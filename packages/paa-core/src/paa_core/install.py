@@ -7,6 +7,7 @@ from datetime import datetime, UTC
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory
@@ -67,8 +68,61 @@ def _copy_file(src: Path, dst: Path) -> None:
     shutil.copy2(src, dst)
 
 
+
+def _copy_optional_tree(src: Path, dst: Path) -> None:
+    if not src.exists():
+        return
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+
+
+def _render_text_template(src: Path, dst: Path, replacements: dict[str, str]) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    text = src.read_text()
+    for key, value in replacements.items():
+        text = text.replace(key, value)
+    dst.write_text(text)
+
+
+def _install_rendered_tree(src: Path, dst: Path, replacements: dict[str, str]) -> None:
+    if not src.exists():
+        return
+    if dst.exists():
+        shutil.rmtree(dst)
+    for path in src.rglob("*"):
+        rel = path.relative_to(src)
+        target = dst / rel
+        if path.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        _render_text_template(path, target, replacements)
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None:
+    if not package_specs:
+        return
+    vendor_root = codex_root / 'vendor'
+    if vendor_root.exists():
+        shutil.rmtree(vendor_root)
+    vendor_root.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            sys.executable,
+            '-m',
+            'pip',
+            'install',
+            '--quiet',
+            '--disable-pip-version-check',
+            '--target',
+            str(vendor_root),
+            *package_specs,
+        ],
+        check=True,
+    )
 
 
 def _write_wrapper(script_path: Path, module_name: str) -> None:
@@ -78,7 +132,9 @@ def _write_wrapper(script_path: Path, module_name: str) -> None:
         "import sys\n"
         "from pathlib import Path\n\n"
         "repo_root = Path(__file__).resolve().parents[3]\n"
+        "vendor_root = repo_root / '.codex' / 'paa' / 'vendor'\n"
         "lib_root = repo_root / '.codex' / 'paa' / 'lib'\n"
+        "sys.path.insert(0, str(vendor_root))\n"
         "sys.path.insert(0, str(lib_root))\n\n"
         f"from {module_name}.__main__ import main\n\n"
         "raise SystemExit(main())\n"
@@ -86,15 +142,18 @@ def _write_wrapper(script_path: Path, module_name: str) -> None:
     script_path.chmod(0o755)
 
 
-def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[str], example_config_name: str) -> InstallResult:
+def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[str], example_config_name: str, vendor_packages: list[str] | None = None) -> InstallResult:
     root = platform_repo_root()
     codex_root = ensure_directory(repo_root / CODEX_INSTALL_ROOT)
     runtime_root = ensure_directory(repo_root / PROJECT_DATA_ROOT)
 
     ensure_directory(codex_root / "bin")
     ensure_directory(codex_root / "lib")
-    ensure_directory(codex_root / "schemas" / "authority-package")
-    ensure_directory(codex_root / "templates" / "configs")
+    ensure_directory(codex_root / 'schemas' / 'authority-package')
+    ensure_directory(codex_root / 'schemas' / 'handoff-packets')
+    ensure_directory(codex_root / 'schemas' / 'runtime-records')
+    ensure_directory(codex_root / 'templates' / 'configs')
+    ensure_directory(codex_root / 'vendor')
 
     for package_name in package_names:
         src = root / "packages" / package_name / "src"
@@ -102,15 +161,19 @@ def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[st
         for pkg_dir in pkg_dirs:
             _copy_tree(pkg_dir, codex_root / "lib" / pkg_dir.name)
 
-    schema_root = root / "schemas" / "authority-package"
-    for schema_path in schema_root.glob("*.json"):
-        _copy_file(schema_path, codex_root / "schemas" / "authority-package" / schema_path.name)
+    for schema_group in ['authority-package', 'handoff-packets', 'runtime-records']:
+        schema_root = root / 'schemas' / schema_group
+        if schema_root.exists():
+            for schema_path in schema_root.glob('*.json'):
+                _copy_file(schema_path, codex_root / 'schemas' / schema_group / schema_path.name)
 
     templates_root = root / "templates" / "configs"
     for template_path in templates_root.glob("*.json"):
         _copy_file(template_path, codex_root / "templates" / "configs" / template_path.name)
 
     _copy_file(templates_root / example_config_name, codex_root / "project-config.example.json")
+
+    _install_vendor_packages(codex_root, vendor_packages or [])
 
     _write_json(
         codex_root / "install-metadata.json",
@@ -141,11 +204,14 @@ def install_producer_runtime(repo_root: Path) -> InstallResult:
         mode="producer",
         package_names=["paa-core", "paa-producer"],
         example_config_name="project-config.producer.example.json",
+        vendor_packages=[],
     )
+    replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     ensure_directory(result.runtime_data_root / "publish")
     ensure_directory(result.runtime_data_root / "cache")
-    _write_wrapper(result.codex_install_root / "bin" / "paa-producer", "paa_producer")
-    (result.codex_install_root / "README.md").write_text(
+    _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
+    _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
+    (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         "This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
     )
@@ -158,13 +224,18 @@ def install_consumer_runtime(repo_root: Path) -> InstallResult:
     result = _install_common_layout(
         repo_root,
         mode="consumer",
-        package_names=["paa-core", "paa-consumer"],
+        package_names=["paa-core", "paa-consumer", "paa-producer"],
         example_config_name="project-config.consumer.example.json",
+        vendor_packages=['jsonschema>=4,<5'],
     )
+    replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     for name in ["authority/current", "claims", "queue-state", "artifacts", "evidence", "cache", "reports"]:
         ensure_directory(result.runtime_data_root / name)
-    _write_wrapper(result.codex_install_root / "bin" / "paa-consumer", "paa_consumer")
-    (result.codex_install_root / "README.md").write_text(
+    _write_wrapper(result.codex_install_root / 'bin' / 'paa-consumer', 'paa_consumer')
+    _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
+    _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
+    _install_rendered_tree(platform_repo_root() / 'templates' / 'automations', repo_root / '.codex' / 'automations', replacements)
+    (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         "This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"
     )

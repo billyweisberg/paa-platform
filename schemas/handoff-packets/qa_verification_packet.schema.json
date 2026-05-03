@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://individual-centricity.local/fractal-core/qa_verification_packet.schema.json",
+  "title": "QA Verification Packet",
+  "type": "object",
+  "required": [
+    "message_id",
+    "schema_type",
+    "schema_version",
+    "project",
+    "from_role",
+    "to_role",
+    "created_at",
+    "correlation_id",
+    "authority_context",
+    "github_context",
+    "payload"
+  ],
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_type": {
+      "const": "qa_verification_packet"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "to_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "github_context": {
+      "type": "object",
+      "required": [
+        "repo",
+        "issue_number",
+        "pr_number",
+        "branch",
+        "links"
+      ],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pr_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "issue",
+        "pr",
+        "verification_status",
+        "verification_scope",
+        "mechanical_checks",
+        "technical_scope_checks",
+        "protected_path_checks",
+        "artifact_checks",
+        "findings",
+        "recommended_action"
+      ],
+      "properties": {
+        "issue": {
+          "type": "object"
+        },
+        "pr": {
+          "type": "object"
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "needs_human_review"
+          ]
+        },
+        "verification_scope": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        },
+        "mechanical_checks": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        },
+        "technical_scope_checks": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        },
+        "protected_path_checks": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        },
+        "artifact_checks": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        },
+        "findings": {
+          "type": [
+            "array",
+            "object",
+            "string"
+          ]
+        },
+        "recommended_action": {
+          "type": [
+            "object",
+            "array",
+            "string"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "authority_context": {
+      "type": "object",
+      "required": [
+        "manifest_path",
+        "authority_version",
+        "milestone_id",
+        "phase_id",
+        "task_id"
+      ],
+      "properties": {
+        "manifest_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "milestone_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

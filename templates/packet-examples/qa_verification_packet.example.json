@@ -1,0 +1,76 @@
+{
+  "message_id": "fcore-qa-2026-04-27-0001",
+  "schema_type": "qa_verification_packet",
+  "schema_version": "1.0.0",
+  "project": "fractal-core",
+  "from_role": "qa",
+  "to_role": "architect",
+  "created_at": "2026-04-27T18:00:00Z",
+  "correlation_id": "issue-65",
+  "github_context": {
+    "repo": "billyweisberg/fractal-core-python",
+    "issue_number": 65,
+    "pr_number": 95,
+    "branch": "codex/issue-65-upward-vfe-cadence-reauthorized",
+    "links": [
+      "https://github.com/billyweisberg/fractal-core-python/issues/65",
+      "https://github.com/billyweisberg/fractal-core-python/pull/95"
+    ]
+  },
+  "payload": {
+    "issue": {
+      "number": 65,
+      "url": "https://github.com/billyweisberg/fractal-core-python/issues/65"
+    },
+    "pr": {
+      "number": 95,
+      "url": "https://github.com/billyweisberg/fractal-core-python/pull/95",
+      "ready_for_review": true
+    },
+    "verification_status": "pass",
+    "verification_scope": {
+      "authority_docs_consulted": [
+        "44-python-implementation-roadmap.md",
+        "37-port-version-targeting.md",
+        "11-parity-and-tolerances.md"
+      ],
+      "github_records_consulted": [
+        "issue #65",
+        "PR #95"
+      ]
+    },
+    "mechanical_checks": {
+      "closes_issue": true,
+      "issue_update_comment_present": true,
+      "ci_passed": true,
+      "ready_for_review": true
+    },
+    "technical_scope_checks": {
+      "scope_match": "upward VFE cadence only",
+      "unauthorized_scope_widening": false,
+      "tolerance_change_requires_human_review": false
+    },
+    "protected_path_checks": {
+      "trace_contract_unchanged": true,
+      "parity_contract_unchanged": true,
+      "benchmark_contract_unchanged": true,
+      "protected_10000_step_parity_passed": true
+    },
+    "artifact_checks": {
+      "artifact_contract_changes_present": false,
+      "reviewer_usable_outputs": true
+    },
+    "findings": [],
+    "recommended_action": {
+      "merge_recommendation": "accept_and_merge",
+      "next_step": "Architect may merge PR #95 and select the next authorized issue"
+    }
+  },
+  "authority_context": {
+    "manifest_path": "/Users/billyweisberg/.codex/authority/fractal-core-python/current/fractal-core-python-authority.json",
+    "authority_version": "2026-04-27.2",
+    "milestone_id": "m1-reference-implementation",
+    "phase_id": "p6-forward-semantic-target",
+    "task_id": "py-p6-upward-vfe-cadence"
+  }
+}

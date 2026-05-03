@@ -1,0 +1,259 @@
+{
+  "message_id": "fcore-arch-2026-04-25-0001",
+  "schema_type": "architect_cycle_packet",
+  "schema_version": "1.0.0",
+  "project": "fractal-core",
+  "from_role": "architect",
+  "to_role": "python-team",
+  "created_at": "2026-04-25T12:00:00Z",
+  "correlation_id": "issue-8",
+  "github_context": {
+    "repo": "billyweisberg/fractal-core-python",
+    "issue_number": 8,
+    "pr_number": 7,
+    "branch": "main",
+    "links": [
+      "https://github.com/billyweisberg/fractal-core-python/pull/7",
+      "https://github.com/billyweisberg/fractal-core-python/issues/8"
+    ]
+  },
+  "payload": {
+    "accepted_pr": {
+      "number": 7,
+      "url": "https://github.com/billyweisberg/fractal-core-python/pull/7"
+    },
+    "closed_issue": {
+      "number": 6,
+      "url": "https://github.com/billyweisberg/fractal-core-python/issues/6"
+    },
+    "next_issue": {
+      "number": 8,
+      "url": "https://github.com/billyweisberg/fractal-core-python/issues/8"
+    },
+    "current_baseline": {
+      "blessed_reference_goals_10000": 49,
+      "python_live_goals_10000": 49,
+      "goal_delta": 0,
+      "failed_checkpoint_final_metric_counters": 0,
+      "first_known_divergence_step": 8311
+    },
+    "remaining_gap": "one compact trace identity divergence near step 8311",
+    "next_move": [
+      "create branch from main",
+      "open draft PR for issue #8",
+      "investigate compact trace divergence near step 8311"
+    ],
+    "focus": [
+      "late-run layer arbitration",
+      "active composite selection",
+      "why reference row shows motor 4 while Python selects motor 6"
+    ],
+    "keep_stable": [
+      "trace",
+      "parity",
+      "benchmark"
+    ],
+    "governance_reminder": [
+      "Dev owns implementation, validation, and keeping the PR current",
+      "Architect / Spec Owner owns acceptance and merge",
+      "do not merge your own slice"
+    ],
+    "coder_run_brief_ref": {
+      "path": "/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/handoff-schemas/coder_run_brief.issue73.example.json",
+      "schema_path": "/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/handoff-schemas/coder_run_brief.schema.json",
+      "brief_id": "fcore-coder-2026-04-30-issue73-retirement-lifecycle-reset"
+    },
+    "coder_run_brief": {
+      "brief_id": "fcore-coder-2026-04-30-issue73-retirement-lifecycle-reset",
+      "schema_type": "coder_run_brief",
+      "schema_version": "1.0.0",
+      "project": "fractal-core",
+      "authority_context": {
+        "authority_version": "2026-04-29.1",
+        "milestone_id": "m1-reference-implementation",
+        "phase_id": "p6-forward-semantic-target",
+        "task_id": "py-p6-retirement-lifecycle-boundary",
+        "issue_number": 73,
+        "pr_number": 100
+      },
+      "slice_scope_ref": {
+        "slice_name": "retirement lifecycle boundary",
+        "authorized_delta_family": "retirement-lifecycle",
+        "out_of_scope_delta_families": [
+          "scalar-threshold",
+          "layer-cap",
+          "retirement-cadence",
+          "mode-switching",
+          "corridor-fields",
+          "upward-vfe"
+        ]
+      },
+      "component_assignment": {
+        "component_name": "RetirementLifecyclePolicy and retirement lifecycle behavior in FractalStack",
+        "component_role": "versioned boundary policy plus hierarchy retirement lifecycle execution",
+        "system_layer": "policy",
+        "tier": "compute",
+        "component_aspects": [
+          "functions",
+          "configuration",
+          "tests",
+          "docs"
+        ],
+        "target_modules": [
+          "src/baby7_core/model/fractal_core.py",
+          "src/baby7_core/model/agent.py",
+          "tests/unit/test_smoke.py",
+          "docs/port-version-targeting.md"
+        ]
+      },
+      "architecture_constraints": {
+        "required_architecture_seams": [
+          "Retirement lifecycle policy resolution stays distinct from scalar-threshold and layer-cap policy boundaries.",
+          "Host-facing Agent boundary remains separate from model-core execution and hierarchy retirement behavior."
+        ],
+        "target_module_boundaries": [
+          "Do not add new scalar-threshold or layer-cap responsibilities while changing retirement lifecycle behavior.",
+          "Keep lifecycle-specific logic scoped to the lifecycle policy path and retirement evaluation path."
+        ],
+        "allowed_edit_surfaces": [
+          "src/baby7_core/model/fractal_core.py",
+          "src/baby7_core/model/agent.py",
+          "tests/unit/test_smoke.py",
+          "docs/port-version-targeting.md"
+        ],
+        "forbidden_edit_surfaces": [
+          "unrelated host runtime code",
+          "queue or automation runtime code",
+          "non-retirement roadmap slices"
+        ],
+        "forbidden_module_growth_patterns": [
+          "Do not introduce new ScalarThresholds behavior while working this slice.",
+          "Do not introduce new LayerCapPolicy behavior while working this slice.",
+          "Do not broaden unrelated docs or tests by proxy."
+        ]
+      },
+      "collaboration_context": {
+        "pattern_name": "core-step-loop and retirement-window evaluation",
+        "collaborating_components": [
+          "ICFABaby7Agent",
+          "FractalCore",
+          "FractalStack",
+          "CompositeLayer",
+          "RetirementLifecyclePolicy"
+        ],
+        "callers": [
+          "ICFABaby7Agent.act",
+          "ICFABaby7Agent.observe",
+          "FractalCore.on_goal_reached"
+        ],
+        "callees": [
+          "FractalStack.select",
+          "FractalStack._maybe_retire_layers"
+        ],
+        "event_emitters": [
+          "FractalStack"
+        ],
+        "event_consumers": [
+          "Agent drilldown and diagnostics surfaces"
+        ]
+      },
+      "dependency_contract": {
+        "dependencies_to_inject": [
+          "RetirementLifecyclePolicy",
+          "RetirementCadencePolicy",
+          "FractalStack into FractalCore",
+          "FractalCore into ICFABaby7Agent"
+        ],
+        "runtime_inputs": [
+          "current CI",
+          "retired layer state",
+          "layer activity state",
+          "goal and path-distance evidence"
+        ],
+        "configuration_inputs": [
+          "version_target",
+          "experimental.retirement_lifecycle"
+        ],
+        "forbidden_hidden_dependencies": [
+          "Do not infer lifecycle mode from scalar profile.",
+          "Do not create ad hoc hidden links to layer-cap or scalar-threshold policy objects."
+        ]
+      },
+      "behavioral_contract": {
+        "behavior_to_add_or_change": [
+          "Expose retained proving retirement lifecycle versus forward-target outcome-driven lifecycle as an explicit boundary.",
+          "When forward-target lifecycle is selected, pruned layers do not auto-reactivate under low CI, do not keep learned memory on prune, and do not continue active execution after pruning."
+        ],
+        "invariants_to_preserve": [
+          "The blessed 10,000-step proving path remains protected.",
+          "Default proving target keeps retained retirement lifecycle semantics unless an explicit forward-target boundary is selected.",
+          "No scalar-threshold or layer-cap semantics are changed."
+        ],
+        "edge_cases": [
+          "A retired layer may still be active when lifecycle policy says retained proving behavior allows it.",
+          "Outcome-driven lifecycle must not reactivate retired layers under low CI."
+        ],
+        "error_conditions": [
+          "Treat any scalar-threshold or layer-cap diff as out of scope for this run."
+        ]
+      },
+      "test_contract": {
+        "tests_to_run": [
+          "uv run ruff check .",
+          "uv run mypy src",
+          "uv run --extra dev pytest -q"
+        ],
+        "tests_to_add_or_update": [
+          "tests/unit/test_smoke.py retirement lifecycle coverage"
+        ],
+        "protected_baseline_checks": [
+          "10,000-step trace remains 49 goals",
+          "checkpoint parity stays pass with 0 failed / 0 warn",
+          "benchmark stays at mean_goals_reached 49"
+        ],
+        "artifacts_expected": [
+          "trace artifact",
+          "parity artifact",
+          "benchmark artifact"
+        ]
+      },
+      "change_budget": {
+        "max_responsibility_expansion": "No new semantic family beyond retirement-lifecycle may be changed in this run.",
+        "expected_touch_surfaces": [
+          "retirement lifecycle policy resolution",
+          "retirement pruning/reactivation execution path",
+          "retirement lifecycle drilldown/docs/tests"
+        ],
+        "pre_handoff_scope_checks": [
+          "Diff against main contains no added ScalarThresholds changes.",
+          "Diff against main contains no added LayerCapPolicy changes.",
+          "Docs and tests mention only retirement-lifecycle boundary changes needed for this run."
+        ]
+      },
+      "anti_goals": {
+        "anti_goals": [
+          "Do not opportunistically clean up neighboring forward-target deltas.",
+          "Do not expand the slice into layer-cap or scalar-threshold work.",
+          "Do not use this run to refactor unrelated model architecture."
+        ],
+        "common_failure_modes": [
+          "Branch looks narrower but still carries adjacent policy/doc/test changes.",
+          "A coder adds another boundary class into an already overloaded module without isolating responsibility.",
+          "QA receives a packet before the diff is checked against the authorized delta family."
+        ]
+      }
+    },
+    "pr_starter": {
+      "branch": "codex/issue-8-compact-trace-divergence",
+      "title": "[Baby-7][Python] Reduce late-run compact trace divergence near step 8311",
+      "body_linkage": "Closes #8"
+    }
+  },
+  "authority_context": {
+    "manifest_path": "/Users/billyweisberg/.codex/authority/fractal-core-python/current/fractal-core-python-authority.json",
+    "authority_version": "2026-04-27.2",
+    "milestone_id": "m1-reference-implementation",
+    "phase_id": "p5-proving-artifact-maturity",
+    "task_id": "py-p2-compact-trace-divergence"
+  }
+}

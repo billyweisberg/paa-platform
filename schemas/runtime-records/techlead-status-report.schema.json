@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://individual-centricity.local/schemas/techlead-status-report.schema.json",
+  "title": "TechLead Status Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_id",
+    "project_id",
+    "captured_at",
+    "captured_by",
+    "authority",
+    "workflow",
+    "active_work",
+    "queues",
+    "automations",
+    "traceability",
+    "escalations",
+    "recommended_actions",
+    "unattended_safe",
+    "summary"
+  ],
+  "properties": {
+    "report_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string", "minLength": 1},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "captured_by": {"$ref": "#/$defs/capturedBy"},
+    "authority": {"$ref": "#/$defs/authority"},
+    "workflow": {"$ref": "#/$defs/workflow"},
+    "active_work": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/activeWork"}]},
+    "queues": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/queueState"}},
+    "automations": {"$ref": "#/$defs/automations"},
+    "traceability": {"$ref": "#/$defs/traceability"},
+    "escalations": {"type": "array", "items": {"$ref": "#/$defs/escalation"}},
+    "recommended_actions": {"type": "array", "items": {"$ref": "#/$defs/recommendedAction"}},
+    "unattended_safe": {"type": "boolean"},
+    "summary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "capturedBy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "agent_name", "agent_type"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "agent_name": {"type": "string", "minLength": 1},
+        "agent_type": {"enum": ["human", "automation", "hybrid"]}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_version", "status", "published_at", "source_ref", "local_mirrors"],
+      "properties": {
+        "current_version": {"type": "string", "minLength": 1},
+        "status": {"enum": ["aligned", "stale", "ahead_of_execution", "behind_execution", "unknown"]},
+        "published_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+        "source_ref": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "local_mirrors": {"type": "array", "items": {"$ref": "#/$defs/localMirror"}}
+      }
+    },
+    "localMirror": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "status"],
+      "properties": {
+        "location": {"type": "string", "minLength": 1},
+        "status": {"enum": ["present", "missing", "stale", "unknown"]}
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_stage", "last_successful_handoff", "current_owner_role", "state_consistency"],
+      "properties": {
+        "current_stage": {
+          "enum": [
+            "architect_authorized",
+            "dev_in_progress",
+            "dev_rework_required",
+            "dev_reset_required",
+            "qa_pending",
+            "qa_escalated",
+            "architect_review_pending",
+            "architect_merge_pending",
+            "ready_for_acceptance",
+            "accepted",
+            "blocked"
+          ]
+        },
+        "last_successful_handoff": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/handoffSummary"}]},
+        "current_owner_role": {"type": "string", "minLength": 1},
+        "state_consistency": {"enum": ["consistent", "recoverable", "inconsistent"]}
+      }
+    },
+    "handoffSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "from_role", "to_role", "completed_at"],
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "from_role": {"type": "string", "minLength": 1},
+        "to_role": {"type": "string", "minLength": 1},
+        "completed_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "activeWork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["work_item", "execution", "verification"],
+      "properties": {
+        "work_item": {"$ref": "#/$defs/workItem"},
+        "execution": {"$ref": "#/$defs/execution"},
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "workItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issue_number", "task_id", "title", "status", "authority_version"],
+      "properties": {
+        "issue_number": {"type": "integer", "minimum": 1},
+        "task_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "authority_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pr_number", "branch", "state", "ci_status", "is_draft"],
+      "properties": {
+        "pr_number": {"anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "state": {"enum": ["open", "draft", "merged", "closed"]},
+        "ci_status": {"enum": ["green", "red", "pending", "unknown"]},
+        "is_draft": {"anyOf": [{"type": "boolean"}, {"type": "null"}]}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protected_path", "scope", "last_qa_verdict", "effective_verification_state", "qa_packet_path"],
+      "properties": {
+        "protected_path": {"enum": ["pass", "fail", "unknown"]},
+        "scope": {"enum": ["pass", "fail", "unknown"]},
+        "last_qa_verdict": {"enum": ["pass", "needs_human_review", "fail", "unknown"]},
+        "effective_verification_state": {"enum": ["pass", "needs_human_review", "fail", "awaiting_fresh_qa", "rework_required", "reset_required", "unknown"]},
+        "qa_packet_path": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      }
+    },
+    "queueState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ready", "unacknowledged", "latest_message"],
+      "properties": {
+        "ready": {"type": "integer", "minimum": 0},
+        "unacknowledged": {"type": "integer", "minimum": 0},
+        "latest_message": {"anyOf": [{"type": "null"}, {"type": "object"}]}
+      }
+    },
+    "automations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles"],
+      "properties": {
+        "roles": {"type": "array", "items": {"$ref": "#/$defs/automationRole"}}
+      }
+    },
+    "traceability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "view_name", "error_message", "latest_accepted_chain", "active_work_chain"],
+      "properties": {
+        "status": {"enum": ["available", "unavailable"]},
+        "view_name": {"type": "string", "minLength": 1},
+        "error_message": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "latest_accepted_chain": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/traceabilityChain"}]},
+        "active_work_chain": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/traceabilityChain"}]}
+      }
+    },
+    "traceabilityChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_number",
+        "work_item_title",
+        "work_item_status",
+        "package_id_external",
+        "brief_id_external",
+        "component_name",
+        "component_role",
+        "system_layer",
+        "full_chain_state",
+        "dev_message_id",
+        "qa_message_id",
+        "acceptance_decision",
+        "acceptance_created_at",
+        "last_transition_at"
+      ],
+      "properties": {
+        "issue_number": {"type": "integer", "minimum": 1},
+        "work_item_title": {"type": "string", "minLength": 1},
+        "work_item_status": {"type": "string", "minLength": 1},
+        "package_id_external": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "brief_id_external": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "component_name": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "component_role": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "system_layer": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "full_chain_state": {"type": "string", "minLength": 1},
+        "dev_message_id": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "qa_message_id": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "acceptance_decision": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "acceptance_created_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+        "last_transition_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]}
+      }
+    },
+    "automationRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "status", "runtime", "root", "last_run_at"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "status": {"enum": ["visible", "missing", "duplicate", "paused", "active", "unknown"]},
+        "runtime": {"anyOf": [{"enum": ["local", "worktree"]}, {"type": "null"}]},
+        "root": {"type": "string", "minLength": 1},
+        "last_run_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]}
+      }
+    },
+    "workItemRef": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue_number", "task_id"],
+          "properties": {
+            "issue_number": {"type": "integer", "minimum": 1},
+            "task_id": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_type", "severity", "work_item_ref", "summary", "details", "recommended_route", "status"],
+      "properties": {
+        "event_type": {"type": "string", "minLength": 1},
+        "severity": {"enum": ["low", "medium", "high", "critical"]},
+        "work_item_ref": {"$ref": "#/$defs/workItemRef"},
+        "summary": {"type": "string", "minLength": 1},
+        "details": {"type": "object"},
+        "recommended_route": {"type": "string", "minLength": 1},
+        "status": {"enum": ["open", "closed", "suppressed"]}
+      }
+    },
+    "recommendedAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "action_type", "reason", "target_role", "blocking"],
+      "properties": {
+        "priority": {"type": "integer", "minimum": 1},
+        "action_type": {
+          "enum": [
+            "continue_unattended",
+            "route_to_architect",
+            "route_to_dev",
+            "route_to_qa",
+            "route_to_python",
+            "route_to_python_reset_branch",
+            "route_to_architect_for_reset_decision",
+            "pause_role",
+            "resume_role",
+            "requeue_packet",
+            "republish_authority",
+            "resync_issue",
+            "abandon_stale_branch",
+            "recreate_automation",
+            "keep_python_paused",
+            "monitor_dev",
+            "stop_loop"
+          ]
+        },
+        "reason": {"type": "string", "minLength": 1},
+        "target_role": {"type": "string", "minLength": 1},
+        "blocking": {"type": "boolean"}
+      }
+    }
+  }
+}

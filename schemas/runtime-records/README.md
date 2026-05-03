@@ -1,1 +1,3 @@
-Placeholder for future platform content.
+# Runtime record schemas
+
+Canonical runtime-report schemas owned by `paa-platform`.

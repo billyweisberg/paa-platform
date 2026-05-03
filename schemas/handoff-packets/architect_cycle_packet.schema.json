@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://individual-centricity.local/fractal-core/architect_cycle_packet.schema.json",
+  "title": "Architect Cycle Packet",
+  "type": "object",
+  "required": [
+    "message_id",
+    "schema_type",
+    "schema_version",
+    "project",
+    "from_role",
+    "to_role",
+    "created_at",
+    "correlation_id",
+    "authority_context",
+    "github_context",
+    "payload"
+  ],
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_type": {
+      "const": "architect_cycle_packet"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "to_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "github_context": {
+      "type": "object",
+      "required": [
+        "repo",
+        "issue_number",
+        "pr_number",
+        "branch",
+        "links"
+      ],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pr_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "accepted_pr",
+        "closed_issue",
+        "next_issue",
+        "current_baseline",
+        "remaining_gap",
+        "next_move",
+        "focus",
+        "keep_stable",
+        "governance_reminder"
+      ],
+      "properties": {
+        "accepted_pr": {
+          "type": "object"
+        },
+        "closed_issue": {
+          "type": "object"
+        },
+        "next_issue": {
+          "type": "object"
+        },
+        "current_baseline": {
+          "type": "object"
+        },
+        "remaining_gap": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "next_move": {
+          "type": [
+            "string",
+            "array",
+            "object"
+          ]
+        },
+        "focus": {
+          "type": [
+            "string",
+            "array",
+            "object"
+          ]
+        },
+        "keep_stable": {
+          "type": [
+            "array",
+            "object",
+            "string"
+          ]
+        },
+        "governance_reminder": {
+          "type": [
+            "array",
+            "object",
+            "string"
+          ]
+        },
+        "coder_run_brief_ref": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "path",
+            "schema_path",
+            "brief_id"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "schema_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "brief_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        },
+        "coder_run_brief": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "pr_starter": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "authority_context": {
+      "type": "object",
+      "required": [
+        "manifest_path",
+        "authority_version",
+        "milestone_id",
+        "phase_id",
+        "task_id"
+      ],
+      "properties": {
+        "manifest_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "milestone_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

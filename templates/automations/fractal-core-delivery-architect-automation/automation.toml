@@ -1,0 +1,18 @@
+version = 1
+id = "fractal-core-delivery-architect-automation"
+kind = "cron"
+name = "Fractal Core Delivery Architect Automation"
+prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-authority/SKILL.md)
+[$fractal-core-inbox]({{REPO_ROOT}}/.codex/skills/fractal-core-inbox/SKILL.md)
+[$fractal-core-architect-handoff]({{REPO_ROOT}}/.codex/skills/fractal-core-architect-handoff/SKILL.md)
+
+Act as Delivery Architect only.
+Use repo-local consumer runtime only.
+Do not depend on producer repo paths or `$HOME/.codex`.
+"""
+status = "PAUSED"
+rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"
+model = "gpt-5.4"
+reasoning_effort = "medium"
+execution_environment = "local"
+cwds = ["{{REPO_ROOT}}"]

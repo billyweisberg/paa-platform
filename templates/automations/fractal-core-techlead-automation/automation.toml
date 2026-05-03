@@ -1,0 +1,15 @@
+version = 1
+id = "fractal-core-techlead-automation"
+kind = "cron"
+name = "Fractal Core TechLead Automation"
+prompt = """[$fractal-core-techlead]({{REPO_ROOT}}/.codex/skills/fractal-core-techlead/SKILL.md)
+
+Use repo-local consumer runtime only.
+Generate the TechLead report from installed authority, queue runtime, GitHub state, and PAA traceability.
+"""
+status = "PAUSED"
+rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"
+model = "gpt-5.4"
+reasoning_effort = "medium"
+execution_environment = "local"
+cwds = ["{{REPO_ROOT}}"]

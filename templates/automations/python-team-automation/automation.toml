@@ -1,0 +1,18 @@
+version = 1
+id = "python-team-automation"
+kind = "cron"
+name = "Python Team Automation"
+prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-authority/SKILL.md)
+[$fractal-core-inbox]({{REPO_ROOT}}/.codex/skills/fractal-core-inbox/SKILL.md)
+
+Use repo-local consumer runtime only.
+Use installed authority package under `.project/data/paa/authority/current`.
+Use `{{REPO_ROOT}}` as the canonical consumer repo root.
+Do not read project runtime from `$HOME/.codex`.
+"""
+status = "PAUSED"
+rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"
+model = "gpt-5.5"
+reasoning_effort = "medium"
+execution_environment = "local"
+cwds = ["{{REPO_ROOT}}"]

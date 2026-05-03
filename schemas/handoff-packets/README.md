@@ -1,1 +1,3 @@
-Placeholder for future platform content.
+# Handoff packet schemas
+
+Canonical packet schemas owned by `paa-platform`.

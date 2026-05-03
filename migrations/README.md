@@ -1,1 +1,3 @@
-Placeholder for future platform content.
+# Postgres migrations
+
+Canonical PAA migrations and reporting SQL now live here.
