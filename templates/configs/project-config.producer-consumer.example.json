@@ -1,0 +1,17 @@
+{
+  "project_id": "greenfield-app",
+  "mode": "producer_consumer",
+  "authority_manifest_path": "docs/architecture/project-authority/greenfield-app-authority.json",
+  "supporting_docs_root": "docs/architecture",
+  "artifact_examples_root": "docs/architecture/artifact-examples",
+  "publication_output_root": ".project/data/paa/publish",
+  "authority_install_root": ".project/data/paa/authority/current",
+  "runtime_data_root": ".project/data/paa",
+  "github_repo": "example/greenfield-app",
+  "queue_names": {
+    "python": "greenfield-python",
+    "qa": "greenfield-qa",
+    "architect": "greenfield-architecture"
+  },
+  "db_profile": "paa_dev"
+}

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://billyweisberg.github.io/paa-platform/schemas/authority-package/project-config.producer-consumer.schema.json",
+  "title": "PAA Producer-Consumer Project Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_id",
+    "mode",
+    "authority_manifest_path",
+    "supporting_docs_root",
+    "artifact_examples_root",
+    "publication_output_root",
+    "authority_install_root",
+    "runtime_data_root",
+    "github_repo",
+    "queue_names",
+    "db_profile"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "const": "producer_consumer"
+    },
+    "authority_manifest_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supporting_docs_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_examples_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "publication_output_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_install_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime_data_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "github_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "queue_names": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python",
+        "qa",
+        "architect"
+      ],
+      "properties": {
+        "python": {
+          "type": "string",
+          "minLength": 1
+        },
+        "qa": {
+          "type": "string",
+          "minLength": 1
+        },
+        "architect": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "db_profile": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

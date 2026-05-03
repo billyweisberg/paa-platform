@@ -8,6 +8,8 @@ It is designed to separate three concerns that had become too entangled:
 - the authority-producing source repo
 - the consuming implementation repo
 
+The default operating model uses separate producer and consumer repos, but the platform must also support a unified topology where one repo acts as both the authority producer and the runtime consumer.
+
 ## Purpose
 
 This repo is the source of truth for shared PAA software.
@@ -38,6 +40,11 @@ The working three-repo model is:
    - source requirements, source authority, source planning artifacts
 3. consumer repo
    - implementation + installed PAA runtime + installed authority package
+
+The platform must also support a greenfield or tightly-coupled variant:
+
+4. unified producer-consumer repo
+   - source authority + implementation + installed PAA runtime in one repo
 
 ## Initial layout
 

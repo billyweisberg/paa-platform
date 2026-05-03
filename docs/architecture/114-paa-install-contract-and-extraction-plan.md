@@ -7,6 +7,7 @@ Date: 2026-05-03
 This document defines:
 
 - how PAA gets installed into producer and consumer repos
+- how PAA supports unified producer-consumer repos
 - what a published authority package must contain
 - the first extraction moves out of:
   - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
@@ -29,6 +30,8 @@ Mutable runtime state installs/operates under:
 - `.project/data/paa/`
 
 This location should be gitignored.
+
+This rule remains true even for a unified producer-consumer repo.
 
 ### Producer install contract
 
@@ -75,6 +78,34 @@ And it may also create:
 .project/data/paa/reports/
 ```
 
+### Unified producer-consumer install contract
+
+When PAA is installed into a repo that acts as both authority producer and runtime consumer, it must create:
+
+```text
+.codex/paa/bin/
+.codex/paa/lib/
+.codex/paa/schemas/
+.codex/paa/templates/
+.codex/paa/install-metadata.json
+.codex/paa/project-config.example.json
+```
+
+And it may also create:
+
+```text
+.project/data/paa/publish/
+.project/data/paa/authority/current/
+.project/data/paa/claims/
+.project/data/paa/queue-state/
+.project/data/paa/artifacts/
+.project/data/paa/evidence/
+.project/data/paa/cache/
+.project/data/paa/reports/
+```
+
+The repo-local source-authority files remain outside `.project/data/paa/`.
+
 ### Install metadata
 
 Every install should record:
@@ -117,6 +148,27 @@ Expected fields:
 - `github_repo`
 - `queue_names`
 - `db_profile` or runtime DB connection source
+
+### Unified producer-consumer repo config
+
+Path:
+- `.codex/paa/project-config.json`
+
+Expected fields:
+- `project_id`
+- `mode = producer_consumer`
+- producer-side fields:
+  - `authority_manifest_path`
+  - `supporting_docs_root`
+  - `artifact_examples_root`
+  - `publication_output_root`
+- consumer-side fields:
+  - `authority_install_root`
+  - `runtime_data_root`
+  - `queue_names`
+  - `db_profile`
+- shared field:
+  - `github_repo`
 
 ## Authority package format
 
@@ -191,6 +243,20 @@ authority-package/
    - local runtime data
    - GitHub
    - PAA runtime DB
+
+### Unified producer-consumer flow
+
+1. install producer-consumer mode PAA into the repo
+2. author source authority content in the repo
+3. derive and publish the authority package locally
+4. install the published authority package into the same repo runtime root
+5. run Dev / QA / Architect roles against:
+   - installed package
+   - local runtime data
+   - GitHub
+   - PAA runtime DB
+
+The platform should make this flow explicit rather than forcing the operator to emulate split repos manually.
 
 ## First extraction wave
 
@@ -330,6 +396,8 @@ We should consider the first wave successful when:
 3. role automations run from repo-local installs, not `$HOME/.codex`
 4. runtime claims/artifacts/evidence live under `.project/data/paa/`
 5. no cross-repo sibling mirror writes are required during normal role execution
+
+The same success criteria should hold whether producer and consumer are split or unified.
 
 ## Recommended next implementation slice
 

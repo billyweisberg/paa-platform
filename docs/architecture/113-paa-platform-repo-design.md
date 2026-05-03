@@ -28,6 +28,7 @@ Consumers:
   - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
 - project consumer repos such as:
   - `billyweisberg/fractal-core-python`
+- unified producer-consumer repos for greenfield or tightly coupled projects
 
 ## Product boundaries
 
@@ -51,6 +52,40 @@ Consumers:
 - product-specific source diagrams and requirements
 - implementation code for consumer repos
 - product-specific GitHub issue bodies except through data-driven templates
+
+## Supported topologies
+
+### Topology A. Split producer / consumer
+
+This is the default operating model:
+
+- one repo authors and publishes authority packages
+- another repo installs those packages and runs the role loop
+
+This topology is best when:
+- source authority and implementation evolve on different cadences
+- multiple consumers may install the same published authority package
+- the control plane should stay operationally separated from source authoring
+
+### Topology B. Unified producer-consumer
+
+In this topology, one repo acts as both:
+
+- the source-authority producer
+- the runtime consumer
+
+This topology is valid for:
+- greenfield apps
+- smaller projects
+- early-stage systems where source authoring and implementation are still tightly coupled
+
+The platform must treat this as first-class, not as a hack.
+
+Requirements for this topology:
+- producer and consumer installs still remain logically distinct
+- mutable runtime data still stays under `.project/data/paa/`
+- source authority files and runtime artifacts still do not share the same directories
+- role runs still do not patch platform code in flight
 
 ## Target repo structure
 
@@ -186,6 +221,11 @@ Consumer config should declare:
 - GitHub repo name
 - runtime DB settings or connection profile name
 
+Unified producer-consumer config should declare:
+- `mode = producer_consumer`
+- both producer-side authority source paths
+- and consumer-side runtime/install paths
+
 ## Install modes
 
 ### Producer install mode
@@ -208,6 +248,19 @@ Expected contents:
 - packet compilers
 - queue/claim runtime
 - consumer automation templates
+
+### Unified producer-consumer install mode
+
+Installed into:
+- `.codex/paa/`
+
+Expected contents:
+- producer commands
+- consumer/runtime commands
+- shared schemas
+- templates for both producer and consumer use
+
+The distinction between source-authoring content and runtime state still applies even when the repo is shared.
 
 ## Versioning
 
