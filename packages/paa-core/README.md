@@ -24,4 +24,8 @@ It is the lowest-level package in the platform split.
 - `src/paa_core/package_metadata.py`
 - `src/paa_core/paths.py`
 
-These modules are intentionally minimal placeholders for the first extraction wave.
+These modules are intentionally small, but they now provide the first shared helpers for:
+
+- producer/consumer project config loading
+- authority package metadata typing
+- shared repo-local path conventions

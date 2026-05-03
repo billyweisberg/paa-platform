@@ -7,4 +7,3 @@ PRODUCER_COMMANDS = (
     "derive-coder-briefs",
     "publish-authority-package",
 )
-

@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import argparse
+
 from paa_producer.commands import PRODUCER_COMMANDS
 
 
 def main() -> int:
-    print("paa-producer placeholder")
-    print("commands:", ", ".join(PRODUCER_COMMANDS))
+    parser = argparse.ArgumentParser(prog="paa-producer")
+    parser.add_argument("command", nargs="?", default="help")
+    args = parser.parse_args()
+    if args.command == "help":
+        print("paa-producer placeholder")
+        print("commands:", ", ".join(PRODUCER_COMMANDS))
+        return 0
+    print(f"command placeholder: {args.command}")
     return 0
 
 

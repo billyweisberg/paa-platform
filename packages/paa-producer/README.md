@@ -22,5 +22,6 @@
 
 - `src/paa_producer/commands.py`
 - `src/paa_producer/__main__.py`
+- `src/paa_producer/publish.py`
 
-These files are intentionally skeletal so the first extraction wave has a stable target surface.
+These files are intentionally small, but they now include the first extracted authority publication surface as a library module.
