@@ -165,18 +165,23 @@ def build_obligation_rows(
 def materialize_verification_obligations(
     *,
     repo_root: Path,
-    config: ProducerProjectConfig,
+    config: ProducerProjectConfig | None,
     issue_number: int,
     package_path: Path | None = None,
     verification_key_prefix: str | None = None,
     scope_authority_label: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    resolved_package_path = package_path or _find_stage1_package_path(
-        repo_root=repo_root,
-        config=config,
-        issue_number=issue_number,
-    )
+    if package_path is not None:
+        resolved_package_path = package_path
+    else:
+        if config is None:
+            raise ValueError("config is required when package_path is not provided")
+        resolved_package_path = _find_stage1_package_path(
+            repo_root=repo_root,
+            config=config,
+            issue_number=issue_number,
+        )
     package = load_stage1_package(resolved_package_path)
     default_issue_slug = _derive_issue_slug_from_path(resolved_package_path, issue_number)
     rows = build_obligation_rows(

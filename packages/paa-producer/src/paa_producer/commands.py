@@ -8,4 +8,5 @@ PRODUCER_COMMANDS = (
     'derive-artifacts',
     'materialize-readiness',
     'materialize-verification-obligations',
+    'load-issue-into-paa',
 )
