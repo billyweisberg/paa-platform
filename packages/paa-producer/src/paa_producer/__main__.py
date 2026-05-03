@@ -12,6 +12,7 @@ from paa_core.readiness import main as readiness_main
 from paa_producer.authority_runtime import main as authority_main
 from paa_producer.commands import PRODUCER_COMMANDS
 from paa_producer.derive_artifacts import derive_inventory
+from paa_producer.obligation_loader import materialize_verification_obligations
 from paa_producer.publish import publish_from_project_config
 
 
@@ -66,6 +67,30 @@ def main() -> int:
 
     if args.command == 'materialize-readiness':
         return readiness_main(remainder)
+
+    if args.command == 'materialize-verification-obligations':
+        argp = argparse.ArgumentParser(prog='paa-producer materialize-verification-obligations')
+        argp.add_argument('--repo-root', default=args.repo_root, required=args.repo_root is None)
+        argp.add_argument('--project-config', default=args.project_config, required=args.project_config is None)
+        argp.add_argument('--issue-number', required=True, type=int)
+        argp.add_argument('--package-path')
+        argp.add_argument('--verification-key-prefix')
+        argp.add_argument('--scope-authority-label')
+        argp.add_argument('--dry-run', action='store_true')
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve()
+        config = load_producer_project_config(Path(subargs.project_config).resolve())
+        result = materialize_verification_obligations(
+            repo_root=repo_root,
+            config=config,
+            issue_number=subargs.issue_number,
+            package_path=Path(subargs.package_path).resolve() if subargs.package_path else None,
+            verification_key_prefix=subargs.verification_key_prefix,
+            scope_authority_label=subargs.scope_authority_label,
+            dry_run=subargs.dry_run,
+        )
+        print(json.dumps(result, indent=2))
+        return 0
 
     print(f'unknown command: {args.command}')
     return 2

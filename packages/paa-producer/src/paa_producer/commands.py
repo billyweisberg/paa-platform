@@ -7,4 +7,5 @@ PRODUCER_COMMANDS = (
     'authority',
     'derive-artifacts',
     'materialize-readiness',
+    'materialize-verification-obligations',
 )
