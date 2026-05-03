@@ -1,0 +1,9 @@
+{
+  "project_id": "fractal-core-python",
+  "mode": "producer",
+  "authority_manifest_path": "docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json",
+  "supporting_docs_root": "docs/architecture/tom-baby7-fractal-core",
+  "artifact_examples_root": "docs/architecture/tom-baby7-fractal-core/artifact-examples",
+  "publication_output_root": ".project/data/paa/publish",
+  "github_repo": "billyweisberg/fractal-core-python"
+}

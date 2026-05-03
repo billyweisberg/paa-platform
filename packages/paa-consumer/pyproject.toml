@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paa-consumer"
+version = "0.1.0"
+description = "Consumer-side runtime tooling for PAA execution repos."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["paa-core"]
+
+[project.scripts]
+paa-consumer = "paa_consumer.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

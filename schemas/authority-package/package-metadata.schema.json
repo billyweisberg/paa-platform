@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://billyweisberg.github.io/paa-platform/schemas/authority-package/package-metadata.schema.json",
+  "title": "PAA Authority Package Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_id",
+    "authority_version",
+    "published_at",
+    "published_from_repo",
+    "published_from_revision",
+    "package_format_version",
+    "producer_platform_version",
+    "included_docs",
+    "included_artifacts"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_from_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "published_from_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_format_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_platform_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "included_docs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "included_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

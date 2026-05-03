@@ -1,0 +1,8 @@
+{
+  "platform_version": "0.1.0",
+  "install_mode": "consumer",
+  "installed_at": "2026-05-03T00:00:00Z",
+  "source_platform_repo": "https://github.com/billyweisberg/paa-platform",
+  "source_platform_revision": "main",
+  "schema_bundle_version": "0.1.0"
+}
