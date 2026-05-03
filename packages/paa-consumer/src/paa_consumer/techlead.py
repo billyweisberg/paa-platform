@@ -831,7 +831,7 @@ def load_traceability_section(db_container, db_name, db_user, project_slug, acti
             last_transition_at
           FROM paa.v_work_item_full_chain_traceability
           WHERE project_slug = {sql_literal(project_slug)}
-            AND acceptance_decision = 'accepted'
+            AND full_chain_state = 'accepted_full_chain'
           ORDER BY COALESCE(acceptance_created_at, last_transition_at) DESC NULLS LAST, issue_number DESC
           LIMIT 1
         ) t;
