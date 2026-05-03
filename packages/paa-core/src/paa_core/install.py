@@ -1,0 +1,191 @@
+"""Repo-local install/update helpers for PAA runtime payloads."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, UTC
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory
+
+PLATFORM_VERSION = "0.1.0"
+SCHEMA_BUNDLE_VERSION = "0.1.0"
+
+
+@dataclass(frozen=True)
+class InstallResult:
+    """Summary of a repo-local install/update run."""
+
+    repo_root: Path
+    install_mode: str
+    codex_install_root: Path
+    runtime_data_root: Path
+    platform_revision: str
+
+
+@dataclass(frozen=True)
+class AuthorityInstallResult:
+    """Summary of an authority-package install into a consumer repo."""
+
+    repo_root: Path
+    package_root: Path
+    authority_install_root: Path
+
+
+def platform_repo_root() -> Path:
+    """Resolve the platform repo root from the source tree layout."""
+
+    return Path(__file__).resolve().parents[4]
+
+
+def platform_revision() -> str:
+    """Resolve the current platform git revision."""
+
+    root = platform_repo_root()
+    return (
+        subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        .stdout.strip()
+    )
+
+
+def _copy_tree(src: Path, dst: Path) -> None:
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+
+
+def _copy_file(src: Path, dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def _write_wrapper(script_path: Path, module_name: str) -> None:
+    script_path.write_text(
+        "#!/opt/homebrew/bin/python3.12\n"
+        "from __future__ import annotations\n\n"
+        "import sys\n"
+        "from pathlib import Path\n\n"
+        "repo_root = Path(__file__).resolve().parents[3]\n"
+        "lib_root = repo_root / '.codex' / 'paa' / 'lib'\n"
+        "sys.path.insert(0, str(lib_root))\n\n"
+        f"from {module_name}.__main__ import main\n\n"
+        "raise SystemExit(main())\n"
+    )
+    script_path.chmod(0o755)
+
+
+def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[str], example_config_name: str) -> InstallResult:
+    root = platform_repo_root()
+    codex_root = ensure_directory(repo_root / CODEX_INSTALL_ROOT)
+    runtime_root = ensure_directory(repo_root / PROJECT_DATA_ROOT)
+
+    ensure_directory(codex_root / "bin")
+    ensure_directory(codex_root / "lib")
+    ensure_directory(codex_root / "schemas" / "authority-package")
+    ensure_directory(codex_root / "templates" / "configs")
+
+    for package_name in package_names:
+        src = root / "packages" / package_name / "src"
+        pkg_dirs = [p for p in src.iterdir() if p.is_dir()]
+        for pkg_dir in pkg_dirs:
+            _copy_tree(pkg_dir, codex_root / "lib" / pkg_dir.name)
+
+    schema_root = root / "schemas" / "authority-package"
+    for schema_path in schema_root.glob("*.json"):
+        _copy_file(schema_path, codex_root / "schemas" / "authority-package" / schema_path.name)
+
+    templates_root = root / "templates" / "configs"
+    for template_path in templates_root.glob("*.json"):
+        _copy_file(template_path, codex_root / "templates" / "configs" / template_path.name)
+
+    _copy_file(templates_root / example_config_name, codex_root / "project-config.example.json")
+
+    _write_json(
+        codex_root / "install-metadata.json",
+        {
+            "platform_version": PLATFORM_VERSION,
+            "install_mode": mode,
+            "installed_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "source_platform_repo": "https://github.com/billyweisberg/paa-platform",
+            "source_platform_revision": platform_revision(),
+            "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
+        },
+    )
+
+    return InstallResult(
+        repo_root=repo_root,
+        install_mode=mode,
+        codex_install_root=codex_root,
+        runtime_data_root=runtime_root,
+        platform_revision=platform_revision(),
+    )
+
+
+def install_producer_runtime(repo_root: Path) -> InstallResult:
+    """Install or update the producer-mode repo-local PAA payload."""
+
+    result = _install_common_layout(
+        repo_root,
+        mode="producer",
+        package_names=["paa-core", "paa-producer"],
+        example_config_name="project-config.producer.example.json",
+    )
+    ensure_directory(result.runtime_data_root / "publish")
+    ensure_directory(result.runtime_data_root / "cache")
+    _write_wrapper(result.codex_install_root / "bin" / "paa-producer", "paa_producer")
+    (result.codex_install_root / "README.md").write_text(
+        "# Repo-local PAA install\n\n"
+        "This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
+    )
+    return result
+
+
+def install_consumer_runtime(repo_root: Path) -> InstallResult:
+    """Install or update the consumer-mode repo-local PAA payload."""
+
+    result = _install_common_layout(
+        repo_root,
+        mode="consumer",
+        package_names=["paa-core", "paa-consumer"],
+        example_config_name="project-config.consumer.example.json",
+    )
+    for name in ["authority/current", "claims", "queue-state", "artifacts", "evidence", "cache", "reports"]:
+        ensure_directory(result.runtime_data_root / name)
+    _write_wrapper(result.codex_install_root / "bin" / "paa-consumer", "paa_consumer")
+    (result.codex_install_root / "README.md").write_text(
+        "# Repo-local PAA install\n\n"
+        "This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"
+    )
+    return result
+
+
+def install_authority_package(repo_root: Path, package_root: Path, authority_install_root: Path | None = None) -> AuthorityInstallResult:
+    """Install a published authority package into a consumer repo runtime root."""
+
+    destination = authority_install_root or (repo_root / PROJECT_DATA_ROOT / "authority" / "current")
+    if destination.exists():
+        shutil.rmtree(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    for child in package_root.iterdir():
+        target = destination / child.name
+        if child.is_dir():
+            shutil.copytree(child, target)
+        else:
+            shutil.copy2(child, target)
+    return AuthorityInstallResult(
+        repo_root=repo_root,
+        package_root=package_root,
+        authority_install_root=destination,
+    )

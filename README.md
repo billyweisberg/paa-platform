@@ -46,52 +46,54 @@ The platform must also support a greenfield or tightly-coupled variant:
 4. unified producer-consumer repo
    - source authority + implementation + installed PAA runtime in one repo
 
-## Initial layout
+## Current documentation map
 
-```text
-paa-platform/
-  README.md
-  docs/
-    architecture/
-    install/
-    operations/
-  packages/
-    paa-core/
-    paa-producer/
-    paa-consumer/
-  schemas/
-    authority-package/
-    handoff-packets/
-    runtime-records/
-  scripts/
-    install/
-    publish/
-    runtime/
-    db/
-  templates/
-    automations/
-    skills/
-    configs/
-  migrations/
-  tests/
-    unit/
-    integration/
-    contract/
-```
-
-## First milestones
-
-1. define the platform repo itself
-2. define the install contract and authority package format
-3. extract publication/runtime tooling out of source repos and home-folder state without changing behavior first
-
-## Current source architecture docs
-
-The initial architecture lives in:
-
+### Design
 - `docs/2_Design/2026-05-03-paa-platform-repo-design.md`
 - `docs/2_Design/2026-05-03-paa-install-contract-and-extraction-plan.md`
+- `docs/2_Design/2026-05-03-paa-staged-lifecycle.md`
+- `docs/2_Design/2026-05-03-authority-architect-vs-delivery-architect.md`
+- `docs/2_Design/2026-05-03-coder-run-brief.md`
+- `docs/2_Design/2026-05-03-coder-run-brief-packet-integration.md`
+- `docs/2_Design/2026-05-03-coder-brief-derivation-method.md`
+- `docs/2_Design/2026-05-03-coder-brief-field-derivation-matrix.md`
+- `docs/2_Design/2026-05-03-stage1-design-package-contract.md`
+- `docs/2_Design/2026-05-03-component-dependency-graph-contract.md`
+- `docs/2_Design/2026-05-03-stage1-schema-and-record-shape.md`
+- `docs/2_Design/2026-05-03-coder-brief-sequencing.md`
 
-## Status
+### Planning
+- `docs/3_Plan/2026-05-03-paa-platform-inventory-matrix.md`
 
-This repo is currently a skeleton and architecture baseline. The first implementation slice should move shared publication and runtime tool surfaces here without changing external behavior yet.
+### Build
+- `docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md`
+- `docs/4_Build/2026-05-03-paa-backed-architect-packet-brief-resolution.md`
+- `docs/4_Build/2026-05-03-architect-packet-compiler.md`
+- `docs/4_Build/2026-05-03-dev-and-qa-packet-compilers.md`
+
+### Deploy
+- `docs/6_Deploy/install-readme.md`
+- `docs/6_Deploy/producer-publication.md`
+- `docs/6_Deploy/2026-05-03-packet-compilation-persistence.md`
+- `docs/6_Deploy/2026-05-03-compiled-packet-transport-trace.md`
+
+### Monitor
+- `docs/7_Monitor/2026-05-03-techlead-traceability-reporting.md`
+
+## Current implementation status
+
+Implemented now:
+- initial `paa-core`, `paa-producer`, and `paa-consumer` package scaffolds
+- config-driven authority publication
+- producer runtime install/update command
+- consumer runtime install/update command
+- consumer authority-package install command
+- first formal platform inventory matrix
+
+Still to extract or formalize:
+- readiness materializer runtime
+- packet compiler runtime
+- queue/claim runtime
+- TechLead reporting runtime
+- project-local automation and skill install/update flows
+- stale-workspace startup validation

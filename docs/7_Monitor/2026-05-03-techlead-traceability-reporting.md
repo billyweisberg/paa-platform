@@ -1,0 +1,43 @@
+# TechLead Traceability Reporting
+
+The single-slice full-chain proof is now promoted into two reusable reporting surfaces:
+
+1. `paa.v_work_item_full_chain_traceability`
+2. the TechLead report `traceability` section
+
+## View purpose
+
+The view provides a one-row reporting surface per work item that resolves the most relevant current chain state across:
+
+- work item identity
+- latest design package
+- selected coder brief
+- latest compiled Dev packet run
+- latest Dev queue/handoff state
+- latest Dev evidence summary
+- latest compiled QA packet run
+- latest QA queue/handoff state
+- latest QA evidence summary
+- latest Architect acceptance state
+
+It intentionally stays honest for mixed-history items:
+
+- legacy slices like issue `#71` or issue `#73` can still show acceptance state without pretending they have a Stage 1 design package or coder brief
+- the proving slice issue `#201` shows the full modern chain as `accepted_full_chain`
+
+## TechLead report purpose
+
+The TechLead report now includes a `traceability` section that answers two practical questions:
+
+1. Is the full-chain reporting view available in the live PAA database?
+2. What is the latest accepted full-chain slice, and what does the currently active work item look like in that view?
+
+This is the right reporting level for TechLead.
+It gives a quick confidence anchor without forcing the operator to run the full proof SQL manually.
+
+## Why both surfaces matter
+
+- the SQL view is the canonical reusable join surface for tools and future reports
+- the TechLead section is the lightweight operational summary for humans
+
+That separation keeps the system disciplined.

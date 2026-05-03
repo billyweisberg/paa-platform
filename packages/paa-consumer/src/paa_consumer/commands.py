@@ -1,6 +1,8 @@
 """Consumer command definitions."""
 
 CONSUMER_COMMANDS = (
+    "install-consumer-runtime",
+    "update-consumer-runtime",
     "install-authority-package",
     "resolve-active-state",
     "check-queue",
@@ -11,4 +13,3 @@ CONSUMER_COMMANDS = (
     "materialize-architect-cycle-packet",
     "techlead-status",
 )
-
