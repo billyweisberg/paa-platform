@@ -693,7 +693,9 @@ def persist_architect_acceptance(
       LIMIT 1
     ), update_current AS (
       UPDATE paa.work_items wi
-      SET status = 'accepted'::paa.work_item_status
+      SET status = 'accepted'::paa.work_item_status,
+          authority_version_id = (SELECT authority_version_id FROM chosen_version),
+          updated_at = now()
       FROM current_work_item cwi
       WHERE wi.work_item_id = cwi.work_item_id
       RETURNING wi.work_item_id
@@ -727,7 +729,14 @@ def persist_architect_acceptance(
       {sql_literal(merge_commit_sha)},
       {sql_literal(metadata)}::jsonb,
       {sql_literal(published_at)}::timestamptz
-    FROM project, current_work_item, architect_agent, architect_role
+    FROM project
+    JOIN current_work_item ON TRUE
+    JOIN architect_agent ON TRUE
+    JOIN architect_role ON TRUE
+    LEFT JOIN linked_handoff ON TRUE
+    LEFT JOIN chosen_version ON TRUE
+    LEFT JOIN update_current ON TRUE
+    LEFT JOIN update_next ON TRUE
     WHERE NOT EXISTS (
       SELECT 1
       FROM paa.acceptance_events ae
@@ -1733,8 +1742,8 @@ def build_parser():
     p.add_argument('--project-slug', default=PAA_PROJECT_SLUG)
     p.add_argument('--completed-issue-number', type=int, required=True)
     p.add_argument('--completed-task-id', required=True)
-    p.add_argument('--next-issue-number', type=int, required=True)
-    p.add_argument('--next-task-id', required=True)
+    p.add_argument('--next-issue-number', type=int)
+    p.add_argument('--next-task-id')
     p.add_argument('--authority-version', required=True)
     p.add_argument('--published-at', required=True)
     p.add_argument('--merge-commit-sha')

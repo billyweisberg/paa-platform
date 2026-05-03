@@ -98,6 +98,15 @@ def _install_rendered_tree(src: Path, dst: Path, replacements: dict[str, str]) -
             continue
         _render_text_template(path, target, replacements)
 
+def _prune_installed_dirs(root: Path, allowed_dirs: set[str]) -> None:
+    if not root.exists():
+        return
+    for child in root.iterdir():
+        if child.is_file():
+            continue
+        if child.name not in allowed_dirs:
+            shutil.rmtree(child)
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -211,6 +220,15 @@ def install_producer_runtime(repo_root: Path) -> InstallResult:
     ensure_directory(result.runtime_data_root / "cache")
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
     _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
+    _prune_installed_dirs(
+        repo_root / '.codex' / 'skills',
+        {
+            'fractal-core-authority',
+            'fractal-core-dev-result',
+            'fractal-core-qa-review',
+            'fractal-core-architect-handoff',
+        },
+    )
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         "This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
