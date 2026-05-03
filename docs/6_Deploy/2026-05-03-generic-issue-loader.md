@@ -12,6 +12,17 @@ The loader materializes:
 - `paa.coder_brief_sequence_states`
 - `paa.verification_obligations`
 
+## Producer flow integration
+
+Repo-local producer architect packet compilation now calls this loader automatically for the target next issue before resolving the package and brief from PAA:
+
+```bash
+paa-producer authority materialize-architect-packet ...
+```
+
+By default this keeps source artifacts and PAA synchronized during the normal producer flow.
+Use `--skip-source-sync` only for debugging or controlled recovery work.
+
 ## Command
 
 ```bash

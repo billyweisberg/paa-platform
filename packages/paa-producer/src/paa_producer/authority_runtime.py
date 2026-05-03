@@ -9,7 +9,10 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from paa_core.config import load_producer_project_config
+from paa_core.runtime_paths import repo_root_from_cwd
 from paa_core.runtime_paths import default_installed_artifact_path, default_installed_manifest_path, producer_manifest_candidates
+from paa_producer.issue_loader import load_issue_into_paa
 
 MANIFEST_ENV = 'FRACTAL_CORE_AUTHORITY_MANIFEST'
 CURRENT_MANIFEST = default_installed_manifest_path()
@@ -96,6 +99,34 @@ def resolve_work_item_id(project_slug: str, issue_number: Optional[int]) -> Opti
     """
     out = run_psql(sql).strip()
     return out or None
+
+
+def resolve_producer_project_config_path(repo_root: Path) -> Path:
+    config_path = repo_root / '.codex' / 'paa' / 'project-config.json'
+    if not config_path.exists():
+        raise FileNotFoundError(
+            f'No producer project config found at {config_path}. '
+            'Install producer runtime and configure .codex/paa/project-config.json first.'
+        )
+    return config_path
+
+
+def sync_issue_source_into_paa(
+    *,
+    repo_root: Path,
+    issue_number: int,
+    verification_key_prefix: str | None = None,
+    scope_authority_label: str | None = None,
+) -> dict:
+    config = load_producer_project_config(resolve_producer_project_config_path(repo_root))
+    return load_issue_into_paa(
+        repo_root=repo_root,
+        config=config,
+        issue_number=issue_number,
+        verification_key_prefix=verification_key_prefix,
+        scope_authority_label=scope_authority_label,
+        dry_run=False,
+    )
 
 
 def persist_packet_compilation(
@@ -1289,6 +1320,13 @@ def cmd_materialize_coder_brief(args):
 
 def cmd_materialize_architect_packet(args):
     manifest, manifest_data = load_manifest(args.manifest)
+    source_to_paa_sync = None
+    if not getattr(args, 'skip_source_sync', False):
+        repo_root = repo_root_from_cwd()
+        source_to_paa_sync = sync_issue_source_into_paa(
+            repo_root=repo_root,
+            issue_number=args.next_issue_number,
+        )
     package = load_design_package_from_paa(
         project_slug=args.project_slug,
         package_id_external=args.package_id_external,
@@ -1440,6 +1478,12 @@ def cmd_materialize_architect_packet(args):
         'output_path': str(Path(args.output).expanduser().resolve()) if args.output else None,
         'review_output_path': str(Path(args.review_output).expanduser().resolve()) if args.review_output else None,
         'automation_run_id': automation_run_id,
+        'source_to_paa_sync': {
+            'issue_number': source_to_paa_sync.get('issue_number'),
+            'package_id': source_to_paa_sync.get('package_id'),
+            'brief_ids': source_to_paa_sync.get('brief_ids'),
+            'materialized_obligation_count': source_to_paa_sync.get('materialized_obligation_count'),
+        } if source_to_paa_sync else None,
         'coder_brief_resolution': payload['payload']['coder_brief_resolution'],
         'packet': payload if not args.output else None,
     }, indent=2))
@@ -1800,6 +1844,7 @@ def build_parser():
     p.add_argument('--output')
     p.add_argument('--review-output')
     p.add_argument('--persist-db', action='store_true')
+    p.add_argument('--skip-source-sync', action='store_true')
     p.set_defaults(func=cmd_materialize_architect_packet)
 
     p = sub.add_parser('materialize-slice-result-packet')
