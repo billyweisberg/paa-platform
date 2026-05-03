@@ -20,6 +20,8 @@ class ProducerProjectConfig:
     artifact_examples_root: str
     publication_output_root: str
     github_repo: str
+    supporting_docs: list[str]
+    artifact_paths: list[str]
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,8 @@ def load_producer_project_config(path: Path) -> ProducerProjectConfig:
         artifact_examples_root=data["artifact_examples_root"],
         publication_output_root=data["publication_output_root"],
         github_repo=data["github_repo"],
+        supporting_docs=data.get("supporting_docs", []),
+        artifact_paths=data.get("artifact_paths", []),
     )
 
 

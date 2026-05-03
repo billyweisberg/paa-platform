@@ -5,5 +5,17 @@
   "supporting_docs_root": "docs/architecture/tom-baby7-fractal-core",
   "artifact_examples_root": "docs/architecture/tom-baby7-fractal-core/artifact-examples",
   "publication_output_root": ".project/data/paa/publish",
-  "github_repo": "billyweisberg/fractal-core-python"
+  "github_repo": "billyweisberg/fractal-core-python",
+  "supporting_docs": [
+    "32-config-and-tuning-contract.md",
+    "11-parity-and-tolerances.md",
+    "37-port-version-targeting.md",
+    "42-rabbitmq-handoff-system.md",
+    "44-python-implementation-roadmap.md",
+    "47-qa-verification-gate.md",
+    "48-git-and-github-authority-model.md",
+    "49-authority-task-authoring-workflow.md",
+    "50-authority-issue-materialization.md"
+  ],
+  "artifact_paths": []
 }

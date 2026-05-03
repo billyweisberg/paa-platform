@@ -128,3 +128,18 @@ def build_authority_package(
             manifest_path=destination_root / "authority" / paths.manifest_path.name,
             authority_version=manifest["project"]["authority_version"],
         )
+
+
+def publish_from_project_config(
+    *,
+    repo_root: Path,
+    config: ProducerProjectConfig,
+) -> PublishResult:
+    """Publish an authority package using a producer project config."""
+
+    paths = resolve_publish_paths(repo_root, config)
+    return build_authority_package(
+        paths=paths,
+        supporting_docs=config.supporting_docs,
+        artifact_paths=config.artifact_paths,
+    )
