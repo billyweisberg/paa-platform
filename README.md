@@ -89,8 +89,8 @@ paa-platform/
 
 The initial architecture lives in:
 
-- `docs/architecture/113-paa-platform-repo-design.md`
-- `docs/architecture/114-paa-install-contract-and-extraction-plan.md`
+- `docs/2_Design/2026-05-03-paa-platform-repo-design.md`
+- `docs/2_Design/2026-05-03-paa-install-contract-and-extraction-plan.md`
 
 ## Status
 

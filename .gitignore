@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local planning snapshots with internal machine paths
+docs/3_Plan/2026-05-03-current-state-vs-target-state-snapshot.md
