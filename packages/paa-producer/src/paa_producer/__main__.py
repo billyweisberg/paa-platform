@@ -9,6 +9,7 @@ from pathlib import Path
 from paa_core.config import load_producer_project_config
 from paa_core.install import install_producer_runtime
 from paa_core.readiness import main as readiness_main
+from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
 from paa_producer.commands import PRODUCER_COMMANDS
 from paa_producer.derive_artifacts import derive_inventory
@@ -65,7 +66,7 @@ def main() -> int:
         return 0
 
     if args.command == 'smoke-test':
-        repo_root = Path(args.repo_root or Path.cwd()).resolve()
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(run_smoke_test(repo_root), indent=2))
         return 0
 
@@ -73,7 +74,7 @@ def main() -> int:
         return authority_main(remainder)
 
     if args.command == 'derive-artifacts':
-        repo_root = Path(args.repo_root or Path.cwd()).resolve()
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(derive_inventory(repo_root), indent=2))
         return 0
 

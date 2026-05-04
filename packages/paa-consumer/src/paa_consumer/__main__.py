@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from paa_core.install import install_consumer_runtime
+from paa_core.runtime_paths import repo_root_from_cwd
 from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
 from paa_consumer.inbox import run_queue_command
@@ -66,7 +67,7 @@ def main() -> int:
         argp.add_argument('--validate-schema', action='store_true')
         argp.add_argument('--output')
         subargs = argp.parse_args(remainder)
-        repo_root = Path(subargs.repo_root or Path.cwd()).resolve()
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
         output_path = Path(subargs.output).resolve() if subargs.output else None
         print(json.dumps(
             run_smoke_test(
@@ -111,7 +112,7 @@ def main() -> int:
         return techlead_main([*remainder])
 
     if args.command == 'validate-runtime':
-        repo_root = Path(args.repo_root or Path.cwd()).resolve()
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(validate(repo_root), indent=2))
         return 0
 
