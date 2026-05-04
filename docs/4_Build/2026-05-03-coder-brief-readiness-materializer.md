@@ -87,8 +87,8 @@ Base run against the retirement subsystem proving set:
 
 ```bash
 python3 future `paa-platform` readiness materializer command \
-  --design-package /Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/artifact-examples/stage1_design_package.retirement_subsystem_decomposition.example.json \
-  --brief-dir /Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/artifact-examples \
+  --design-package <producer_repo>/docs/architecture/tom-baby7-fractal-core/artifact-examples/stage1_design_package.retirement_subsystem_decomposition.example.json \
+  --brief-dir <producer_repo>/docs/architecture/tom-baby7-fractal-core/artifact-examples \
   --write
 ```
 
@@ -116,8 +116,8 @@ Simulated rerun after resolver contract readiness:
 
 ```bash
 python3 future `paa-platform` readiness materializer command \
-  --design-package /Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/artifact-examples/stage1_design_package.retirement_subsystem_decomposition.example.json \
-  --brief-dir /Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/artifact-examples \
+  --design-package <producer_repo>/docs/architecture/tom-baby7-fractal-core/artifact-examples/stage1_design_package.retirement_subsystem_decomposition.example.json \
+  --brief-dir <producer_repo>/docs/architecture/tom-baby7-fractal-core/artifact-examples \
   --set-edge-status edge-executor-needs-resolver-contract=contract_ready \
   --set-edge-status edge-diagnostics-needs-resolver-contract=contract_ready \
   --write
