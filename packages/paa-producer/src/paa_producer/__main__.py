@@ -15,6 +15,7 @@ from paa_producer.derive_artifacts import derive_inventory
 from paa_producer.issue_loader import load_issue_into_paa
 from paa_producer.obligation_loader import materialize_verification_obligations
 from paa_producer.publish import publish_from_project_config
+from paa_producer.smoke_test import run_smoke_test
 
 
 def main() -> int:
@@ -61,6 +62,11 @@ def main() -> int:
             'manifest_path': str(result.manifest_path),
             'authority_version': result.authority_version,
         }, indent=2))
+        return 0
+
+    if args.command == 'smoke-test':
+        repo_root = Path(args.repo_root or Path.cwd()).resolve()
+        print(json.dumps(run_smoke_test(repo_root), indent=2))
         return 0
 
     if args.command == 'authority':

@@ -11,6 +11,7 @@ from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
 from paa_consumer.inbox import run_queue_command
 from paa_consumer.runtime_guardrails import validate
+from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
 
 
@@ -53,6 +54,29 @@ def main() -> int:
             parser.error('install-authority-package requires --repo-root and --package-root')
         destination = Path(args.authority_install_root).resolve() if args.authority_install_root else None
         print(json.dumps(install_authority(Path(args.repo_root).resolve(), Path(args.package_root).resolve(), destination), indent=2))
+        return 0
+
+    if args.command == 'smoke-test':
+        argp = argparse.ArgumentParser(
+            prog='paa-consumer smoke-test',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', default=args.repo_root)
+        argp.add_argument('--expected-branch')
+        argp.add_argument('--validate-schema', action='store_true')
+        argp.add_argument('--output')
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root or Path.cwd()).resolve()
+        output_path = Path(subargs.output).resolve() if subargs.output else None
+        print(json.dumps(
+            run_smoke_test(
+                repo_root,
+                expected_branch=subargs.expected_branch,
+                validate_schema_flag=subargs.validate_schema,
+                output_path=output_path,
+            ),
+            indent=2,
+        ))
         return 0
 
     if args.command == 'queue-check':
