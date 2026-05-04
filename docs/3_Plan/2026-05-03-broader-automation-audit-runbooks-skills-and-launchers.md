@@ -57,11 +57,11 @@ Launch helpers currently do the right thing with topology:
 - they do not reference `$HOME/.codex`
 - they do not reference old producer/source or role-workspace paths
 
-But they currently hardcode:
+At the time of the original audit pass, they still hardcoded:
 - `/opt/homebrew/bin/python3.12`
 
-That is not a topology bug.
-It is the upcoming environment/bootstrap problem and should be handled in the dedicated `uv` strategy slice.
+That was not a topology bug.
+It was the environment/bootstrap problem and has since been addressed in the first-pass `uv` wrapper update.
 
 Affected launch helpers include:
 - `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer`
@@ -92,7 +92,7 @@ That is a prompt-quality and workflow-review issue, not a topology-residue issue
 | Repo-local installed skills | pass | no old topology references found |
 | Project-pack skills | pass | no old topology references found |
 | Repo-local readme/runbook surfaces | pass | current repo-local guidance is aligned |
-| Repo-local launch helpers | pass with follow-up | topology-clean; hardcoded interpreter path remains for `uv` slice |
+| Repo-local launch helpers | pass with follow-up | topology-clean; first-pass `uv` wrapper update completed, full runtime-project bootstrap still pending |
 | Platform build docs | cleanup required and completed | one old source-lane example updated |
 | Prompt quality | follow-up required | not a path/reference failure, but still needs review |
 

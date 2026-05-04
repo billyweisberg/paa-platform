@@ -182,7 +182,7 @@ Have we read all the docs related to PAA that were in the `appdev` repo? Are rem
 ## Item 6. Shared `uv` Environment
 
 ### Current state
-- We are still using explicit Python paths like `/opt/homebrew/bin/python3.12` in several places.
+- First-pass wrapper cleanup is done, but the full `uv` runtime/bootstrap contract is still not complete.
 - We do not yet have a single, documented `uv` environment setup used consistently by:
   - interactive sessions
   - repo-local wrappers

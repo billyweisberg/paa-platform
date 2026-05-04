@@ -13,8 +13,9 @@ It addresses two related concerns:
   - `uv 0.8.13`
 - default `python3` in the shell is still:
   - `Python 3.9.6`
-- the PAA wrappers currently hardcode:
-  - `/opt/homebrew/bin/python3.12`
+- the repo-local PAA wrappers now:
+  - prefer `uv` with Python 3.12
+  - fall back only to `python3 >= 3.12` if `uv` is unavailable
 - `paa-platform` package pyprojects require:
   - `>=3.12`
 - `fractal-core-python` already uses `uv` in CI and developer commands
@@ -132,8 +133,8 @@ Every human session and every automation run should use the same Python toolchai
 
 The system should stop depending on:
 - shell-default `python3` being correct
-- hardcoded `/opt/homebrew/bin/python3.12`
 - manually remembered virtualenv activation
+- machine-specific Python path assumptions
 
 ## Recommended target model
 
@@ -191,9 +192,9 @@ Automations should:
 ## Short-term vs target-state bootstrap
 
 ### Short-term acceptable state
-For a short transition window, the current hardcoded 3.12 wrappers are acceptable because they are at least consistent.
+For the current transition window, repo-local wrappers prefer `uv` and fall back to `python3 >= 3.12`.
 
-But they should be treated as transitional.
+That is acceptable as a first pass, but it should still be treated as transitional until the full repo-local runtime project layout is in place.
 
 ### Target state
 Replace generated Python shebang wrappers with a `uv`-managed bootstrap path.
@@ -233,7 +234,7 @@ The important contract is:
 1. add repo-local `.codex/config.toml` to the canonical producer and consumer repos
 2. add `.python-version` pins to canonical producer, consumer, and platform repos where appropriate
 3. define generated UV-managed runtime layout under `.codex/paa/runtime/`
-4. update installer-generated wrappers to execute through `uv`, not `/opt/homebrew/bin/python3.12`
+4. update installer-generated wrappers to execute through `uv`, not a hardcoded system Python path
 5. validate producer and consumer repo-local commands under that model
 6. validate automation runs under the same model
 

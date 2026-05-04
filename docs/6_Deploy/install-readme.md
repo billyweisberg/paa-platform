@@ -8,7 +8,7 @@ This directory documents producer-mode and consumer-mode installation flows for 
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
-/opt/homebrew/bin/python3.12 -m paa_producer install-producer-runtime \
+uv run --python 3.12 --isolated python -m paa_producer install-producer-runtime \
   --repo-root /absolute/path/to/producer-repo \
   --project-pack fractal-core
 ```
@@ -17,7 +17,7 @@ Alias:
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
-/opt/homebrew/bin/python3.12 -m paa_producer update-producer-runtime \
+uv run --python 3.12 --isolated python -m paa_producer update-producer-runtime \
   --repo-root /absolute/path/to/producer-repo \
   --project-pack fractal-core
 ```
@@ -41,7 +41,7 @@ The producer install selects project-specific skills and automations from:
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-consumer/src \
-/opt/homebrew/bin/python3.12 -m paa_consumer install-consumer-runtime \
+uv run --python 3.12 --isolated python -m paa_consumer install-consumer-runtime \
   --repo-root /absolute/path/to/consumer-repo \
   --project-pack fractal-core
 ```
@@ -50,7 +50,7 @@ Alias:
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-consumer/src \
-/opt/homebrew/bin/python3.12 -m paa_consumer update-consumer-runtime \
+uv run --python 3.12 --isolated python -m paa_consumer update-consumer-runtime \
   --repo-root /absolute/path/to/consumer-repo \
   --project-pack fractal-core
 ```
@@ -79,7 +79,7 @@ The consumer install selects project-specific skills and automations from:
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-consumer/src \
-/opt/homebrew/bin/python3.12 -m paa_consumer install-authority-package \
+uv run --python 3.12 --isolated python -m paa_consumer install-authority-package \
   --repo-root /absolute/path/to/consumer-repo \
   --package-root /absolute/path/to/published-authority-package
 ```
