@@ -5,6 +5,45 @@
 Capture the next set of PAA migration and hardening concerns before changing more system flow.
 This note is intentionally operational. It records what we know now, what remains open, and the recommended sequencing.
 
+## Execution Checklist
+
+### Core audit
+- [ ] Classify every remaining PAA-related numbered doc in `/Users/billyweisberg/Repos/Individual-Centricity/appdev/docs/architecture/tom-baby7-fractal-core/`
+- [ ] Build a complete helper-script inventory across canonical repos and legacy surfaces
+- [ ] Confirm whether any live PAA runtime capability still exists only outside `paa-platform`
+
+### Automation hardening
+- [ ] Audit producer automation prompt, assumptions, and trigger model
+- [ ] Audit consumer automation prompts, assumptions, and trigger model
+- [ ] Validate all repo-local automations against current topology and role boundaries
+- [ ] Identify and remove prompt logic that is compensating for missing runtime checks
+
+### Runtime and environment
+- [ ] Decide the repo/worktree operating model for role execution
+- [ ] Define the shared `uv` environment/bootstrap model for sessions and automations
+- [ ] Decide the repo-level config strategy (`config.toml`, JSON, or both)
+- [ ] Validate repo-local wrappers and automation runs against the chosen environment model
+
+### Producer and consumer governance
+- [ ] Add `AGENTS.md` to `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- [ ] Define Authority Architect operating rules explicitly in producer repo docs
+- [ ] Reconfirm Delivery Architect boundaries in consumer-side automation/docs
+
+### Testing and validation
+- [ ] Create the end-to-end test matrix
+- [ ] Define how to run repeatable end-to-end tests from canonical repos
+- [ ] Validate the full chain: source load -> packets -> evidence -> TechLead -> accepted full chain
+
+### Documentation system
+- [ ] Define the lifecycle-folder documentation strategy
+- [ ] Define naming, supersession, and archive rules for lifecycle docs
+- [ ] Define ownership and update expectations for lifecycle docs
+
+### Portfolio readiness
+- [ ] Decide whether to add a generic `example-pack`
+- [ ] Define project-pack creation rules for the rest of the portfolio
+- [ ] Define the minimum onboarding checklist for installing PAA into another project
+
 ## Summary
 
 We have made real progress on:
