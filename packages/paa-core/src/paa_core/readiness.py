@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 STATUS_ORDER = {
     'undefined': 0,
@@ -335,7 +335,7 @@ def persist_to_db(
     run_psql(sql, db_container=db_container, db_name=db_name, db_user=db_user)
 
 
-def main() -> int:
+def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description='Materialize execution prerequisites and readiness into coder_run_brief artifacts.')
     parser.add_argument('--design-package', help='Path to the Stage 1 design package JSON artifact.')
     parser.add_argument('--dependency-graph', help='Optional path to dependency_graph_slice JSON. Defaults to embedded package graph.')
@@ -349,7 +349,7 @@ def main() -> int:
     parser.add_argument('--set-brief-readiness', action='append', default=[], help='Force a brief readiness class as brief_id=readiness_class.')
     parser.add_argument('--write', action='store_true', help='Persist updated briefs back to disk.')
     parser.add_argument('--db-write', action='store_true', help='Persist updated coder brief JSON and sequence state into PAA.')
-    args = parser.parse_args(argv)
+    args = parser.parse_args(list(argv) if argv is not None else None)
 
     if not args.design_package and not args.db_package_id_external:
         raise SystemExit('Pass either --design-package or --db-package-id-external.')
