@@ -98,6 +98,7 @@ def _install_rendered_tree(src: Path, dst: Path, replacements: dict[str, str]) -
             continue
         _render_text_template(path, target, replacements)
 
+
 def _prune_installed_dirs(root: Path, allowed_dirs: set[str]) -> None:
     if not root.exists():
         return
@@ -109,6 +110,22 @@ def _prune_installed_dirs(root: Path, allowed_dirs: set[str]) -> None:
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def _install_selected_rendered_dirs(
+    src_root: Path,
+    dst_root: Path,
+    replacements: dict[str, str],
+    allowed_dirs: set[str],
+) -> None:
+    dst_root.mkdir(parents=True, exist_ok=True)
+    for child in src_root.iterdir():
+        if child.is_file():
+            _render_text_template(child, dst_root / child.name, replacements)
+            continue
+        if child.name in allowed_dirs:
+            _install_rendered_tree(child, dst_root / child.name, replacements)
+    _prune_installed_dirs(dst_root, allowed_dirs)
 
 
 def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None:
@@ -126,6 +143,7 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
             'install',
             '--quiet',
             '--disable-pip-version-check',
+            '--no-compile',
             '--target',
             str(vendor_root),
             *package_specs,
@@ -229,6 +247,12 @@ def install_producer_runtime(repo_root: Path) -> InstallResult:
             'fractal-core-architect-handoff',
         },
     )
+    _install_selected_rendered_dirs(
+        platform_repo_root() / 'templates' / 'automations',
+        repo_root / '.codex' / 'automations',
+        replacements,
+        {'fractal-core-authority-architect-automation'},
+    )
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         "This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
@@ -252,7 +276,17 @@ def install_consumer_runtime(repo_root: Path) -> InstallResult:
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-consumer', 'paa_consumer')
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
     _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
-    _install_rendered_tree(platform_repo_root() / 'templates' / 'automations', repo_root / '.codex' / 'automations', replacements)
+    _install_selected_rendered_dirs(
+        platform_repo_root() / 'templates' / 'automations',
+        repo_root / '.codex' / 'automations',
+        replacements,
+        {
+            'fractal-core-delivery-architect-automation',
+            'fractal-core-qa-automation',
+            'fractal-core-techlead-automation',
+            'python-team-automation',
+        },
+    )
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         "This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"

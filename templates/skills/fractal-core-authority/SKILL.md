@@ -9,6 +9,17 @@ Use repo-local producer tooling:
 {{REPO_ROOT}}/.codex/paa/bin/paa-producer authority summary
 {{REPO_ROOT}}/.codex/paa/bin/paa-producer authority current
 {{REPO_ROOT}}/.codex/paa/bin/paa-producer authority task --issue-number 106
+{{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-architect-packet \
+  --package-id-external <package_id_external> \
+  --repo <consumer_repo_root> \
+  --accepted-pr-number <accepted_pr_number> \
+  --accepted-pr-url <accepted_pr_url> \
+  --closed-issue-number <closed_issue_number> \
+  --closed-issue-url <closed_issue_url> \
+  --next-issue-number <next_issue_number> \
+  --next-issue-url <next_issue_url> \
+  --baseline-file <baseline_json> \
+  --persist-db
 {{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-slice-result-packet --persist-db ...
 ```
 

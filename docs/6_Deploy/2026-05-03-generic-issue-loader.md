@@ -23,6 +23,12 @@ paa-producer authority materialize-architect-packet ...
 By default this keeps source artifacts and PAA synchronized during the normal producer flow.
 Use `--skip-source-sync` only for debugging or controlled recovery work.
 
+Producer installs also render the repo-local Authority Architect automation template:
+
+- `fractal-core-authority-architect-automation`
+
+That automation is expected to use the repo-local producer command surface above, so source-to-PAA synchronization happens in the normal producer workflow rather than as a one-off recovery step.
+
 ## Command
 
 ```bash

@@ -1710,7 +1710,10 @@ def cmd_materialize_qa_verification_packet(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description='Fractal Core project authority helper')
+    parser = argparse.ArgumentParser(
+        description='Fractal Core project authority helper',
+        allow_abbrev=False,
+    )
     sub = parser.add_subparsers(dest='command')
 
     p = sub.add_parser('summary')

@@ -15,7 +15,7 @@ from paa_consumer.techlead import main as techlead_main
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog='paa-consumer')
+    parser = argparse.ArgumentParser(prog='paa-consumer', allow_abbrev=False)
     parser.add_argument('command', nargs='?', default='help')
     parser.add_argument('--repo-root')
     parser.add_argument('--package-root')

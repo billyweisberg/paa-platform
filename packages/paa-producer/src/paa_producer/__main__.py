@@ -18,7 +18,7 @@ from paa_producer.publish import publish_from_project_config
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog='paa-producer')
+    parser = argparse.ArgumentParser(prog='paa-producer', allow_abbrev=False)
     parser.add_argument('command', nargs='?', default='help')
     parser.add_argument('--repo-root')
     parser.add_argument('--project-config')
@@ -70,7 +70,10 @@ def main() -> int:
         return readiness_main(remainder)
 
     if args.command == 'materialize-verification-obligations':
-        argp = argparse.ArgumentParser(prog='paa-producer materialize-verification-obligations')
+        argp = argparse.ArgumentParser(
+            prog='paa-producer materialize-verification-obligations',
+            allow_abbrev=False,
+        )
         argp.add_argument('--repo-root', default=args.repo_root, required=args.repo_root is None)
         argp.add_argument('--project-config', default=args.project_config, required=args.project_config is None)
         argp.add_argument('--issue-number', required=True, type=int)
@@ -94,7 +97,10 @@ def main() -> int:
         return 0
 
     if args.command == 'load-issue-into-paa':
-        argp = argparse.ArgumentParser(prog='paa-producer load-issue-into-paa')
+        argp = argparse.ArgumentParser(
+            prog='paa-producer load-issue-into-paa',
+            allow_abbrev=False,
+        )
         argp.add_argument('--repo-root', default=args.repo_root, required=args.repo_root is None)
         argp.add_argument('--project-config', default=args.project_config, required=args.project_config is None)
         argp.add_argument('--issue-number', required=True, type=int)
