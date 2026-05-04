@@ -177,6 +177,9 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
             ],
             check=True,
         )
+        lock_path = vendor_root / ".lock"
+        if lock_path.exists():
+            lock_path.unlink()
         return
     subprocess.run(
         [
