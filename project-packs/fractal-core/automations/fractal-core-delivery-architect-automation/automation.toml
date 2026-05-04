@@ -4,7 +4,7 @@ kind = "cron"
 name = "Fractal Core Delivery Architect Automation"
 prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-authority/SKILL.md)
 [$fractal-core-inbox]({{REPO_ROOT}}/.codex/skills/fractal-core-inbox/SKILL.md)
-[$fractal-core-architect-handoff]({{REPO_ROOT}}/.codex/skills/fractal-core-architect-handoff/SKILL.md)
+[$fractal-core-techlead]({{REPO_ROOT}}/.codex/skills/fractal-core-techlead/SKILL.md)
 
 Act as Delivery Architect only.
 Use repo-local consumer runtime only.
