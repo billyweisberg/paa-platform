@@ -1,0 +1,32 @@
+{
+  "pack_id": "fractal-core",
+  "producer": {
+    "skills": [
+      "fractal-core-authority",
+      "fractal-core-dev-result",
+      "fractal-core-qa-review",
+      "fractal-core-architect-handoff"
+    ],
+    "automations": [
+      "fractal-core-authority-architect-automation"
+    ]
+  },
+  "consumer": {
+    "skills": [
+      "fractal-core-authority",
+      "fractal-core-dev-result",
+      "fractal-core-qa-review",
+      "fractal-core-architect-handoff",
+      "fractal-core-handoff-common",
+      "fractal-core-inbox",
+      "fractal-core-queue-admin",
+      "fractal-core-techlead"
+    ],
+    "automations": [
+      "fractal-core-delivery-architect-automation",
+      "fractal-core-qa-automation",
+      "fractal-core-techlead-automation",
+      "python-team-automation"
+    ]
+  }
+}

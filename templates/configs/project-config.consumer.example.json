@@ -1,5 +1,6 @@
 {
   "project_id": "fractal-core-python",
+  "project_pack": "fractal-core",
   "mode": "consumer",
   "authority_install_root": ".project/data/paa/authority/current",
   "runtime_data_root": ".project/data/paa",

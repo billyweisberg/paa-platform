@@ -9,7 +9,8 @@ This directory documents producer-mode and consumer-mode installation flows for 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
 /opt/homebrew/bin/python3.12 -m paa_producer install-producer-runtime \
-  --repo-root /absolute/path/to/producer-repo
+  --repo-root /absolute/path/to/producer-repo \
+  --project-pack fractal-core
 ```
 
 Alias:
@@ -17,7 +18,8 @@ Alias:
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
 /opt/homebrew/bin/python3.12 -m paa_producer update-producer-runtime \
-  --repo-root /absolute/path/to/producer-repo
+  --repo-root /absolute/path/to/producer-repo \
+  --project-pack fractal-core
 ```
 
 This creates or refreshes:
@@ -32,12 +34,16 @@ This creates or refreshes:
 - `.project/data/paa/publish/`
 - `.project/data/paa/cache/`
 
+The producer install selects project-specific skills and automations from:
+- `project-packs/<project-pack>/pack.json`
+
 ### Consumer runtime install/update
 
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-consumer/src \
 /opt/homebrew/bin/python3.12 -m paa_consumer install-consumer-runtime \
-  --repo-root /absolute/path/to/consumer-repo
+  --repo-root /absolute/path/to/consumer-repo \
+  --project-pack fractal-core
 ```
 
 Alias:
@@ -45,7 +51,8 @@ Alias:
 ```bash
 PYTHONPATH=packages/paa-core/src:packages/paa-consumer/src \
 /opt/homebrew/bin/python3.12 -m paa_consumer update-consumer-runtime \
-  --repo-root /absolute/path/to/consumer-repo
+  --repo-root /absolute/path/to/consumer-repo \
+  --project-pack fractal-core
 ```
 
 This creates or refreshes:
@@ -64,6 +71,9 @@ This creates or refreshes:
 - `.project/data/paa/evidence/`
 - `.project/data/paa/cache/`
 - `.project/data/paa/reports/`
+
+The consumer install selects project-specific skills and automations from:
+- `project-packs/<project-pack>/pack.json`
 
 ### Authority package install into consumer repo
 

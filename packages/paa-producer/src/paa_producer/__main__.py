@@ -22,6 +22,7 @@ def main() -> int:
     parser.add_argument('command', nargs='?', default='help')
     parser.add_argument('--repo-root')
     parser.add_argument('--project-config')
+    parser.add_argument('--project-pack')
     args, remainder = parser.parse_known_args()
 
     if args.command == 'help':
@@ -32,7 +33,10 @@ def main() -> int:
     if args.command in {'install-producer-runtime', 'update-producer-runtime'}:
         if not args.repo_root:
             parser.error(f'{args.command} requires --repo-root')
-        result = install_producer_runtime(Path(args.repo_root).resolve())
+        result = install_producer_runtime(
+            Path(args.repo_root).resolve(),
+            project_pack=args.project_pack or 'fractal-core',
+        )
         print(json.dumps({
             'ok': True,
             'install_mode': result.install_mode,
@@ -40,6 +44,7 @@ def main() -> int:
             'codex_install_root': str(result.codex_install_root),
             'runtime_data_root': str(result.runtime_data_root),
             'platform_revision': result.platform_revision,
+            'project_pack': result.project_pack,
         }, indent=2))
         return 0
 

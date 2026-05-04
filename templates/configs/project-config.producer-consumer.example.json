@@ -1,5 +1,6 @@
 {
   "project_id": "greenfield-app",
+  "project_pack": "fractal-core",
   "mode": "producer_consumer",
   "authority_manifest_path": "docs/architecture/project-authority/greenfield-app-authority.json",
   "supporting_docs_root": "docs/architecture",

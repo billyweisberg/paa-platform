@@ -1,5 +1,6 @@
 {
   "project_id": "fractal-core-python",
+  "project_pack": "fractal-core",
   "mode": "producer",
   "authority_manifest_path": "docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json",
   "supporting_docs_root": "docs/architecture/tom-baby7-fractal-core",

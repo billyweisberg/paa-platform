@@ -1,11 +1,4 @@
-# Automation templates
+# Automation Templates
 
-These templates are rendered into repo-local `.codex/automations/` installs.
-
-- Producer installs render:
-  - `fractal-core-authority-architect-automation`
-- Consumer installs render:
-  - `fractal-core-delivery-architect-automation`
-  - `fractal-core-qa-automation`
-  - `fractal-core-techlead-automation`
-  - `python-team-automation`
+Generic template assets live under `templates/`.
+Project-specific automation templates live under `project-packs/<pack>/automations/` and are rendered into repo-local `.codex/automations/` installs through the selected project pack manifest.

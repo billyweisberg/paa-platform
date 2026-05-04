@@ -1,3 +1,4 @@
-# Skill templates
+# Skill Templates
 
-These templates are rendered into repo-local `.codex/skills/` installs.
+Generic template assets live under `templates/`.
+Project-specific skill templates live under `project-packs/<pack>/skills/` and are rendered into repo-local `.codex/skills/` installs through the selected project pack.

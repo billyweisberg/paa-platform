@@ -14,6 +14,7 @@ class ProducerProjectConfig:
 
     path: Path
     project_id: str
+    project_pack: str
     mode: str
     authority_manifest_path: str
     supporting_docs_root: str
@@ -30,6 +31,7 @@ class ConsumerProjectConfig:
 
     path: Path
     project_id: str
+    project_pack: str
     mode: str
     authority_install_root: str
     runtime_data_root: str
@@ -44,6 +46,7 @@ class ProducerConsumerProjectConfig:
 
     path: Path
     project_id: str
+    project_pack: str
     mode: str
     authority_manifest_path: str
     supporting_docs_root: str
@@ -69,6 +72,7 @@ def load_producer_project_config(path: Path) -> ProducerProjectConfig:
     return ProducerProjectConfig(
         path=path,
         project_id=data["project_id"],
+        project_pack=data.get("project_pack", "fractal-core"),
         mode=data["mode"],
         authority_manifest_path=data["authority_manifest_path"],
         supporting_docs_root=data["supporting_docs_root"],
@@ -87,6 +91,7 @@ def load_consumer_project_config(path: Path) -> ConsumerProjectConfig:
     return ConsumerProjectConfig(
         path=path,
         project_id=data["project_id"],
+        project_pack=data.get("project_pack", "fractal-core"),
         mode=data["mode"],
         authority_install_root=data["authority_install_root"],
         runtime_data_root=data["runtime_data_root"],
@@ -103,6 +108,7 @@ def load_producer_consumer_project_config(path: Path) -> ProducerConsumerProject
     return ProducerConsumerProjectConfig(
         path=path,
         project_id=data["project_id"],
+        project_pack=data.get("project_pack", "fractal-core"),
         mode=data["mode"],
         authority_manifest_path=data["authority_manifest_path"],
         supporting_docs_root=data["supporting_docs_root"],

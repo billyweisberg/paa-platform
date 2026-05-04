@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": [
     "project_id",
+    "project_pack",
     "mode",
     "authority_install_root",
     "runtime_data_root",
@@ -15,6 +16,10 @@
   ],
   "properties": {
     "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_pack": {
       "type": "string",
       "minLength": 1
     },

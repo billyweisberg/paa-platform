@@ -14,6 +14,7 @@ from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directo
 
 PLATFORM_VERSION = "0.1.0"
 SCHEMA_BUNDLE_VERSION = "0.1.0"
+DEFAULT_PROJECT_PACK = "fractal-core"
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,7 @@ class InstallResult:
     codex_install_root: Path
     runtime_data_root: Path
     platform_revision: str
+    project_pack: str
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,24 @@ def platform_revision() -> str:
         )
         .stdout.strip()
     )
+
+
+def project_pack_root(project_pack: str) -> Path:
+    """Resolve a named project pack inside the platform repo."""
+
+    root = platform_repo_root() / "project-packs" / project_pack
+    if not root.exists():
+        raise FileNotFoundError(
+            f"Project pack '{project_pack}' not found under {platform_repo_root() / 'project-packs'}"
+        )
+    return root
+
+
+def project_pack_manifest(project_pack: str) -> dict[str, object]:
+    """Load a named project pack manifest."""
+
+    manifest_path = project_pack_root(project_pack) / "pack.json"
+    return json.loads(manifest_path.read_text())
 
 
 def _copy_tree(src: Path, dst: Path) -> None:
@@ -110,6 +130,13 @@ def _prune_installed_dirs(root: Path, allowed_dirs: set[str]) -> None:
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def _manifest_names(manifest: dict[str, object], role: str, key: str) -> set[str]:
+    return set(
+        str(name)
+        for name in ((manifest.get(role) or {}).get(key, []))  # type: ignore[union-attr]
+    )
 
 
 def _install_selected_rendered_dirs(
@@ -169,7 +196,15 @@ def _write_wrapper(script_path: Path, module_name: str) -> None:
     script_path.chmod(0o755)
 
 
-def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[str], example_config_name: str, vendor_packages: list[str] | None = None) -> InstallResult:
+def _install_common_layout(
+    repo_root: Path,
+    *,
+    mode: str,
+    package_names: list[str],
+    example_config_name: str,
+    project_pack: str,
+    vendor_packages: list[str] | None = None,
+) -> InstallResult:
     root = platform_repo_root()
     codex_root = ensure_directory(repo_root / CODEX_INSTALL_ROOT)
     runtime_root = ensure_directory(repo_root / PROJECT_DATA_ROOT)
@@ -207,6 +242,7 @@ def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[st
         {
             "platform_version": PLATFORM_VERSION,
             "install_mode": mode,
+            "project_pack": project_pack,
             "installed_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
             "source_platform_repo": "https://github.com/billyweisberg/paa-platform",
             "source_platform_revision": platform_revision(),
@@ -220,10 +256,11 @@ def _install_common_layout(repo_root: Path, *, mode: str, package_names: list[st
         codex_install_root=codex_root,
         runtime_data_root=runtime_root,
         platform_revision=platform_revision(),
+        project_pack=project_pack,
     )
 
 
-def install_producer_runtime(repo_root: Path) -> InstallResult:
+def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
     """Install or update the producer-mode repo-local PAA payload."""
 
     result = _install_common_layout(
@@ -231,36 +268,36 @@ def install_producer_runtime(repo_root: Path) -> InstallResult:
         mode="producer",
         package_names=["paa-core", "paa-producer"],
         example_config_name="project-config.producer.example.json",
+        project_pack=project_pack,
         vendor_packages=[],
     )
+    pack_root = project_pack_root(project_pack)
+    manifest = project_pack_manifest(project_pack)
     replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     ensure_directory(result.runtime_data_root / "publish")
     ensure_directory(result.runtime_data_root / "cache")
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
-    _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
-    _prune_installed_dirs(
+    _install_selected_rendered_dirs(
+        pack_root / 'skills',
         repo_root / '.codex' / 'skills',
-        {
-            'fractal-core-authority',
-            'fractal-core-dev-result',
-            'fractal-core-qa-review',
-            'fractal-core-architect-handoff',
-        },
+        replacements,
+        _manifest_names(manifest, 'producer', 'skills'),
     )
     _install_selected_rendered_dirs(
-        platform_repo_root() / 'templates' / 'automations',
+        pack_root / 'automations',
         repo_root / '.codex' / 'automations',
         replacements,
-        {'fractal-core-authority-architect-automation'},
+        _manifest_names(manifest, 'producer', 'automations'),
     )
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
-        "This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
+        f"This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
+        f"Selected project pack: `{project_pack}`.\n"
     )
     return result
 
 
-def install_consumer_runtime(repo_root: Path) -> InstallResult:
+def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
     """Install or update the consumer-mode repo-local PAA payload."""
 
     result = _install_common_layout(
@@ -268,28 +305,32 @@ def install_consumer_runtime(repo_root: Path) -> InstallResult:
         mode="consumer",
         package_names=["paa-core", "paa-consumer", "paa-producer"],
         example_config_name="project-config.consumer.example.json",
+        project_pack=project_pack,
         vendor_packages=['jsonschema>=4,<5'],
     )
+    pack_root = project_pack_root(project_pack)
+    manifest = project_pack_manifest(project_pack)
     replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     for name in ["authority/current", "claims", "queue-state", "artifacts", "evidence", "cache", "reports"]:
         ensure_directory(result.runtime_data_root / name)
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-consumer', 'paa_consumer')
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
-    _install_rendered_tree(platform_repo_root() / 'templates' / 'skills', repo_root / '.codex' / 'skills', replacements)
     _install_selected_rendered_dirs(
-        platform_repo_root() / 'templates' / 'automations',
+        pack_root / 'skills',
+        repo_root / '.codex' / 'skills',
+        replacements,
+        _manifest_names(manifest, 'consumer', 'skills'),
+    )
+    _install_selected_rendered_dirs(
+        pack_root / 'automations',
         repo_root / '.codex' / 'automations',
         replacements,
-        {
-            'fractal-core-delivery-architect-automation',
-            'fractal-core-qa-automation',
-            'fractal-core-techlead-automation',
-            'python-team-automation',
-        },
+        _manifest_names(manifest, 'consumer', 'automations'),
     )
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
-        "This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"
+        f"This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"
+        f"Selected project pack: `{project_pack}`.\n"
     )
     return result
 
