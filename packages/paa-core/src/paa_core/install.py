@@ -162,6 +162,22 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
     if vendor_root.exists():
         shutil.rmtree(vendor_root)
     vendor_root.mkdir(parents=True, exist_ok=True)
+    if shutil.which("uv"):
+        subprocess.run(
+            [
+                "uv",
+                "pip",
+                "install",
+                "--quiet",
+                "--python",
+                sys.executable,
+                "--target",
+                str(vendor_root),
+                *package_specs,
+            ],
+            check=True,
+        )
+        return
     subprocess.run(
         [
             sys.executable,
