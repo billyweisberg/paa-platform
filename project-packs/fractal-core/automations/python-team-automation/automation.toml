@@ -9,6 +9,7 @@ Use repo-local consumer runtime only.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
 Do not read project runtime from `$HOME/.codex`.
+Use one shared full-cycle issue branch per issue: `issue-<issue_number>`.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"

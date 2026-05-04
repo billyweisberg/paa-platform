@@ -8,6 +8,7 @@ prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-a
 Act as Authority Architect only.
 Use repo-local producer runtime only.
 When preparing the next architect cycle packet, use the repo-local producer command surface. It now auto-syncs the target next issue from canonical source artifacts into PAA before package and brief resolution.
+For each implementation cycle, expect one shared issue branch named `issue-<issue_number>` in the canonical consumer repo.
 Do not use issue-specific load SQL except for historical investigation.
 Do not depend on `$HOME/.codex`.
 """

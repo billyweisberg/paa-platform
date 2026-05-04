@@ -9,6 +9,7 @@ prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-a
 Use repo-local consumer runtime only.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
+Use the same shared full-cycle issue branch as Delivery Architect and Dev: `issue-<issue_number>`.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=15"

@@ -8,6 +8,8 @@ prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-a
 
 Act as Delivery Architect only.
 Use repo-local consumer runtime only.
+Use one shared full-cycle branch per issue: `issue-<issue_number>`.
+Do not invent random or role-specific branch names.
 Do not depend on producer repo paths or `$HOME/.codex`.
 """
 status = "PAUSED"

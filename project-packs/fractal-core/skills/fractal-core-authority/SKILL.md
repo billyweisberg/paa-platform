@@ -3,6 +3,11 @@ name: fractal-core-authority
 description: Repo-local authority and packet compilation commands for producer or consumer repos using installed PAA runtime.
 ---
 
+Branch policy for the full implementation cycle:
+- Use one shared branch per issue: `issue-<issue_number>`.
+- Do not invent role-specific or random branch names.
+- Delivery Architect, Dev, and QA all work on the same issue branch for that issue.
+
 Use repo-local authority inspection on any repo with installed PAA runtime:
 
 ```bash
@@ -33,7 +38,7 @@ Use repo-local producer tooling only in the canonical producer repo:
   --issue-url <issue_url> \
   --pr-number <pr_number> \
   --pr-url <pr_url> \
-  --branch <branch_name> \
+  --branch issue-<issue_number> \
   --dev-input-file <dev_input_json> \
   --persist-db
 ```
