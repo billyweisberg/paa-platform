@@ -41,3 +41,18 @@ After the UI check, use the repo-local smoke tests for the rest:
 - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer smoke-test --expected-branch codex/paa-consumer-consolidation`
 
 That is enough human validation for this stage.
+
+## TOML Validation
+
+Platform-owned validator:
+
+```bash
+cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
+uv run --python 3.12 --no-project python scripts/runtime/validate_automation_toml.py \
+  /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations \
+  /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations
+```
+
+Current known result on 2026-05-03:
+- all installed repo-local automation TOML files parse successfully
+- UI invisibility is therefore not explained by TOML syntax failure
