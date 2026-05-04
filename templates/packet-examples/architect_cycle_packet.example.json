@@ -59,8 +59,8 @@
       "do not merge your own slice"
     ],
     "coder_run_brief_ref": {
-      "path": "/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/handoff-schemas/coder_run_brief.issue73.example.json",
-      "schema_path": "/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/docs/architecture/tom-baby7-fractal-core/handoff-schemas/coder_run_brief.schema.json",
+      "path": "{{CODER_RUN_BRIEF_PATH}}",
+      "schema_path": "{{CODER_RUN_BRIEF_SCHEMA_PATH}}",
       "brief_id": "fcore-coder-2026-04-30-issue73-retirement-lifecycle-reset"
     },
     "coder_run_brief": {
@@ -250,7 +250,7 @@
     }
   },
   "authority_context": {
-    "manifest_path": "/Users/billyweisberg/.codex/authority/fractal-core-python/current/fractal-core-python-authority.json",
+    "manifest_path": "{{AUTHORITY_MANIFEST_PATH}}",
     "authority_version": "2026-04-27.2",
     "milestone_id": "m1-reference-implementation",
     "phase_id": "p5-proving-artifact-maturity",

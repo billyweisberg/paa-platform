@@ -65,7 +65,7 @@
     "architect_decision_needed": "review PR #9 for acceptance and merge readiness"
   },
   "authority_context": {
-    "manifest_path": "/Users/billyweisberg/.codex/authority/fractal-core-python/current/fractal-core-python-authority.json",
+    "manifest_path": "{{AUTHORITY_MANIFEST_PATH}}",
     "authority_version": "2026-04-27.2",
     "milestone_id": "m1-reference-implementation",
     "phase_id": "p5-proving-artifact-maturity",
