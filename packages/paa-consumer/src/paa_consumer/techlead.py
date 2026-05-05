@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-AUTH_SCRIPT = REPO_ROOT / '.codex' / 'paa' / 'bin' / 'paa-producer'
-QUEUE_SCRIPT = REPO_ROOT / '.codex' / 'paa' / 'bin' / 'paa-consumer'
-AUTOMATIONS_DIR = REPO_ROOT / '.codex' / 'automations'
-AUTH_CURRENT = REPO_ROOT / '.project' / 'data' / 'paa' / 'authority' / 'current' / 'authority' / 'fractal-core-python-authority.json'
-DEFAULT_SCHEMA = REPO_ROOT / '.codex' / 'paa' / 'schemas' / 'runtime-records' / 'techlead-status-report.schema.json'
-QA_WORK_DIR = REPO_ROOT / '.project' / 'data' / 'paa' / 'reports'
 DEFAULT_DB_CONTAINER = 'agenthub-mm-db'
 DEFAULT_DB_NAME = 'paa_dev'
 DEFAULT_DB_USER = 'mmuser'
 DEFAULT_PROJECT_SLUG = 'fractal-core-python'
 DEFAULT_AGENT_NAME = 'Fractal Core TechLead Automation'
-LOCAL_MIRRORS = [AUTH_CURRENT]
 ROLE_CONFIG = {
     'Architect': {'dir': 'fractal-core-delivery-architect-automation', 'root': str(REPO_ROOT)},
     'Python Dev': {'dir': 'python-team-automation', 'root': str(REPO_ROOT)},
@@ -28,11 +22,51 @@ ROLE_CONFIG = {
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 
 
+def repo_auth_script(repo_root: Path) -> Path:
+    return repo_root / '.codex' / 'paa' / 'bin' / 'paa-producer'
+
+
+def repo_queue_script(repo_root: Path) -> Path:
+    return repo_root / '.codex' / 'paa' / 'bin' / 'paa-consumer'
+
+
+def repo_automations_dir(repo_root: Path) -> Path:
+    return repo_root / '.codex' / 'automations'
+
+
+def repo_auth_current(repo_root: Path) -> Path:
+    return repo_root / '.project' / 'data' / 'paa' / 'authority' / 'current' / 'authority' / 'fractal-core-python-authority.json'
+
+
+def repo_default_schema(repo_root: Path) -> Path:
+    return repo_root / '.codex' / 'paa' / 'schemas' / 'runtime-records' / 'techlead-status-report.schema.json'
+
+
+def repo_reports_dir(repo_root: Path) -> Path:
+    return repo_root / '.project' / 'data' / 'paa' / 'reports'
+
+
+AUTH_SCRIPT = repo_auth_script(REPO_ROOT)
+QUEUE_SCRIPT = repo_queue_script(REPO_ROOT)
+AUTOMATIONS_DIR = repo_automations_dir(REPO_ROOT)
+AUTH_CURRENT = repo_auth_current(REPO_ROOT)
+DEFAULT_SCHEMA = repo_default_schema(REPO_ROOT)
+QA_WORK_DIR = repo_reports_dir(REPO_ROOT)
+LOCAL_MIRRORS = [AUTH_CURRENT]
+
+
 def run_json(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or f'command failed: {cmd}')
     return json.loads(result.stdout)
+
+
+def run_json_with_errors(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        return result.returncode, None, result.stderr.strip() or result.stdout.strip() or f'command failed: {cmd}'
+    return 0, json.loads(result.stdout), None
 
 
 def run_psql(db_container, db_name, db_user, sql):
@@ -53,24 +87,43 @@ def sql_literal(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def load_authority():
-    current = run_json([str(AUTH_SCRIPT), 'authority', 'current', '--manifest', str(AUTH_CURRENT)])
-    manifest = json.loads(AUTH_CURRENT.read_text())
+def load_authority(repo_root: Path = REPO_ROOT):
+    auth_script = repo_auth_script(repo_root)
+    auth_current = repo_auth_current(repo_root)
+    current = run_json([str(auth_script), 'authority', 'current', '--manifest', str(auth_current)])
+    manifest = json.loads(auth_current.read_text())
     return current, manifest
 
 
-def queue_state():
+def load_design_package(project_slug, package_id_external):
+    sql = f"""
+    SELECT dp.package_json::text
+    FROM paa.design_packages dp
+    JOIN paa.projects p ON p.project_id = dp.project_id
+    WHERE p.slug = {sql_literal(project_slug)}
+      AND dp.package_id_external = {sql_literal(package_id_external)}
+    LIMIT 1;
+    """
+    out = run_psql(DEFAULT_DB_CONTAINER, DEFAULT_DB_NAME, DEFAULT_DB_USER, sql).strip()
+    if not out:
+        raise RuntimeError(f'No design package found for {project_slug}:{package_id_external}')
+    return json.loads(out)
+
+
+def queue_state(repo_root: Path = REPO_ROOT):
     out = {}
+    queue_script = repo_queue_script(repo_root)
     for q in QUEUE_NAMES:
-        out[q] = run_json([str(QUEUE_SCRIPT), 'queue-check', '--repo-root', str(REPO_ROOT), '--queue', q])
+        out[q] = run_json([str(queue_script), 'queue-check', '--repo-root', str(repo_root), '--queue', q])
     return out
 
 
-def automation_state():
+def automation_state(repo_root: Path = REPO_ROOT):
     roles = []
     architect_missing = False
+    automations_dir = repo_automations_dir(repo_root)
     for role, cfg in ROLE_CONFIG.items():
-        d = AUTOMATIONS_DIR / cfg['dir']
+        d = automations_dir / cfg['dir']
         status = 'missing'
         runtime = None
         if d.exists():
@@ -93,7 +146,7 @@ def automation_state():
             'role': role,
             'status': status,
             'runtime': runtime,
-            'root': cfg['root'],
+            'root': str(repo_root),
             'last_run_at': None,
         })
     return roles, architect_missing
@@ -127,7 +180,27 @@ def github_state(issue_number, fallback_pr_number=None):
             active_pr = fetch_pr(fallback_pr_number)
         except Exception:
             active_pr = None
-    elif active_pr is not None:
+    if active_pr is None:
+        try:
+            all_prs = run_json([
+                'gh', 'pr', 'list', '--repo', 'billyweisberg/fractal-core-python',
+                '--state', 'all', '--json', 'number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,mergedAt,body'
+            ])
+        except Exception:
+            all_prs = []
+        fallback_matches = [
+            pr for pr in all_prs
+            if str(issue_number) in (pr.get('headRefName') or '')
+            or str(issue_number) in (pr.get('title') or '')
+            or str(issue_number) in (pr.get('body') or '')
+        ]
+        for pr in fallback_matches:
+            if pr.get('state') == 'OPEN':
+                active_pr = pr
+                break
+        if active_pr is None and fallback_matches:
+            active_pr = fallback_matches[0]
+    if active_pr is not None and 'comments' not in active_pr:
         try:
             active_pr = fetch_pr(active_pr['number'])
         except Exception:
@@ -135,10 +208,10 @@ def github_state(issue_number, fallback_pr_number=None):
     return issue, active_pr
 
 
-def mirror_status(authority_version):
+def mirror_status(authority_version, repo_root: Path = REPO_ROOT):
     mirrors = []
     statuses = []
-    for path in LOCAL_MIRRORS:
+    for path in [repo_auth_current(repo_root)]:
         if not path.exists():
             status = 'missing'
         else:
@@ -153,9 +226,9 @@ def mirror_status(authority_version):
     return overall, mirrors
 
 
-def latest_qa_packet(issue_number):
+def latest_qa_packet(issue_number, reports_dir: Path = QA_WORK_DIR):
     candidates = []
-    for packet_path in sorted(QA_WORK_DIR.glob(f'qa-verification*issue{issue_number}*.json')):
+    for packet_path in sorted(reports_dir.glob(f'qa-verification*issue{issue_number}*.json')):
         try:
             packet = json.loads(packet_path.read_text())
         except Exception:
@@ -242,6 +315,15 @@ def action_type_for_role(role):
         'TechLead': 'route_to_techlead',
     }
     return mapping.get(role, 'route_to_techlead')
+
+
+def techlead_assignment_role(raw_role):
+    mapping = {
+        'Python Dev': 'python-team',
+        'QA': 'qa',
+        'Delivery Architect': 'delivery-architect',
+    }
+    return mapping.get(raw_role)
 
 
 def parse_created_at(value):
@@ -1036,6 +1118,255 @@ def load_traceability_section(db_container, db_name, db_user, project_slug, acti
     return section
 
 
+def resolve_issue_number_from_package(package: dict, package_id_external: str) -> int:
+    authority_context = package.get('authority_context') or {}
+    issue_number = authority_context.get('issue_number')
+    if issue_number is not None:
+        return int(issue_number)
+    task_issue_number = authority_context.get('task_issue_number')
+    if task_issue_number is not None:
+        return int(task_issue_number)
+    match = re.search(r'issue(\\d+)', package_id_external)
+    if match:
+        return int(match.group(1))
+    raise RuntimeError(
+        f'Could not resolve issue_number from package {package_id_external!r}; '
+        'package authority_context has no issue_number and package_id_external does not contain issueNNN.'
+    )
+
+
+def resolve_task_summary(manifest: dict, package: dict, issue_number: int) -> dict:
+    authority_context = package.get('authority_context') or {}
+    task_id = authority_context.get('task_id')
+    task_title = None
+    task_status = None
+    for task in (manifest.get('tasks') or []):
+        if task_id and task.get('task_id') == task_id:
+            task_title = task.get('title')
+            task_status = task.get('status')
+            break
+        if task.get('issue_number') == issue_number:
+            task_id = task.get('task_id') or task_id
+            task_title = task.get('title')
+            task_status = task.get('status')
+            break
+    if task_id is None:
+        task_id = authority_context.get('task_id') or f'issue-{issue_number}'
+    return {
+        'issue_number': issue_number,
+        'task_id': task_id,
+        'title': task_title or f'Issue #{issue_number}',
+        'status': task_status or 'unknown',
+    }
+
+
+def default_assignment_paths(repo_root: Path, issue_number: int, target_role: str) -> tuple[Path, Path]:
+    slug = target_role.replace(' ', '-').lower()
+    reports_dir = repo_reports_dir(repo_root)
+    output = reports_dir / f'techlead-assignment.issue{issue_number}.{slug}.json'
+    review = reports_dir / f'techlead-assignment.issue{issue_number}.{slug}.md'
+    return output, review
+
+
+def derive_next_assignment_context(args) -> dict:
+    repo_root = args.repo_root.resolve()
+    current, manifest = load_authority(repo_root)
+    package = load_design_package(args.project_slug, args.package_id_external)
+    issue_number = resolve_issue_number_from_package(package, args.package_id_external)
+    current_task = resolve_task_summary(manifest, package, issue_number)
+    queues = queue_state(repo_root)
+    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
+    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+    workflow_stage, owner_role, _escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
+    pending_dev_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='slice_result_packet',
+        to_role='techlead',
+    )
+    if args.target_role == 'python-team':
+        if not pr:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'explicit_python_dev_emission_requires_active_pr',
+                'details': 'No PR was available from GitHub state for the selected issue, so Python Dev emission could not derive PR context.',
+            }
+        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number'),
+            'pr_url': pr.get('url'),
+            'branch': branch_name,
+            'target_role': 'Python Dev',
+            'target_role_cli': 'python-team',
+            'assignment_type': 'implement_authorized_slice',
+            'allowed_result_types': [
+                'implemented_ready_for_qa',
+                'blocked',
+                'needs_clarification',
+            ],
+            'assignment_summary': (
+                f'TechLead is explicitly issuing a Python Dev implementation assignment for issue #{issue_number} '
+                f'on branch {branch_name}.'
+            ),
+            'source_packet_message_id': None,
+            'source_packet_path': None,
+            'issue': issue,
+            'pr': pr,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
+    if workflow_stage == 'techlead_dev_review_pending' and pending_dev_packet:
+        if not pr:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'dev_review_pending_but_no_pr_context',
+                'details': 'A Dev result packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
+            }
+        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
+        source_message_id = pending_dev_packet.get('message_id')
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number'),
+            'pr_url': pr.get('url'),
+            'branch': branch_name,
+            'target_role': 'QA',
+            'target_role_cli': 'qa',
+            'assignment_type': 'verify_authorized_slice',
+            'allowed_result_types': [
+                'pass',
+                'fail_fixable',
+                'needs_human_review',
+            ],
+            'assignment_summary': (
+                f'TechLead is routing Dev result packet {source_message_id} '
+                f'for issue #{issue_number} to QA on branch {branch_name}.'
+            ),
+            'source_packet_message_id': source_message_id,
+            'source_packet_path': None,
+            'issue': issue,
+            'pr': pr,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
+    return {
+        'ok': False,
+        'workflow_stage': workflow_stage,
+        'reason': 'no_supported_emission_available',
+        'details': (
+            f'Current workflow stage {workflow_stage!r} does not support next-assignment emission in this slice. '
+            'Only techlead_dev_review_pending -> QA and explicit Python Dev emission are supported.'
+        ),
+        'recommended_actions': recommended,
+        'unattended_safe': unattended_safe,
+    }
+
+
+def emit_next_assignment(args):
+    repo_root = args.repo_root.resolve()
+    context = derive_next_assignment_context(args)
+    if not context.get('ok'):
+        return context
+    default_output_path, default_review_output_path = default_assignment_paths(
+        repo_root,
+        context['issue_number'],
+        context['target_role'],
+    )
+    output_path = args.output or default_output_path
+    review_output_path = args.review_output or default_review_output_path
+    output_path = output_path.resolve()
+    review_output_path = review_output_path.resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    review_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    auth_script = repo_auth_script(repo_root)
+    auth_current = repo_auth_current(repo_root)
+    queue_script = repo_queue_script(repo_root)
+    compile_cmd = [
+        str(auth_script),
+        'authority',
+        'materialize-techlead-assignment-packet',
+        '--manifest', str(auth_current),
+        '--project-slug', args.project_slug,
+        '--package-id-external', args.package_id_external,
+        '--brief-id-external', args.brief_id_external,
+        '--repo', 'billyweisberg/fractal-core-python',
+        '--issue-number', str(context['issue_number']),
+        '--issue-url', str(context['issue_url']),
+        '--pr-number', str(context['pr_number']),
+        '--pr-url', str(context['pr_url']),
+        '--branch', str(context['branch']),
+        '--target-role', context['target_role_cli'],
+        '--assignment-type', context['assignment_type'],
+        '--assignment-summary', context['assignment_summary'],
+        '--output', str(output_path),
+        '--review-output', str(review_output_path),
+        '--persist-db',
+    ]
+    if context.get('source_packet_path'):
+        compile_cmd.extend(['--source-packet-path', str(context['source_packet_path'])])
+    if context.get('source_packet_message_id'):
+        compile_cmd.extend(['--source-packet-message-id', str(context['source_packet_message_id'])])
+    for allowed_result_type in context['allowed_result_types']:
+        compile_cmd.extend(['--allowed-result-type', allowed_result_type])
+
+    compile_result = run_json(compile_cmd)
+    validate_cmd = [
+        str(queue_script),
+        'techlead-validate-packet',
+        '--message-file', str(output_path),
+    ]
+    validate_code, validate_result, validate_error = run_json_with_errors(validate_cmd)
+    result = {
+        'ok': validate_code == 0,
+        'workflow_stage': context['workflow_stage'],
+        'derived_decision': {
+            'target_role': context['target_role'],
+            'assignment_type': context['assignment_type'],
+            'allowed_result_types': context['allowed_result_types'],
+        },
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'output_path': str(output_path),
+        'review_output_path': str(review_output_path),
+        'message_id': compile_result.get('message_id'),
+        'automation_run_id': compile_result.get('automation_run_id'),
+        'resolved_queue': validate_result.get('resolved_queue') if validate_result else None,
+        'sent': False,
+        'compile': compile_result,
+        'validate': validate_result,
+        'source_packet_ref': {
+            'message_id': context.get('source_packet_message_id'),
+            'path': context.get('source_packet_path'),
+        },
+    }
+    if validate_code != 0:
+        result['error'] = validate_error
+        return result
+    if args.send:
+        send_cmd = [
+            str(queue_script),
+            'techlead-send-packet',
+            '--repo-root', str(repo_root),
+            '--message-file', str(output_path),
+        ]
+        send_code, send_result, send_error = run_json_with_errors(send_cmd)
+        result['send'] = send_result
+        result['sent'] = send_code == 0 and bool(send_result and send_result.get('ok'))
+        if send_code != 0:
+            result['ok'] = False
+            result['error'] = send_error
+    return result
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -1104,40 +1435,62 @@ def persist_report(report, args):
 
 
 def parse_args(argv: list[str] | None = None):
-    parser = argparse.ArgumentParser(description='Generate Fractal Core TechLead status report.')
-    parser.add_argument('--output', type=Path, help='Write the JSON report to this path.')
-    parser.add_argument('--schema', type=Path, default=DEFAULT_SCHEMA, help='Schema path to use with --validate-schema.')
-    parser.add_argument('--validate-schema', action='store_true', help='Validate the generated report against the TechLead JSON schema.')
-    parser.add_argument('--persist-db', action='store_true', help='Persist the generated report into paa.automation_runs.')
-    parser.add_argument('--db-container', default=DEFAULT_DB_CONTAINER, help='Docker container running Postgres.')
-    parser.add_argument('--db-name', default=DEFAULT_DB_NAME, help='Postgres database name.')
-    parser.add_argument('--db-user', default=DEFAULT_DB_USER, help='Postgres database user.')
-    parser.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG, help='PAA project slug to resolve agent and work item IDs.')
-    parser.add_argument('--agent-name', default=DEFAULT_AGENT_NAME, help='PAA agent name used for TechLead persistence.')
+    parser = argparse.ArgumentParser(description='Fractal Core TechLead runtime.')
+    sub = parser.add_subparsers(dest='command')
+
+    status = sub.add_parser('status')
+    status.add_argument('--output', type=Path, help='Write the JSON report to this path.')
+    status.add_argument('--schema', type=Path, default=DEFAULT_SCHEMA, help='Schema path to use with --validate-schema.')
+    status.add_argument('--validate-schema', action='store_true', help='Validate the generated report against the TechLead JSON schema.')
+    status.add_argument('--persist-db', action='store_true', help='Persist the generated report into paa.automation_runs.')
+    status.add_argument('--db-container', default=DEFAULT_DB_CONTAINER, help='Docker container running Postgres.')
+    status.add_argument('--db-name', default=DEFAULT_DB_NAME, help='Postgres database name.')
+    status.add_argument('--db-user', default=DEFAULT_DB_USER, help='Postgres database user.')
+    status.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG, help='PAA project slug to resolve agent and work item IDs.')
+    status.add_argument('--agent-name', default=DEFAULT_AGENT_NAME, help='PAA agent name used for TechLead persistence.')
+
+    emit = sub.add_parser('emit-next-assignment')
+    emit.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
+    emit.add_argument('--package-id-external', required=True)
+    emit.add_argument('--brief-id-external', required=True)
+    emit.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    emit.add_argument('--target-role', choices=['python-team', 'qa'], help='Explicitly request a supported target role. Omit to derive from current TechLead-visible workflow state.')
+    emit.add_argument('--send', action='store_true', help='Send the compiled packet after validation succeeds.')
+    emit.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
+    emit.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
+
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
-    report = build_report()
-    if args.validate_schema:
-        validate_report(report, args.schema)
-    persistence = None
-    if args.persist_db:
-        persistence = persist_report(report, args)
-    text = json.dumps(report, indent=2)
-    if args.output:
-        args.output.write_text(text + '\n')
-    if persistence:
-        sys.stderr.write(
-            f"Persisted TechLead report to {args.db_name} as automation_run_id={persistence['automation_run_id']}"
-        )
-        if persistence.get('work_item_id'):
-            sys.stderr.write(f" work_item_id={persistence['work_item_id']}")
-        sys.stderr.write('\n')
-    sys.stdout.write(text)
-    sys.stdout.write('\n')
+    if args.command in {None, 'status'}:
+        report = build_report()
+        if args.validate_schema:
+            validate_report(report, args.schema)
+        persistence = None
+        if args.persist_db:
+            persistence = persist_report(report, args)
+        text = json.dumps(report, indent=2)
+        if args.output:
+            args.output.write_text(text + '\n')
+        if persistence:
+            sys.stderr.write(
+                f"Persisted TechLead report to {args.db_name} as automation_run_id={persistence['automation_run_id']}"
+            )
+            if persistence.get('work_item_id'):
+                sys.stderr.write(f" work_item_id={persistence['work_item_id']}")
+            sys.stderr.write('\n')
+        sys.stdout.write(text)
+        sys.stdout.write('\n')
+        return 0
+    if args.command == 'emit-next-assignment':
+        result = emit_next_assignment(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    return 2
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

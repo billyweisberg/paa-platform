@@ -20,6 +20,20 @@ Operator-facing dispatch path:
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-send-packet --repo-root {{REPO_ROOT}} --message-file <packet.json>
 ```
 
+Supported Phase C emission path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  [--send]
+```
+
+Initial supported cases:
+- `techlead_dev_review_pending` -> emit assignment to `QA`
+- explicit `--target-role python-team` invocation -> emit assignment to `Python Dev`
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

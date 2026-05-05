@@ -162,7 +162,11 @@ def main() -> int:
         return run_queue_command(Path(args.repo_root).resolve(), ['requeue', '--claim-id', args.claim_id, *remainder])
 
     if args.command == 'techlead-status':
-        return techlead_main([*remainder])
+        return techlead_main(['status', *remainder])
+
+    if args.command == 'techlead-emit-next-assignment':
+        argv = ['emit-next-assignment', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
 
     if args.command == 'validate-runtime':
         repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
