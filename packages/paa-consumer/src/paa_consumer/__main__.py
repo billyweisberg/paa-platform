@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument('--authority-install-root')
     parser.add_argument('--queue')
     parser.add_argument('--claim-id')
+    parser.add_argument('--message-file')
     args, remainder = parser.parse_known_args()
 
     if args.command == 'help':
@@ -80,10 +81,30 @@ def main() -> int:
         ))
         return 0
 
+    if args.command == 'queue-state-info':
+        if not args.repo_root:
+            parser.error('queue-state-info requires --repo-root')
+        return run_queue_command(Path(args.repo_root).resolve(), ['state-info', *remainder])
+
+    if args.command == 'queue-ensure-topology':
+        if not args.repo_root:
+            parser.error('queue-ensure-topology requires --repo-root')
+        return run_queue_command(Path(args.repo_root).resolve(), ['ensure-topology', *remainder])
+
     if args.command == 'queue-check':
         if not args.repo_root or not args.queue:
             parser.error('queue-check requires --repo-root and --queue')
         return run_queue_command(Path(args.repo_root).resolve(), ['check', '--queue', args.queue, *remainder])
+
+    if args.command == 'queue-validate':
+        if not args.repo_root or not args.message_file:
+            parser.error('queue-validate requires --repo-root and --message-file')
+        return run_queue_command(Path(args.repo_root).resolve(), ['validate', '--message-file', args.message_file, *remainder])
+
+    if args.command == 'queue-send':
+        if not args.repo_root or not args.queue or not args.message_file:
+            parser.error('queue-send requires --repo-root, --queue, and --message-file')
+        return run_queue_command(Path(args.repo_root).resolve(), ['send', '--queue', args.queue, '--message-file', args.message_file, *remainder])
 
     if args.command == 'queue-claim-next':
         if not args.repo_root or not args.queue:
