@@ -34,6 +34,22 @@ Initial supported cases:
 - `techlead_dev_review_pending` -> emit assignment to `QA`
 - explicit `--target-role python-team` invocation -> emit assignment to `Python Dev`
 
+Supported branch-aware decision path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-emit-decision \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --decision-type <reset_required|superseded|closed> \
+  [--send]
+```
+
+Initial supported decision cases:
+- `reset_required`
+- `superseded`
+- `closed`
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

@@ -1424,6 +1424,285 @@ def emit_next_assignment(args):
     return result
 
 
+def latest_escalation_of_type(escalations: list[dict], event_type: str) -> dict | None:
+    for escalation in reversed(escalations):
+        if escalation.get('event_type') == event_type:
+            return escalation
+    return None
+
+
+def derive_decision_context(args) -> dict:
+    repo_root = args.repo_root.resolve()
+    _current, manifest = load_authority(repo_root)
+    package = load_design_package(args.project_slug, args.package_id_external)
+    issue_number = resolve_issue_number_from_package(package, args.package_id_external)
+    current_task = resolve_task_summary(manifest, package, issue_number)
+    queues = queue_state(repo_root)
+    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
+    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+    workflow_stage, _owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
+
+    canonical_branch = args.canonical_branch or (f'issue-{issue_number}')
+    branch_name = (pr.get('headRefName') if pr else None) or canonical_branch
+    role_branch = args.role_branch
+    if role_branch is None and branch_name != canonical_branch:
+        role_branch = branch_name
+    source_packet_path = str(args.source_packet_path.resolve()) if args.source_packet_path else (qa_packet.get('path') if qa_packet else None)
+
+    if args.decision_type == 'reset_required':
+        reset_escalation = latest_escalation_of_type(escalations, 'reset_branch_required') or latest_escalation_of_type(escalations, 'reset_branch_recommended')
+        if workflow_stage != 'dev_reset_required' and not reset_escalation:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'reset_required_not_supported_for_current_stage',
+                'details': 'reset_required decisions are only supported when TechLead detects a reset-required recovery state.',
+            }
+        if source_packet_path is None:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'reset_required_missing_source_packet',
+                'details': 'reset_required decision emission requires a source QA packet path.',
+            }
+        reset_reason = args.reset_reason or (reset_escalation or {}).get('summary') or 'TechLead determined the current lineage requires a clean reset.'
+        superseded_branch = args.superseded_branch or role_branch or (branch_name if branch_name != canonical_branch else None)
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number') if pr else None,
+            'pr_url': pr.get('url') if pr else None,
+            'branch': branch_name,
+            'to_role': 'techlead',
+            'target_role_cli': 'python-team',
+            'decision_type': 'reset_branch',
+            'decision_rationale': reset_reason,
+            'next_assignment_type': 'implement_authorized_slice',
+            'work_item_status_update_intent': 'blocked',
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'branch_owner_role': 'TechLead',
+            'lineage_state': 'reset_required',
+            'lineage_action': 'reset',
+            'source_branch': canonical_branch,
+            'superseded_branch': superseded_branch,
+            'worktree_hint': args.worktree_hint or f'issue-{issue_number}-dev',
+            'reset_reason': reset_reason,
+            'source_packet_path': source_packet_path,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
+
+    if args.decision_type == 'superseded':
+        superseded_escalation = latest_escalation_of_type(escalations, 'qa_escalation_superseded')
+        if superseded_escalation is None:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'superseded_not_supported_for_current_stage',
+                'details': 'superseded decisions are only supported when TechLead has detected a superseded QA escalation.',
+            }
+        if source_packet_path is None:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'superseded_missing_source_packet',
+                'details': 'superseded decision emission requires a source QA packet path.',
+            }
+        superseded_branch = args.superseded_branch or role_branch or (branch_name if branch_name != canonical_branch else canonical_branch)
+        rationale = args.reset_reason or superseded_escalation.get('summary') or 'TechLead is recording that the prior branch lineage has been superseded.'
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number') if pr else None,
+            'pr_url': pr.get('url') if pr else None,
+            'branch': branch_name,
+            'to_role': 'techlead',
+            'target_role_cli': None,
+            'decision_type': 'supersede_branch_lineage',
+            'decision_rationale': rationale,
+            'next_assignment_type': None,
+            'work_item_status_update_intent': 'superseded',
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'branch_owner_role': 'TechLead',
+            'lineage_state': 'superseded',
+            'lineage_action': 'superseded',
+            'source_branch': canonical_branch,
+            'superseded_branch': superseded_branch,
+            'worktree_hint': args.worktree_hint,
+            'reset_reason': None,
+            'source_packet_path': source_packet_path,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
+
+    if args.decision_type == 'closed':
+        if not (pr and pr.get('mergedAt')) and issue.get('state') != 'CLOSED':
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'closed_not_supported_for_current_stage',
+                'details': 'closed decisions require a merged PR or closed issue state.',
+            }
+        if source_packet_path is None:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'closed_missing_source_packet',
+                'details': 'closed decision emission requires an explicit source packet path or a resolved QA packet path.',
+            }
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number') if pr else None,
+            'pr_url': pr.get('url') if pr else None,
+            'branch': branch_name,
+            'to_role': 'techlead',
+            'target_role_cli': None,
+            'decision_type': 'close_slice',
+            'decision_rationale': 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.',
+            'next_assignment_type': None,
+            'work_item_status_update_intent': 'accepted',
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'branch_owner_role': 'TechLead',
+            'lineage_state': 'closed',
+            'lineage_action': 'closed',
+            'source_branch': canonical_branch,
+            'superseded_branch': args.superseded_branch,
+            'worktree_hint': args.worktree_hint,
+            'reset_reason': None,
+            'source_packet_path': source_packet_path,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
+
+    return {
+        'ok': False,
+        'workflow_stage': workflow_stage,
+        'reason': 'unsupported_decision_type',
+        'details': f"Unsupported decision type {args.decision_type!r}.",
+    }
+
+
+def emit_decision(args):
+    repo_root = args.repo_root.resolve()
+    context = derive_decision_context(args)
+    if not context.get('ok'):
+        return context
+    output_stem = args.decision_type.replace('_', '-')
+    output_path = args.output or (repo_reports_dir(repo_root) / f'techlead-decision.issue{context["issue_number"]}.{output_stem}.json')
+    review_output_path = args.review_output or (repo_reports_dir(repo_root) / f'techlead-decision.issue{context["issue_number"]}.{output_stem}.md')
+    output_path = output_path.resolve()
+    review_output_path = review_output_path.resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    review_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    auth_script = repo_auth_script(repo_root)
+    auth_current = repo_auth_current(repo_root)
+    queue_script = repo_queue_script(repo_root)
+    compile_cmd = [
+        str(auth_script),
+        'authority',
+        'materialize-techlead-decision-packet',
+        '--manifest', str(auth_current),
+        '--project-slug', args.project_slug,
+        '--package-id-external', args.package_id_external,
+        '--brief-id-external', args.brief_id_external,
+        '--repo', 'billyweisberg/fractal-core-python',
+        '--issue-number', str(context['issue_number']),
+        '--issue-url', str(context['issue_url']),
+        '--pr-number', str(context['pr_number']),
+        '--pr-url', str(context['pr_url']),
+        '--branch', str(context['branch']),
+        '--canonical-branch', str(context['canonical_branch']),
+        '--to-role', context['to_role'],
+        '--decision-type', context['decision_type'],
+        '--decision-rationale', context['decision_rationale'],
+        '--work-item-status-update-intent', context['work_item_status_update_intent'],
+        '--source-packet-path', str(context['source_packet_path']),
+        '--branch-owner-role', context['branch_owner_role'],
+        '--lineage-state', context['lineage_state'],
+        '--lineage-action', context['lineage_action'],
+        '--source-branch', context['source_branch'],
+        '--output', str(output_path),
+        '--review-output', str(review_output_path),
+        '--persist-db',
+    ]
+    if context.get('pr_number') is None or context.get('pr_url') is None:
+        return {
+            'ok': False,
+            'workflow_stage': context['workflow_stage'],
+            'reason': 'decision_missing_pr_context',
+            'details': 'TechLead decision emission requires PR context in this slice.',
+        }
+    if context.get('target_role_cli'):
+        compile_cmd.extend(['--target-role', context['target_role_cli']])
+    if context.get('next_assignment_type'):
+        compile_cmd.extend(['--next-assignment-type', context['next_assignment_type']])
+    if context.get('role_branch'):
+        compile_cmd.extend(['--role-branch', str(context['role_branch'])])
+    if context.get('superseded_branch'):
+        compile_cmd.extend(['--superseded-branch', str(context['superseded_branch'])])
+    if context.get('worktree_hint'):
+        compile_cmd.extend(['--worktree-hint', str(context['worktree_hint'])])
+    if context.get('reset_reason'):
+        compile_cmd.extend(['--reset-reason', context['reset_reason']])
+
+    compile_result = run_json(compile_cmd)
+    validate_cmd = [
+        str(queue_script),
+        'techlead-validate-packet',
+        '--message-file', str(output_path),
+    ]
+    validate_code, validate_result, validate_error = run_json_with_errors(validate_cmd)
+    result = {
+        'ok': validate_code == 0,
+        'workflow_stage': context['workflow_stage'],
+        'derived_decision': {
+            'decision_type': context['decision_type'],
+            'lineage_state': context['lineage_state'],
+            'lineage_action': context['lineage_action'],
+            'target_role': context.get('target_role_cli'),
+        },
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'output_path': str(output_path),
+        'review_output_path': str(review_output_path),
+        'message_id': compile_result.get('message_id'),
+        'automation_run_id': compile_result.get('automation_run_id'),
+        'resolved_queue': validate_result.get('resolved_queue') if validate_result else None,
+        'sent': False,
+        'compile': compile_result,
+        'validate': validate_result,
+        'source_packet_path': context.get('source_packet_path'),
+    }
+    if validate_code != 0:
+        result['error'] = validate_error
+        return result
+    if args.send:
+        send_cmd = [
+            str(queue_script),
+            'techlead-send-packet',
+            '--repo-root', str(repo_root),
+            '--message-file', str(output_path),
+        ]
+        send_code, send_result, send_error = run_json_with_errors(send_cmd)
+        result['send'] = send_result
+        result['sent'] = send_code == 0 and bool(send_result and send_result.get('ok'))
+        if send_code != 0:
+            result['ok'] = False
+            result['error'] = send_error
+    return result
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -1516,6 +1795,22 @@ def parse_args(argv: list[str] | None = None):
     emit.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
     emit.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
 
+    decision = sub.add_parser('emit-decision')
+    decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
+    decision.add_argument('--package-id-external', required=True)
+    decision.add_argument('--brief-id-external', required=True)
+    decision.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    decision.add_argument('--decision-type', choices=['reset_required', 'superseded', 'closed'], required=True)
+    decision.add_argument('--send', action='store_true', help='Send the compiled decision packet after validation succeeds.')
+    decision.add_argument('--source-packet-path', type=Path, help='Explicit source packet path to use when runtime inference is insufficient.')
+    decision.add_argument('--canonical-branch')
+    decision.add_argument('--role-branch')
+    decision.add_argument('--superseded-branch')
+    decision.add_argument('--worktree-hint')
+    decision.add_argument('--reset-reason')
+    decision.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
+    decision.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
+
     return parser.parse_args(argv)
 
 
@@ -1543,6 +1838,11 @@ def main(argv=None):
         return 0
     if args.command == 'emit-next-assignment':
         result = emit_next_assignment(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'emit-decision':
+        result = emit_decision(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
