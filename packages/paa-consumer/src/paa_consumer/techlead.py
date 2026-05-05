@@ -305,6 +305,47 @@ def newest_packet(*packets):
     return latest
 
 
+def derive_lineage_section(current_task, pr, queues, escalations):
+    issue_number = current_task['issue_number'] if current_task else None
+    assignment_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='techlead_assignment_packet',
+    ) if issue_number else None
+    decision_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='techlead_decision_packet',
+    ) if issue_number else None
+    lineage_packet = newest_packet(decision_packet, assignment_packet)
+    payload = (lineage_packet or {}).get('payload') or {}
+    canonical_branch = payload.get('canonical_branch') or (pr.get('headRefName') if pr else None)
+    role_branch = payload.get('role_branch')
+    reset_required = any(e.get('event_type') in {'reset_branch_required', 'reset_branch_recommended'} for e in escalations)
+    lineage_state = payload.get('lineage_state')
+    if lineage_state is None:
+        if reset_required:
+            lineage_state = 'reset_required'
+        elif canonical_branch:
+            lineage_state = 'active'
+        else:
+            lineage_state = 'unknown'
+    return {
+        'canonical_branch': canonical_branch,
+        'active_role_branch': role_branch,
+        'branch_owner_role': payload.get('branch_owner_role') or ('TechLead' if lineage_packet else None),
+        'lineage_state': lineage_state,
+        'latest_lineage_action': payload.get('lineage_action'),
+        'source_branch': payload.get('source_branch'),
+        'superseded_branch': payload.get('superseded_branch'),
+        'worktree_hint': payload.get('worktree_hint'),
+        'reset_reason': payload.get('reset_reason'),
+        'current_packet_type': lineage_packet.get('schema_type') if lineage_packet else None,
+        'current_packet_message_id': lineage_packet.get('message_id') if lineage_packet else None,
+        'current_packet_queue': lineage_packet.get('queue_name') if lineage_packet else None,
+    }
+
+
 def action_type_for_role(role):
     mapping = {
         'Delivery Architect': 'route_to_delivery_architect',
@@ -876,6 +917,20 @@ def build_report():
     unattended_safe = True
     workflow_stage = 'blocked'
     owner_role = 'Unknown'
+    lineage = {
+        'canonical_branch': None,
+        'active_role_branch': None,
+        'branch_owner_role': None,
+        'lineage_state': 'unknown',
+        'latest_lineage_action': None,
+        'source_branch': None,
+        'superseded_branch': None,
+        'worktree_hint': None,
+        'reset_reason': None,
+        'current_packet_type': None,
+        'current_packet_message_id': None,
+        'current_packet_queue': None,
+    }
 
     if current_task:
         qa_packet = latest_qa_packet(current_task['issue_number'])
@@ -885,6 +940,7 @@ def build_report():
         escalations.extend(wf_escalations)
         recommended.extend(wf_recommended)
         unattended_safe = unattended_safe and wf_safe
+        lineage = derive_lineage_section(current_task, pr, queues, escalations)
 
         last_qa_verdict = qa_packet.get('verification_status') if qa_packet else 'unknown'
         superseded = any(e.get('event_type') == 'qa_escalation_superseded' for e in escalations)
@@ -994,6 +1050,7 @@ def build_report():
             'unacknowledged': queues[q]['messages_unacknowledged'],
             'latest_message': (queues[q].get('preview') or [None])[0]['payload_preview'] if queues[q].get('preview') else None,
         } for q in QUEUE_NAMES},
+        'lineage': lineage,
         'automations': {'roles': auto_roles},
         'traceability': traceability,
         'escalations': escalations,

@@ -417,6 +417,22 @@ def normalize_techlead_role(raw_role: str) -> str:
     return mapping.get(raw_role, raw_role)
 
 
+def techlead_worktree_hint(issue_number: int, target_role: Optional[str]) -> Optional[str]:
+    if target_role is None:
+        return None
+    suffix_map = {
+        'Python Dev': 'dev',
+        'QA': 'qa',
+        'Delivery Architect': 'delivery',
+        'Authority Architect': 'authority',
+        'TechLead': 'techlead',
+    }
+    suffix = suffix_map.get(target_role)
+    if suffix is None:
+        return None
+    return f'issue-{issue_number}-{suffix}'
+
+
 def build_authority_context(manifest: Path, manifest_data: dict, package: dict):
     task = find_task(manifest_data, task_id=package['authority_context']['task_id'])
     authority_context = {
@@ -1800,6 +1816,15 @@ def cmd_materialize_techlead_assignment_packet(args):
     brief_json = selected['brief_json']
     issue_links = [url for url in [args.issue_url, args.pr_url] if url]
     target_role_label = normalize_techlead_role(args.target_role)
+    canonical_branch = args.canonical_branch or args.branch
+    role_branch = args.role_branch
+    branch_owner_role = args.branch_owner_role or 'TechLead'
+    lineage_state = args.lineage_state or 'active'
+    lineage_action = args.lineage_action or 'created'
+    source_branch = args.source_branch or canonical_branch
+    superseded_branch = args.superseded_branch
+    worktree_hint = args.worktree_hint or techlead_worktree_hint(args.issue_number, target_role_label)
+    reset_reason = args.reset_reason
     payload = {
         'message_id': args.message_id or f"fcore-techlead-{datetime.now(timezone.utc).date().isoformat()}-issue{args.issue_number}-{args.assignment_type}",
         'schema_type': 'techlead_assignment_packet',
@@ -1834,8 +1859,15 @@ def cmd_materialize_techlead_assignment_packet(args):
                 'package_id_external': args.package_id_external,
                 'brief_id_external': selected['brief_id_external'],
             },
-            'canonical_branch': args.canonical_branch or args.branch,
-            'role_branch': args.role_branch,
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'branch_owner_role': branch_owner_role,
+            'lineage_state': lineage_state,
+            'lineage_action': lineage_action,
+            'source_branch': source_branch,
+            'superseded_branch': superseded_branch,
+            'worktree_hint': worktree_hint,
+            'reset_reason': reset_reason,
             'allowed_result_types': list(args.allowed_result_type),
             'assignment_summary': args.assignment_summary,
             'coder_run_brief_ref': {
@@ -1908,6 +1940,15 @@ def cmd_materialize_techlead_decision_packet(args):
     brief_json = selected['brief_json']
     issue_links = [url for url in [args.issue_url, args.pr_url] if url]
     target_role_label = normalize_techlead_role(args.target_role) if args.target_role else None
+    canonical_branch = args.canonical_branch or args.branch
+    role_branch = args.role_branch
+    branch_owner_role = args.branch_owner_role or 'TechLead'
+    lineage_state = args.lineage_state or 'active'
+    lineage_action = args.lineage_action or 'created'
+    source_branch = args.source_branch or canonical_branch
+    superseded_branch = args.superseded_branch
+    worktree_hint = args.worktree_hint or techlead_worktree_hint(args.issue_number, target_role_label or 'TechLead')
+    reset_reason = args.reset_reason
     payload = {
         'message_id': args.message_id or f"fcore-techlead-{datetime.now(timezone.utc).date().isoformat()}-issue{args.issue_number}-{args.decision_type}",
         'schema_type': 'techlead_decision_packet',
@@ -1942,8 +1983,15 @@ def cmd_materialize_techlead_decision_packet(args):
             'decision_rationale': args.decision_rationale,
             'target_role': target_role_label,
             'next_assignment_type': args.next_assignment_type,
-            'canonical_branch': args.canonical_branch or args.branch,
-            'role_branch': args.role_branch,
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'branch_owner_role': branch_owner_role,
+            'lineage_state': lineage_state,
+            'lineage_action': lineage_action,
+            'source_branch': source_branch,
+            'superseded_branch': superseded_branch,
+            'worktree_hint': worktree_hint,
+            'reset_reason': reset_reason,
             'work_item_status_update_intent': args.work_item_status_update_intent,
             'coder_run_brief_ref': {
                 'path': selected['source_artifact'],
@@ -2197,6 +2245,13 @@ def build_parser():
     p.add_argument('--branch', required=True)
     p.add_argument('--canonical-branch')
     p.add_argument('--role-branch')
+    p.add_argument('--branch-owner-role')
+    p.add_argument('--lineage-state')
+    p.add_argument('--lineage-action')
+    p.add_argument('--source-branch')
+    p.add_argument('--superseded-branch')
+    p.add_argument('--worktree-hint')
+    p.add_argument('--reset-reason')
     p.add_argument('--assignment-type', required=True)
     p.add_argument('--assignment-summary', required=True)
     p.add_argument('--allowed-result-type', action='append', required=True)
@@ -2224,6 +2279,13 @@ def build_parser():
     p.add_argument('--branch', required=True)
     p.add_argument('--canonical-branch')
     p.add_argument('--role-branch')
+    p.add_argument('--branch-owner-role')
+    p.add_argument('--lineage-state')
+    p.add_argument('--lineage-action')
+    p.add_argument('--source-branch')
+    p.add_argument('--superseded-branch')
+    p.add_argument('--worktree-hint')
+    p.add_argument('--reset-reason')
     p.add_argument('--to-role', choices=['authority-architect', 'techlead'], default='authority-architect')
     p.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa', 'authority-architect'])
     p.add_argument('--decision-type', required=True)

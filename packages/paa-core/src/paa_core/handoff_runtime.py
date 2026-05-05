@@ -91,6 +91,13 @@ TECHLEAD_ASSIGNMENT_REQUIRED = [
     "source_context_ref",
     "canonical_branch",
     "role_branch",
+    "branch_owner_role",
+    "lineage_state",
+    "lineage_action",
+    "source_branch",
+    "superseded_branch",
+    "worktree_hint",
+    "reset_reason",
     "allowed_result_types",
     "assignment_summary",
 ]
@@ -104,6 +111,13 @@ TECHLEAD_DECISION_REQUIRED = [
     "next_assignment_type",
     "canonical_branch",
     "role_branch",
+    "branch_owner_role",
+    "lineage_state",
+    "lineage_action",
+    "source_branch",
+    "superseded_branch",
+    "worktree_hint",
+    "reset_reason",
     "work_item_status_update_intent",
 ]
 ENVELOPE_REQUIRED = [

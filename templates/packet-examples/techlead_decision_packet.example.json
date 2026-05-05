@@ -37,6 +37,13 @@
     "next_assignment_type": "verify_authorized_slice",
     "canonical_branch": "issue-106",
     "role_branch": null,
+    "branch_owner_role": "TechLead",
+    "lineage_state": "active",
+    "lineage_action": "created",
+    "source_branch": "issue-106",
+    "superseded_branch": null,
+    "worktree_hint": "issue-106-qa",
+    "reset_reason": null,
     "work_item_status_update_intent": "qa_pending",
     "coder_run_brief_ref": {
       "path": "{{CODER_RUN_BRIEF_PATH}}",

@@ -37,6 +37,13 @@
     },
     "canonical_branch": "issue-106",
     "role_branch": null,
+    "branch_owner_role": "TechLead",
+    "lineage_state": "active",
+    "lineage_action": "created",
+    "source_branch": "issue-106",
+    "superseded_branch": null,
+    "worktree_hint": "issue-106-dev",
+    "reset_reason": null,
     "allowed_result_types": [
       "implemented_ready_for_qa",
       "blocked",

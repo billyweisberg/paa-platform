@@ -13,6 +13,7 @@
     "workflow",
     "active_work",
     "queues",
+    "lineage",
     "automations",
     "traceability",
     "escalations",
@@ -29,6 +30,7 @@
     "workflow": {"$ref": "#/$defs/workflow"},
     "active_work": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/activeWork"}]},
     "queues": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/queueState"}},
+    "lineage": {"$ref": "#/$defs/lineage"},
     "automations": {"$ref": "#/$defs/automations"},
     "traceability": {"$ref": "#/$defs/traceability"},
     "escalations": {"type": "array", "items": {"$ref": "#/$defs/escalation"}},
@@ -162,6 +164,38 @@
         "ready": {"type": "integer", "minimum": 0},
         "unacknowledged": {"type": "integer", "minimum": 0},
         "latest_message": {"anyOf": [{"type": "null"}, {"type": "object"}]}
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_branch",
+        "active_role_branch",
+        "branch_owner_role",
+        "lineage_state",
+        "latest_lineage_action",
+        "source_branch",
+        "superseded_branch",
+        "worktree_hint",
+        "reset_reason",
+        "current_packet_type",
+        "current_packet_message_id",
+        "current_packet_queue"
+      ],
+      "properties": {
+        "canonical_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "active_role_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "branch_owner_role": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "lineage_state": {"enum": ["active", "superseded", "reset_required", "closed", "unknown"]},
+        "latest_lineage_action": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "source_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "superseded_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "worktree_hint": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "reset_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "current_packet_type": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "current_packet_message_id": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "current_packet_queue": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       }
     },
     "automations": {
