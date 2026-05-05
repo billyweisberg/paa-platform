@@ -905,6 +905,26 @@ def save_json(path, data):
         fh.write("\n")
 
 
+def reconcile_ready_count(raw_ready: Optional[int], preview: list[dict], preview_probe_ran: bool) -> tuple[int, Optional[dict]]:
+    raw_value = 0 if raw_ready is None else int(raw_ready)
+    observed_minimum = len(preview)
+    if not preview_probe_ran:
+        return raw_value, None
+    if observed_minimum == 0 and raw_value != 0:
+        return 0, {
+            "raw_messages_ready": raw_value,
+            "observed_preview_count": observed_minimum,
+            "reason": "preview_empty_but_broker_ready_nonzero",
+        }
+    if observed_minimum > raw_value:
+        return observed_minimum, {
+            "raw_messages_ready": raw_value,
+            "observed_preview_count": observed_minimum,
+            "reason": "preview_count_exceeded_broker_ready",
+        }
+    return raw_value, None
+
+
 def validate_envelope(message, require_authority=True):
     errors = []
     for field in ENVELOPE_REQUIRED:
@@ -1017,6 +1037,7 @@ def cmd_check(args):
     client = RabbitMQManagementClient(user=args.user, password=args.password, host=args.host, port=args.port, vhost=args.vhost)
     _, queue_data = client.queue(args.queue)
     preview = []
+    preview_probe_ran = args.preview > 0
     if args.preview > 0:
         _, messages = client.get_messages(args.queue, count=args.preview, ackmode="ack_requeue_true")
         for msg in messages:
@@ -1037,15 +1058,23 @@ def cmd_check(args):
                     "to_role": parsed.get("to_role"),
                 },
             })
+    messages_ready, reconciliation = reconcile_ready_count(
+        queue_data.get("messages_ready"),
+        preview,
+        preview_probe_ran,
+    )
     result = {
         "queue": args.queue,
-        "messages_ready": queue_data.get("messages_ready"),
+        "messages_ready": messages_ready,
+        "messages_ready_raw": queue_data.get("messages_ready"),
         "messages_unacknowledged": queue_data.get("messages_unacknowledged"),
         "consumers": queue_data.get("consumers"),
         "active_state_dir": str(root),
         "active_state_source": source,
         "preview": preview,
     }
+    if reconciliation:
+        result["reconciliation"] = reconciliation
     print(json.dumps(result, indent=2))
 
 
