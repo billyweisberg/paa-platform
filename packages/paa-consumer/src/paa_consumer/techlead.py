@@ -219,6 +219,31 @@ def latest_packet_preview(queues, issue_number, schema_type=None, to_role=None):
     return latest
 
 
+def newest_packet(*packets):
+    latest = None
+    latest_dt = None
+    for packet in packets:
+        if not packet:
+            continue
+        created_at = parse_created_at(packet.get('created_at'))
+        if latest is None or (created_at and (latest_dt is None or created_at > latest_dt)):
+            latest = packet
+            latest_dt = created_at
+    return latest
+
+
+def action_type_for_role(role):
+    mapping = {
+        'Delivery Architect': 'route_to_delivery_architect',
+        'Python Dev': 'route_to_python',
+        'QA': 'route_to_qa',
+        'Authority Architect': 'route_to_architect',
+        'Architect': 'route_to_architect',
+        'TechLead': 'route_to_techlead',
+    }
+    return mapping.get(role, 'route_to_techlead')
+
+
 def parse_created_at(value):
     if not value:
         return None
@@ -351,6 +376,16 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         schema_type='qa_verification_packet',
         to_role='techlead',
     ) if issue_number else None
+    pending_assignment_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='techlead_assignment_packet',
+    ) if issue_number else None
+    pending_decision_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='techlead_decision_packet',
+    ) if issue_number else None
     issue_comments = issue.get('comments') or []
     pr_comments = (pr or {}).get('comments') or []
     latest_python_handoff = latest_issue_comment(issue, 'Python Team handoff:')
@@ -400,14 +435,84 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         and 'needs_human_review' in ((latest_qa_review or {}).get('body') or '')
     )
 
-    if pending_qa_queue_packet:
+    latest_techlead_packet = newest_packet(
+        pending_decision_packet,
+        pending_assignment_packet,
+        pending_qa_queue_packet,
+        pending_dev_packet,
+    )
+
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'techlead_decision_packet':
+        payload = latest_techlead_packet.get('payload') or {}
+        target_role = payload.get('target_role') or 'TechLead'
+        stage = 'techlead_decision_recorded'
+        owner = 'TechLead'
+        unattended_safe = False
+        escalations.append({
+            'event_type': 'techlead_decision_recorded',
+            'severity': 'medium',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': 'TechLead has already recorded the next routing or merge decision for the active slice.',
+            'details': {
+                'message_id': latest_techlead_packet.get('message_id'),
+                'queue_name': latest_techlead_packet.get('queue_name'),
+                'decision_type': payload.get('decision_type'),
+                'target_role': target_role,
+                'next_assignment_type': payload.get('next_assignment_type'),
+                'source_packet_ref': payload.get('source_packet_ref'),
+            },
+            'recommended_route': target_role,
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': action_type_for_role(target_role),
+            'reason': 'TechLead has already recorded the next workflow decision; follow that decision rather than re-deriving the route from older packets.',
+            'target_role': target_role,
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'techlead_assignment_packet':
+        payload = latest_techlead_packet.get('payload') or {}
+        target_role = payload.get('target_role') or 'TechLead'
+        stage = 'techlead_assignment_issued'
+        owner = target_role
+        unattended_safe = False
+        escalations.append({
+            'event_type': 'techlead_assignment_issued',
+            'severity': 'medium',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': 'TechLead has issued the next assignment packet for the active slice.',
+            'details': {
+                'message_id': latest_techlead_packet.get('message_id'),
+                'queue_name': latest_techlead_packet.get('queue_name'),
+                'assignment_type': payload.get('assignment_type'),
+                'target_role': target_role,
+                'canonical_branch': payload.get('canonical_branch'),
+                'role_branch': payload.get('role_branch'),
+                'allowed_result_types': payload.get('allowed_result_types'),
+            },
+            'recommended_route': target_role,
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': action_type_for_role(target_role),
+            'reason': 'TechLead has already issued a concrete assignment packet; the next step is for the target role to claim and execute it.',
+            'target_role': target_role,
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'qa_verification_packet':
         stage = 'techlead_qa_review_pending'
         owner = 'TechLead'
         unattended_safe = False
         details = {
-            'message_id': pending_qa_queue_packet.get('message_id'),
-            'schema_type': pending_qa_queue_packet.get('schema_type'),
-            'queue_name': pending_qa_queue_packet.get('queue_name'),
+            'message_id': latest_techlead_packet.get('message_id'),
+            'schema_type': latest_techlead_packet.get('schema_type'),
+            'queue_name': latest_techlead_packet.get('queue_name'),
         }
         if qa_packet:
             details['verification_status'] = qa_packet.get('verification_status')
@@ -429,7 +534,7 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         })
         return stage, owner, escalations, recommended, unattended_safe
 
-    if pending_dev_packet:
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'slice_result_packet':
         stage = 'techlead_dev_review_pending'
         owner = 'TechLead'
         unattended_safe = False
@@ -439,9 +544,9 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
             'summary': 'TechLead has a waiting Dev result packet to review before QA is assigned.',
             'details': {
-                'message_id': pending_dev_packet.get('message_id'),
-                'schema_type': pending_dev_packet.get('schema_type'),
-                'queue_name': pending_dev_packet.get('queue_name'),
+                'message_id': latest_techlead_packet.get('message_id'),
+                'schema_type': latest_techlead_packet.get('schema_type'),
+                'queue_name': latest_techlead_packet.get('queue_name'),
             },
             'recommended_route': 'TechLead',
             'status': 'open',

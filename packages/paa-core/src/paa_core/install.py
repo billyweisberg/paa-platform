@@ -40,7 +40,17 @@ class AuthorityInstallResult:
 
 def platform_repo_root() -> Path:
     """Resolve the platform repo root from the source tree layout."""
-
+    metadata_path = Path(__file__).resolve().parents[2] / "install-metadata.json"
+    if metadata_path.exists():
+        try:
+            metadata = json.loads(metadata_path.read_text())
+        except Exception:
+            metadata = {}
+        configured_root = metadata.get("source_platform_repo_root")
+        if configured_root:
+            candidate = Path(str(configured_root)).expanduser().resolve()
+            if candidate.exists():
+                return candidate
     return Path(__file__).resolve().parents[4]
 
 
@@ -279,6 +289,7 @@ def _install_common_layout(
             "project_pack": project_pack,
             "installed_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
             "source_platform_repo": "https://github.com/billyweisberg/paa-platform",
+            "source_platform_repo_root": str(root),
             "source_platform_revision": platform_revision(),
             "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
         },

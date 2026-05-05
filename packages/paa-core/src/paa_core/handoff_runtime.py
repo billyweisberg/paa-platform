@@ -26,11 +26,26 @@ STATE_ENV_VAR = "FRACTAL_CORE_HANDOFF_STATE_DIR"
 PAA_DB_CONTAINER = os.environ.get("PAA_DB_CONTAINER", "agenthub-mm-db")
 PAA_DB_NAME = os.environ.get("PAA_DB_NAME", "paa_dev")
 PAA_DB_USER = os.environ.get("PAA_DB_USER", "mmuser")
-SUPPORTED_SCHEMA_TYPES = {"architect_cycle_packet", "qa_verification_packet", "slice_result_packet"}
+SUPPORTED_SCHEMA_TYPES = {
+    "architect_cycle_packet",
+    "qa_verification_packet",
+    "slice_result_packet",
+    "techlead_assignment_packet",
+    "techlead_decision_packet",
+}
 ROUTE_POLICY_BY_SCHEMA = {
-    "architect_cycle_packet": ("Architect", "Python Dev"),
-    "slice_result_packet": ("Python Dev", "TechLead"),
-    "qa_verification_packet": ("QA", "TechLead"),
+    "architect_cycle_packet": {("Architect", "Python Dev")},
+    "slice_result_packet": {("Python Dev", "TechLead")},
+    "qa_verification_packet": {("QA", "TechLead")},
+    "techlead_assignment_packet": {
+        ("TechLead", "Delivery Architect"),
+        ("TechLead", "Python Dev"),
+        ("TechLead", "QA"),
+    },
+    "techlead_decision_packet": {
+        ("TechLead", "Authority Architect"),
+        ("TechLead", "TechLead"),
+    },
 }
 
 ARCHITECT_REQUIRED = [
@@ -68,6 +83,29 @@ QA_REQUIRED = [
     "findings",
     "recommended_action",
 ]
+TECHLEAD_ASSIGNMENT_REQUIRED = [
+    "issue",
+    "pr",
+    "target_role",
+    "assignment_type",
+    "source_context_ref",
+    "canonical_branch",
+    "role_branch",
+    "allowed_result_types",
+    "assignment_summary",
+]
+TECHLEAD_DECISION_REQUIRED = [
+    "issue",
+    "pr",
+    "source_packet_ref",
+    "decision_type",
+    "decision_rationale",
+    "target_role",
+    "next_assignment_type",
+    "canonical_branch",
+    "role_branch",
+    "work_item_status_update_intent",
+]
 ENVELOPE_REQUIRED = [
     "message_id",
     "schema_type",
@@ -92,6 +130,8 @@ PAYLOAD_REQUIRED_BY_SCHEMA = {
     "architect_cycle_packet": ARCHITECT_REQUIRED,
     "slice_result_packet": SLICE_REQUIRED,
     "qa_verification_packet": QA_REQUIRED,
+    "techlead_assignment_packet": TECHLEAD_ASSIGNMENT_REQUIRED,
+    "techlead_decision_packet": TECHLEAD_DECISION_REQUIRED,
 }
 
 
@@ -117,7 +157,7 @@ def run_psql(sql: str) -> str:
     return result.stdout
 
 
-def role_name_for_db(raw_role: Optional[str]) -> Optional[str]:
+def normalize_role_name(raw_role: Optional[str]) -> Optional[str]:
     if raw_role is None:
         return None
     mapping = {
@@ -128,10 +168,23 @@ def role_name_for_db(raw_role: Optional[str]) -> Optional[str]:
         "qa": "QA",
         "Architect": "Architect",
         "architect": "Architect",
+        "Authority Architect": "Authority Architect",
+        "authority-architect": "Authority Architect",
+        "Delivery Architect": "Delivery Architect",
+        "delivery-architect": "Delivery Architect",
         "TechLead": "TechLead",
         "techlead": "TechLead",
     }
     return mapping.get(raw_role, raw_role)
+
+
+def role_name_for_db(raw_role: Optional[str]) -> Optional[str]:
+    normalized = normalize_role_name(raw_role)
+    if normalized == "Delivery Architect":
+        return "Architect"
+    if normalized == "Authority Architect":
+        return "Architect"
+    return normalized
 
 
 def project_slug_from_message(message: dict) -> str:
@@ -890,13 +943,13 @@ def validate_envelope(message, require_authority=True):
                 errors.append(f"missing payload field: {field}")
     expected_route = ROUTE_POLICY_BY_SCHEMA.get(message.get("schema_type"))
     if expected_route:
-        actual_from_role = role_name_for_db(message.get("from_role"))
-        actual_to_role = role_name_for_db(message.get("to_role"))
-        expected_from_role, expected_to_role = expected_route
-        if actual_from_role != expected_from_role or actual_to_role != expected_to_role:
+        actual_from_role = normalize_role_name(message.get("from_role"))
+        actual_to_role = normalize_role_name(message.get("to_role"))
+        if (actual_from_role, actual_to_role) not in expected_route:
+            route_options = ", ".join(f"{fr} -> {to}" for fr, to in sorted(expected_route))
             errors.append(
                 "invalid route for "
-                f"{message.get('schema_type')}: expected {expected_from_role} -> {expected_to_role}, "
+                f"{message.get('schema_type')}: expected one of [{route_options}], "
                 f"got {actual_from_role} -> {actual_to_role}"
             )
     return errors

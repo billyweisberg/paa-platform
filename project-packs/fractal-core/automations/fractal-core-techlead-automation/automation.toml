@@ -7,6 +7,8 @@ prompt = """[$fractal-core-techlead]({{REPO_ROOT}}/.codex/skills/fractal-core-te
 Use repo-local consumer runtime only.
 Generate the TechLead report from installed authority, queue runtime, GitHub state, and PAA traceability.
 Treat Dev result packets and QA verification packets as TechLead-owned decisions before any next assignment is made.
+Recognize `techlead_assignment_packet` as an issued routing intent and `techlead_decision_packet` as the durable reason for the next route, pause, reset, or merge-prep action.
+Do not auto-send new packets in this phase; keep next-step execution human/report-driven unless explicitly instructed.
 Flag any issue work that is not using the shared branch pattern `issue-<issue_number>`.
 """
 status = "PAUSED"

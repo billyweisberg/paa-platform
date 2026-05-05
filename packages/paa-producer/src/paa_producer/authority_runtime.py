@@ -29,6 +29,8 @@ PACKET_COMPILER_AGENT_BY_SCHEMA = {
     'architect_cycle_packet': 'Fractal Core Architect Automation',
     'slice_result_packet': 'Python Team Automation',
     'qa_verification_packet': 'Fractal Core QA Automation',
+    'techlead_assignment_packet': 'Fractal Core TechLead Automation',
+    'techlead_decision_packet': 'Fractal Core TechLead Automation',
 }
 
 
@@ -404,6 +406,17 @@ def load_json_file(path: str) -> dict:
     return json.loads(Path(path).expanduser().resolve().read_text())
 
 
+def normalize_techlead_role(raw_role: str) -> str:
+    mapping = {
+        'python-team': 'Python Dev',
+        'qa': 'QA',
+        'delivery-architect': 'Delivery Architect',
+        'authority-architect': 'Authority Architect',
+        'techlead': 'TechLead',
+    }
+    return mapping.get(raw_role, raw_role)
+
+
 def build_authority_context(manifest: Path, manifest_data: dict, package: dict):
     task = find_task(manifest_data, task_id=package['authority_context']['task_id'])
     authority_context = {
@@ -640,6 +653,63 @@ def write_qa_review_markdown(path: Path, packet: dict):
         '',
         '## Recommended action',
         json.dumps(packet['payload']['recommended_action'], indent=2),
+    ]
+    path.write_text('\n'.join(review) + '\n')
+
+
+def write_techlead_assignment_review_markdown(path: Path, packet: dict):
+    payload = packet['payload']
+    review = [
+        f"# TechLead Assignment Packet Review: {packet['message_id']}",
+        '',
+        '## Assignment',
+        f"- target role: `{payload['target_role']}`",
+        f"- assignment type: `{payload['assignment_type']}`",
+        f"- canonical branch: `{payload['canonical_branch']}`",
+        f"- role branch: `{payload['role_branch'] or '(none)'}`",
+        '',
+        '## GitHub context',
+        f"- issue: `#{payload['issue']['number']}`",
+        f"- PR: `#{payload['pr']['number']}`",
+        '',
+        '## Allowed result types',
+    ]
+    review.extend([f"- {item}" for item in payload['allowed_result_types']])
+    review.extend([
+        '',
+        '## Assignment summary',
+        str(payload['assignment_summary']),
+        '',
+        '## Source context',
+        json.dumps(payload['source_context_ref'], indent=2),
+    ])
+    path.write_text('\n'.join(review) + '\n')
+
+
+def write_techlead_decision_review_markdown(path: Path, packet: dict):
+    payload = packet['payload']
+    review = [
+        f"# TechLead Decision Packet Review: {packet['message_id']}",
+        '',
+        '## Decision',
+        f"- decision type: `{payload['decision_type']}`",
+        f"- target role: `{payload['target_role'] or '(none)'}`",
+        f"- next assignment type: `{payload['next_assignment_type'] or '(none)'}`",
+        f"- canonical branch: `{payload['canonical_branch']}`",
+        f"- role branch: `{payload['role_branch'] or '(none)'}`",
+        '',
+        '## GitHub context',
+        f"- issue: `#{payload['issue']['number']}`",
+        f"- PR: `#{payload['pr']['number']}`",
+        '',
+        '## Decision rationale',
+        str(payload['decision_rationale']),
+        '',
+        '## Source packet reference',
+        json.dumps(payload['source_packet_ref'], indent=2),
+        '',
+        '## Work-item status update intent',
+        str(payload['work_item_status_update_intent']),
     ]
     path.write_text('\n'.join(review) + '\n')
 
@@ -1709,6 +1779,221 @@ def cmd_materialize_qa_verification_packet(args):
     }, indent=2))
 
 
+def cmd_materialize_techlead_assignment_packet(args):
+    manifest, manifest_data = load_manifest(args.manifest)
+    package = load_design_package_from_paa(
+        project_slug=args.project_slug,
+        package_id_external=args.package_id_external,
+    )
+    authority_context, _task = build_authority_context(manifest, manifest_data, package)
+    try:
+        selected = resolve_brief_for_packet(
+            project_slug=args.project_slug,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            require_ready=False,
+        )
+    except RuntimeError as exc:
+        print(json.dumps({'ok': False, 'error': str(exc)}, indent=2))
+        sys.exit(1)
+
+    brief_json = selected['brief_json']
+    issue_links = [url for url in [args.issue_url, args.pr_url] if url]
+    target_role_label = normalize_techlead_role(args.target_role)
+    payload = {
+        'message_id': args.message_id or f"fcore-techlead-{datetime.now(timezone.utc).date().isoformat()}-issue{args.issue_number}-{args.assignment_type}",
+        'schema_type': 'techlead_assignment_packet',
+        'schema_version': '1.0.0',
+        'project': args.packet_project,
+        'from_role': 'techlead',
+        'to_role': args.target_role,
+        'created_at': args.created_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+        'correlation_id': args.correlation_id or f'issue-{args.issue_number}',
+        'github_context': {
+            'repo': args.repo,
+            'issue_number': args.issue_number,
+            'pr_number': args.pr_number,
+            'branch': args.branch,
+            'links': issue_links,
+        },
+        'payload': {
+            'issue': {
+                'number': args.issue_number,
+                'url': args.issue_url,
+            },
+            'pr': {
+                'number': args.pr_number,
+                'url': args.pr_url,
+                'ready_for_review': True,
+            },
+            'target_role': target_role_label,
+            'assignment_type': args.assignment_type,
+            'source_context_ref': {
+                'source_packet_path': args.source_packet_path,
+                'source_packet_message_id': args.source_packet_message_id,
+                'package_id_external': args.package_id_external,
+                'brief_id_external': selected['brief_id_external'],
+            },
+            'canonical_branch': args.canonical_branch or args.branch,
+            'role_branch': args.role_branch,
+            'allowed_result_types': list(args.allowed_result_type),
+            'assignment_summary': args.assignment_summary,
+            'coder_run_brief_ref': {
+                'path': selected['source_artifact'],
+                'schema_path': selected['schema_path'],
+                'brief_id': brief_json['brief_id'],
+            },
+            'coder_run_brief': brief_json,
+            'coder_brief_resolution': {
+                'package_id_external': args.package_id_external,
+                'brief_id_external': selected['brief_id_external'],
+                'readiness_state': selected['readiness_state'],
+                'parallel_group_id': selected['parallel_group_id'],
+            },
+        },
+        'authority_context': authority_context,
+    }
+    review_markdown = None
+    if args.output:
+        output_path = Path(args.output).expanduser().resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2) + '\n')
+    if args.review_output:
+        review_path = Path(args.review_output).expanduser().resolve()
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        write_techlead_assignment_review_markdown(review_path, payload)
+        review_markdown = review_path.read_text()
+    automation_run_id = None
+    if args.persist_db:
+        automation_run_id = persist_packet_compilation(
+            project_slug=args.project_slug,
+            packet=payload,
+            package_id_external=args.package_id_external,
+            brief_id_external=selected['brief_id_external'],
+            review_markdown=review_markdown,
+            output_path=str(Path(args.output).expanduser().resolve()) if args.output else None,
+            review_output_path=str(Path(args.review_output).expanduser().resolve()) if args.review_output else None,
+            source_packet_path=args.source_packet_path,
+        )
+    print(json.dumps({
+        'ok': True,
+        'message_id': payload['message_id'],
+        'output_path': str(Path(args.output).expanduser().resolve()) if args.output else None,
+        'review_output_path': str(Path(args.review_output).expanduser().resolve()) if args.review_output else None,
+        'automation_run_id': automation_run_id,
+        'coder_brief_resolution': payload['payload']['coder_brief_resolution'],
+        'task_id': authority_context['task_id'],
+        'packet': payload if not args.output else None,
+    }, indent=2))
+
+
+def cmd_materialize_techlead_decision_packet(args):
+    manifest, manifest_data = load_manifest(args.manifest)
+    package = load_design_package_from_paa(
+        project_slug=args.project_slug,
+        package_id_external=args.package_id_external,
+    )
+    authority_context, _task = build_authority_context(manifest, manifest_data, package)
+    try:
+        selected = resolve_brief_for_packet(
+            project_slug=args.project_slug,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            require_ready=False,
+        )
+    except RuntimeError as exc:
+        print(json.dumps({'ok': False, 'error': str(exc)}, indent=2))
+        sys.exit(1)
+
+    brief_json = selected['brief_json']
+    issue_links = [url for url in [args.issue_url, args.pr_url] if url]
+    target_role_label = normalize_techlead_role(args.target_role) if args.target_role else None
+    payload = {
+        'message_id': args.message_id or f"fcore-techlead-{datetime.now(timezone.utc).date().isoformat()}-issue{args.issue_number}-{args.decision_type}",
+        'schema_type': 'techlead_decision_packet',
+        'schema_version': '1.0.0',
+        'project': args.packet_project,
+        'from_role': 'techlead',
+        'to_role': args.to_role,
+        'created_at': args.created_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+        'correlation_id': args.correlation_id or f'issue-{args.issue_number}',
+        'github_context': {
+            'repo': args.repo,
+            'issue_number': args.issue_number,
+            'pr_number': args.pr_number,
+            'branch': args.branch,
+            'links': issue_links,
+        },
+        'payload': {
+            'issue': {
+                'number': args.issue_number,
+                'url': args.issue_url,
+            },
+            'pr': {
+                'number': args.pr_number,
+                'url': args.pr_url,
+                'ready_for_review': True,
+            },
+            'source_packet_ref': {
+                'path': args.source_packet_path,
+                'message_id': args.source_packet_message_id,
+            },
+            'decision_type': args.decision_type,
+            'decision_rationale': args.decision_rationale,
+            'target_role': target_role_label,
+            'next_assignment_type': args.next_assignment_type,
+            'canonical_branch': args.canonical_branch or args.branch,
+            'role_branch': args.role_branch,
+            'work_item_status_update_intent': args.work_item_status_update_intent,
+            'coder_run_brief_ref': {
+                'path': selected['source_artifact'],
+                'schema_path': selected['schema_path'],
+                'brief_id': brief_json['brief_id'],
+            },
+            'coder_run_brief': brief_json,
+            'coder_brief_resolution': {
+                'package_id_external': args.package_id_external,
+                'brief_id_external': selected['brief_id_external'],
+                'readiness_state': selected['readiness_state'],
+                'parallel_group_id': selected['parallel_group_id'],
+            },
+        },
+        'authority_context': authority_context,
+    }
+    review_markdown = None
+    if args.output:
+        output_path = Path(args.output).expanduser().resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2) + '\n')
+    if args.review_output:
+        review_path = Path(args.review_output).expanduser().resolve()
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        write_techlead_decision_review_markdown(review_path, payload)
+        review_markdown = review_path.read_text()
+    automation_run_id = None
+    if args.persist_db:
+        automation_run_id = persist_packet_compilation(
+            project_slug=args.project_slug,
+            packet=payload,
+            package_id_external=args.package_id_external,
+            brief_id_external=selected['brief_id_external'],
+            review_markdown=review_markdown,
+            output_path=str(Path(args.output).expanduser().resolve()) if args.output else None,
+            review_output_path=str(Path(args.review_output).expanduser().resolve()) if args.review_output else None,
+            source_packet_path=args.source_packet_path,
+        )
+    print(json.dumps({
+        'ok': True,
+        'message_id': payload['message_id'],
+        'output_path': str(Path(args.output).expanduser().resolve()) if args.output else None,
+        'review_output_path': str(Path(args.review_output).expanduser().resolve()) if args.review_output else None,
+        'automation_run_id': automation_run_id,
+        'coder_brief_resolution': payload['payload']['coder_brief_resolution'],
+        'task_id': authority_context['task_id'],
+        'packet': payload if not args.output else None,
+    }, indent=2))
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         description='Fractal Core project authority helper',
@@ -1896,6 +2181,64 @@ def build_parser():
     p.add_argument('--review-output')
     p.add_argument('--persist-db', action='store_true')
     p.set_defaults(func=cmd_materialize_qa_verification_packet)
+
+    p = sub.add_parser('materialize-techlead-assignment-packet')
+    p.add_argument('--manifest')
+    p.add_argument('--project-slug', default=PAA_PROJECT_SLUG)
+    p.add_argument('--package-id-external', required=True)
+    p.add_argument('--brief-id-external', required=True)
+    p.add_argument('--packet-project', default='fractal-core')
+    p.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
+    p.add_argument('--repo', required=True)
+    p.add_argument('--issue-number', type=int, required=True)
+    p.add_argument('--issue-url', required=True)
+    p.add_argument('--pr-number', type=int, required=True)
+    p.add_argument('--pr-url', required=True)
+    p.add_argument('--branch', required=True)
+    p.add_argument('--canonical-branch')
+    p.add_argument('--role-branch')
+    p.add_argument('--assignment-type', required=True)
+    p.add_argument('--assignment-summary', required=True)
+    p.add_argument('--allowed-result-type', action='append', required=True)
+    p.add_argument('--source-packet-path')
+    p.add_argument('--source-packet-message-id')
+    p.add_argument('--message-id')
+    p.add_argument('--correlation-id')
+    p.add_argument('--created-at')
+    p.add_argument('--output')
+    p.add_argument('--review-output')
+    p.add_argument('--persist-db', action='store_true')
+    p.set_defaults(func=cmd_materialize_techlead_assignment_packet)
+
+    p = sub.add_parser('materialize-techlead-decision-packet')
+    p.add_argument('--manifest')
+    p.add_argument('--project-slug', default=PAA_PROJECT_SLUG)
+    p.add_argument('--package-id-external', required=True)
+    p.add_argument('--brief-id-external', required=True)
+    p.add_argument('--packet-project', default='fractal-core')
+    p.add_argument('--repo', required=True)
+    p.add_argument('--issue-number', type=int, required=True)
+    p.add_argument('--issue-url', required=True)
+    p.add_argument('--pr-number', type=int, required=True)
+    p.add_argument('--pr-url', required=True)
+    p.add_argument('--branch', required=True)
+    p.add_argument('--canonical-branch')
+    p.add_argument('--role-branch')
+    p.add_argument('--to-role', choices=['authority-architect', 'techlead'], default='authority-architect')
+    p.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa', 'authority-architect'])
+    p.add_argument('--decision-type', required=True)
+    p.add_argument('--decision-rationale', required=True)
+    p.add_argument('--next-assignment-type')
+    p.add_argument('--work-item-status-update-intent', required=True)
+    p.add_argument('--source-packet-path', required=True)
+    p.add_argument('--source-packet-message-id')
+    p.add_argument('--message-id')
+    p.add_argument('--correlation-id')
+    p.add_argument('--created-at')
+    p.add_argument('--output')
+    p.add_argument('--review-output')
+    p.add_argument('--persist-db', action='store_true')
+    p.set_defaults(func=cmd_materialize_techlead_decision_packet)
 
     return parser
 

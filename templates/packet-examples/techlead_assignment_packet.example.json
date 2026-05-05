@@ -1,0 +1,69 @@
+{
+  "message_id": "fcore-techlead-2026-05-04-assign-issue106-python",
+  "schema_type": "techlead_assignment_packet",
+  "schema_version": "1.0.0",
+  "project": "fractal-core",
+  "from_role": "techlead",
+  "to_role": "python-team",
+  "created_at": "2026-05-04T12:00:00Z",
+  "correlation_id": "issue-106",
+  "github_context": {
+    "repo": "billyweisberg/fractal-core-python",
+    "issue_number": 106,
+    "pr_number": 107,
+    "branch": "issue-106",
+    "links": [
+      "https://github.com/billyweisberg/fractal-core-python/issues/106",
+      "https://github.com/billyweisberg/fractal-core-python/pull/107"
+    ]
+  },
+  "payload": {
+    "issue": {
+      "number": 106,
+      "url": "https://github.com/billyweisberg/fractal-core-python/issues/106"
+    },
+    "pr": {
+      "number": 107,
+      "url": "https://github.com/billyweisberg/fractal-core-python/pull/107",
+      "ready_for_review": true
+    },
+    "target_role": "Python Dev",
+    "assignment_type": "implement_authorized_slice",
+    "source_context_ref": {
+      "source_packet_path": "{{SOURCE_PACKET_PATH}}",
+      "source_packet_message_id": "fcore-techlead-2026-05-04-decision-issue106-assign-dev",
+      "package_id_external": "fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics",
+      "brief_id_external": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics"
+    },
+    "canonical_branch": "issue-106",
+    "role_branch": null,
+    "allowed_result_types": [
+      "implemented_ready_for_qa",
+      "blocked",
+      "needs_clarification",
+      "cannot_complete_without_scope_change"
+    ],
+    "assignment_summary": "Implement the authorized retirement boundary diagnostics slice on the canonical issue branch and return the result to TechLead.",
+    "coder_run_brief_ref": {
+      "path": "{{CODER_RUN_BRIEF_PATH}}",
+      "schema_path": "{{CODER_RUN_BRIEF_SCHEMA_PATH}}",
+      "brief_id": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics"
+    },
+    "coder_run_brief": {
+      "brief_id": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics"
+    },
+    "coder_brief_resolution": {
+      "package_id_external": "fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics",
+      "brief_id_external": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics",
+      "readiness_state": "execution_ready",
+      "parallel_group_id": null
+    }
+  },
+  "authority_context": {
+    "manifest_path": "{{AUTHORITY_MANIFEST_PATH}}",
+    "authority_version": "2026-05-03.1",
+    "milestone_id": "m1-reference-implementation",
+    "phase_id": "p6-forward-semantic-target",
+    "task_id": "py-p6-retirement-boundary-diagnostics"
+  }
+}
