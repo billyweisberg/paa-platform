@@ -7,6 +7,10 @@ Branch policy:
 - Use the same shared full-cycle issue branch used by Delivery Architect and Dev: `issue-<issue_number>`.
 - Do not invent a separate QA branch.
 
+Routing policy:
+- QA returns the verification packet to TechLead.
+- QA does not route directly to Architect.
+
 Compile via repo-local producer runtime installed in the repo:
 
 ```bash

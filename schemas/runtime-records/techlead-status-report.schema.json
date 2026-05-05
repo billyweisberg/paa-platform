@@ -79,6 +79,8 @@
             "dev_in_progress",
             "dev_rework_required",
             "dev_reset_required",
+            "techlead_dev_review_pending",
+            "techlead_qa_review_pending",
             "qa_pending",
             "qa_escalated",
             "architect_review_pending",
@@ -266,6 +268,7 @@
           "enum": [
             "continue_unattended",
             "route_to_architect",
+            "route_to_techlead",
             "route_to_dev",
             "route_to_qa",
             "route_to_python",

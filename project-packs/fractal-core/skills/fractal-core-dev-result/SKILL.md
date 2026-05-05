@@ -7,6 +7,10 @@ Branch policy:
 - Use the shared full-cycle issue branch: `issue-<issue_number>`.
 - Do not create role-specific branch names for Dev work.
 
+Routing policy:
+- Dev returns the result packet to TechLead.
+- Dev does not route directly to QA.
+
 Compile via repo-local producer runtime installed in the repo:
 
 ```bash

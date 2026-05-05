@@ -27,6 +27,11 @@ PAA_DB_CONTAINER = os.environ.get("PAA_DB_CONTAINER", "agenthub-mm-db")
 PAA_DB_NAME = os.environ.get("PAA_DB_NAME", "paa_dev")
 PAA_DB_USER = os.environ.get("PAA_DB_USER", "mmuser")
 SUPPORTED_SCHEMA_TYPES = {"architect_cycle_packet", "qa_verification_packet", "slice_result_packet"}
+ROUTE_POLICY_BY_SCHEMA = {
+    "architect_cycle_packet": ("Architect", "Python Dev"),
+    "slice_result_packet": ("Python Dev", "TechLead"),
+    "qa_verification_packet": ("QA", "TechLead"),
+}
 
 ARCHITECT_REQUIRED = [
     "accepted_pr",
@@ -883,6 +888,17 @@ def validate_envelope(message, require_authority=True):
         for field in required:
             if field not in payload:
                 errors.append(f"missing payload field: {field}")
+    expected_route = ROUTE_POLICY_BY_SCHEMA.get(message.get("schema_type"))
+    if expected_route:
+        actual_from_role = role_name_for_db(message.get("from_role"))
+        actual_to_role = role_name_for_db(message.get("to_role"))
+        expected_from_role, expected_to_role = expected_route
+        if actual_from_role != expected_from_role or actual_to_role != expected_to_role:
+            errors.append(
+                "invalid route for "
+                f"{message.get('schema_type')}: expected {expected_from_role} -> {expected_to_role}, "
+                f"got {actual_from_role} -> {actual_to_role}"
+            )
     return errors
 
 

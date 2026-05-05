@@ -10,6 +10,7 @@ Use repo-local consumer runtime only.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
 Use the same shared full-cycle issue branch as Delivery Architect and Dev: `issue-<issue_number>`.
+Return QA verification packets to TechLead, not directly to Architect.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=15"

@@ -6,6 +6,7 @@ prompt = """[$fractal-core-techlead]({{REPO_ROOT}}/.codex/skills/fractal-core-te
 
 Use repo-local consumer runtime only.
 Generate the TechLead report from installed authority, queue runtime, GitHub state, and PAA traceability.
+Treat Dev result packets and QA verification packets as TechLead-owned decisions before any next assignment is made.
 Flag any issue work that is not using the shared branch pattern `issue-<issue_number>`.
 """
 status = "PAUSED"

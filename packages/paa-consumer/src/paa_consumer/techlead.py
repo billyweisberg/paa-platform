@@ -198,6 +198,27 @@ def latest_queue_preview(queues, queue_name, issue_number):
     return None
 
 
+def latest_packet_preview(queues, issue_number, schema_type=None, to_role=None):
+    latest = None
+    latest_dt = None
+    for queue_name, queue_data in queues.items():
+        preview = queue_data.get('preview') or []
+        for item in preview:
+            payload = item.get('payload_preview') or {}
+            if payload.get('correlation_id') != f'issue-{issue_number}':
+                continue
+            if schema_type and payload.get('schema_type') != schema_type:
+                continue
+            if to_role and payload.get('to_role') != to_role:
+                continue
+            created_at = parse_created_at(payload.get('created_at'))
+            if latest is None or (created_at and (latest_dt is None or created_at > latest_dt)):
+                latest = dict(payload)
+                latest['queue_name'] = queue_name
+                latest_dt = created_at
+    return latest
+
+
 def parse_created_at(value):
     if not value:
         return None
@@ -318,7 +339,18 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
     recommended = []
     unattended_safe = True
     issue_number = current_task['issue_number'] if current_task else None
-    pending_dev_packet = latest_queue_preview(queues, 'fractal-core-qa', issue_number) if issue_number else None
+    pending_dev_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='slice_result_packet',
+        to_role='techlead',
+    ) if issue_number else None
+    pending_qa_queue_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='qa_verification_packet',
+        to_role='techlead',
+    ) if issue_number else None
     issue_comments = issue.get('comments') or []
     pr_comments = (pr or {}).get('comments') or []
     latest_python_handoff = latest_issue_comment(issue, 'Python Team handoff:')
@@ -368,6 +400,61 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         and 'needs_human_review' in ((latest_qa_review or {}).get('body') or '')
     )
 
+    if pending_qa_queue_packet:
+        stage = 'techlead_qa_review_pending'
+        owner = 'TechLead'
+        unattended_safe = False
+        details = {
+            'message_id': pending_qa_queue_packet.get('message_id'),
+            'schema_type': pending_qa_queue_packet.get('schema_type'),
+            'queue_name': pending_qa_queue_packet.get('queue_name'),
+        }
+        if qa_packet:
+            details['verification_status'] = qa_packet.get('verification_status')
+        escalations.append({
+            'event_type': 'qa_packet_waiting_for_techlead',
+            'severity': 'high',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': 'TechLead has a waiting QA verification result packet to review.',
+            'details': details,
+            'recommended_route': 'TechLead',
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': 'route_to_techlead',
+            'reason': 'A QA verification packet addressed to TechLead is waiting for a merge, rework, or escalation decision.',
+            'target_role': 'TechLead',
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
+    if pending_dev_packet:
+        stage = 'techlead_dev_review_pending'
+        owner = 'TechLead'
+        unattended_safe = False
+        escalations.append({
+            'event_type': 'dev_packet_waiting_for_techlead',
+            'severity': 'medium',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': 'TechLead has a waiting Dev result packet to review before QA is assigned.',
+            'details': {
+                'message_id': pending_dev_packet.get('message_id'),
+                'schema_type': pending_dev_packet.get('schema_type'),
+                'queue_name': pending_dev_packet.get('queue_name'),
+            },
+            'recommended_route': 'TechLead',
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': 'route_to_techlead',
+            'reason': 'A Dev result packet addressed to TechLead is waiting for the next routing decision.',
+            'target_role': 'TechLead',
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
     if queues['fractal-core-architecture']['messages_ready'] > 0:
         stage = 'ready_for_acceptance'
         owner = 'Architect'
@@ -416,32 +503,6 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             'action_type': 'route_to_architect',
             'reason': 'Architect queue has a waiting acceptance packet.',
             'target_role': 'Architect',
-            'blocking': True,
-        })
-        return stage, owner, escalations, recommended, unattended_safe
-
-    if queues['fractal-core-qa']['messages_ready'] > 0:
-        stage = 'qa_pending'
-        owner = 'QA'
-        unattended_safe = False
-        if qa_packet and qa_packet.get('verification_status') == 'needs_human_review' and escalation_superseded:
-            escalations.append({
-                'event_type': 'qa_escalation_superseded',
-                'severity': 'low',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
-                'summary': 'An earlier QA escalation exists, but a newer Dev result packet for the same issue is waiting for QA review.',
-                'details': {
-                    'superseded_qa_packet_id': qa_packet.get('message_id'),
-                    'new_dev_packet_id': pending_dev_packet.get('message_id') if pending_dev_packet else None,
-                },
-                'recommended_route': 'QA',
-                'status': 'suppressed',
-            })
-        recommended.append({
-            'priority': 1,
-            'action_type': 'route_to_qa',
-            'reason': 'QA queue has a waiting development result packet.',
-            'target_role': 'QA',
             'blocking': True,
         })
         return stage, owner, escalations, recommended, unattended_safe
@@ -531,8 +592,8 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
     if qa_packet and issue['state'] == 'OPEN' and pr and pr.get('state') == 'OPEN':
         verdict = qa_packet.get('verification_status')
         if verdict == 'needs_human_review' and not escalation_superseded:
-            stage = 'architect_review_pending'
-            owner = 'Architect'
+            stage = 'techlead_qa_review_pending'
+            owner = 'TechLead'
             unattended_safe = False
             escalations.append({
                 'event_type': 'qa_escalation_pending',
@@ -546,20 +607,20 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                     'scope': qa_packet.get('technical_scope_checks', {}),
                     'path': qa_packet.get('path'),
                 },
-                'recommended_route': 'Architect',
+                'recommended_route': 'TechLead',
                 'status': 'open',
             })
             recommended.append({
                 'priority': 1,
-                'action_type': 'route_to_architect',
-                'reason': 'QA marked the current slice needs_human_review and Architect has not resolved it yet.',
-                'target_role': 'Architect',
+                'action_type': 'route_to_techlead',
+                'reason': 'QA marked the current slice needs_human_review and TechLead should make the next routing decision.',
+                'target_role': 'TechLead',
                 'blocking': True,
             })
             return stage, owner, escalations, recommended, unattended_safe
         if verdict == 'pass':
-            stage = 'architect_merge_pending'
-            owner = 'Architect'
+            stage = 'techlead_qa_review_pending'
+            owner = 'TechLead'
             unattended_safe = False
             escalations.append({
                 'event_type': 'qa_pass_pending_acceptance',
@@ -570,14 +631,14 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                     'qa_packet_id': qa_packet.get('message_id'),
                     'path': qa_packet.get('path'),
                 },
-                'recommended_route': 'Architect',
+                'recommended_route': 'TechLead',
                 'status': 'open',
             })
             recommended.append({
                 'priority': 1,
-                'action_type': 'route_to_architect',
-                'reason': 'QA pass is recorded locally, but the slice is still open and unmerged.',
-                'target_role': 'Architect',
+                'action_type': 'route_to_techlead',
+                'reason': 'QA pass is recorded locally, and TechLead should decide whether the slice is ready for merge preparation.',
+                'target_role': 'TechLead',
                 'blocking': True,
             })
             return stage, owner, escalations, recommended, unattended_safe
