@@ -13,6 +13,13 @@ Phase B adds first-class TechLead packet artifacts:
 - `techlead_decision_packet` records the durable routing, pause, reset, merge-prep, or escalation decision
 - keep assignment sending operator-invoked in this phase; do not assume auto-dispatch
 
+Operator-facing dispatch path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-validate-packet --message-file <packet.json>
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-send-packet --repo-root {{REPO_ROOT}} --message-file <packet.json>
+```
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

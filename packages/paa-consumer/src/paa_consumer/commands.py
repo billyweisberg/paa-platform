@@ -10,6 +10,8 @@ CONSUMER_COMMANDS = (
     'queue-check',
     'queue-validate',
     'queue-send',
+    'techlead-validate-packet',
+    'techlead-send-packet',
     'queue-claim-next',
     'queue-list-claims',
     'queue-ack',

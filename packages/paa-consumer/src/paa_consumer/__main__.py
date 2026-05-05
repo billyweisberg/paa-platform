@@ -7,10 +7,11 @@ import json
 from pathlib import Path
 
 from paa_core.install import install_consumer_runtime
+from paa_core import handoff_runtime
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
-from paa_consumer.inbox import run_queue_command
+from paa_consumer.inbox import dispatch_techlead_packet, resolve_techlead_packet_queue, run_queue_command
 from paa_consumer.runtime_guardrails import validate
 from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
@@ -105,6 +106,37 @@ def main() -> int:
         if not args.repo_root or not args.queue or not args.message_file:
             parser.error('queue-send requires --repo-root, --queue, and --message-file')
         return run_queue_command(Path(args.repo_root).resolve(), ['send', '--queue', args.queue, '--message-file', args.message_file, *remainder])
+
+    if args.command == 'techlead-validate-packet':
+        if not args.message_file:
+            parser.error('techlead-validate-packet requires --message-file')
+        message = handoff_runtime.load_json(Path(args.message_file).resolve())
+        errors = handoff_runtime.validate_envelope(message, require_authority=True)
+        if errors:
+            print(json.dumps({
+                'ok': False,
+                'message_file': str(Path(args.message_file).resolve()),
+                'resolved_queue': None,
+                'errors': errors,
+            }, indent=2))
+            return 1
+        print(json.dumps({
+            'ok': True,
+            'message_file': str(Path(args.message_file).resolve()),
+            'message_id': message.get('message_id'),
+            'schema_type': message.get('schema_type'),
+            'resolved_queue': resolve_techlead_packet_queue(message),
+            'from_role': message.get('from_role'),
+            'to_role': message.get('to_role'),
+        }, indent=2))
+        return 0
+
+    if args.command == 'techlead-send-packet':
+        if not args.repo_root or not args.message_file:
+            parser.error('techlead-send-packet requires --repo-root and --message-file')
+        result = dispatch_techlead_packet(Path(args.repo_root).resolve(), Path(args.message_file).resolve())
+        print(json.dumps(result, indent=2))
+        return 0 if result.get('ok') else 1
 
     if args.command == 'queue-claim-next':
         if not args.repo_root or not args.queue:
