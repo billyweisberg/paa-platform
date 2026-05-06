@@ -1411,6 +1411,16 @@ def default_result_input_path(repo_root: Path, issue_number: int, target_role: s
     return reports_dir / f'role-result-input.issue{issue_number}.{slug}.json'
 
 
+def default_result_packet_paths(repo_root: Path, issue_number: int, target_role: str) -> tuple[Path, Path]:
+    slug = target_role.replace(' ', '-').lower()
+    reports_dir = repo_reports_dir(repo_root)
+    if target_role == 'Python Dev':
+        stem = f'slice-result.issue{issue_number}.{slug}'
+    else:
+        stem = f'qa-verification.issue{issue_number}.{slug}'
+    return reports_dir / f'{stem}.json', reports_dir / f'{stem}.md'
+
+
 def derive_next_assignment_context(args) -> dict:
     repo_root = args.repo_root.resolve()
     current, manifest = load_authority(repo_root)
@@ -2464,10 +2474,10 @@ def role_result_assist(args):
         expected_assignment_type = 'implement_authorized_slice'
         input_contract = {
             'required_top_level_keys': [
-                'result_type',
-                'summary',
-                'change_summary',
-                'evidence',
+                'result_summary',
+                'validation',
+                'artifacts',
+                'merge_status',
             ],
             'recommended_result_types': [
                 'implemented_ready_for_qa',
@@ -2482,9 +2492,11 @@ def role_result_assist(args):
         input_contract = {
             'required_top_level_keys': [
                 'verification_status',
-                'summary',
+                'mechanical_checks',
+                'technical_scope_checks',
+                'protected_path_checks',
+                'artifact_checks',
                 'findings',
-                'recommended_action',
             ],
             'recommended_result_types': [
                 'pass',
@@ -2540,6 +2552,118 @@ def role_result_assist(args):
         },
         'role_entry': entry,
         'next_step_hint': 'prepare_role_result_input_and_compile_manually' if len(missing_fields) == 0 else 'resolve_missing_role_result_context',
+    }
+
+
+def role_return_bridge(args):
+    assist_args = SimpleNamespace(
+        repo_root=args.repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=args.target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+        assignment_path=args.assignment_path,
+        review_output=args.assignment_review_output,
+        result_input_path=args.result_input_path,
+    )
+    assist = role_result_assist(assist_args)
+    if not assist.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'role_result_assist_failed',
+            'details': 'Role return bridge requires a successful role-result assist context.',
+            'assist': assist,
+        }
+
+    result_input_path = Path(assist['manual_result_surfaces']['result_input_template_path']).resolve()
+    if not result_input_path.exists():
+        return {
+            'ok': False,
+            'reason': 'result_input_missing',
+            'details': f'No role result input file was found at {str(result_input_path)!r}.',
+            'assist': assist,
+            'result_input_path': str(result_input_path),
+        }
+
+    repo_root = args.repo_root.resolve()
+    issue_number = assist['required_context']['issue_number']
+    role_label = assist['target_role']
+    default_output_path, default_review_output_path = default_result_packet_paths(repo_root, issue_number, role_label)
+    output_path = args.output.resolve() if getattr(args, 'output', None) else default_output_path.resolve()
+    review_output_path = args.review_output.resolve() if getattr(args, 'review_output', None) else default_review_output_path.resolve()
+
+    compile_command = assist['manual_result_surfaces']['result_compile_command'].split()
+    compile_command.extend([
+        '--output', str(output_path),
+        '--review-output', str(review_output_path),
+    ])
+    code, compile_result, compile_error = run_json_with_errors(compile_command)
+    if code != 0 or compile_result is None:
+        return {
+            'ok': False,
+            'reason': 'result_compile_failed',
+            'details': compile_error,
+            'assist': assist,
+            'compile_command': compile_command,
+        }
+
+    packet_path = Path(compile_result['output_path']).resolve()
+    packet = handoff_runtime.load_json(packet_path)
+    errors = handoff_runtime.validate_envelope(packet, require_authority=True)
+    from paa_consumer.inbox import resolve_packet_queue
+    resolved_queue = resolve_packet_queue(packet)
+    validate_result = {
+        'ok': not errors,
+        'message_file': str(packet_path),
+        'message_id': packet.get('message_id'),
+        'schema_type': packet.get('schema_type'),
+        'resolved_queue': resolved_queue,
+        'from_role': packet.get('from_role'),
+        'to_role': packet.get('to_role'),
+        'errors': errors,
+    }
+    if errors:
+        return {
+            'ok': False,
+            'reason': 'result_packet_validation_failed',
+            'details': 'Compiled role result packet failed envelope validation.',
+            'assist': assist,
+            'compile': compile_result,
+            'validate': validate_result,
+        }
+
+    send_result = None
+    if args.send:
+        from paa_consumer.inbox import dispatch_packet
+        send_result = dispatch_packet(repo_root, packet_path)
+        if not send_result.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'result_packet_send_failed',
+                'details': 'Compiled role result packet could not be sent through the queue runtime.',
+                'assist': assist,
+                'compile': compile_result,
+                'validate': validate_result,
+                'send': send_result,
+            }
+
+    return {
+        'ok': True,
+        'repo_root': str(repo_root),
+        'target_role': role_label,
+        'result_family': assist['result_family'],
+        'result_input_path': str(result_input_path),
+        'output_path': str(packet_path),
+        'review_output_path': str(review_output_path),
+        'compile': compile_result,
+        'validate': validate_result,
+        'send': send_result,
+        'sent': bool(send_result and send_result.get('ok')),
+        'resolved_queue': resolved_queue,
+        'assist': assist,
+        'next_step_hint': 'techlead_should_review_returned_result' if args.send else 'review_compiled_role_result_packet',
     }
 
 
@@ -2710,6 +2834,21 @@ def parse_args(argv: list[str] | None = None):
     result_assist.add_argument('--review-output', type=Path)
     result_assist.add_argument('--result-input-path', type=Path)
 
+    role_return = sub.add_parser('role-return')
+    role_return.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role result compile/send bridge.')
+    role_return.add_argument('--package-id-external', required=True)
+    role_return.add_argument('--brief-id-external', required=True)
+    role_return.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    role_return.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    role_return.add_argument('--role-branch')
+    role_return.add_argument('--worktree-path', type=Path)
+    role_return.add_argument('--assignment-path', type=Path)
+    role_return.add_argument('--assignment-review-output', type=Path)
+    role_return.add_argument('--result-input-path', type=Path)
+    role_return.add_argument('--output', type=Path)
+    role_return.add_argument('--review-output', type=Path)
+    role_return.add_argument('--send', action='store_true')
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2793,6 +2932,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'role-result-assist':
         result = role_result_assist(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'role-return':
+        result = role_return_bridge(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

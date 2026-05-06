@@ -25,6 +25,7 @@ CONSUMER_COMMANDS = (
     'techlead-inspect-role-worktree',
     'techlead-role-entry',
     'techlead-role-result-assist',
+    'techlead-role-return',
     'techlead-emit-decision',
     'validate-runtime',
 )

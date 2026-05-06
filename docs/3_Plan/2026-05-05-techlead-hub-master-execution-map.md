@@ -80,25 +80,26 @@ What drifted was planning visibility.
 ### Current phase
 
 Current phase is:
-- `Phase E: Role Execution Bridge`
+- `Phase F: Role Result Return Path`
 
 Meaning:
 - `TechLead` can emit assignment intent
 - lineage can be queried and persisted
 - branch/worktree preparation can be done in narrow steps
 - handoff into a prepared role execution context exists
-- role work has not yet been cleanly bridged back into the hub through the same structured path
+- one clean Python Dev round trip has been validated through the bridge
+- the remaining work is now about making that return path generic and stable enough for broader worker-role use
 
 ### What is complete vs incomplete
 
 Complete enough to count as done:
-- Phases `A` through `D`
+- Phases `A` through `E`
 
 Started and partially complete:
-- Phase `E`
+- Phase `F`
 
 Not yet complete:
-- Phases `F` through `I`
+- Phases `G` through `I`
 
 ## Phase Map
 
@@ -187,9 +188,10 @@ Bridge TechLead assignment emission into a prepared, inspectable, role-specific 
 - added `techlead-inspect-role-worktree`
 - added `techlead-role-entry`
 - added `techlead-role-result-assist`
+- added `techlead-role-return`
 
 ### Current state
-This phase is active and only partially complete.
+This phase is complete enough to treat the bridge as real.
 
 The hub can now:
 - emit assignment intent
@@ -197,11 +199,18 @@ The hub can now:
 - prepare worktree context
 - inspect the receive side
 - produce a role-entry view with exact manual execution surfaces
+- compile, validate, and optionally send a role result back toward `TechLead`
 
-The hub cannot yet complete a symmetric role-result return path with the same level of structure.
+### Validation result
+- one clean Python Dev round trip has been run through:
+  - TechLead emit
+  - branch/worktree prep
+  - role entry
+  - result compile/send return
+- the returned `slice_result_packet` validated and sent successfully
+- the returned packet appeared on the expected transitional queue
 
 ### Remaining slices
-- add a narrow result compile/send bridge back to `TechLead`
 - make Dev and QA return flow use the same structured entry/exit model as the TechLead handoff side
 - confirm the bridge is generic enough for future worker roles, not only `Python Dev`
 
@@ -211,6 +220,10 @@ Phase E is complete when a role can:
 - see the exact assignment artifact and expected result vocabulary
 - be guided to the exact result compilation surface
 - hand control back into the hub path without ad hoc queue/branch reasoning
+- complete one clean round trip through the bridge
+
+### Acceptance state
+- complete
 
 ## Phase F: Role Result Return Path
 
@@ -220,15 +233,20 @@ Make the spoke-to-hub return path first-class and symmetrical with the TechLead-
 ### Scope
 This is the first phase that should complete the round trip.
 
-### Planned slices
-- add role-result assist helper built on role-entry context
-- validate required result context before compile
-- add exact compile surfaces for:
+### Completed foundation
+- role-result assist helper exists
+- exact compile surfaces exist for:
   - Dev result return
   - QA result return
-- add exact validate/send surfaces for the result packet
+- validate/send bridge exists for the result packet
+- one clean Python Dev round trip has been validated
+
+### Remaining slices
+- confirm the current return bridge is generic enough for future worker-role families
+- tighten the worker-result contract if `slice_result_packet` remains too Python-specific
+- decide whether `worker_result_packet` is actually required before multi-role expansion
+- validate the same bridge shape for `QA`
 - stop short of broad autonomous execution of the role itself
-- optionally introduce `worker_result_packet` only if the current `slice_result_packet` becomes too Python-specific for multi-worker scale
 
 ### Acceptance criteria
 - a prepared role can return to `TechLead` through one narrow guided path
@@ -237,8 +255,7 @@ This is the first phase that should complete the round trip.
 - result return path is reusable by future worker-role families
 
 ### Status
-- not started as a named phase
-- some prerequisites are complete via Phase E
+- active
 
 ## Phase G: Multi-Role Generalization And Delivery Architect Integration
 
@@ -331,21 +348,24 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase E receive-side worktree inspection
 - Phase E role-entry helper
 - Phase E role-result assist helper
+- Phase E role-return bridge
+- Phase E clean Python Dev round-trip validation
 
 ### Still open inside active flow
-- result compile/send bridge from role back to `TechLead`
-- round-trip proof of the role execution bridge
+- generic worker-role proof beyond the Python Dev path
+- QA return-path proof through the same bridge
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. finish Phase E by adding the narrow result compile/send return path
-2. begin Phase F by validating one narrow round trip back to `TechLead`
+1. continue Phase F by validating the same return bridge shape for `QA`
+2. decide whether the current Python Dev return path is generic enough for future worker roles
 3. validate one full round trip through:
    - TechLead emit
    - branch/worktree prep
    - role entry
    - result return to `TechLead`
+   - TechLead-visible follow-up interpretation for the returned result
 
 ### After that
 4. generalize the role model beyond Python-only execution assumptions
@@ -385,9 +405,9 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- finish Phase E with the narrow result compile/send bridge back to `TechLead`
+- validate the same narrow return bridge for `QA`
 
 Immediately after that:
-- start Phase F with one clean round-trip validation
+- tighten the generic worker return contract only if the `QA` pass shows a real asymmetry
 
 That keeps the system on the shortest path to a real functioning round trip.

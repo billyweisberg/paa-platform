@@ -151,6 +151,23 @@ This path is intentionally narrow:
 - print the exact result compile surfaces
 - stop before compiling or sending the result packet
 
+Role-side return bridge:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-role-return \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <python-team|qa> \
+  [--send]
+```
+
+This path is intentionally narrow:
+- consume the role-result-assist context
+- compile the role result packet
+- validate the compiled packet and resolve the queue
+- optionally send it back toward `TechLead`
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

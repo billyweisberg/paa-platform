@@ -21,6 +21,13 @@ TECHLEAD_QUEUE_BY_ROLE = {
     'TechLead': 'fractal-core-architecture',
 }
 
+TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA = {
+    # Phase A keeps physical queue names stable while semantic routing changes to TechLead.
+    'architect_cycle_packet': 'fractal-core-python',
+    'slice_result_packet': 'fractal-core-qa',
+    'qa_verification_packet': 'fractal-core-architecture',
+}
+
 
 def run_queue_command(repo_root: Path, argv: list[str]) -> int:
     os.environ.setdefault('FRACTAL_CORE_HANDOFF_STATE_DIR', str(repo_queue_state_root(repo_root)))
@@ -49,7 +56,16 @@ def resolve_techlead_packet_queue(message: dict[str, Any]) -> str:
     return queue_name
 
 
-def dispatch_techlead_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
+def resolve_packet_queue(message: dict[str, Any]) -> str:
+    schema_type = message.get('schema_type')
+    if schema_type in TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA:
+        return TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA[schema_type]
+    if schema_type in {'techlead_assignment_packet', 'techlead_decision_packet'}:
+        return resolve_techlead_packet_queue(message)
+    raise RuntimeError(f'No queue mapping is defined for schema type {schema_type!r}')
+
+
+def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
     os.environ.setdefault('FRACTAL_CORE_HANDOFF_STATE_DIR', str(repo_queue_state_root(repo_root)))
     message = handoff_runtime.load_json(message_file)
     errors = handoff_runtime.validate_envelope(message, require_authority=True)
@@ -59,7 +75,7 @@ def dispatch_techlead_packet(repo_root: Path, message_file: Path) -> dict[str, A
             'message_file': str(message_file),
             'errors': errors,
         }
-    queue_name = resolve_techlead_packet_queue(message)
+    queue_name = resolve_packet_queue(message)
     client = handoff_runtime.RabbitMQManagementClient(
         user=handoff_runtime.DEFAULT_USER,
         password=handoff_runtime.DEFAULT_PASSWORD,
@@ -81,3 +97,15 @@ def dispatch_techlead_packet(repo_root: Path, message_file: Path) -> dict[str, A
         'from_role': message.get('from_role'),
         'to_role': message.get('to_role'),
     }
+
+
+def dispatch_techlead_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
+    message = handoff_runtime.load_json(message_file)
+    schema_type = message.get('schema_type')
+    if schema_type not in {'techlead_assignment_packet', 'techlead_decision_packet'}:
+        return {
+            'ok': False,
+            'message_file': str(message_file),
+            'errors': [f'techlead dispatch only supports techlead packet families, got {schema_type!r}'],
+        }
+    return dispatch_packet(repo_root, message_file)
