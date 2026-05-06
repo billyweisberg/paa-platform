@@ -186,6 +186,7 @@ Bridge TechLead assignment emission into a prepared, inspectable, role-specific 
 - added `techlead-handoff-to-role-worktree`
 - added `techlead-inspect-role-worktree`
 - added `techlead-role-entry`
+- added `techlead-role-result-assist`
 
 ### Current state
 This phase is active and only partially complete.
@@ -200,7 +201,6 @@ The hub can now:
 The hub cannot yet complete a symmetric role-result return path with the same level of structure.
 
 ### Remaining slices
-- add a narrow role-result assist helper
 - add a narrow result compile/send bridge back to `TechLead`
 - make Dev and QA return flow use the same structured entry/exit model as the TechLead handoff side
 - confirm the bridge is generic enough for future worker roles, not only `Python Dev`
@@ -330,17 +330,17 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase E handoff from emitted assignment to prepared role worktree
 - Phase E receive-side worktree inspection
 - Phase E role-entry helper
+- Phase E role-result assist helper
 
 ### Still open inside active flow
-- role-result assist helper
 - result compile/send bridge from role back to `TechLead`
 - round-trip proof of the role execution bridge
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. finish Phase E by adding the role-result assist helper
-2. begin Phase F by adding the narrow result compile/send return path
+1. finish Phase E by adding the narrow result compile/send return path
+2. begin Phase F by validating one narrow round trip back to `TechLead`
 3. validate one full round trip through:
    - TechLead emit
    - branch/worktree prep
@@ -385,9 +385,9 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- finish Phase E with the narrow role-result assist helper
+- finish Phase E with the narrow result compile/send bridge back to `TechLead`
 
 Immediately after that:
-- start Phase F with the narrow result compile/send bridge back to `TechLead`
+- start Phase F with one clean round-trip validation
 
 That keeps the system on the shortest path to a real functioning round trip.

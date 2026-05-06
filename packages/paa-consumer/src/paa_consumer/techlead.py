@@ -1405,6 +1405,12 @@ def default_assignment_paths(repo_root: Path, issue_number: int, target_role: st
     return output, review
 
 
+def default_result_input_path(repo_root: Path, issue_number: int, target_role: str) -> Path:
+    slug = target_role.replace(' ', '-').lower()
+    reports_dir = repo_reports_dir(repo_root)
+    return reports_dir / f'role-result-input.issue{issue_number}.{slug}.json'
+
+
 def derive_next_assignment_context(args) -> dict:
     repo_root = args.repo_root.resolve()
     current, manifest = load_authority(repo_root)
@@ -2393,6 +2399,150 @@ def role_entry_helper(args):
     }
 
 
+def role_result_assist(args):
+    entry_args = SimpleNamespace(
+        repo_root=args.repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=args.target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+        assignment_path=args.assignment_path,
+        review_output=args.review_output,
+    )
+    entry = role_entry_helper(entry_args)
+    if not entry.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'role_entry_failed',
+            'details': 'Role result assist requires a successful role-entry context.',
+            'role_entry': entry,
+        }
+
+    inspection = entry['inspection']
+    lineage_view = inspection['lineage_view']
+    role_label = entry['target_role']
+    worktree_path = Path(entry['worktree_path']).resolve()
+    branch_alignment = entry['branch_alignment']
+    artifact = entry['assignment_artifact']
+    repo_root = args.repo_root.resolve()
+    issue_number = lineage_view.get('issue_number')
+    issue_url = lineage_view.get('issue_url')
+    pr_number = lineage_view.get('pr_number')
+    pr_url = lineage_view.get('pr_url')
+    current_branch = branch_alignment.get('current_branch')
+    required_context = {
+        'issue_number': issue_number,
+        'issue_url': issue_url,
+        'pr_number': pr_number,
+        'pr_url': pr_url,
+        'branch': current_branch,
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'assignment_artifact_path': artifact.get('path'),
+        'allowed_result_types': artifact.get('allowed_result_types') or [],
+    }
+    missing_fields = [
+        field_name for field_name, field_value in required_context.items()
+        if field_value in (None, '', [])
+    ]
+    if not branch_alignment.get('ok'):
+        missing_fields.append('aligned_role_branch')
+    if artifact.get('assignment_type') is None:
+        missing_fields.append('assignment_type')
+
+    result_input_path = (
+        args.result_input_path.resolve()
+        if getattr(args, 'result_input_path', None)
+        else default_result_input_path(repo_root, issue_number, role_label)
+    )
+
+    if role_label == 'Python Dev':
+        result_family = 'slice_result_packet'
+        input_flag = '--dev-input-file'
+        expected_assignment_type = 'implement_authorized_slice'
+        input_contract = {
+            'required_top_level_keys': [
+                'result_type',
+                'summary',
+                'change_summary',
+                'evidence',
+            ],
+            'recommended_result_types': [
+                'implemented_ready_for_qa',
+                'blocked',
+                'needs_clarification',
+            ],
+        }
+    else:
+        result_family = 'qa_verification_packet'
+        input_flag = '--qa-input-file'
+        expected_assignment_type = 'verify_authorized_slice'
+        input_contract = {
+            'required_top_level_keys': [
+                'verification_status',
+                'summary',
+                'findings',
+                'recommended_action',
+            ],
+            'recommended_result_types': [
+                'pass',
+                'fail_fixable',
+                'needs_human_review',
+            ],
+        }
+
+    if artifact.get('assignment_type') != expected_assignment_type:
+        return {
+            'ok': False,
+            'reason': 'assignment_type_not_supported_for_role_result',
+            'details': f'Assignment type {artifact.get("assignment_type")!r} is not supported for role {role_label!r} in the current Phase E bridge.',
+            'role_entry': entry,
+            'expected_assignment_type': expected_assignment_type,
+        }
+
+    producer_wrapper = repo_root / '.codex' / 'paa' / 'bin' / 'paa-producer'
+    result_compile_command = [
+        str(producer_wrapper),
+        'authority',
+        'materialize-slice-result-packet' if role_label == 'Python Dev' else 'materialize-qa-verification-packet',
+        '--package-id-external', args.package_id_external,
+        '--brief-id-external', args.brief_id_external,
+        '--repo', str(worktree_path),
+        '--issue-number', str(issue_number),
+        '--issue-url', str(issue_url),
+        '--pr-number', str(pr_number),
+        '--pr-url', str(pr_url),
+        '--branch', str(current_branch),
+        input_flag, str(result_input_path),
+        '--persist-db',
+    ]
+
+    return {
+        'ok': len(missing_fields) == 0,
+        'repo_root': str(repo_root),
+        'target_role': role_label,
+        'result_family': result_family,
+        'worktree_path': str(worktree_path),
+        'branch_alignment': branch_alignment,
+        'assignment_artifact': artifact,
+        'required_context': required_context,
+        'missing_fields': missing_fields,
+        'result_input_contract': input_contract,
+        'manual_result_surfaces': {
+            'enter_worktree_command': entry['manual_execution_surfaces']['enter_worktree_command'],
+            'assignment_json_command': entry['manual_execution_surfaces']['assignment_json_command'],
+            'assignment_review_command': entry['manual_execution_surfaces']['assignment_review_command'],
+            'result_input_template_path': str(result_input_path),
+            'result_compile_command': ' '.join(result_compile_command),
+            'producer_wrapper_path': str(producer_wrapper),
+        },
+        'role_entry': entry,
+        'next_step_hint': 'prepare_role_result_input_and_compile_manually' if len(missing_fields) == 0 else 'resolve_missing_role_result_context',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -2548,6 +2698,18 @@ def parse_args(argv: list[str] | None = None):
     entry.add_argument('--assignment-path', type=Path)
     entry.add_argument('--review-output', type=Path)
 
+    result_assist = sub.add_parser('role-result-assist')
+    result_assist.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role result guidance.')
+    result_assist.add_argument('--package-id-external', required=True)
+    result_assist.add_argument('--brief-id-external', required=True)
+    result_assist.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    result_assist.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    result_assist.add_argument('--role-branch')
+    result_assist.add_argument('--worktree-path', type=Path)
+    result_assist.add_argument('--assignment-path', type=Path)
+    result_assist.add_argument('--review-output', type=Path)
+    result_assist.add_argument('--result-input-path', type=Path)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2626,6 +2788,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'role-entry':
         result = role_entry_helper(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'role-result-assist':
+        result = role_result_assist(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
