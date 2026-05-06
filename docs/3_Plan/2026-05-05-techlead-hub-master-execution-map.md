@@ -266,6 +266,13 @@ This is the first phase that should complete the round trip.
 ### Goal
 Finish the hub model so it is not effectively a Python-only special case.
 
+### Completed foundation
+- `worker_result_packet` contract defined
+- `delivery_review_packet` contract defined
+- schema files added for both packet families
+- example packets added for both packet families
+- runtime validator acceptance added for both packet families
+
 ### Planned slices
 - decide whether `slice_result_packet` remains transitional or becomes `worker_result_packet`
 - add or finalize `delivery_review_packet`
@@ -285,7 +292,7 @@ Finish the hub model so it is not effectively a Python-only special case.
 - Delivery Architect is no longer only a design concept in docs
 
 ### Status
-- not started
+- active
 
 ## Phase H: Lifecycle Hygiene And Worktree Cleanup Automation
 

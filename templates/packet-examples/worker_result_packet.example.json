@@ -1,0 +1,97 @@
+{
+  "message_id": "fcore-worker-2026-05-06-issue106-python",
+  "schema_type": "worker_result_packet",
+  "schema_version": "1.0.0",
+  "project": "fractal-core",
+  "from_role": "python-team",
+  "to_role": "techlead",
+  "created_at": "2026-05-06T12:00:00Z",
+  "correlation_id": "issue-106",
+  "github_context": {
+    "repo": "billyweisberg/fractal-core-python",
+    "issue_number": 106,
+    "pr_number": 107,
+    "branch": "issue-106-dev",
+    "links": [
+      "https://github.com/billyweisberg/fractal-core-python/issues/106",
+      "https://github.com/billyweisberg/fractal-core-python/pull/107"
+    ]
+  },
+  "payload": {
+    "issue": {
+      "number": 106,
+      "url": "https://github.com/billyweisberg/fractal-core-python/issues/106"
+    },
+    "branch": {
+      "name": "issue-106-dev"
+    },
+    "pr": {
+      "number": 107,
+      "url": "https://github.com/billyweisberg/fractal-core-python/pull/107",
+      "ready_for_review": true
+    },
+    "worker_role": "Python Dev",
+    "worker_family": "implementation",
+    "result_type": "implemented_ready_for_qa",
+    "workflow_compliance": {
+      "shared_issue_branch_used": false,
+      "authorized_role_branch_used": true,
+      "issue_side_update_comment_added": true,
+      "assignment_artifact_used": true
+    },
+    "implementation_summary": "Implemented the authorized retirement boundary diagnostics slice and prepared the result for QA.",
+    "validation_summary": {
+      "status": "passed",
+      "commands": [
+        "uv run ruff check .",
+        "uv run --extra dev pytest -q"
+      ],
+      "notes": [
+        "Disposable example packet for Phase G schema definition."
+      ]
+    },
+    "artifacts": [
+      {
+        "path": ".project/data/paa/reports/diagnostics.issue106.json",
+        "kind": "diagnostics",
+        "summary": "Retirement boundary diagnostics output"
+      }
+    ],
+    "merge_status": {
+      "merged": false,
+      "ready_for_review": true,
+      "merge_conflicts": false
+    },
+    "techlead_action_recommended": {
+      "action": "assign_qa",
+      "reason": "Implementation work is complete and ready for QA verification."
+    },
+    "source_assignment_ref": {
+      "message_id": "fcore-techlead-2026-05-06-issue106-implement_authorized_slice",
+      "assignment_type": "implement_authorized_slice",
+      "target_role": "Python Dev",
+      "path": "{{SOURCE_ASSIGNMENT_PATH}}"
+    },
+    "coder_run_brief_ref": {
+      "path": "{{CODER_RUN_BRIEF_PATH}}",
+      "schema_path": "{{CODER_RUN_BRIEF_SCHEMA_PATH}}",
+      "brief_id": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics"
+    },
+    "coder_run_brief": {
+      "brief_id": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics"
+    },
+    "coder_brief_resolution": {
+      "package_id_external": "fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics",
+      "brief_id_external": "fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics",
+      "readiness_state": "execution_ready",
+      "parallel_group_id": null
+    }
+  },
+  "authority_context": {
+    "manifest_path": "{{AUTHORITY_MANIFEST_PATH}}",
+    "authority_version": "2026-05-03.1",
+    "milestone_id": "m1-reference-implementation",
+    "phase_id": "p6-forward-semantic-target",
+    "task_id": "py-p6-retirement-boundary-diagnostics"
+  }
+}
