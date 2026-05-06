@@ -88,7 +88,8 @@ Meaning:
 - branch/worktree preparation can be done in narrow steps
 - handoff into a prepared role execution context exists
 - one clean Python Dev round trip has been validated through the bridge
-- the remaining work is now about making that return path generic and stable enough for broader worker-role use
+- one clean QA return path has been validated through the same bridge
+- the remaining work is now about future worker-role generalization, not basic return-path viability
 
 ### What is complete vs incomplete
 
@@ -242,10 +243,8 @@ This is the first phase that should complete the round trip.
 - one clean Python Dev round trip has been validated
 
 ### Remaining slices
-- confirm the current return bridge is generic enough for future worker-role families
 - tighten the worker-result contract if `slice_result_packet` remains too Python-specific
 - decide whether `worker_result_packet` is actually required before multi-role expansion
-- validate the same bridge shape for `QA`
 - stop short of broad autonomous execution of the role itself
 
 ### Acceptance criteria
@@ -256,6 +255,11 @@ This is the first phase that should complete the round trip.
 
 ### Status
 - active
+
+### Decision
+- the current return bridge shape is generic enough to keep
+- `slice_result_packet` is still too Python-specific to be the final multi-worker contract
+- defer `worker_result_packet` to Phase G
 
 ## Phase G: Multi-Role Generalization And Delivery Architect Integration
 
@@ -350,16 +354,16 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase E role-result assist helper
 - Phase E role-return bridge
 - Phase E clean Python Dev round-trip validation
+- Phase F clean QA return-bridge validation
 
 ### Still open inside active flow
-- generic worker-role proof beyond the Python Dev path
-- QA return-path proof through the same bridge
+- generic worker-result packet contract for future worker-role families
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. continue Phase F by validating the same return bridge shape for `QA`
-2. decide whether the current Python Dev return path is generic enough for future worker roles
+1. close Phase F by accepting the current bridge shape and carrying the packet-family decision into Phase G
+2. begin Phase G with the multi-role generalization boundary
 3. validate one full round trip through:
    - TechLead emit
    - branch/worktree prep
@@ -405,9 +409,9 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- validate the same narrow return bridge for `QA`
+- begin Phase G and define the exact multi-worker packet strategy
 
 Immediately after that:
-- tighten the generic worker return contract only if the `QA` pass shows a real asymmetry
+- decide whether `worker_result_packet` and `delivery_review_packet` should land together or in separate slices
 
 That keeps the system on the shortest path to a real functioning round trip.
