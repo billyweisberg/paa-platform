@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import sys
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -319,6 +320,52 @@ def git_branch_usage(repo_root: Path, branch_name: str) -> list[str]:
     return usages
 
 
+def git_worktree_entries(repo_root: Path) -> list[dict]:
+    code, stdout, _error = run_text_with_errors(['git', 'worktree', 'list', '--porcelain'], cwd=repo_root)
+    if code != 0 or stdout is None:
+        return []
+    entries: list[dict] = []
+    current: dict | None = None
+    for raw_line in stdout.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if current:
+                entries.append(current)
+            current = None
+            continue
+        if line.startswith('worktree '):
+            if current:
+                entries.append(current)
+            current = {'path': line.split(' ', 1)[1], 'branch': None, 'head': None, 'detached': False}
+            continue
+        if current is None:
+            continue
+        if line.startswith('HEAD '):
+            current['head'] = line.split(' ', 1)[1]
+        elif line.startswith('branch refs/heads/'):
+            current['branch'] = line.removeprefix('branch refs/heads/')
+        elif line == 'detached':
+            current['detached'] = True
+    if current:
+        entries.append(current)
+    return entries
+
+
+def git_worktree_for_branch(repo_root: Path, branch_name: str) -> dict | None:
+    for entry in git_worktree_entries(repo_root):
+        if entry.get('branch') == branch_name:
+            return entry
+    return None
+
+
+def git_worktree_for_path(repo_root: Path, worktree_path: Path) -> dict | None:
+    target = str(worktree_path.resolve())
+    for entry in git_worktree_entries(repo_root):
+        if Path(entry['path']).resolve().as_posix() == Path(target).as_posix():
+            return entry
+    return None
+
+
 def normalize_canonical_branch(repo_root: Path, issue_number: int, lineage: dict, explicit: str | None) -> str:
     if explicit:
         return explicit
@@ -336,6 +383,10 @@ def role_branch_name(issue_number: int, target_role: str, explicit: str | None) 
         return explicit
     suffix = ROLE_BRANCH_SUFFIX[target_role]
     return f'issue-{issue_number}-{suffix}'
+
+
+def default_role_worktree_path(repo_root: Path, role_branch: str) -> Path:
+    return Path.home() / '.codex' / 'worktrees' / 'paa' / repo_root.name / role_branch
 
 
 def resolve_canonical_source_ref(repo_root: Path, canonical_branch: str) -> tuple[str | None, str | None]:
@@ -1962,6 +2013,109 @@ def prepare_role_branch(args):
     }
 
 
+def prepare_role_worktree(args):
+    repo_root = args.repo_root.resolve()
+    branch_args = SimpleNamespace(
+        repo_root=repo_root,
+        project_slug=args.project_slug,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        target_role=args.target_role,
+        action=args.branch_action,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+    )
+    branch_result = prepare_role_branch(branch_args)
+    if not branch_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'role_branch_prepare_failed',
+            'details': 'Role worktree preparation requires a successful role-branch preparation result.',
+            'branch_prepare': branch_result,
+        }
+
+    role_branch = branch_result['role_branch']
+    existing_branch_worktree = git_worktree_for_branch(repo_root, role_branch)
+    requested_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
+
+    if existing_branch_worktree is not None:
+        existing_path = Path(existing_branch_worktree['path']).resolve()
+        if args.worktree_path and existing_path != requested_path:
+            return {
+                'ok': False,
+                'reason': 'role_branch_checked_out_elsewhere',
+                'details': f'Role branch {role_branch!r} is already checked out in another worktree.',
+                'branch_prepare': branch_result,
+                'worktree_path': str(requested_path),
+                'existing_worktree_path': str(existing_path),
+            }
+        return {
+            'ok': True,
+            'action': 'reuse',
+            'repo_root': str(repo_root),
+            'target_role': args.target_role,
+            'role_branch': role_branch,
+            'worktree_path': str(existing_path),
+            'worktree_head': existing_branch_worktree.get('head'),
+            'branch_prepare': branch_result,
+            'created': False,
+            'reused': True,
+            'next_step_hint': 'enter_worktree_and_execute_role',
+        }
+
+    existing_path_worktree = git_worktree_for_path(repo_root, requested_path)
+    if existing_path_worktree is not None:
+        existing_branch = existing_path_worktree.get('branch')
+        if existing_branch != role_branch:
+            return {
+                'ok': False,
+                'reason': 'worktree_path_already_bound_to_different_branch',
+                'details': f'Worktree path {str(requested_path)!r} is already registered for another branch.',
+                'branch_prepare': branch_result,
+                'worktree_path': str(requested_path),
+                'existing_branch': existing_branch,
+            }
+        return {
+            'ok': True,
+            'action': 'reuse',
+            'repo_root': str(repo_root),
+            'target_role': args.target_role,
+            'role_branch': role_branch,
+            'worktree_path': str(requested_path),
+            'worktree_head': existing_path_worktree.get('head'),
+            'branch_prepare': branch_result,
+            'created': False,
+            'reused': True,
+            'next_step_hint': 'enter_worktree_and_execute_role',
+        }
+
+    if requested_path.exists():
+        return {
+            'ok': False,
+            'reason': 'worktree_path_exists_not_registered',
+            'details': f'Worktree path {str(requested_path)!r} already exists but is not registered as a git worktree for this repo.',
+            'branch_prepare': branch_result,
+            'worktree_path': str(requested_path),
+        }
+
+    requested_path.parent.mkdir(parents=True, exist_ok=True)
+    run_text(['git', 'worktree', 'add', str(requested_path), role_branch], cwd=repo_root)
+    created_worktree = git_worktree_for_path(repo_root, requested_path)
+    return {
+        'ok': created_worktree is not None,
+        'action': 'create',
+        'repo_root': str(repo_root),
+        'target_role': args.target_role,
+        'role_branch': role_branch,
+        'worktree_path': str(requested_path),
+        'worktree_head': created_worktree.get('head') if created_worktree else None,
+        'branch_prepare': branch_result,
+        'created': True,
+        'reused': False,
+        'next_step_hint': 'enter_worktree_and_execute_role',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -2070,6 +2224,17 @@ def parse_args(argv: list[str] | None = None):
     branch.add_argument('--canonical-branch')
     branch.add_argument('--role-branch')
 
+    worktree = sub.add_parser('prepare-role-worktree')
+    worktree.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root where role worktrees are managed.')
+    worktree.add_argument('--package-id-external', required=True)
+    worktree.add_argument('--brief-id-external', required=True)
+    worktree.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    worktree.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    worktree.add_argument('--branch-action', choices=['ensure', 'reset'], default='ensure')
+    worktree.add_argument('--canonical-branch')
+    worktree.add_argument('--role-branch')
+    worktree.add_argument('--worktree-path', type=Path)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2128,6 +2293,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'prepare-role-branch':
         result = prepare_role_branch(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'prepare-role-worktree':
+        result = prepare_role_worktree(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

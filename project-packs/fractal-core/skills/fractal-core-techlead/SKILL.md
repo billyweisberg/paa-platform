@@ -73,6 +73,20 @@ Narrow branch mutation path:
 Use `techlead-lineage` as the required precursor to `techlead-prepare-role-branch`.
 This slice is limited to role-branch creation/reset only. Do not assume worktree creation or cleanup is automatic yet.
 
+Narrow role-worktree path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-prepare-role-worktree \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <python-team|qa> \
+  [--branch-action <ensure|reset>]
+```
+
+Use `techlead-lineage` first, then `techlead-prepare-role-branch`, then `techlead-prepare-role-worktree`.
+This slice only creates or reuses a role worktree from a prepared role branch. Do not assume lifecycle cleanup is automatic yet.
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```
