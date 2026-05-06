@@ -2285,6 +2285,114 @@ def inspect_role_worktree(args):
     }
 
 
+def role_entry_helper(args):
+    inspection_args = SimpleNamespace(
+        repo_root=args.repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=args.target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+        assignment_path=args.assignment_path,
+        review_output=args.review_output,
+    )
+    inspection = inspect_role_worktree(inspection_args)
+    if not inspection.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'inspection_failed',
+            'details': 'Role entry helper requires a successful role-worktree inspection result.',
+            'inspection': inspection,
+        }
+
+    repo_root = args.repo_root.resolve()
+    worktree_path = Path(inspection['worktree_path']).resolve()
+    current_branch = inspection['current_branch']
+    role_branch = inspection['role_branch']
+    artifact = inspection['assignment_artifact']
+    role_label = inspection['target_role']
+    branch_alignment = {
+        'ok': current_branch == role_branch,
+        'current_branch': current_branch,
+        'expected_role_branch': role_branch,
+        'assignment_role_branch': artifact.get('role_branch'),
+        'assignment_canonical_branch': artifact.get('canonical_branch'),
+    }
+    if artifact.get('role_branch') and artifact.get('role_branch') != role_branch:
+        return {
+            'ok': False,
+            'reason': 'assignment_role_branch_mismatch',
+            'details': 'The assignment artifact names a different role branch than the prepared worktree context.',
+            'inspection': inspection,
+            'branch_alignment': branch_alignment,
+        }
+    if current_branch != role_branch:
+        return {
+            'ok': False,
+            'reason': 'worktree_branch_not_aligned',
+            'details': 'The prepared worktree is no longer on the expected role branch.',
+            'inspection': inspection,
+            'branch_alignment': branch_alignment,
+        }
+
+    producer_wrapper = repo_root / '.codex' / 'paa' / 'bin' / 'paa-producer'
+    issue_number = inspection['lineage_view']['issue_number']
+    issue_url = inspection['lineage_view']['issue_url']
+    pr_number = inspection['lineage_view']['pr_number']
+    pr_url = inspection['lineage_view']['pr_url']
+    if role_label == 'Python Dev':
+        result_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-slice-result-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', current_branch,
+            '--dev-input-file', '<dev_input_json>',
+            '--persist-db',
+        ]
+    else:
+        result_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-qa-verification-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', current_branch,
+            '--qa-input-file', '<qa_input_json>',
+            '--persist-db',
+        ]
+
+    return {
+        'ok': True,
+        'repo_root': str(repo_root),
+        'target_role': role_label,
+        'worktree_path': str(worktree_path),
+        'assignment_artifact': artifact,
+        'branch_alignment': branch_alignment,
+        'manual_execution_surfaces': {
+            'enter_worktree_command': f'cd {worktree_path}',
+            'assignment_json_command': f'cat {artifact["path"]}',
+            'assignment_review_command': f'cat {artifact["review_output_path"]}',
+            'result_compile_command': ' '.join(result_command),
+            'producer_wrapper_path': str(producer_wrapper),
+        },
+        'inspection': inspection,
+        'next_step_hint': 'review_assignment_and_begin_role_work_manually',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -2429,6 +2537,17 @@ def parse_args(argv: list[str] | None = None):
     inspect.add_argument('--assignment-path', type=Path)
     inspect.add_argument('--review-output', type=Path)
 
+    entry = sub.add_parser('role-entry')
+    entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
+    entry.add_argument('--package-id-external', required=True)
+    entry.add_argument('--brief-id-external', required=True)
+    entry.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    entry.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    entry.add_argument('--role-branch')
+    entry.add_argument('--worktree-path', type=Path)
+    entry.add_argument('--assignment-path', type=Path)
+    entry.add_argument('--review-output', type=Path)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2502,6 +2621,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'inspect-role-worktree':
         result = inspect_role_worktree(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'role-entry':
+        result = role_entry_helper(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

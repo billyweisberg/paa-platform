@@ -119,6 +119,22 @@ This path is intentionally narrow:
 - point the role at the emitted assignment artifact
 - stop before role execution
 
+Role-side entry helper:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-role-entry \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <python-team|qa>
+```
+
+This path is intentionally narrow:
+- read the inspected worktree context
+- verify branch and assignment artifact alignment
+- print the exact next manual execution surfaces
+- stop before compiling Dev or QA result packets
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

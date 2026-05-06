@@ -15,6 +15,7 @@ In the current narrow branch-mutation slice, use `techlead-prepare-role-branch` 
 When a prepared role branch needs an execution workspace, use `techlead-prepare-role-worktree` only to create or reuse the worktree from that prepared branch.
 When TechLead is ready for the narrow end-to-end handoff, use `techlead-handoff-to-role-worktree` only to emit the assignment, prepare the branch, and prepare the worktree, then stop.
 When the role needs the receive-side context, use `techlead-inspect-role-worktree` only to inspect the prepared worktree and point to the emitted assignment artifact, then stop.
+When the role is ready to enter manually, use `techlead-role-entry` only to verify alignment and print the exact next execution surfaces, then stop.
 Do not auto-send new packets in this phase; keep next-step execution human/report-driven unless explicitly instructed.
 Flag any issue work that is not using the shared branch pattern `issue-<issue_number>`.
 """
