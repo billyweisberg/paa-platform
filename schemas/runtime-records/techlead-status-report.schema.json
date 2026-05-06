@@ -82,6 +82,8 @@
             "dev_rework_required",
             "dev_reset_required",
             "techlead_dev_review_pending",
+            "techlead_worker_review_pending",
+            "techlead_delivery_review_pending",
             "techlead_qa_review_pending",
             "techlead_assignment_issued",
             "techlead_decision_recorded",

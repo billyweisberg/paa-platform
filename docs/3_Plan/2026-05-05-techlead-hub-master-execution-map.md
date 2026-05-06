@@ -273,14 +273,11 @@ Finish the hub model so it is not effectively a Python-only special case.
 - example packets added for both packet families
 - runtime validator acceptance added for both packet families
 - producer compiler support added for both packet families
+- TechLead runtime interpretation added for both packet families
+- explicit Delivery Architect assignment/return bridge added
 - Python transition lane deliberately kept on `slice_result_packet`
 
 ### Planned slices
-- add Delivery Architect assignment emission path
-- add Delivery Architect result return path
-- add TechLead reporting/runtime interpretation for:
-  - `worker_result_packet`
-  - `delivery_review_packet`
 - confirm the hub contract works for multiple worker-role families:
   - `Python Dev`
   - `Frontend Dev`

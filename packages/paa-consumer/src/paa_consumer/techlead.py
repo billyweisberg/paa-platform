@@ -23,6 +23,7 @@ ROLE_CONFIG = {
     'TechLead': {'dir': 'fractal-core-techlead-automation', 'root': str(REPO_ROOT)},
 }
 ROLE_BRANCH_SUFFIX = {
+    'delivery-architect': 'delivery',
     'python-team': 'dev',
     'qa': 'qa',
 }
@@ -673,10 +674,22 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         schema_type='slice_result_packet',
         to_role='techlead',
     ) if issue_number else None
+    pending_worker_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='worker_result_packet',
+        to_role='techlead',
+    ) if issue_number else None
     pending_qa_queue_packet = latest_packet_preview(
         queues,
         issue_number,
         schema_type='qa_verification_packet',
+        to_role='techlead',
+    ) if issue_number else None
+    pending_delivery_review_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='delivery_review_packet',
         to_role='techlead',
     ) if issue_number else None
     pending_assignment_packet = latest_packet_preview(
@@ -741,7 +754,9 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
     latest_techlead_packet = newest_packet(
         pending_decision_packet,
         pending_assignment_packet,
+        pending_delivery_review_packet,
         pending_qa_queue_packet,
+        pending_worker_packet,
         pending_dev_packet,
     )
 
@@ -832,6 +847,75 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             'priority': 1,
             'action_type': 'route_to_techlead',
             'reason': 'A QA verification packet addressed to TechLead is waiting for a merge, rework, or escalation decision.',
+            'target_role': 'TechLead',
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'delivery_review_packet':
+        stage = 'techlead_delivery_review_pending'
+        owner = 'TechLead'
+        unattended_safe = False
+        delivery_payload = latest_techlead_packet.get('payload') or {}
+        escalations.append({
+            'event_type': 'delivery_review_waiting_for_techlead',
+            'severity': 'medium',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': 'TechLead has a waiting Delivery Architect review packet to review.',
+            'details': {
+                'message_id': latest_techlead_packet.get('message_id'),
+                'schema_type': latest_techlead_packet.get('schema_type'),
+                'queue_name': latest_techlead_packet.get('queue_name'),
+                'review_type': delivery_payload.get('review_type'),
+                'result_type': delivery_payload.get('result_type'),
+                'techlead_action_recommended': delivery_payload.get('techlead_action_recommended'),
+            },
+            'recommended_route': 'TechLead',
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': 'route_to_techlead',
+            'reason': 'A Delivery Architect review packet addressed to TechLead is waiting for the next routing decision.',
+            'target_role': 'TechLead',
+            'blocking': True,
+        })
+        return stage, owner, escalations, recommended, unattended_safe
+
+    if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'worker_result_packet':
+        worker_payload = latest_techlead_packet.get('payload') or {}
+        worker_role = worker_payload.get('worker_role') or 'Worker'
+        if worker_role == 'Python Dev':
+            stage = 'techlead_dev_review_pending'
+            summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
+            reason = 'A Python worker result packet addressed to TechLead is waiting for the next routing decision.'
+        else:
+            stage = 'techlead_worker_review_pending'
+            summary = f'TechLead has a waiting {worker_role} result packet to review.'
+            reason = 'A worker result packet addressed to TechLead is waiting for the next routing decision.'
+        owner = 'TechLead'
+        unattended_safe = False
+        escalations.append({
+            'event_type': 'worker_packet_waiting_for_techlead',
+            'severity': 'medium',
+            'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+            'summary': summary,
+            'details': {
+                'message_id': latest_techlead_packet.get('message_id'),
+                'schema_type': latest_techlead_packet.get('schema_type'),
+                'queue_name': latest_techlead_packet.get('queue_name'),
+                'worker_role': worker_role,
+                'worker_family': worker_payload.get('worker_family'),
+                'result_type': worker_payload.get('result_type'),
+                'techlead_action_recommended': worker_payload.get('techlead_action_recommended'),
+            },
+            'recommended_route': 'TechLead',
+            'status': 'open',
+        })
+        recommended.append({
+            'priority': 1,
+            'action_type': 'route_to_techlead',
+            'reason': reason,
             'target_role': 'TechLead',
             'blocking': True,
         })
@@ -1414,7 +1498,9 @@ def default_result_input_path(repo_root: Path, issue_number: int, target_role: s
 def default_result_packet_paths(repo_root: Path, issue_number: int, target_role: str) -> tuple[Path, Path]:
     slug = target_role.replace(' ', '-').lower()
     reports_dir = repo_reports_dir(repo_root)
-    if target_role == 'Python Dev':
+    if target_role == 'Delivery Architect':
+        stem = f'delivery-review.issue{issue_number}.{slug}'
+    elif target_role == 'Python Dev':
         stem = f'slice-result.issue{issue_number}.{slug}'
     else:
         stem = f'qa-verification.issue{issue_number}.{slug}'
@@ -1437,6 +1523,54 @@ def derive_next_assignment_context(args) -> dict:
         schema_type='slice_result_packet',
         to_role='techlead',
     )
+    pending_worker_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='worker_result_packet',
+        to_role='techlead',
+    )
+    pending_delivery_review_packet = latest_packet_preview(
+        queues,
+        issue_number,
+        schema_type='delivery_review_packet',
+        to_role='techlead',
+    )
+    if args.target_role == 'delivery-architect':
+        if not pr:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'explicit_delivery_architect_emission_requires_active_pr',
+                'details': 'No PR was available from GitHub state for the selected issue, so Delivery Architect emission could not derive PR context.',
+            }
+        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'issue_number': issue_number,
+            'issue_url': issue.get('url'),
+            'pr_number': pr.get('number'),
+            'pr_url': pr.get('url'),
+            'branch': branch_name,
+            'target_role': 'Delivery Architect',
+            'target_role_cli': 'delivery-architect',
+            'assignment_type': 'delivery_architecture_review',
+            'allowed_result_types': [
+                'ready_for_dev',
+                'narrow_scope',
+                'reject_scope',
+            ],
+            'assignment_summary': (
+                f'TechLead is explicitly issuing a Delivery Architect review assignment for issue #{issue_number} '
+                f'on branch {branch_name}.'
+            ),
+            'source_packet_message_id': None,
+            'source_packet_path': None,
+            'issue': issue,
+            'pr': pr,
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
     if args.target_role == 'python-team':
         if not pr:
             return {
@@ -1473,7 +1607,7 @@ def derive_next_assignment_context(args) -> dict:
             'recommended_actions': recommended,
             'unattended_safe': unattended_safe,
         }
-    if workflow_stage == 'techlead_dev_review_pending' and pending_dev_packet:
+    if workflow_stage == 'techlead_dev_review_pending' and (pending_dev_packet or pending_worker_packet):
         if not pr:
             return {
                 'ok': False,
@@ -1482,7 +1616,8 @@ def derive_next_assignment_context(args) -> dict:
                 'details': 'A Dev result packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
             }
         branch_name = pr.get('headRefName') or f'issue-{issue_number}'
-        source_message_id = pending_dev_packet.get('message_id')
+        source_packet = pending_worker_packet or pending_dev_packet
+        source_message_id = source_packet.get('message_id')
         return {
             'ok': True,
             'workflow_stage': workflow_stage,
@@ -1510,13 +1645,22 @@ def derive_next_assignment_context(args) -> dict:
             'recommended_actions': recommended,
             'unattended_safe': unattended_safe,
         }
+    if workflow_stage == 'techlead_delivery_review_pending' and pending_delivery_review_packet:
+        return {
+            'ok': False,
+            'workflow_stage': workflow_stage,
+            'reason': 'delivery_review_pending_requires_manual_techlead_decision',
+            'details': 'Delivery review packets are now visible to TechLead, but automatic next-assignment derivation from them is not implemented in this slice.',
+            'recommended_actions': recommended,
+            'unattended_safe': unattended_safe,
+        }
     return {
         'ok': False,
         'workflow_stage': workflow_stage,
         'reason': 'no_supported_emission_available',
         'details': (
             f'Current workflow stage {workflow_stage!r} does not support next-assignment emission in this slice. '
-            'Only techlead_dev_review_pending -> QA and explicit Python Dev emission are supported.'
+            'Only techlead_dev_review_pending -> QA and explicit Python Dev or Delivery Architect emission are supported.'
         ),
         'recommended_actions': recommended,
         'unattended_safe': unattended_safe,
@@ -2168,6 +2312,8 @@ def handoff_to_role_worktree(args):
         role_cli = 'qa'
     elif derived_target_role == 'Python Dev':
         role_cli = 'python-team'
+    elif derived_target_role == 'Delivery Architect':
+        role_cli = 'delivery-architect'
     if role_cli is None:
         return {
             'ok': False,
@@ -2244,7 +2390,12 @@ def inspect_role_worktree(args):
             'worktree_path': str(worktree_path),
         }
 
-    human_role = 'Python Dev' if args.target_role == 'python-team' else 'QA'
+    role_map = {
+        'python-team': 'Python Dev',
+        'qa': 'QA',
+        'delivery-architect': 'Delivery Architect',
+    }
+    human_role = role_map[args.target_role]
     default_output_path, default_review_output_path = default_assignment_paths(repo_root, issue_number, human_role)
     assignment_path = (args.assignment_path.resolve() if args.assignment_path else default_output_path.resolve())
     review_output_path = (args.review_output.resolve() if args.review_output else default_review_output_path.resolve())
@@ -2357,7 +2508,26 @@ def role_entry_helper(args):
     issue_url = inspection['lineage_view']['issue_url']
     pr_number = inspection['lineage_view']['pr_number']
     pr_url = inspection['lineage_view']['pr_url']
-    if role_label == 'Python Dev':
+    if role_label == 'Delivery Architect':
+        result_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-delivery-review-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', current_branch,
+            '--result-type', '<delivery_result_type>',
+            '--delivery-input-file', '<delivery_input_json>',
+            '--source-assignment-path', artifact['path'],
+            '--source-assignment-type', artifact['assignment_type'],
+            '--persist-db',
+        ]
+    elif role_label == 'Python Dev':
         result_command = [
             str(producer_wrapper),
             'authority',
@@ -2468,7 +2638,26 @@ def role_result_assist(args):
         else default_result_input_path(repo_root, issue_number, role_label)
     )
 
-    if role_label == 'Python Dev':
+    if role_label == 'Delivery Architect':
+        result_family = 'delivery_review_packet'
+        input_flag = '--delivery-input-file'
+        expected_assignment_type = 'delivery_architecture_review'
+        input_contract = {
+            'required_top_level_keys': [
+                'scope_recommendation',
+                'authority_impact',
+                'branch_recommendation',
+                'techlead_action_recommended',
+                'review_summary',
+                'findings',
+            ],
+            'recommended_result_types': [
+                'ready_for_dev',
+                'narrow_scope',
+                'reject_scope',
+            ],
+        }
+    elif role_label == 'Python Dev':
         result_family = 'slice_result_packet'
         input_flag = '--dev-input-file'
         expected_assignment_type = 'implement_authorized_slice'
@@ -2515,21 +2704,57 @@ def role_result_assist(args):
         }
 
     producer_wrapper = repo_root / '.codex' / 'paa' / 'bin' / 'paa-producer'
-    result_compile_command = [
-        str(producer_wrapper),
-        'authority',
-        'materialize-slice-result-packet' if role_label == 'Python Dev' else 'materialize-qa-verification-packet',
-        '--package-id-external', args.package_id_external,
-        '--brief-id-external', args.brief_id_external,
-        '--repo', str(worktree_path),
-        '--issue-number', str(issue_number),
-        '--issue-url', str(issue_url),
-        '--pr-number', str(pr_number),
-        '--pr-url', str(pr_url),
-        '--branch', str(current_branch),
-        input_flag, str(result_input_path),
-        '--persist-db',
-    ]
+    if role_label == 'Delivery Architect':
+        result_compile_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-delivery-review-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', str(current_branch),
+            '--result-type', '<delivery_result_type>',
+            '--delivery-input-file', str(result_input_path),
+            '--source-assignment-path', str(artifact.get('path')),
+            '--source-assignment-type', str(artifact.get('assignment_type')),
+            '--persist-db',
+        ]
+    elif role_label == 'Python Dev':
+        result_compile_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-slice-result-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', str(current_branch),
+            '--dev-input-file', str(result_input_path),
+            '--persist-db',
+        ]
+    else:
+        result_compile_command = [
+            str(producer_wrapper),
+            'authority',
+            'materialize-qa-verification-packet',
+            '--package-id-external', args.package_id_external,
+            '--brief-id-external', args.brief_id_external,
+            '--repo', str(worktree_path),
+            '--issue-number', str(issue_number),
+            '--issue-url', str(issue_url),
+            '--pr-number', str(pr_number),
+            '--pr-url', str(pr_url),
+            '--branch', str(current_branch),
+            '--qa-input-file', str(result_input_path),
+            '--persist-db',
+        ]
 
     return {
         'ok': len(missing_fields) == 0,
@@ -2595,6 +2820,21 @@ def role_return_bridge(args):
     review_output_path = args.review_output.resolve() if getattr(args, 'review_output', None) else default_review_output_path.resolve()
 
     compile_command = assist['manual_result_surfaces']['result_compile_command'].split()
+    if role_label == 'Delivery Architect':
+        delivery_input = handoff_runtime.load_json(result_input_path)
+        delivery_result_type = delivery_input.get('result_type')
+        if not delivery_result_type:
+            return {
+                'ok': False,
+                'reason': 'delivery_result_type_missing',
+                'details': 'Delivery Architect return bridge requires result_input_file to include a top-level result_type.',
+                'assist': assist,
+                'result_input_path': str(result_input_path),
+            }
+        compile_command = [
+            delivery_result_type if token == '<delivery_result_type>' else token
+            for token in compile_command
+        ]
     compile_command.extend([
         '--output', str(output_path),
         '--review-output', str(review_output_path),
@@ -2770,7 +3010,7 @@ def parse_args(argv: list[str] | None = None):
     branch.add_argument('--package-id-external', required=True)
     branch.add_argument('--brief-id-external', required=True)
     branch.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    branch.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    branch.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     branch.add_argument('--action', choices=['ensure', 'reset'], required=True)
     branch.add_argument('--canonical-branch')
     branch.add_argument('--role-branch')
@@ -2780,7 +3020,7 @@ def parse_args(argv: list[str] | None = None):
     worktree.add_argument('--package-id-external', required=True)
     worktree.add_argument('--brief-id-external', required=True)
     worktree.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    worktree.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    worktree.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     worktree.add_argument('--branch-action', choices=['ensure', 'reset'], default='ensure')
     worktree.add_argument('--canonical-branch')
     worktree.add_argument('--role-branch')
@@ -2791,7 +3031,7 @@ def parse_args(argv: list[str] | None = None):
     handoff.add_argument('--package-id-external', required=True)
     handoff.add_argument('--brief-id-external', required=True)
     handoff.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    handoff.add_argument('--target-role', choices=['python-team', 'qa'], help='Explicitly request a supported target role. Omit to derive from current TechLead-visible workflow state.')
+    handoff.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], help='Explicitly request a supported target role. Omit to derive from current TechLead-visible workflow state.')
     handoff.add_argument('--send', action='store_true', help='Send the compiled assignment packet after validation succeeds.')
     handoff.add_argument('--output', type=Path, help='Write the compiled assignment packet JSON to this path.')
     handoff.add_argument('--review-output', type=Path, help='Write the compiled assignment packet review markdown to this path.')
@@ -2805,7 +3045,7 @@ def parse_args(argv: list[str] | None = None):
     inspect.add_argument('--package-id-external', required=True)
     inspect.add_argument('--brief-id-external', required=True)
     inspect.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    inspect.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    inspect.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     inspect.add_argument('--role-branch')
     inspect.add_argument('--worktree-path', type=Path)
     inspect.add_argument('--assignment-path', type=Path)
@@ -2816,7 +3056,7 @@ def parse_args(argv: list[str] | None = None):
     entry.add_argument('--package-id-external', required=True)
     entry.add_argument('--brief-id-external', required=True)
     entry.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    entry.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    entry.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     entry.add_argument('--role-branch')
     entry.add_argument('--worktree-path', type=Path)
     entry.add_argument('--assignment-path', type=Path)
@@ -2827,7 +3067,7 @@ def parse_args(argv: list[str] | None = None):
     result_assist.add_argument('--package-id-external', required=True)
     result_assist.add_argument('--brief-id-external', required=True)
     result_assist.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    result_assist.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    result_assist.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     result_assist.add_argument('--role-branch')
     result_assist.add_argument('--worktree-path', type=Path)
     result_assist.add_argument('--assignment-path', type=Path)
@@ -2839,7 +3079,7 @@ def parse_args(argv: list[str] | None = None):
     role_return.add_argument('--package-id-external', required=True)
     role_return.add_argument('--brief-id-external', required=True)
     role_return.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
-    role_return.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    role_return.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
     role_return.add_argument('--role-branch')
     role_return.add_argument('--worktree-path', type=Path)
     role_return.add_argument('--assignment-path', type=Path)

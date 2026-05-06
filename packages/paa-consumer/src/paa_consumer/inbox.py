@@ -25,7 +25,9 @@ TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA = {
     # Phase A keeps physical queue names stable while semantic routing changes to TechLead.
     'architect_cycle_packet': 'fractal-core-python',
     'slice_result_packet': 'fractal-core-qa',
+    'worker_result_packet': 'fractal-core-architecture',
     'qa_verification_packet': 'fractal-core-architecture',
+    'delivery_review_packet': 'fractal-core-architecture',
 }
 
 
