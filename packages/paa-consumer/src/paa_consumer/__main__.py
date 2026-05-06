@@ -172,6 +172,10 @@ def main() -> int:
         argv = ['lineage', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-prepare-role-branch':
+        argv = ['prepare-role-branch', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'techlead-emit-decision':
         argv = ['emit-decision', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)

@@ -19,6 +19,7 @@ CONSUMER_COMMANDS = (
     'techlead-status',
     'techlead-emit-next-assignment',
     'techlead-lineage',
+    'techlead-prepare-role-branch',
     'techlead-emit-decision',
     'validate-runtime',
 )

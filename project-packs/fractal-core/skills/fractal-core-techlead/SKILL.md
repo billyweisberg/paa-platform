@@ -59,7 +59,19 @@ Dedicated lineage query path:
   --brief-id-external <brief_id_external>
 ```
 
-Use `techlead-lineage` before any future branch reset, supersede, or close automation.
+Narrow branch mutation path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-prepare-role-branch \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <python-team|qa> \
+  --action <ensure|reset>
+```
+
+Use `techlead-lineage` as the required precursor to `techlead-prepare-role-branch`.
+This slice is limited to role-branch creation/reset only. Do not assume worktree creation or cleanup is automatic yet.
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json

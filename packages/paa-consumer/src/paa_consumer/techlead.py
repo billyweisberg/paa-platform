@@ -19,6 +19,10 @@ ROLE_CONFIG = {
     'QA': {'dir': 'fractal-core-qa-automation', 'root': str(REPO_ROOT)},
     'TechLead': {'dir': 'fractal-core-techlead-automation', 'root': str(REPO_ROOT)},
 }
+ROLE_BRANCH_SUFFIX = {
+    'python-team': 'dev',
+    'qa': 'qa',
+}
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 
 
@@ -67,6 +71,20 @@ def run_json_with_errors(cmd):
     if result.returncode != 0:
         return result.returncode, None, result.stderr.strip() or result.stdout.strip() or f'command failed: {cmd}'
     return 0, json.loads(result.stdout), None
+
+
+def run_text(cmd, cwd: Path | None = None) -> str:
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or f'command failed: {cmd}')
+    return result.stdout
+
+
+def run_text_with_errors(cmd, cwd: Path | None = None):
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
+    if result.returncode != 0:
+        return result.returncode, None, result.stderr.strip() or result.stdout.strip() or f'command failed: {cmd}'
+    return 0, result.stdout, None
 
 
 def run_psql(db_container, db_name, db_user, sql):
@@ -257,6 +275,76 @@ def latest_qa_packet(issue_number, reports_dir: Path = QA_WORK_DIR):
     latest.pop('_created_dt', None)
     latest.pop('_mtime', None)
     return latest
+
+
+def git_local_branch_exists(repo_root: Path, branch_name: str) -> bool:
+    return subprocess.run(
+        ['git', 'show-ref', '--verify', '--quiet', f'refs/heads/{branch_name}'],
+        cwd=str(repo_root),
+    ).returncode == 0
+
+
+def git_remote_branch_exists(repo_root: Path, branch_name: str) -> bool:
+    return subprocess.run(
+        ['git', 'show-ref', '--verify', '--quiet', f'refs/remotes/origin/{branch_name}'],
+        cwd=str(repo_root),
+    ).returncode == 0
+
+
+def git_resolve_ref(repo_root: Path, ref_name: str) -> str | None:
+    code, stdout, _error = run_text_with_errors(['git', 'rev-parse', '--verify', ref_name], cwd=repo_root)
+    if code != 0 or stdout is None:
+        return None
+    return stdout.strip()
+
+
+def git_branch_usage(repo_root: Path, branch_name: str) -> list[str]:
+    code, stdout, _error = run_text_with_errors(['git', 'worktree', 'list', '--porcelain'], cwd=repo_root)
+    if code != 0 or stdout is None:
+        return []
+    usages: list[str] = []
+    current_worktree = None
+    for raw_line in stdout.splitlines():
+        line = raw_line.strip()
+        if not line:
+            current_worktree = None
+            continue
+        if line.startswith('worktree '):
+            current_worktree = line.split(' ', 1)[1]
+            continue
+        if line.startswith('branch refs/heads/') and current_worktree:
+            checked_out = line.removeprefix('branch refs/heads/')
+            if checked_out == branch_name:
+                usages.append(current_worktree)
+    return usages
+
+
+def normalize_canonical_branch(repo_root: Path, issue_number: int, lineage: dict, explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    preferred = f'issue-{issue_number}'
+    if git_local_branch_exists(repo_root, preferred) or git_remote_branch_exists(repo_root, preferred):
+        return preferred
+    lineage_branch = lineage.get('canonical_branch')
+    if lineage_branch:
+        return str(lineage_branch)
+    return preferred
+
+
+def role_branch_name(issue_number: int, target_role: str, explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    suffix = ROLE_BRANCH_SUFFIX[target_role]
+    return f'issue-{issue_number}-{suffix}'
+
+
+def resolve_canonical_source_ref(repo_root: Path, canonical_branch: str) -> tuple[str | None, str | None]:
+    if git_local_branch_exists(repo_root, canonical_branch):
+        return canonical_branch, git_resolve_ref(repo_root, canonical_branch)
+    if git_remote_branch_exists(repo_root, canonical_branch):
+        remote_ref = f'origin/{canonical_branch}'
+        return remote_ref, git_resolve_ref(repo_root, remote_ref)
+    return None, None
 
 
 def latest_queue_preview(queues, queue_name, issue_number):
@@ -1769,6 +1857,111 @@ def emit_decision(args):
     return result
 
 
+def prepare_role_branch(args):
+    repo_root = args.repo_root.resolve()
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    if not lineage_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'ambiguous_lineage_view',
+            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
+            'lineage_view': lineage_view,
+        }
+
+    issue_number = lineage_view['issue_number']
+    lineage = lineage_view['lineage']
+    canonical_branch = normalize_canonical_branch(repo_root, issue_number, lineage, args.canonical_branch)
+    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
+    source_ref, source_commit = resolve_canonical_source_ref(repo_root, canonical_branch)
+    if source_ref is None or source_commit is None:
+        return {
+            'ok': False,
+            'reason': 'canonical_branch_unresolved',
+            'details': f'Could not resolve canonical branch {canonical_branch!r} locally or from origin.',
+            'lineage_view': lineage_view,
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+        }
+
+    branch_exists_before = git_local_branch_exists(repo_root, role_branch)
+    branch_head_before = git_resolve_ref(repo_root, role_branch) if branch_exists_before else None
+    checked_out_paths = git_branch_usage(repo_root, role_branch)
+    mutation_required = (not branch_exists_before) or (branch_head_before != source_commit)
+
+    if args.action == 'ensure' and branch_exists_before and branch_head_before != source_commit:
+        return {
+            'ok': False,
+            'reason': 'role_branch_exists_with_different_tip',
+            'details': f'Role branch {role_branch!r} already exists at a different commit. Use --action reset to realign it to {canonical_branch!r}.',
+            'lineage_view': lineage_view,
+            'canonical_branch': canonical_branch,
+            'canonical_source_ref': source_ref,
+            'canonical_source_commit': source_commit,
+            'role_branch': role_branch,
+            'branch_head_before': branch_head_before,
+            'branch_checked_out_in': checked_out_paths,
+        }
+
+    if args.action == 'reset' and mutation_required and checked_out_paths:
+        return {
+            'ok': False,
+            'reason': 'role_branch_checked_out_in_worktree',
+            'details': f'Cannot reset role branch {role_branch!r} while it is checked out in an active worktree.',
+            'lineage_view': lineage_view,
+            'canonical_branch': canonical_branch,
+            'canonical_source_ref': source_ref,
+            'canonical_source_commit': source_commit,
+            'role_branch': role_branch,
+            'branch_head_before': branch_head_before,
+            'branch_checked_out_in': checked_out_paths,
+        }
+
+    mutated = False
+    created = False
+    reset = False
+    if args.action == 'ensure':
+        if not branch_exists_before:
+            run_text(['git', 'branch', role_branch, source_ref], cwd=repo_root)
+            mutated = True
+            created = True
+    elif args.action == 'reset':
+        if not branch_exists_before or branch_head_before != source_commit:
+            run_text(['git', 'branch', '-f', role_branch, source_ref], cwd=repo_root)
+            mutated = True
+            created = not branch_exists_before
+            reset = branch_exists_before
+
+    branch_head_after = git_resolve_ref(repo_root, role_branch)
+    return {
+        'ok': branch_head_after == source_commit,
+        'action': args.action,
+        'repo_root': str(repo_root),
+        'issue_number': issue_number,
+        'workflow_stage': lineage_view.get('workflow_stage'),
+        'target_role': args.target_role,
+        'canonical_branch': canonical_branch,
+        'canonical_source_ref': source_ref,
+        'canonical_source_commit': source_commit,
+        'role_branch': role_branch,
+        'branch_owner_role': lineage.get('branch_owner_role') or 'TechLead',
+        'worktree_hint': lineage.get('worktree_hint') or role_branch,
+        'mutated': mutated,
+        'created': created,
+        'reset': reset,
+        'branch_exists_before': branch_exists_before,
+        'branch_head_before': branch_head_before,
+        'branch_head_after': branch_head_after,
+        'branch_checked_out_in': checked_out_paths,
+        'lineage_view': lineage_view,
+        'next_step_hint': 'create_or_reuse_worktree_for_role' if branch_head_after == source_commit else 'investigate_branch_alignment',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -1867,6 +2060,16 @@ def parse_args(argv: list[str] | None = None):
     lineage.add_argument('--brief-id-external', required=True)
     lineage.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
 
+    branch = sub.add_parser('prepare-role-branch')
+    branch.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root where role branches are managed.')
+    branch.add_argument('--package-id-external', required=True)
+    branch.add_argument('--brief-id-external', required=True)
+    branch.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    branch.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    branch.add_argument('--action', choices=['ensure', 'reset'], required=True)
+    branch.add_argument('--canonical-branch')
+    branch.add_argument('--role-branch')
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -1920,6 +2123,11 @@ def main(argv=None):
             args.package_id_external,
             args.brief_id_external,
         )
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'prepare-role-branch':
+        result = prepare_role_branch(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
