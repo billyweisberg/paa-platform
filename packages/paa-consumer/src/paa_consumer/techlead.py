@@ -2116,6 +2116,67 @@ def prepare_role_worktree(args):
     }
 
 
+def handoff_to_role_worktree(args):
+    repo_root = args.repo_root.resolve()
+    emit_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=args.target_role,
+        send=args.send,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    assignment_result = emit_next_assignment(emit_args)
+    if not assignment_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'assignment_emission_failed',
+            'details': 'Role-worktree handoff requires a successful TechLead assignment emission result.',
+            'assignment': assignment_result,
+        }
+
+    derived_target_role = ((assignment_result.get('derived_decision') or {}).get('target_role') or '').strip()
+    role_cli = None
+    if derived_target_role == 'QA':
+        role_cli = 'qa'
+    elif derived_target_role == 'Python Dev':
+        role_cli = 'python-team'
+    if role_cli is None:
+        return {
+            'ok': False,
+            'reason': 'unsupported_assignment_target_for_worktree',
+            'details': f'Assignment target {derived_target_role!r} is not supported for role-worktree preparation in this slice.',
+            'assignment': assignment_result,
+        }
+
+    worktree_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=role_cli,
+        branch_action=args.branch_action,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+    )
+    worktree_result = prepare_role_worktree(worktree_args)
+    return {
+        'ok': bool(assignment_result.get('ok')) and bool(worktree_result.get('ok')),
+        'repo_root': str(repo_root),
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'target_role': derived_target_role,
+        'sent': bool(assignment_result.get('sent')),
+        'resolved_queue': assignment_result.get('resolved_queue'),
+        'assignment': assignment_result,
+        'worktree': worktree_result,
+        'next_step_hint': 'enter_prepared_worktree_and_execute_role' if worktree_result.get('ok') else 'investigate_worktree_preparation',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -2235,6 +2296,20 @@ def parse_args(argv: list[str] | None = None):
     worktree.add_argument('--role-branch')
     worktree.add_argument('--worktree-path', type=Path)
 
+    handoff = sub.add_parser('handoff-to-role-worktree')
+    handoff.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for assignment emission and role worktree preparation.')
+    handoff.add_argument('--package-id-external', required=True)
+    handoff.add_argument('--brief-id-external', required=True)
+    handoff.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    handoff.add_argument('--target-role', choices=['python-team', 'qa'], help='Explicitly request a supported target role. Omit to derive from current TechLead-visible workflow state.')
+    handoff.add_argument('--send', action='store_true', help='Send the compiled assignment packet after validation succeeds.')
+    handoff.add_argument('--output', type=Path, help='Write the compiled assignment packet JSON to this path.')
+    handoff.add_argument('--review-output', type=Path, help='Write the compiled assignment packet review markdown to this path.')
+    handoff.add_argument('--branch-action', choices=['ensure', 'reset'], default='ensure')
+    handoff.add_argument('--canonical-branch')
+    handoff.add_argument('--role-branch')
+    handoff.add_argument('--worktree-path', type=Path)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2298,6 +2373,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'prepare-role-worktree':
         result = prepare_role_worktree(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'handoff-to-role-worktree':
+        result = handoff_to_role_worktree(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

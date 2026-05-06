@@ -87,6 +87,23 @@ Narrow role-worktree path:
 Use `techlead-lineage` first, then `techlead-prepare-role-branch`, then `techlead-prepare-role-worktree`.
 This slice only creates or reuses a role worktree from a prepared role branch. Do not assume lifecycle cleanup is automatic yet.
 
+Narrow TechLead handoff path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-handoff-to-role-worktree \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  [--target-role <python-team|qa>] \
+  [--send]
+```
+
+This path is intentionally narrow:
+- emit the assignment packet
+- prepare the role branch
+- prepare the role worktree
+- stop before role execution
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```
