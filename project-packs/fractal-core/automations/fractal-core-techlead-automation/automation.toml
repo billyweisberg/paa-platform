@@ -10,6 +10,7 @@ Treat Dev result packets and QA verification packets as TechLead-owned decisions
 Recognize `techlead_assignment_packet` as an issued routing intent and `techlead_decision_packet` as the durable reason for the next route, pause, reset, or merge-prep action.
 In supported cases, TechLead may emit the next assignment packet through `techlead-emit-next-assignment` rather than stopping at recommendation-only output.
 In supported branch-aware cases, TechLead may emit `techlead_decision_packet` through `techlead-emit-decision` to record reset, superseded, or closed lineage state.
+Use `techlead-lineage` as the dedicated lineage inspection surface before any future branch mutation automation is introduced.
 Do not auto-send new packets in this phase; keep next-step execution human/report-driven unless explicitly instructed.
 Flag any issue work that is not using the shared branch pattern `issue-<issue_number>`.
 """

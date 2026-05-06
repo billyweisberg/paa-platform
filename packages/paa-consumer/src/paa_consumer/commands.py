@@ -18,6 +18,7 @@ CONSUMER_COMMANDS = (
     'queue-requeue',
     'techlead-status',
     'techlead-emit-next-assignment',
+    'techlead-lineage',
     'techlead-emit-decision',
     'validate-runtime',
 )

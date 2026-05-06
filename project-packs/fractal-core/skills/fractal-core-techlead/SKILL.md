@@ -50,6 +50,17 @@ Initial supported decision cases:
 - `superseded`
 - `closed`
 
+Dedicated lineage query path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-lineage \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external>
+```
+
+Use `techlead-lineage` before any future branch reset, supersede, or close automation.
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

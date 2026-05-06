@@ -346,6 +346,38 @@ def derive_lineage_section(current_task, pr, queues, escalations):
     }
 
 
+def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: str, brief_id_external: str) -> dict:
+    _current, manifest = load_authority(repo_root)
+    package = load_design_package(project_slug, package_id_external)
+    issue_number = resolve_issue_number_from_package(package, package_id_external)
+    current_task = resolve_task_summary(manifest, package, issue_number)
+    queues = queue_state(repo_root)
+    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
+    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+    workflow_stage, owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
+    lineage = derive_lineage_section(current_task, pr, queues, escalations)
+    ambiguity_reasons = []
+    if lineage['current_packet_type'] is None and lineage['canonical_branch'] is None and not pr:
+        ambiguity_reasons.append('no_lineage_packet_or_pr_context')
+    return {
+        'ok': len(ambiguity_reasons) == 0,
+        'project_slug': project_slug,
+        'package_id_external': package_id_external,
+        'brief_id_external': brief_id_external,
+        'issue_number': issue_number,
+        'issue_url': issue.get('url'),
+        'pr_number': pr.get('number') if pr else None,
+        'pr_url': pr.get('url') if pr else None,
+        'workflow_stage': workflow_stage,
+        'current_owner_role': owner_role,
+        'lineage': lineage,
+        'source_packet_path': qa_packet.get('path') if qa_packet else None,
+        'recommended_actions': recommended,
+        'unattended_safe': unattended_safe,
+        'ambiguity_reasons': ambiguity_reasons,
+    }
+
+
 def action_type_for_role(role):
     mapping = {
         'Delivery Architect': 'route_to_delivery_architect',
@@ -1433,23 +1465,50 @@ def latest_escalation_of_type(escalations: list[dict], event_type: str) -> dict 
 
 def derive_decision_context(args) -> dict:
     repo_root = args.repo_root.resolve()
-    _current, manifest = load_authority(repo_root)
-    package = load_design_package(args.project_slug, args.package_id_external)
-    issue_number = resolve_issue_number_from_package(package, args.package_id_external)
-    current_task = resolve_task_summary(manifest, package, issue_number)
-    queues = queue_state(repo_root)
-    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
-    workflow_stage, _owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
-
-    canonical_branch = args.canonical_branch or (f'issue-{issue_number}')
-    branch_name = (pr.get('headRefName') if pr else None) or canonical_branch
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    if not lineage_view.get('ok') and args.decision_type in {'superseded', 'closed'}:
+        return {
+            'ok': False,
+            'workflow_stage': lineage_view.get('workflow_stage'),
+            'reason': 'ambiguous_lineage_view',
+            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
+        }
+    issue_number = lineage_view['issue_number']
+    issue_url = lineage_view['issue_url']
+    pr_number = lineage_view['pr_number']
+    pr_url = lineage_view['pr_url']
+    workflow_stage = lineage_view['workflow_stage']
+    recommended = lineage_view['recommended_actions']
+    unattended_safe = lineage_view['unattended_safe']
+    lineage = lineage_view['lineage']
+    canonical_branch = args.canonical_branch or lineage.get('canonical_branch') or f'issue-{issue_number}'
+    branch_name = canonical_branch
+    if lineage.get('active_role_branch'):
+        branch_name = lineage['active_role_branch']
+    elif lineage.get('canonical_branch'):
+        branch_name = lineage['canonical_branch']
     role_branch = args.role_branch
     if role_branch is None and branch_name != canonical_branch:
         role_branch = branch_name
-    source_packet_path = str(args.source_packet_path.resolve()) if args.source_packet_path else (qa_packet.get('path') if qa_packet else None)
+    source_packet_path = str(args.source_packet_path.resolve()) if args.source_packet_path else lineage_view.get('source_packet_path')
+    issue = {'url': issue_url, 'state': 'CLOSED' if pr_url and workflow_stage == 'dev_in_progress' and pr_number else 'OPEN'}
+    pr = {'number': pr_number, 'url': pr_url, 'headRefName': branch_name, 'mergedAt': None}
+    if pr_number is None:
+        pr = None
 
     if args.decision_type == 'reset_required':
+        _current, manifest = load_authority(repo_root)
+        package = load_design_package(args.project_slug, args.package_id_external)
+        current_task = resolve_task_summary(manifest, package, issue_number)
+        queues = queue_state(repo_root)
+        qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
+        issue_full, pr_full = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+        _workflow_stage, _owner_role, escalations, _recommended, _unattended = derive_workflow(current_task, issue_full, pr_full, qa_packet, queues)
         reset_escalation = latest_escalation_of_type(escalations, 'reset_branch_required') or latest_escalation_of_type(escalations, 'reset_branch_recommended')
         if workflow_stage != 'dev_reset_required' and not reset_escalation:
             return {
@@ -1471,9 +1530,9 @@ def derive_decision_context(args) -> dict:
             'ok': True,
             'workflow_stage': workflow_stage,
             'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number') if pr else None,
-            'pr_url': pr.get('url') if pr else None,
+            'issue_url': issue_url,
+            'pr_number': pr_full.get('number') if pr_full else None,
+            'pr_url': pr_full.get('url') if pr_full else None,
             'branch': branch_name,
             'to_role': 'techlead',
             'target_role_cli': 'python-team',
@@ -1496,6 +1555,13 @@ def derive_decision_context(args) -> dict:
         }
 
     if args.decision_type == 'superseded':
+        _current, manifest = load_authority(repo_root)
+        package = load_design_package(args.project_slug, args.package_id_external)
+        current_task = resolve_task_summary(manifest, package, issue_number)
+        queues = queue_state(repo_root)
+        qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
+        issue_full, pr_full = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+        _workflow_stage, _owner_role, escalations, _recommended, _unattended = derive_workflow(current_task, issue_full, pr_full, qa_packet, queues)
         superseded_escalation = latest_escalation_of_type(escalations, 'qa_escalation_superseded')
         if superseded_escalation is None:
             return {
@@ -1517,9 +1583,9 @@ def derive_decision_context(args) -> dict:
             'ok': True,
             'workflow_stage': workflow_stage,
             'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number') if pr else None,
-            'pr_url': pr.get('url') if pr else None,
+            'issue_url': issue_url,
+            'pr_number': pr_full.get('number') if pr_full else None,
+            'pr_url': pr_full.get('url') if pr_full else None,
             'branch': branch_name,
             'to_role': 'techlead',
             'target_role_cli': None,
@@ -1542,12 +1608,12 @@ def derive_decision_context(args) -> dict:
         }
 
     if args.decision_type == 'closed':
-        if not (pr and pr.get('mergedAt')) and issue.get('state') != 'CLOSED':
+        if pr_number is None and issue_url is None:
             return {
                 'ok': False,
                 'workflow_stage': workflow_stage,
                 'reason': 'closed_not_supported_for_current_stage',
-                'details': 'closed decisions require a merged PR or closed issue state.',
+                'details': 'closed decisions require a closed lineage context with issue or PR identity.',
             }
         if source_packet_path is None:
             return {
@@ -1560,9 +1626,9 @@ def derive_decision_context(args) -> dict:
             'ok': True,
             'workflow_stage': workflow_stage,
             'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number') if pr else None,
-            'pr_url': pr.get('url') if pr else None,
+            'issue_url': issue_url,
+            'pr_number': pr_number,
+            'pr_url': pr_url,
             'branch': branch_name,
             'to_role': 'techlead',
             'target_role_cli': None,
@@ -1795,6 +1861,12 @@ def parse_args(argv: list[str] | None = None):
     emit.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
     emit.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
 
+    lineage = sub.add_parser('lineage')
+    lineage.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for lineage inspection.')
+    lineage.add_argument('--package-id-external', required=True)
+    lineage.add_argument('--brief-id-external', required=True)
+    lineage.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -1838,6 +1910,16 @@ def main(argv=None):
         return 0
     if args.command == 'emit-next-assignment':
         result = emit_next_assignment(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'lineage':
+        result = build_lineage_view(
+            args.repo_root.resolve(),
+            args.project_slug,
+            args.package_id_external,
+            args.brief_id_external,
+        )
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
