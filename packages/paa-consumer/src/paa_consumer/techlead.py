@@ -8,6 +8,8 @@ from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 
+from paa_core import handoff_runtime
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_DB_CONTAINER = 'agenthub-mm-db'
 DEFAULT_DB_NAME = 'paa_dev'
@@ -387,6 +389,13 @@ def role_branch_name(issue_number: int, target_role: str, explicit: str | None) 
 
 def default_role_worktree_path(repo_root: Path, role_branch: str) -> Path:
     return Path.home() / '.codex' / 'worktrees' / 'paa' / repo_root.name / role_branch
+
+
+def git_current_branch(repo_root: Path) -> str | None:
+    code, stdout, _error = run_text_with_errors(['git', 'symbolic-ref', '--short', 'HEAD'], cwd=repo_root)
+    if code != 0 or stdout is None:
+        return None
+    return stdout.strip()
 
 
 def resolve_canonical_source_ref(repo_root: Path, canonical_branch: str) -> tuple[str | None, str | None]:
@@ -2177,6 +2186,105 @@ def handoff_to_role_worktree(args):
     }
 
 
+def inspect_role_worktree(args):
+    repo_root = args.repo_root.resolve()
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    if not lineage_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'ambiguous_lineage_view',
+            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
+            'lineage_view': lineage_view,
+        }
+
+    issue_number = lineage_view['issue_number']
+    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
+    worktree_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
+    worktree_entry = git_worktree_for_path(repo_root, worktree_path)
+    if worktree_entry is None:
+        return {
+            'ok': False,
+            'reason': 'worktree_not_registered',
+            'details': f'No registered git worktree was found at {str(worktree_path)!r}.',
+            'lineage_view': lineage_view,
+            'role_branch': role_branch,
+            'worktree_path': str(worktree_path),
+        }
+
+    checked_out_branch = worktree_entry.get('branch')
+    if checked_out_branch != role_branch:
+        return {
+            'ok': False,
+            'reason': 'worktree_branch_mismatch',
+            'details': f'Worktree at {str(worktree_path)!r} is not checked out on the expected role branch.',
+            'lineage_view': lineage_view,
+            'role_branch': role_branch,
+            'checked_out_branch': checked_out_branch,
+            'worktree_path': str(worktree_path),
+        }
+
+    human_role = 'Python Dev' if args.target_role == 'python-team' else 'QA'
+    default_output_path, default_review_output_path = default_assignment_paths(repo_root, issue_number, human_role)
+    assignment_path = (args.assignment_path.resolve() if args.assignment_path else default_output_path.resolve())
+    review_output_path = (args.review_output.resolve() if args.review_output else default_review_output_path.resolve())
+    if not assignment_path.exists():
+        return {
+            'ok': False,
+            'reason': 'assignment_artifact_missing',
+            'details': f'No assignment artifact was found at {str(assignment_path)!r}.',
+            'lineage_view': lineage_view,
+            'role_branch': role_branch,
+            'worktree_path': str(worktree_path),
+            'assignment_path': str(assignment_path),
+        }
+
+    packet = handoff_runtime.load_json(assignment_path)
+    payload = packet.get('payload') or {}
+    packet_target_role = payload.get('target_role')
+    if packet_target_role != human_role:
+        return {
+            'ok': False,
+            'reason': 'assignment_target_mismatch',
+            'details': f'Assignment artifact target {packet_target_role!r} does not match the requested role {human_role!r}.',
+            'lineage_view': lineage_view,
+            'role_branch': role_branch,
+            'worktree_path': str(worktree_path),
+            'assignment_path': str(assignment_path),
+            'packet_target_role': packet_target_role,
+        }
+
+    current_branch = git_current_branch(worktree_path)
+    return {
+        'ok': True,
+        'repo_root': str(repo_root),
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'target_role': human_role,
+        'role_branch': role_branch,
+        'worktree_path': str(worktree_path),
+        'current_branch': current_branch,
+        'assignment_artifact': {
+            'path': str(assignment_path),
+            'review_output_path': str(review_output_path),
+            'message_id': packet.get('message_id'),
+            'schema_type': packet.get('schema_type'),
+            'assignment_type': payload.get('assignment_type'),
+            'assignment_summary': payload.get('assignment_summary'),
+            'allowed_result_types': payload.get('allowed_result_types') or [],
+            'canonical_branch': payload.get('canonical_branch'),
+            'role_branch': payload.get('role_branch'),
+            'worktree_hint': payload.get('worktree_hint'),
+        },
+        'lineage_view': lineage_view,
+        'next_step_hint': 'open_worktree_and_begin_role_execution_manually',
+    }
+
+
 def persist_report(report, args):
     agent_id = resolve_agent_id(
         args.db_container,
@@ -2310,6 +2418,17 @@ def parse_args(argv: list[str] | None = None):
     handoff.add_argument('--role-branch')
     handoff.add_argument('--worktree-path', type=Path)
 
+    inspect = sub.add_parser('inspect-role-worktree')
+    inspect.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role-worktree inspection.')
+    inspect.add_argument('--package-id-external', required=True)
+    inspect.add_argument('--brief-id-external', required=True)
+    inspect.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    inspect.add_argument('--target-role', choices=['python-team', 'qa'], required=True)
+    inspect.add_argument('--role-branch')
+    inspect.add_argument('--worktree-path', type=Path)
+    inspect.add_argument('--assignment-path', type=Path)
+    inspect.add_argument('--review-output', type=Path)
+
     decision = sub.add_parser('emit-decision')
     decision.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for dispatch commands.')
     decision.add_argument('--package-id-external', required=True)
@@ -2378,6 +2497,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'handoff-to-role-worktree':
         result = handoff_to_role_worktree(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'inspect-role-worktree':
+        result = inspect_role_worktree(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

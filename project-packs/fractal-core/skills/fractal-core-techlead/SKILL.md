@@ -104,6 +104,21 @@ This path is intentionally narrow:
 - prepare the role worktree
 - stop before role execution
 
+Receive-side role-worktree inspection:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <python-team|qa>
+```
+
+This path is intentionally narrow:
+- inspect the prepared worktree context
+- point the role at the emitted assignment artifact
+- stop before role execution
+
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
 ```

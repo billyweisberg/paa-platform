@@ -22,6 +22,7 @@ CONSUMER_COMMANDS = (
     'techlead-prepare-role-branch',
     'techlead-prepare-role-worktree',
     'techlead-handoff-to-role-worktree',
+    'techlead-inspect-role-worktree',
     'techlead-emit-decision',
     'validate-runtime',
 )
