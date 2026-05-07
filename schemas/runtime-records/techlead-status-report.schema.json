@@ -184,7 +184,8 @@
         "current_packet_type",
         "current_packet_message_id",
         "current_packet_queue",
-        "worktree_ownership"
+        "worktree_ownership",
+        "worktree_staleness"
       ],
       "properties": {
         "canonical_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
@@ -199,7 +200,8 @@
         "current_packet_type": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "current_packet_message_id": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "current_packet_queue": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
-        "worktree_ownership": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/worktreeOwnership"}]}
+        "worktree_ownership": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/worktreeOwnership"}]},
+        "worktree_staleness": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/worktreeStaleness"}]}
       }
     },
     "worktreeOwnership": {
@@ -236,6 +238,26 @@
         "checked_out_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "branch_aligned": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
         "worktree_head": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      }
+    },
+    "worktreeStaleness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "stale",
+        "cleanup_candidate",
+        "reasons",
+        "warnings",
+        "recommended_action"
+      ],
+      "properties": {
+        "status": {"enum": ["active", "absent", "stale"]},
+        "stale": {"type": "boolean"},
+        "cleanup_candidate": {"type": "boolean"},
+        "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "warnings": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "recommended_action": {"type": "string", "minLength": 1}
       }
     },
     "automations": {

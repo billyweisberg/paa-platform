@@ -24,6 +24,7 @@ CONSUMER_COMMANDS = (
     'techlead-handoff-to-role-worktree',
     'techlead-inspect-role-worktree',
     'techlead-worktree-ownership',
+    'techlead-worktree-stale',
     'techlead-role-entry',
     'techlead-role-result-assist',
     'techlead-role-return',

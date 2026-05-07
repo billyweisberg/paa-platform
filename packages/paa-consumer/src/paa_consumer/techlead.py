@@ -440,6 +440,47 @@ def worktree_ownership_record(
     }
 
 
+def worktree_staleness_assessment(
+    lineage_state: str | None,
+    ownership: dict | None,
+) -> dict | None:
+    if ownership is None:
+        return None
+    reasons: list[str] = []
+    warnings: list[str] = []
+    registered = bool(ownership.get('registered'))
+    branch_aligned = ownership.get('branch_aligned')
+    uses_default_path = bool(ownership.get('uses_default_worktree_path'))
+    if not uses_default_path:
+        warnings.append('nondefault_worktree_path')
+    if not registered:
+        return {
+            'status': 'absent',
+            'stale': False,
+            'cleanup_candidate': False,
+            'reasons': reasons,
+            'warnings': warnings,
+            'recommended_action': 'prepare_or_reuse_worktree_when_role_runs',
+        }
+    if branch_aligned is False:
+        reasons.append('registered_worktree_branch_mismatch')
+    if lineage_state in {'reset_required', 'superseded', 'closed'}:
+        reasons.append(f'lineage_state_{lineage_state}')
+    stale = len(reasons) > 0
+    return {
+        'status': 'stale' if stale else 'active',
+        'stale': stale,
+        'cleanup_candidate': stale,
+        'reasons': reasons,
+        'warnings': warnings,
+        'recommended_action': (
+            'investigate_and_cleanup_after_lifecycle_review'
+            if stale
+            else 'keep_registered_for_role_execution'
+        ),
+    }
+
+
 def default_role_worktree_path(repo_root: Path, role_branch: str) -> Path:
     return Path.home() / '.codex' / 'worktrees' / 'paa' / repo_root.name / role_branch
 
@@ -545,6 +586,7 @@ def derive_lineage_section(current_task, pr, queues, escalations):
             worktree_path,
             worktree_entry=worktree_entry,
         )
+    worktree_staleness = worktree_staleness_assessment(lineage_state, worktree_ownership)
     return {
         'canonical_branch': canonical_branch,
         'active_role_branch': role_branch,
@@ -559,6 +601,7 @@ def derive_lineage_section(current_task, pr, queues, escalations):
         'current_packet_message_id': lineage_packet.get('message_id') if lineage_packet else None,
         'current_packet_queue': lineage_packet.get('queue_name') if lineage_packet else None,
         'worktree_ownership': worktree_ownership,
+        'worktree_staleness': worktree_staleness,
     }
 
 
@@ -1265,6 +1308,7 @@ def build_report():
         'current_packet_message_id': None,
         'current_packet_queue': None,
         'worktree_ownership': None,
+        'worktree_staleness': None,
     }
 
     if current_task:
@@ -2674,8 +2718,31 @@ def worktree_ownership(args):
         'issue_number': issue_number,
         'workflow_stage': lineage_view.get('workflow_stage'),
         'worktree_ownership': ownership,
+        'worktree_staleness': worktree_staleness_assessment(
+            (lineage_view.get('lineage') or {}).get('lineage_state'),
+            ownership,
+        ),
         'lineage_view': lineage_view,
         'next_step_hint': 'role_automation_may_prepare_or_reuse_its_owned_worktree' if not ownership.get('registered') else 'role_automation_may_enter_owned_worktree',
+    }
+
+
+def worktree_stale(args):
+    ownership_view = worktree_ownership(args)
+    if not ownership_view.get('ok'):
+        return ownership_view
+    assessment = ownership_view.get('worktree_staleness')
+    return {
+        'ok': True,
+        'repo_root': ownership_view.get('repo_root'),
+        'package_id_external': ownership_view.get('package_id_external'),
+        'brief_id_external': ownership_view.get('brief_id_external'),
+        'issue_number': ownership_view.get('issue_number'),
+        'workflow_stage': ownership_view.get('workflow_stage'),
+        'worktree_ownership': ownership_view.get('worktree_ownership'),
+        'worktree_staleness': assessment,
+        'lineage_view': ownership_view.get('lineage_view'),
+        'next_step_hint': assessment.get('recommended_action') if assessment else None,
     }
 
 
@@ -3300,6 +3367,15 @@ def parse_args(argv: list[str] | None = None):
     ownership.add_argument('--role-branch')
     ownership.add_argument('--worktree-path', type=Path)
 
+    stale = sub.add_parser('worktree-stale')
+    stale.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for stale worktree inspection.')
+    stale.add_argument('--package-id-external', required=True)
+    stale.add_argument('--brief-id-external', required=True)
+    stale.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    stale.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
+    stale.add_argument('--role-branch')
+    stale.add_argument('--worktree-path', type=Path)
+
     entry = sub.add_parser('role-entry')
     entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
     entry.add_argument('--package-id-external', required=True)
@@ -3416,6 +3492,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'worktree-ownership':
         result = worktree_ownership(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'worktree-stale':
+        result = worktree_stale(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

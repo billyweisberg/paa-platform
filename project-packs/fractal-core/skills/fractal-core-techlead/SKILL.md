@@ -72,6 +72,18 @@ Dedicated worktree ownership query path:
 
 Use this before any future cleanup/reset automation that needs to know which role owns a worktree instance.
 
+Dedicated stale-worktree query path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-worktree-stale \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <delivery-architect|python-team|qa>
+```
+
+Use this before later reset/supersede/close cleanup automation. In this slice it only detects obvious stale conditions; it does not mutate or delete worktrees.
+
 Narrow branch mutation path:
 
 ```bash
