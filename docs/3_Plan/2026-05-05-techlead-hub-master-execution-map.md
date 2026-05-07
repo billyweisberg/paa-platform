@@ -278,6 +278,9 @@ Finish the hub model so it is not effectively a Python-only special case.
 - Python transition lane deliberately kept on `slice_result_packet`
 
 ### Planned slices
+- migrate the active Python bridge from `slice_result_packet` to `worker_result_packet`
+- validate one clean Python round trip on the generic worker lane
+- demote `slice_result_packet` to legacy compatibility after the generic worker lane is proven
 - confirm the hub contract works for multiple worker-role families:
   - `Python Dev`
   - `Frontend Dev`
