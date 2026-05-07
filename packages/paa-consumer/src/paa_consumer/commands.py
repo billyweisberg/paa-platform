@@ -25,6 +25,7 @@ CONSUMER_COMMANDS = (
     'techlead-inspect-role-worktree',
     'techlead-worktree-ownership',
     'techlead-worktree-stale',
+    'techlead-reset-required',
     'techlead-role-entry',
     'techlead-role-result-assist',
     'techlead-role-return',

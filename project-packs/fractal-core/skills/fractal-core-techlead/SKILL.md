@@ -84,6 +84,19 @@ Dedicated stale-worktree query path:
 
 Use this before later reset/supersede/close cleanup automation. In this slice it only detects obvious stale conditions; it does not mutate or delete worktrees.
 
+Dedicated reset-required lifecycle path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-reset-required \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  [--target-role python-team] \
+  [--send-decision]
+```
+
+Use this when TechLead has already determined the slice is in a `reset_required` state. In this slice it records the lifecycle mutation and marks the execution surface as a cleanup candidate, but it does not perform physical cleanup.
+
 Narrow branch mutation path:
 
 ```bash

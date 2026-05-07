@@ -2746,6 +2746,115 @@ def worktree_stale(args):
     }
 
 
+def reset_required_lifecycle(args):
+    repo_root = args.repo_root.resolve()
+    target_role = args.target_role or 'python-team'
+    if target_role != 'python-team':
+        return {
+            'ok': False,
+            'reason': 'unsupported_target_role_for_reset_required',
+            'details': 'Phase H3 reset-required lifecycle mutation supports only python-team in this slice.',
+            'target_role': target_role,
+        }
+
+    ownership_args = SimpleNamespace(
+        repo_root=repo_root,
+        project_slug=args.project_slug,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        target_role=target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+    )
+    ownership_view = worktree_ownership(ownership_args)
+    if not ownership_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'worktree_ownership_unavailable',
+            'details': 'Reset-required lifecycle mutation requires a successful worktree ownership query.',
+            'ownership_view': ownership_view,
+        }
+
+    stale_view = worktree_stale(ownership_args)
+    if not stale_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'worktree_staleness_unavailable',
+            'details': 'Reset-required lifecycle mutation requires a successful stale-worktree query.',
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+        }
+
+    lineage_view = ownership_view.get('lineage_view') or {}
+    workflow_stage = lineage_view.get('workflow_stage')
+    if workflow_stage != 'dev_reset_required':
+        return {
+            'ok': False,
+            'reason': 'reset_required_not_supported_for_current_stage',
+            'details': 'Reset-required lifecycle mutation is only supported when the current workflow is dev_reset_required.',
+            'workflow_stage': workflow_stage,
+            'target_role': target_role,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+        }
+
+    decision_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        decision_type='reset_required',
+        send=bool(args.send_decision),
+        source_packet_path=args.source_packet_path,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        superseded_branch=args.superseded_branch,
+        worktree_hint=args.worktree_hint,
+        reset_reason=args.reset_reason,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    decision_result = emit_decision(decision_args)
+    if not decision_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'reset_required_decision_failed',
+            'details': 'Reset-required lifecycle mutation could not emit the underlying TechLead decision.',
+            'workflow_stage': workflow_stage,
+            'target_role': target_role,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+
+    ownership = ownership_view.get('worktree_ownership') or {}
+    staleness = dict(stale_view.get('worktree_staleness') or {})
+    staleness['status'] = 'stale'
+    staleness['stale'] = True
+    staleness['cleanup_candidate'] = True
+    reasons = list(staleness.get('reasons') or [])
+    if 'lineage_state_reset_required' not in reasons:
+        reasons.append('lineage_state_reset_required')
+    staleness['reasons'] = reasons
+    if not staleness.get('recommended_action'):
+        staleness['recommended_action'] = 'investigate_and_cleanup_after_lifecycle_review'
+
+    return {
+        'ok': True,
+        'workflow_stage': workflow_stage,
+        'target_role': target_role,
+        'canonical_branch': (lineage_view.get('lineage') or {}).get('canonical_branch'),
+        'role_branch': ownership.get('role_branch'),
+        'worktree_path': ownership.get('worktree_path'),
+        'worktree_ownership': ownership,
+        'worktree_staleness': staleness,
+        'decision_result': decision_result,
+        'cleanup_candidate': True,
+        'next_step_hint': 'record_reset_required_and_preserve_worktree_for_later_cleanup',
+        'lineage_view': lineage_view,
+    }
+
+
 def role_entry_helper(args):
     inspection_args = SimpleNamespace(
         repo_root=args.repo_root,
@@ -3376,6 +3485,23 @@ def parse_args(argv: list[str] | None = None):
     stale.add_argument('--role-branch')
     stale.add_argument('--worktree-path', type=Path)
 
+    reset_lifecycle = sub.add_parser('reset-required')
+    reset_lifecycle.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for reset-required lifecycle mutation planning.')
+    reset_lifecycle.add_argument('--package-id-external', required=True)
+    reset_lifecycle.add_argument('--brief-id-external', required=True)
+    reset_lifecycle.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    reset_lifecycle.add_argument('--target-role', choices=['python-team'], default='python-team')
+    reset_lifecycle.add_argument('--role-branch')
+    reset_lifecycle.add_argument('--worktree-path', type=Path)
+    reset_lifecycle.add_argument('--send-decision', action='store_true')
+    reset_lifecycle.add_argument('--source-packet-path', type=Path)
+    reset_lifecycle.add_argument('--canonical-branch')
+    reset_lifecycle.add_argument('--superseded-branch')
+    reset_lifecycle.add_argument('--worktree-hint')
+    reset_lifecycle.add_argument('--reset-reason')
+    reset_lifecycle.add_argument('--output', type=Path)
+    reset_lifecycle.add_argument('--review-output', type=Path)
+
     entry = sub.add_parser('role-entry')
     entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
     entry.add_argument('--package-id-external', required=True)
@@ -3497,6 +3623,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'worktree-stale':
         result = worktree_stale(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'reset-required':
+        result = reset_required_lifecycle(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
