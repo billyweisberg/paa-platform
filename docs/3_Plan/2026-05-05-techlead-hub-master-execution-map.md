@@ -371,7 +371,15 @@ Turn the working hub model into a reliable operating system for agents, not a pr
 - automations are reliable enough to unpause deliberately
 
 ### Status
-- not started
+- active
+
+### Phase I spine
+- canonical E2E runbook:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-runbook.md`
+- consistency checklist and unpause gate:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
+- Phase I entry plan:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-07-phase-i1-hardening-and-acceptance-plan.md`
 
 ## Completed Slices Ledger
 
@@ -413,9 +421,10 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. shift to Phase I hardening unless a stronger branch-retirement policy is explicitly required first
-2. run full end-to-end acceptance and automation hardening before unpausing real automations
-3. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
+1. execute the canonical Phase I E2E slice against the current proven role set
+2. run the consistency checklist against installed runtime and prompt surfaces
+3. evaluate the automation unpause gate based on those results
+4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
 ## Guardrails
 
