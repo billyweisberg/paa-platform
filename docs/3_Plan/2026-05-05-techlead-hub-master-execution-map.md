@@ -277,11 +277,12 @@ Finish the hub model so it is not effectively a Python-only special case.
 - explicit Delivery Architect assignment/return bridge added
 - legacy `slice_result_packet` support deliberately kept intact during migration
 - active Python bridge validated on `worker_result_packet`
+- `delivery_review_packet` can now drive the supported `ready_for_dev -> Python Dev` TechLead decision path
 
 ### Planned slices
 - demote `slice_result_packet` to legacy compatibility after the generic worker lane is proven
-- confirm the hub contract works for multiple worker-role families:
-  - `Python Dev`
+- finish the Delivery Architect -> TechLead -> Python Dev decision lane before broadening worker-role expansion
+- after that, confirm the hub contract works for multiple worker-role families:
   - `Frontend Dev`
   - `Backend Dev`
   - `Infra Dev`
@@ -366,25 +367,16 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase F clean QA return-bridge validation
 
 ### Still open inside active flow
-- generic worker-result packet contract for future worker-role families
+- broader worker-family expansion beyond the proven `Python Dev` generic lane
+- additional Delivery Architect result outcomes beyond `ready_for_dev`
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. close Phase F by accepting the current bridge shape and carrying the packet-family decision into Phase G
-2. begin Phase G with the multi-role generalization boundary
-3. validate one full round trip through:
-   - TechLead emit
-   - branch/worktree prep
-   - role entry
-   - result return to `TechLead`
-   - TechLead-visible follow-up interpretation for the returned result
-
-### After that
-4. generalize the role model beyond Python-only execution assumptions
-5. integrate Delivery Architect as a real spoke
-6. automate lifecycle hygiene only after lineage query/reporting remains trustworthy under repeated runs
-7. run full end-to-end acceptance and automation hardening before unpausing real automations
+1. close out the rest of Phase G around the proven worker/delivery packet families
+2. keep worker-role expansion deferred until the Delivery Architect decision lane is stable
+3. automate lifecycle hygiene only after lineage query/reporting remains trustworthy under repeated runs
+4. run full end-to-end acceptance and automation hardening before unpausing real automations
 
 ## Guardrails
 
@@ -418,9 +410,9 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- begin Phase G and define the exact multi-worker packet strategy
+- close Phase G deliberately instead of broadening into more worker families immediately
 
 Immediately after that:
-- decide whether `worker_result_packet` and `delivery_review_packet` should land together or in separate slices
+- move to the remaining acceptance and lifecycle phases with the current role set
 
-That keeps the system on the shortest path to a real functioning round trip.
+That keeps the system on the shortest path to a real functioning hub without reopening the packet model again midstream.

@@ -1649,11 +1649,104 @@ def derive_next_assignment_context(args) -> dict:
             'unattended_safe': unattended_safe,
         }
     if workflow_stage == 'techlead_delivery_review_pending' and pending_delivery_review_packet:
+        if not pr:
+            return {
+                'ok': False,
+                'workflow_stage': workflow_stage,
+                'reason': 'delivery_review_pending_but_no_pr_context',
+                'details': 'A Delivery Architect review packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
+                'recommended_actions': recommended,
+                'unattended_safe': unattended_safe,
+            }
+        delivery_payload = pending_delivery_review_packet.get('payload') or {}
+        recommended_action = delivery_payload.get('techlead_action_recommended')
+        result_type = delivery_payload.get('result_type')
+        if isinstance(recommended_action, dict):
+            recommended_action_name = recommended_action.get('action')
+            recommended_target_role = recommended_action.get('target_role')
+            recommended_reason = recommended_action.get('reason')
+        else:
+            recommended_action_name = None
+            recommended_target_role = None
+            recommended_reason = None
+        normalized_target_role = handoff_runtime.normalize_role_name(recommended_target_role)
+        if result_type == 'ready_for_dev':
+            if recommended_action_name != 'assign_worker':
+                return {
+                    'ok': False,
+                    'workflow_stage': workflow_stage,
+                    'reason': 'delivery_review_ready_for_dev_without_assign_worker',
+                    'details': 'Delivery review reported ready_for_dev, but the recommended TechLead action was not assign_worker.',
+                    'recommended_actions': recommended,
+                    'unattended_safe': unattended_safe,
+                }
+            if normalized_target_role != 'Python Dev':
+                return {
+                    'ok': False,
+                    'workflow_stage': workflow_stage,
+                    'reason': 'delivery_review_ready_for_dev_target_not_supported',
+                    'details': (
+                        'Delivery review recommended assign_worker, but only Python Dev is supported for '
+                        f'automatic next-assignment derivation in this slice. Received target role: {recommended_target_role!r}.'
+                    ),
+                    'recommended_actions': recommended,
+                    'unattended_safe': unattended_safe,
+                }
+            branch_name = (
+                pr.get('headRefName')
+                or pending_delivery_review_packet.get('github_context', {}).get('branch')
+                or (delivery_payload.get('branch') or {}).get('name')
+                or f'issue-{issue_number}'
+            )
+            source_message_id = pending_delivery_review_packet.get('message_id')
+            source_assignment = delivery_payload.get('source_assignment_ref') or {}
+            source_packet_path = source_assignment.get('path')
+            return {
+                'ok': True,
+                'workflow_stage': workflow_stage,
+                'issue_number': issue_number,
+                'issue_url': issue.get('url'),
+                'pr_number': pr.get('number'),
+                'pr_url': pr.get('url'),
+                'branch': branch_name,
+                'target_role': 'Python Dev',
+                'target_role_cli': 'python-team',
+                'assignment_type': 'implement_authorized_slice',
+                'allowed_result_types': [
+                    'implemented_ready_for_qa',
+                    'blocked',
+                    'needs_clarification',
+                ],
+                'assignment_summary': (
+                    f'TechLead is routing Delivery Architect review packet {source_message_id} '
+                    f'for issue #{issue_number} to Python Dev on branch {branch_name}.'
+                ),
+                'source_packet_message_id': source_message_id,
+                'source_packet_path': source_packet_path,
+                'issue': issue,
+                'pr': pr,
+                'recommended_actions': recommended,
+                'unattended_safe': unattended_safe,
+                'decision_reason': recommended_reason,
+            }
+        unsupported_reason_by_result_type = {
+            'narrow_scope': 'delivery_review_narrow_scope_requires_manual_techlead_decision',
+            'reject_scope': 'delivery_review_reject_scope_requires_manual_techlead_decision',
+            'request_reset': 'delivery_review_request_reset_requires_manual_techlead_decision',
+            'needs_authority_clarification': 'delivery_review_authority_clarification_requires_manual_techlead_decision',
+        }
         return {
             'ok': False,
             'workflow_stage': workflow_stage,
-            'reason': 'delivery_review_pending_requires_manual_techlead_decision',
-            'details': 'Delivery review packets are now visible to TechLead, but automatic next-assignment derivation from them is not implemented in this slice.',
+            'reason': unsupported_reason_by_result_type.get(
+                result_type,
+                'delivery_review_pending_requires_manual_techlead_decision',
+            ),
+            'details': (
+                'Delivery review packets are visible to TechLead, but this result type does not yet support '
+                f'automatic next-assignment derivation in this slice. result_type={result_type!r}, '
+                f'recommended_action={recommended_action_name!r}, target_role={recommended_target_role!r}.'
+            ),
             'recommended_actions': recommended,
             'unattended_safe': unattended_safe,
         }

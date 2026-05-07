@@ -1125,6 +1125,8 @@ def cmd_check(args):
                     "correlation_id": parsed.get("correlation_id"),
                     "from_role": parsed.get("from_role"),
                     "to_role": parsed.get("to_role"),
+                    "github_context": parsed.get("github_context"),
+                    "payload": parsed.get("payload"),
                 },
             })
     messages_ready, reconciliation = reconcile_ready_count(

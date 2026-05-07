@@ -174,6 +174,13 @@ Current active result families:
 - `QA` -> `qa_verification_packet`
 - `Delivery Architect` -> `delivery_review_packet`
 
+Current supported Delivery Architect follow-up:
+- when `delivery_review_packet` reports `result_type = ready_for_dev`
+- and `techlead_action_recommended.action = assign_worker`
+- and `techlead_action_recommended.target_role = Python Dev`
+- `TechLead` may derive the next assignment directly to `Python Dev`
+- other Delivery Architect outcomes remain explicit manual TechLead decisions for now
+
 Legacy compatibility note:
 - `slice_result_packet` still exists for historical/runtime overlap
 - do not treat it as the active Python bridge default
