@@ -318,6 +318,10 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
   - obvious stale conditions are queryable
   - absence is not misclassified as stale
   - no cleanup mutation yet
+- Phase H3 reset-required lifecycle mutation:
+  - first cleanup-safe mutation slice
+  - marks reset-required execution surfaces as cleanup candidates
+  - does not delete worktrees or branches yet
 - branch reset automation on top of `techlead-lineage`
 - supersede-lineage cleanup flow
 - close-slice cleanup flow
@@ -389,8 +393,10 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. begin the first cleanup-safe lifecycle mutation slice on top of lineage plus stale detection
-2. likely start with reset-required handling before broader supersede/close cleanup
+1. implement Phase H3 reset-required lifecycle mutation
+2. then decide whether the next mutation slice should be:
+   - physical reset cleanup
+   - or supersede handling
 3. run full end-to-end acceptance and automation hardening before unpausing real automations
 4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
@@ -426,10 +432,10 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- begin the first cleanup-safe lifecycle mutation slice
+- implement the first cleanup-safe lifecycle mutation slice for `reset_required`
 
 Immediately after that:
-- continue through reset/supersede/close lifecycle hygiene
+- continue through reset/supersede/close lifecycle hygiene one narrow decision at a time
 - then move through the remaining acceptance phases with the current role set
 - keep the deferred worker-family expansion requirement explicitly on the roadmap for a later return
 
