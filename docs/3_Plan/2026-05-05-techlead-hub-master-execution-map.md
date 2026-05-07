@@ -80,25 +80,23 @@ What drifted was planning visibility.
 ### Current phase
 
 Current phase is:
-- `Phase H: Lifecycle Hygiene And Worktree Cleanup Automation`
+- `Phase I: Operational Hardening, E2E Acceptance, And Automation Unpause`
 
 Meaning:
-- the hub loop is proven for the current role set
-- lineage, ownership, and stale-worktree state are queryable
-- `reset_required` lifecycle mutation is proven
-- first physical reset cleanup is now implemented for the narrow `python-team` path
-- remaining work is now lifecycle breadth, acceptance hardening, and future worker-family expansion
+- the hub loop has now been executed end-to-end for the current proven role set
+- lifecycle depth through reset, superseded, and closed cleanup is implemented for the narrow `python-team` path
+- remaining work is now hardening, reporting coherence, and future worker-family expansion
 
 ### What is complete vs incomplete
 
 Complete enough to count as done:
-- Phases `A` through `E`
+- Phases `A` through `H` for the current proven role set
 
-Started and partially complete:
-- Phase `F`
+Active and not yet complete:
+- Phase `I`
 
-Not yet complete:
-- Phases `G` through `I`
+Deferred future requirement:
+- broader worker-family expansion after Phase I hardening
 
 ## Phase Map
 
@@ -252,7 +250,7 @@ This is the first phase that should complete the round trip.
 - result return path is reusable by future worker-role families
 
 ### Status
-- active
+- complete
 
 ### Decision
 - the current return bridge shape is generic enough to keep
@@ -347,7 +345,7 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
 - no branch/worktree mutation happens without a queryable lineage precursor
 
 ### Status
-- active
+- complete for the current narrow lifecycle family
 
 ## Phase I: Operational Hardening, E2E Acceptance, And Automation Unpause
 
@@ -373,6 +371,14 @@ Turn the working hub model into a reliable operating system for agents, not a pr
 ### Status
 - active
 
+### Current hardening result
+- canonical E2E transport loop: proven for the current proven role set
+- automation unpause gate: not yet satisfied
+- blocking findings:
+  - queue-order masking in TechLead derivation
+  - Delivery Architect result-assist contract mismatch on `result_type`
+  - top-level `techlead-status` active-work inference/reporting drift
+
 ### Phase I spine
 - canonical E2E runbook:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-runbook.md`
@@ -380,6 +386,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
 - Phase I entry plan:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-07-phase-i1-hardening-and-acceptance-plan.md`
+- canonical E2E validation note:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
 
 ## Completed Slices Ledger
 
@@ -413,6 +421,7 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase H5 positive synthetic superseded cleanup validation
 - Phase H6 closed cleanup
 - Phase H6 positive synthetic closed cleanup validation
+- Phase I canonical E2E validation for the current proven role set
 
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
@@ -421,10 +430,11 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute the canonical Phase I E2E slice against the current proven role set
-2. run the consistency checklist against installed runtime and prompt surfaces
-3. evaluate the automation unpause gate based on those results
-4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
+1. eliminate queue-order masking from TechLead derivation in the canonical active flow
+2. align Delivery Architect result-assist guidance with the active compiler contract
+3. make top-level `techlead-status` reflect active canonical in-flight work coherently
+4. re-run the Phase I canonical E2E slice and re-evaluate the automation unpause gate
+5. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
 ## Guardrails
 

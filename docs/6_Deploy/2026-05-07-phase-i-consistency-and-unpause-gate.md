@@ -63,3 +63,18 @@ The gate is satisfied only when the current role set is:
 - repeatable
 - documented
 - and safe enough to unpause deliberately rather than experimentally
+
+
+## Current gate result
+
+Canonical Phase I E2E result:
+- transport loop: pass for the current proven role set
+- automation unpause gate: fail
+
+Current blocking findings:
+1. queue-order masking in TechLead derivation requires manual claim/ack of earlier packets before later result packets become visible to the next routing step
+2. Delivery Architect result-assist guidance does not fully match the active compiler contract because `result_type` is required but not declared in the helper contract
+3. top-level `techlead-status` does not reflect the active canonical run coherently and still reports blocked/unknown state while issue-scoped runtime surfaces are correctly interpreting in-flight work
+
+Reference validation note:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
