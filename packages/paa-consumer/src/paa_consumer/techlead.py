@@ -40,6 +40,7 @@ ROLE_CLI_BY_SUFFIX = {
     'qa': 'qa',
 }
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
+QUEUE_PREVIEW_DEPTH = 10
 
 
 def repo_auth_script(repo_root: Path) -> Path:
@@ -148,7 +149,16 @@ def queue_state(repo_root: Path = REPO_ROOT):
     out = {}
     queue_script = repo_queue_script(repo_root)
     for q in QUEUE_NAMES:
-        out[q] = run_json([str(queue_script), 'queue-check', '--repo-root', str(repo_root), '--queue', q])
+        out[q] = run_json([
+            str(queue_script),
+            'queue-check',
+            '--repo-root',
+            str(repo_root),
+            '--queue',
+            q,
+            '--preview',
+            str(QUEUE_PREVIEW_DEPTH),
+        ])
     return out
 
 
@@ -511,6 +521,50 @@ def latest_queue_preview(queues, queue_name, issue_number):
         if github_ctx.get('issue_number') == issue_number:
             return payload
     return None
+
+
+def issue_number_from_packet_preview(payload: dict | None) -> int | None:
+    if not payload:
+        return None
+    github_ctx = payload.get('github_context') or {}
+    issue_number = github_ctx.get('issue_number')
+    if issue_number is None:
+        correlation_id = payload.get('correlation_id') or ''
+        match = re.fullmatch(r'issue-(\d+)', str(correlation_id))
+        if match:
+            issue_number = match.group(1)
+    try:
+        return int(issue_number) if issue_number is not None else None
+    except Exception:
+        return None
+
+
+def newest_queue_preview(queue_data: dict) -> dict | None:
+    preview = queue_data.get('preview') or []
+    newest = None
+    newest_dt = None
+    for item in preview:
+        payload = item.get('payload_preview') or {}
+        created_at = parse_created_at(payload.get('created_at'))
+        if newest is None or (created_at and (newest_dt is None or created_at > newest_dt)):
+            newest = payload
+            newest_dt = created_at
+    return newest
+
+
+def newest_packet_preview_across_queues(queues) -> dict | None:
+    newest = None
+    newest_dt = None
+    for queue_name, queue_data in queues.items():
+        preview = queue_data.get('preview') or []
+        for item in preview:
+            payload = item.get('payload_preview') or {}
+            created_at = parse_created_at(payload.get('created_at'))
+            if newest is None or (created_at and (newest_dt is None or created_at > newest_dt)):
+                newest = dict(payload)
+                newest['queue_name'] = queue_name
+                newest_dt = created_at
+    return newest
 
 
 def latest_packet_preview(queues, issue_number, schema_type=None, to_role=None):
@@ -1311,15 +1365,26 @@ def build_report():
         'worktree_staleness': None,
     }
 
-    if current_task:
-        qa_packet = latest_qa_packet(current_task['issue_number'])
+    inferred_packet = newest_packet_preview_across_queues(queues)
+    inferred_issue_number = issue_number_from_packet_preview(inferred_packet)
+    report_task = current_task
+    if report_task is None and inferred_issue_number is not None:
+        report_task = {
+            'issue_number': inferred_issue_number,
+            'task_id': f'queue-inferred-issue-{inferred_issue_number}',
+            'title': f'Issue #{inferred_issue_number}',
+            'status': 'in_progress',
+        }
+
+    if report_task:
+        qa_packet = latest_qa_packet(report_task['issue_number'])
         fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
-        issue, pr = github_state(current_task['issue_number'], fallback_pr_number=fallback_pr_number)
-        workflow_stage, owner_role, wf_escalations, wf_recommended, wf_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
+        issue, pr = github_state(report_task['issue_number'], fallback_pr_number=fallback_pr_number)
+        workflow_stage, owner_role, wf_escalations, wf_recommended, wf_safe = derive_workflow(report_task, issue, pr, qa_packet, queues)
         escalations.extend(wf_escalations)
         recommended.extend(wf_recommended)
         unattended_safe = unattended_safe and wf_safe
-        lineage = derive_lineage_section(current_task, pr, queues, escalations)
+        lineage = derive_lineage_section(report_task, pr, queues, escalations)
 
         last_qa_verdict = qa_packet.get('verification_status') if qa_packet else 'unknown'
         superseded = any(e.get('event_type') == 'qa_escalation_superseded' for e in escalations)
@@ -1345,10 +1410,10 @@ def build_report():
 
         active_work = {
             'work_item': {
-                'issue_number': current_task['issue_number'],
-                'task_id': current_task['task_id'],
-                'title': current_task['title'],
-                'status': current_task['status'],
+                'issue_number': report_task['issue_number'],
+                'task_id': report_task['task_id'],
+                'title': report_task['title'] if current_task else (issue.get('title') or report_task['title']),
+                'status': report_task['status'],
                 'authority_version': authority_version,
             },
             'execution': {
@@ -1427,7 +1492,7 @@ def build_report():
         'queues': {q: {
             'ready': queues[q]['messages_ready'],
             'unacknowledged': queues[q]['messages_unacknowledged'],
-            'latest_message': (queues[q].get('preview') or [None])[0]['payload_preview'] if queues[q].get('preview') else None,
+            'latest_message': newest_queue_preview(queues[q]),
         } for q in QUEUE_NAMES},
         'lineage': lineage,
         'automations': {'roles': auto_roles},
@@ -3604,6 +3669,7 @@ def role_result_assist(args):
         expected_assignment_type = 'delivery_architecture_review'
         input_contract = {
             'required_top_level_keys': [
+                'result_type',
                 'scope_recommendation',
                 'authority_impact',
                 'branch_recommendation',
