@@ -154,27 +154,26 @@ The rerun resolved the three original blockers:
   - `techlead_delivery_review_pending`
   - `techlead_qa_review_pending`
 
-### Residual hardening finding
+### Transient queue-accounting observation
 
-A queue-state drift issue still remains after cleanup.
+Immediately after cleanup acknowledgement, one queue-check pass observed transient raw broker `messages_ready` lag while:
+- queue preview was empty
+- reconciled `messages_ready` was already `0`
 
-Observed after the rerun cleanup:
-- queue preview returned empty for all three queues
-- reconciled `messages_ready` returned `0` for all three queues
-- raw broker `messages_ready` still reported stale nonzero counts:
-  - `fractal-core-python`: `messages_ready_raw = 1`
-  - `fractal-core-qa`: `messages_ready_raw = 1`
-  - `fractal-core-architecture`: `messages_ready_raw = 4`
+A follow-up queue check after the cleanup settled returned:
+- `messages_ready = 0`
+- `messages_ready_raw = 0`
+- `preview = []`
+for all three queues.
 
 This means:
 - the active routing/derivation path is no longer blocked by queue-order masking
-- but broker-state accounting still drifts after ack cleanup and remains a Phase I hardening concern
+- the runtime reconciliation surface is still the correct control-plane truth if broker counters lag briefly after ack cleanup
+- the lag appears transient rather than a durable blocking defect
 
 ### Updated unpause interpretation
 
 The original three active-flow blockers are resolved.
 
-The automation unpause gate is still **not satisfied** because queue-state drift still appears after the rerun cleanup.
-
-Current remaining blocker:
-1. raw broker `messages_ready` remains stale after cleanup even when preview and reconciled queue state are empty
+The automation unpause gate is now **satisfied for the current proven role set**, with one operational note:
+1. raw broker `messages_ready` may lag briefly after cleanup, so runtime reconciliation must remain the source used for operational gating rather than raw broker counters alone

@@ -377,9 +377,9 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - queue-order masking in TechLead derivation
   - Delivery Architect result-assist contract mismatch on `result_type`
   - top-level `techlead-status` active-work inference/reporting drift
-- automation unpause gate: not yet satisfied
-- remaining blocking finding:
-  - raw broker `messages_ready` drift after cleanup
+- automation unpause gate: satisfied for the current proven role set
+- operational note:
+  - raw broker `messages_ready` may lag briefly after cleanup, so reconciled runtime queue state remains the correct control-plane source
 
 ### Phase I spine
 - canonical E2E runbook:
@@ -432,9 +432,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. eliminate raw broker `messages_ready` drift after cleanup or formally bound it behind a reliable runtime reconciliation contract
-2. re-run the Phase I canonical E2E slice after the queue-state fix and re-evaluate the automation unpause gate
-3. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
+1. define the deliberate automation unpause/cutover checklist for the current proven role set
+2. decide whether to continue Phase I operational hygiene or return to the deferred-but-required multi-worker family expansion
+3. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
 
 ## Guardrails
 

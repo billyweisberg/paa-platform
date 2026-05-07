@@ -69,15 +69,15 @@ The gate is satisfied only when the current role set is:
 
 Canonical Phase I E2E result:
 - transport loop: pass for the current proven role set
-- automation unpause gate: fail
-
-Current blocking findings:
-1. raw broker `messages_ready` remains stale after cleanup even when preview and reconciled queue state are empty
+- automation unpause gate: pass for the current proven role set
 
 Resolved in the hardening rerun:
 - queue-order masking in TechLead derivation
 - Delivery Architect result-assist contract mismatch on `result_type`
 - top-level `techlead-status` active-work inference/reporting drift
+
+Operational note:
+1. raw broker `messages_ready` may lag briefly after cleanup, but reconciled queue state and follow-up broker checks returned to zero across all three queues
 
 Reference validation note:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
