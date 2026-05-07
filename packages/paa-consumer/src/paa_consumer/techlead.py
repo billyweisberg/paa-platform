@@ -2986,6 +2986,220 @@ def reset_cleanup(args):
     }
 
 
+def superseded_cleanup(args):
+    repo_root = args.repo_root.resolve()
+    target_role = args.target_role or 'python-team'
+    if target_role != 'python-team':
+        return {
+            'ok': False,
+            'reason': 'unsupported_target_role_for_superseded_cleanup',
+            'details': 'Phase H5 superseded cleanup supports only python-team in this slice.',
+            'target_role': target_role,
+        }
+
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    if not lineage_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'ambiguous_lineage_view',
+            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
+            'lineage_view': lineage_view,
+        }
+    lineage = lineage_view.get('lineage') or {}
+    workflow_stage = lineage_view.get('workflow_stage')
+    if lineage.get('lineage_state') != 'superseded':
+        return {
+            'ok': False,
+            'reason': 'superseded_not_supported_for_current_stage',
+            'details': 'Superseded cleanup is only supported when lineage state is superseded.',
+            'workflow_stage': workflow_stage,
+            'lineage_view': lineage_view,
+        }
+    if not (args.superseded_branch or lineage.get('superseded_branch')):
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_requires_superseded_branch',
+            'details': 'Superseded cleanup requires lineage to identify a superseded branch.',
+            'workflow_stage': workflow_stage,
+            'lineage_view': lineage_view,
+        }
+
+    ownership_args = SimpleNamespace(
+        repo_root=repo_root,
+        project_slug=args.project_slug,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        target_role=target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+    )
+    ownership_view = worktree_ownership(ownership_args)
+    if not ownership_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'worktree_ownership_unavailable',
+            'details': 'Superseded cleanup requires a successful worktree ownership query.',
+            'ownership_view': ownership_view,
+            'lineage_view': lineage_view,
+        }
+
+    stale_view = worktree_stale(ownership_args)
+    if not stale_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'worktree_staleness_unavailable',
+            'details': 'Superseded cleanup requires a successful stale-worktree query.',
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'lineage_view': lineage_view,
+        }
+
+    decision_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        decision_type='superseded',
+        send=bool(args.send_decision),
+        source_packet_path=args.source_packet_path,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        superseded_branch=args.superseded_branch or lineage.get('superseded_branch'),
+        worktree_hint=args.worktree_hint,
+        reset_reason=args.reset_reason,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    decision_result = emit_decision(decision_args)
+    if not decision_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'superseded_decision_failed',
+            'details': 'Superseded cleanup could not emit the underlying TechLead decision.',
+            'workflow_stage': workflow_stage,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+            'lineage_view': lineage_view,
+        }
+
+    ownership = ownership_view.get('worktree_ownership') or {}
+    staleness = stale_view.get('worktree_staleness') or {}
+    worktree_path_value = ownership.get('worktree_path')
+    default_path_value = ownership.get('default_worktree_path')
+    role_branch = ownership.get('role_branch')
+    superseded_branch = args.superseded_branch or lineage.get('superseded_branch') or role_branch
+
+    if not ownership.get('registered'):
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_requires_registered_worktree',
+            'details': 'Superseded cleanup only runs when the owned role worktree is currently registered.',
+            'lineage_view': lineage_view,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+    if not staleness.get('stale') or not staleness.get('cleanup_candidate'):
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_requires_stale_cleanup_candidate',
+            'details': 'Superseded cleanup only runs when stale detection marks the worktree as a cleanup candidate.',
+            'lineage_view': lineage_view,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+    if not worktree_path_value or not default_path_value:
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_missing_worktree_path',
+            'details': 'Superseded cleanup requires a concrete owned worktree path.',
+            'lineage_view': lineage_view,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+
+    worktree_path = Path(worktree_path_value).resolve()
+    default_worktree_path = Path(default_path_value).resolve()
+    if worktree_path != default_worktree_path:
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_requires_default_owned_worktree_path',
+            'details': 'Superseded cleanup only runs against the deterministic owned worktree path in this slice.',
+            'lineage_view': lineage_view,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+
+    entry_before = git_worktree_for_path(repo_root, worktree_path)
+    if entry_before is None:
+        return {
+            'ok': False,
+            'reason': 'superseded_cleanup_requires_registered_worktree_entry',
+            'details': 'The owned worktree is no longer registered; refusing to run physical cleanup against an ambiguous state.',
+            'lineage_view': lineage_view,
+            'ownership_view': ownership_view,
+            'stale_view': stale_view,
+            'decision_result': decision_result,
+        }
+
+    code, _stdout, error = run_text_with_errors(
+        ['git', 'worktree', 'remove', str(worktree_path)],
+        cwd=repo_root,
+    )
+    if code != 0:
+        return {
+            'ok': False,
+            'reason': 'git_worktree_remove_failed',
+            'details': 'git worktree remove did not complete successfully.',
+            'worktree_path': str(worktree_path),
+            'role_branch': role_branch,
+            'superseded_branch': superseded_branch,
+            'prior_worktree_ownership': ownership,
+            'prior_worktree_staleness': staleness,
+            'decision_result': decision_result,
+            'git_error': error,
+            'lineage_view': lineage_view,
+        }
+
+    entry_after = git_worktree_for_path(repo_root, worktree_path)
+    branch_preserved = bool(superseded_branch and git_local_branch_exists(repo_root, superseded_branch))
+
+    return {
+        'ok': True,
+        'workflow_stage': workflow_stage,
+        'target_role': target_role,
+        'canonical_branch': lineage.get('canonical_branch'),
+        'role_branch': role_branch,
+        'superseded_branch': superseded_branch,
+        'worktree_path': str(worktree_path),
+        'cleanup_performed': entry_after is None,
+        'cleanup_result': {
+            'command': ['git', 'worktree', 'remove', str(worktree_path)],
+            'worktree_removed': entry_after is None,
+            'worktree_still_registered': entry_after is not None,
+            'branch_preserved': branch_preserved,
+        },
+        'prior_worktree_ownership': ownership,
+        'prior_worktree_staleness': staleness,
+        'decision_result': decision_result,
+        'next_step_hint': (
+            'prepare_replacement_role_worktree_only_if_new_assignment_requires_it'
+            if entry_after is None
+            else 'investigate_remaining_registered_worktree_state'
+        ),
+        'lineage_view': lineage_view,
+    }
+
+
 def role_entry_helper(args):
     inspection_args = SimpleNamespace(
         repo_root=args.repo_root,
@@ -3650,6 +3864,23 @@ def parse_args(argv: list[str] | None = None):
     reset_cleanup_parser.add_argument('--output', type=Path)
     reset_cleanup_parser.add_argument('--review-output', type=Path)
 
+    superseded_cleanup_parser = sub.add_parser('superseded-cleanup')
+    superseded_cleanup_parser.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for superseded physical cleanup.')
+    superseded_cleanup_parser.add_argument('--package-id-external', required=True)
+    superseded_cleanup_parser.add_argument('--brief-id-external', required=True)
+    superseded_cleanup_parser.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    superseded_cleanup_parser.add_argument('--target-role', choices=['python-team'], default='python-team')
+    superseded_cleanup_parser.add_argument('--role-branch')
+    superseded_cleanup_parser.add_argument('--worktree-path', type=Path)
+    superseded_cleanup_parser.add_argument('--send-decision', action='store_true')
+    superseded_cleanup_parser.add_argument('--source-packet-path', type=Path)
+    superseded_cleanup_parser.add_argument('--canonical-branch')
+    superseded_cleanup_parser.add_argument('--superseded-branch')
+    superseded_cleanup_parser.add_argument('--worktree-hint')
+    superseded_cleanup_parser.add_argument('--reset-reason')
+    superseded_cleanup_parser.add_argument('--output', type=Path)
+    superseded_cleanup_parser.add_argument('--review-output', type=Path)
+
     entry = sub.add_parser('role-entry')
     entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
     entry.add_argument('--package-id-external', required=True)
@@ -3781,6 +4012,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'reset-cleanup':
         result = reset_cleanup(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'superseded-cleanup':
+        result = superseded_cleanup(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
