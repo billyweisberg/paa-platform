@@ -390,6 +390,13 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-07-phase-i1-hardening-and-acceptance-plan.md`
 - canonical E2E validation note:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
+- cutover checklist for the current proven role set:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-cutover-checklist-current-role-set.md`
+
+### Roadmap decision after Phase I gate pass
+- stay in `Phase I` long enough to finalize deliberate cutover/unpause hygiene for the current proven role set
+- do not jump back to multi-worker expansion yet
+- return to deferred worker-family expansion only after current-role-set cutover expectations are explicit and stable
 
 ## Completed Slices Ledger
 
@@ -432,9 +439,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. define the deliberate automation unpause/cutover checklist for the current proven role set
-2. decide whether to continue Phase I operational hygiene or return to the deferred-but-required multi-worker family expansion
-3. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
+1. execute the deliberate cutover/unpause sequence for the current proven role set when ready
+2. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
+3. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
 
