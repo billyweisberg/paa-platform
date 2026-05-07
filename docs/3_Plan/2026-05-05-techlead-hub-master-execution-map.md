@@ -322,6 +322,10 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
   - first cleanup-safe mutation slice
   - marks reset-required execution surfaces as cleanup candidates
   - does not delete worktrees or branches yet
+- Phase H4 physical reset cleanup:
+  - first physical cleanup slice
+  - retires a stale `python-team` worktree after reset-required has been recorded
+  - preserves the role branch
 - branch reset automation on top of `techlead-lineage`
 - supersede-lineage cleanup flow
 - close-slice cleanup flow
@@ -393,10 +397,10 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. implement Phase H3 reset-required lifecycle mutation
+1. implement Phase H4 physical reset cleanup
 2. then decide whether the next mutation slice should be:
-   - physical reset cleanup
-   - or supersede handling
+   - supersede handling
+   - or close cleanup
 3. run full end-to-end acceptance and automation hardening before unpausing real automations
 4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
@@ -432,7 +436,7 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- implement the first cleanup-safe lifecycle mutation slice for `reset_required`
+- implement the first physical cleanup slice for `reset_required`
 
 Immediately after that:
 - continue through reset/supersede/close lifecycle hygiene one narrow decision at a time
