@@ -443,10 +443,11 @@ This is the short completed ledger we should carry forward instead of relying on
 ### Immediate next slices
 1. make the global UI registration layer real for `Delivery Architect`, `Python Dev`, and `QA`
 2. align the installed/project-pack automation prompts with the real current role/worktree model
-3. create the missing dedicated Delivery Architect execution skill and harden the Python Dev/QA role skills into real execution-agent skills
-4. only then execute the deliberate cutover/unpause sequence for the current proven role set
-5. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
-6. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
+3. define the explicit execution-environment contract for worktree, `uv`, cwd, and required environment variables
+4. create the missing dedicated Delivery Architect execution skill and harden the Python Dev/QA role skills into real execution-agent skills
+5. only then execute the deliberate cutover/unpause sequence for the current proven role set
+6. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
+7. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
 

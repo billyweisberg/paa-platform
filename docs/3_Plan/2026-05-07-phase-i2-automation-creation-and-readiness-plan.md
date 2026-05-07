@@ -23,10 +23,11 @@ into:
 
 ## Automation surfaces that must all exist
 
-For the MVP, an automation is only real when all three surfaces line up:
+For the MVP, an automation is only real when all four surfaces line up:
 - project-pack template source in `paa-platform`
 - repo-local installed automation in the target repo `.codex/automations/`
 - global UI registration entry under `/Users/billyweisberg/.codex/automations/`
+- execution-environment contract for worktree, `uv`, cwd, and required environment variables
 
 If any one of those is missing or stale, the automation is not ready for deliberate unpause.
 
@@ -104,7 +105,27 @@ Conclusion:
 - Delivery Architect has an automation prompt
 - but not a dedicated role execution skill surface
 
-### 4. The worker-role skills are not yet worktree-execution skills
+### 4. Execution-environment contract is not yet explicit enough
+
+Even if an automation is visible in the UI and has the right prompt, it is still not runnable unless its execution environment is fully specified.
+
+That means each role automation needs an explicit contract for:
+- the repo root it should start from
+- the deterministic role worktree path it may create or reuse
+- the working directory it should execute in after worktree preparation
+- the repo-local `uv` binary or wrapper path it should use
+- the required environment variables for PAA runtime, queue runtime, and any repo-local state roots
+- any environment variables that must be forbidden or ignored because they point at deprecated home-folder runtime surfaces
+
+Current gap:
+- these expectations exist partially across runtime helpers and docs
+- but they are not yet gathered into one automation-facing execution contract
+
+Conclusion:
+- execution-environment configuration is currently implicit and fragile
+- Phase I2 must make it explicit before any real unpause
+
+### 5. The worker-role skills are not yet worktree-execution skills
 
 Current installed skills for Python Dev and QA mostly describe:
 - packet compilation
@@ -212,16 +233,29 @@ They should define:
 - execution context
 - result return
 
-### Slice 4: repo/runtime execution contract
+### Slice 4: execution-environment contract
 
 Document and enforce for each role automation:
 - canonical consumer repo root
 - deterministic role worktree path contract
+- exact working directory before and after role worktree preparation
 - repo-local runtime binary paths
 - repo-local `uv` execution expectation
+- required environment variables for runtime state, scratch paths, and queue/runtime behavior
+- forbidden deprecated environment roots or fallback paths
 - what counts as success/failure/blocking
 
-### Slice 5: supervised live automation pilot
+This slice must make the automation environment reproducible, not inferred.
+
+### Slice 5: repo/runtime execution contract
+
+Use the explicit environment contract above to harden each role automation end to end:
+- UI-visible registration points at the correct consumer repo cwd
+- prepared worktree command surfaces enter the correct execution directory
+- role commands use the intended repo-local `uv` and installed PAA wrappers
+- environment variables do not silently drift to deprecated home-folder runtime surfaces
+
+### Slice 6: supervised live automation pilot
 
 After prompt and skill alignment:
 - unpause only one role at a time in supervised mode
@@ -244,5 +278,6 @@ Reason:
 
 1. make the global UI registration layer real for `Delivery Architect`, `Python Dev`, and `QA`
 2. align the installed/project-pack automation prompts with the real current role/worktree model
-3. create the missing dedicated Delivery Architect execution skill
-4. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
+3. define the explicit execution-environment contract for worktree, `uv`, cwd, and required environment variables
+4. create the missing dedicated Delivery Architect execution skill
+5. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
