@@ -2855,6 +2855,137 @@ def reset_required_lifecycle(args):
     }
 
 
+def reset_cleanup(args):
+    repo_root = args.repo_root.resolve()
+    target_role = args.target_role or 'python-team'
+    if target_role != 'python-team':
+        return {
+            'ok': False,
+            'reason': 'unsupported_target_role_for_reset_cleanup',
+            'details': 'Phase H4 physical reset cleanup supports only python-team in this slice.',
+            'target_role': target_role,
+        }
+
+    reset_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        target_role=target_role,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+        send_decision=bool(args.send_decision),
+        source_packet_path=args.source_packet_path,
+        canonical_branch=args.canonical_branch,
+        superseded_branch=args.superseded_branch,
+        worktree_hint=args.worktree_hint,
+        reset_reason=args.reset_reason,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    lifecycle = reset_required_lifecycle(reset_args)
+    if not lifecycle.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'reset_required_lifecycle_unavailable',
+            'details': 'Physical reset cleanup requires a successful reset-required lifecycle mutation result.',
+            'lifecycle': lifecycle,
+        }
+
+    ownership = lifecycle.get('worktree_ownership') or {}
+    staleness = lifecycle.get('worktree_staleness') or {}
+    worktree_path_value = ownership.get('worktree_path')
+    default_path_value = ownership.get('default_worktree_path')
+    role_branch = ownership.get('role_branch')
+
+    if not ownership.get('registered'):
+        return {
+            'ok': False,
+            'reason': 'reset_cleanup_requires_registered_worktree',
+            'details': 'Physical reset cleanup only runs when the owned role worktree is currently registered.',
+            'lifecycle': lifecycle,
+        }
+    if not staleness.get('stale') or not staleness.get('cleanup_candidate'):
+        return {
+            'ok': False,
+            'reason': 'reset_cleanup_requires_stale_cleanup_candidate',
+            'details': 'Physical reset cleanup only runs when stale detection marks the worktree as a cleanup candidate.',
+            'lifecycle': lifecycle,
+        }
+    if not worktree_path_value or not default_path_value:
+        return {
+            'ok': False,
+            'reason': 'reset_cleanup_missing_worktree_path',
+            'details': 'Physical reset cleanup requires a concrete owned worktree path.',
+            'lifecycle': lifecycle,
+        }
+
+    worktree_path = Path(worktree_path_value).resolve()
+    default_worktree_path = Path(default_path_value).resolve()
+    if worktree_path != default_worktree_path:
+        return {
+            'ok': False,
+            'reason': 'reset_cleanup_requires_default_owned_worktree_path',
+            'details': 'Physical reset cleanup only runs against the deterministic owned worktree path in this slice.',
+            'lifecycle': lifecycle,
+        }
+
+    entry_before = git_worktree_for_path(repo_root, worktree_path)
+    if entry_before is None:
+        return {
+            'ok': False,
+            'reason': 'reset_cleanup_requires_registered_worktree_entry',
+            'details': 'The owned worktree is no longer registered; refusing to run physical cleanup against an ambiguous state.',
+            'lifecycle': lifecycle,
+        }
+
+    code, _stdout, error = run_text_with_errors(
+        ['git', 'worktree', 'remove', str(worktree_path)],
+        cwd=repo_root,
+    )
+    if code != 0:
+        return {
+            'ok': False,
+            'reason': 'git_worktree_remove_failed',
+            'details': 'git worktree remove did not complete successfully.',
+            'cleanup_candidate': True,
+            'worktree_path': str(worktree_path),
+            'role_branch': role_branch,
+            'prior_worktree_ownership': ownership,
+            'prior_worktree_staleness': staleness,
+            'decision_result': lifecycle.get('decision_result'),
+            'git_error': error,
+        }
+
+    entry_after = git_worktree_for_path(repo_root, worktree_path)
+    branch_preserved = bool(role_branch and git_local_branch_exists(repo_root, role_branch))
+
+    return {
+        'ok': True,
+        'workflow_stage': lifecycle.get('workflow_stage'),
+        'target_role': target_role,
+        'canonical_branch': lifecycle.get('canonical_branch'),
+        'role_branch': role_branch,
+        'worktree_path': str(worktree_path),
+        'cleanup_performed': entry_after is None,
+        'cleanup_result': {
+            'command': ['git', 'worktree', 'remove', str(worktree_path)],
+            'worktree_removed': entry_after is None,
+            'worktree_still_registered': entry_after is not None,
+            'branch_preserved': branch_preserved,
+        },
+        'prior_worktree_ownership': ownership,
+        'prior_worktree_staleness': staleness,
+        'decision_result': lifecycle.get('decision_result'),
+        'next_step_hint': (
+            'prepare_fresh_role_worktree_before_next_python_run'
+            if entry_after is None
+            else 'investigate_remaining_registered_worktree_state'
+        ),
+        'lineage_view': lifecycle.get('lineage_view'),
+    }
+
+
 def role_entry_helper(args):
     inspection_args = SimpleNamespace(
         repo_root=args.repo_root,
@@ -3502,6 +3633,23 @@ def parse_args(argv: list[str] | None = None):
     reset_lifecycle.add_argument('--output', type=Path)
     reset_lifecycle.add_argument('--review-output', type=Path)
 
+    reset_cleanup_parser = sub.add_parser('reset-cleanup')
+    reset_cleanup_parser.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for physical reset cleanup.')
+    reset_cleanup_parser.add_argument('--package-id-external', required=True)
+    reset_cleanup_parser.add_argument('--brief-id-external', required=True)
+    reset_cleanup_parser.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    reset_cleanup_parser.add_argument('--target-role', choices=['python-team'], default='python-team')
+    reset_cleanup_parser.add_argument('--role-branch')
+    reset_cleanup_parser.add_argument('--worktree-path', type=Path)
+    reset_cleanup_parser.add_argument('--send-decision', action='store_true')
+    reset_cleanup_parser.add_argument('--source-packet-path', type=Path)
+    reset_cleanup_parser.add_argument('--canonical-branch')
+    reset_cleanup_parser.add_argument('--superseded-branch')
+    reset_cleanup_parser.add_argument('--worktree-hint')
+    reset_cleanup_parser.add_argument('--reset-reason')
+    reset_cleanup_parser.add_argument('--output', type=Path)
+    reset_cleanup_parser.add_argument('--review-output', type=Path)
+
     entry = sub.add_parser('role-entry')
     entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
     entry.add_argument('--package-id-external', required=True)
@@ -3628,6 +3776,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'reset-required':
         result = reset_required_lifecycle(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'reset-cleanup':
+        result = reset_cleanup(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

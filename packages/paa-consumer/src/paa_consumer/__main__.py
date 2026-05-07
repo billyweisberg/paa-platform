@@ -200,6 +200,10 @@ def main() -> int:
         argv = ['reset-required', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-reset-cleanup':
+        argv = ['reset-cleanup', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'techlead-role-entry':
         argv = ['role-entry', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)

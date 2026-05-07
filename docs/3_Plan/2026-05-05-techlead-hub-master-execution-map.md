@@ -80,16 +80,14 @@ What drifted was planning visibility.
 ### Current phase
 
 Current phase is:
-- `Phase F: Role Result Return Path`
+- `Phase H: Lifecycle Hygiene And Worktree Cleanup Automation`
 
 Meaning:
-- `TechLead` can emit assignment intent
-- lineage can be queried and persisted
-- branch/worktree preparation can be done in narrow steps
-- handoff into a prepared role execution context exists
-- one clean Python Dev round trip has been validated through the bridge
-- one clean QA return path has been validated through the same bridge
-- the remaining work is now about future worker-role generalization, not basic return-path viability
+- the hub loop is proven for the current role set
+- lineage, ownership, and stale-worktree state are queryable
+- `reset_required` lifecycle mutation is proven
+- first physical reset cleanup is now implemented for the narrow `python-team` path
+- remaining work is now lifecycle breadth, acceptance hardening, and future worker-family expansion
 
 ### What is complete vs incomplete
 
@@ -389,6 +387,12 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase E role-return bridge
 - Phase E clean Python Dev round-trip validation
 - Phase F clean QA return-bridge validation
+- Phase H1 worktree ownership reporting
+- Phase H2 stale worktree detection
+- Phase H3 reset-required lifecycle mutation
+- Phase H3 positive synthetic reset fixture validation
+- Phase H4 physical reset cleanup
+- Phase H4 positive synthetic physical cleanup validation
 
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
@@ -397,10 +401,12 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. implement Phase H4 physical reset cleanup
-2. then decide whether the next mutation slice should be:
+1. choose the next narrow lifecycle mutation after H4:
    - supersede handling
    - or close cleanup
+2. then decide whether the next mutation slice should be:
+   - continue lifecycle breadth
+   - or shift to Phase I hardening
 3. run full end-to-end acceptance and automation hardening before unpausing real automations
 4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 

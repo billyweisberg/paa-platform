@@ -97,6 +97,19 @@ Dedicated reset-required lifecycle path:
 
 Use this when TechLead has already determined the slice is in a `reset_required` state. In this slice it records the lifecycle mutation and marks the execution surface as a cleanup candidate, but it does not perform physical cleanup.
 
+Dedicated physical reset-cleanup path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-reset-cleanup \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  [--target-role python-team] \
+  [--send-decision]
+```
+
+Use this only after `reset_required` has been established. In this slice it removes the stale owned `python-team` worktree, preserves the role branch, and returns a structured cleanup record. It does not recreate worktrees, delete branches, or perform supersede/close cleanup.
+
 Narrow branch mutation path:
 
 ```bash
