@@ -105,6 +105,28 @@ Conclusion:
 - Delivery Architect has an automation prompt
 - but not a dedicated role execution skill surface
 
+### 4.5. Automations need a pre-run no-work gate
+
+Even with correct UI registration, prompts, and environment setup, the automations are still too expensive if every scheduled wakeup immediately invokes the model.
+
+For the MVP, each automation needs a deterministic pre-run check that can decide whether to invoke the model at all.
+
+That gate should be able to answer, without model tokens:
+- is there a claimable packet for this role?
+- is there already active in-progress work for this role that should resume?
+- is the role blocked because a required prior packet or lifecycle state is not present yet?
+- should this scheduled run exit quietly with no model invocation?
+
+This matters especially for queue-polling roles:
+- `TechLead`
+- `Delivery Architect`
+- `Python Dev`
+- `QA`
+
+Conclusion:
+- polling for work must be possible without waking the model
+- model invocation should happen only when the pre-run gate says work is present or resumption is required
+
 ### 4. Execution-environment contract is not yet explicit enough
 
 Even if an automation is visible in the UI and has the right prompt, it is still not runnable unless its execution environment is fully specified.
@@ -125,7 +147,7 @@ Conclusion:
 - execution-environment configuration is currently implicit and fragile
 - Phase I2 must make it explicit before any real unpause
 
-### 5. The worker-role skills are not yet worktree-execution skills
+### 6. The worker-role skills are not yet worktree-execution skills
 
 Current installed skills for Python Dev and QA mostly describe:
 - packet compilation
@@ -233,7 +255,17 @@ They should define:
 - execution context
 - result return
 
-### Slice 4: execution-environment contract
+### Slice 4: pre-run no-work gate
+
+Add a deterministic non-model preflight for each role automation:
+- inspect the relevant queue or active-work runtime state without invoking the model
+- exit without model invocation when there is no work to do
+- invoke the model only when work is present or an active slice must resume
+- make the gate role-specific but shared in shape across `TechLead`, `Delivery Architect`, `Python Dev`, and `QA`
+
+This slice must reduce token waste before any real unpause.
+
+### Slice 5: execution-environment contract
 
 Document and enforce for each role automation:
 - canonical consumer repo root
@@ -247,7 +279,7 @@ Document and enforce for each role automation:
 
 This slice must make the automation environment reproducible, not inferred.
 
-### Slice 5: repo/runtime execution contract
+### Slice 6: repo/runtime execution contract
 
 Use the explicit environment contract above to harden each role automation end to end:
 - UI-visible registration points at the correct consumer repo cwd
@@ -255,7 +287,7 @@ Use the explicit environment contract above to harden each role automation end t
 - role commands use the intended repo-local `uv` and installed PAA wrappers
 - environment variables do not silently drift to deprecated home-folder runtime surfaces
 
-### Slice 6: supervised live automation pilot
+### Slice 7: supervised live automation pilot
 
 After prompt and skill alignment:
 - unpause only one role at a time in supervised mode
@@ -278,6 +310,7 @@ Reason:
 
 1. make the global UI registration layer real for `Delivery Architect`, `Python Dev`, and `QA`
 2. align the installed/project-pack automation prompts with the real current role/worktree model
-3. define the explicit execution-environment contract for worktree, `uv`, cwd, and required environment variables
-4. create the missing dedicated Delivery Architect execution skill
-5. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
+3. add the deterministic pre-run no-work gate so queue polling can happen without model invocation
+4. define the explicit execution-environment contract for worktree, `uv`, cwd, and required environment variables
+5. create the missing dedicated Delivery Architect execution skill
+6. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
