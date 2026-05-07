@@ -13,6 +13,7 @@ But that is not the same thing as being ready for unattended execution.
 The gap is:
 - we have prompt files and cron registrations
 - but the role automations are not yet defined as complete execution agents with a clear repo/runtime/worktree contract
+- and UI visibility depends on a separate global registration surface under `/Users/billyweisberg/.codex/automations/`, not just the repo-local installed copies
 
 So this plan is about turning them from:
 - present on disk
@@ -20,7 +21,34 @@ So this plan is about turning them from:
 into:
 - intentionally runnable
 
+## Automation surfaces that must all exist
+
+For the MVP, an automation is only real when all three surfaces line up:
+- project-pack template source in `paa-platform`
+- repo-local installed automation in the target repo `.codex/automations/`
+- global UI registration entry under `/Users/billyweisberg/.codex/automations/`
+
+If any one of those is missing or stale, the automation is not ready for deliberate unpause.
+
 ## Current findings
+
+### 0. UI visibility is driven by global registration, not repo-local install alone
+
+Earlier UI probe work already established the key distinction:
+- repo-local `.codex/automations/` content can exist and parse correctly
+- but the Codex UI is currently discovering home-level registrations under `/Users/billyweisberg/.codex/automations/`
+
+Current observed home-level state:
+- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml` exists
+- `/Users/billyweisberg/.codex/automations/ui-probe-automation/automation.toml` exists
+- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml` is missing
+- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml` is missing
+- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml` exists, but is a deprecated home-folder placeholder rather than a current runnable registration
+
+Conclusion:
+- Delivery Architect and QA are not UI-registerable yet
+- Python Dev has a name collision with an old deprecated global entry
+- TechLead is visible, but its global prompt is still stale
 
 ### 1. TechLead automation exists, but its prompt is still transitional
 
@@ -154,7 +182,15 @@ QA automation should be able to:
 
 ## What needs to be built next
 
-### Slice 1: prompt contract alignment
+### Slice 1: global UI registration alignment
+
+Make the UI-visible registration layer real for the current proven role set:
+- create current home-level UI registration entries for `Delivery Architect` and `QA`
+- replace or retire the deprecated home-level `python-team-automation` placeholder with a current runnable registration
+- update the existing home-level `TechLead` entry so it matches the real runtime and no longer teaches stale human-only behavior
+- keep the distinction explicit between global UI registration and repo-local runtime execution
+
+### Slice 2: prompt contract alignment
 
 Update installed/project-pack automation prompts so they teach the real current model:
 - TechLead may emit real assignment packets
@@ -162,7 +198,7 @@ Update installed/project-pack automation prompts so they teach the real current 
 - shared full-cycle branch wording is removed where it contradicts the role-worktree model
 - prompts stop implying human-only execution if the runtime is now agent-capable
 
-### Slice 2: dedicated role skill surfaces
+### Slice 3: dedicated role skill surfaces
 
 Add or refactor skills so each current proven role has a role-native execution surface:
 - `fractal-core-delivery-review` or equivalent dedicated Delivery Architect skill
@@ -176,7 +212,7 @@ They should define:
 - execution context
 - result return
 
-### Slice 3: repo/runtime execution contract
+### Slice 4: repo/runtime execution contract
 
 Document and enforce for each role automation:
 - canonical consumer repo root
@@ -185,7 +221,7 @@ Document and enforce for each role automation:
 - repo-local `uv` execution expectation
 - what counts as success/failure/blocking
 
-### Slice 4: supervised live automation pilot
+### Slice 5: supervised live automation pilot
 
 After prompt and skill alignment:
 - unpause only one role at a time in supervised mode
@@ -206,6 +242,7 @@ Reason:
 
 ## Immediate next implementation slice
 
-1. align the installed/project-pack automation prompts with the real current role/worktree model
-2. create the missing dedicated Delivery Architect execution skill
-3. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
+1. make the global UI registration layer real for `Delivery Architect`, `Python Dev`, and `QA`
+2. align the installed/project-pack automation prompts with the real current role/worktree model
+3. create the missing dedicated Delivery Architect execution skill
+4. then harden Python Dev and QA role skills into true execution-agent skills rather than packet-only helper skills
