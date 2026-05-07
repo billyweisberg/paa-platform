@@ -441,11 +441,12 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. align the installed/project-pack automation prompts with the real current role/worktree model
-2. create the missing dedicated Delivery Architect execution skill and harden the Python Dev/QA role skills into real execution-agent skills
-3. only then execute the deliberate cutover/unpause sequence for the current proven role set
-4. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
-5. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
+1. make the global UI registration layer real for `Delivery Architect`, `Python Dev`, and `QA`
+2. align the installed/project-pack automation prompts with the real current role/worktree model
+3. create the missing dedicated Delivery Architect execution skill and harden the Python Dev/QA role skills into real execution-agent skills
+4. only then execute the deliberate cutover/unpause sequence for the current proven role set
+5. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
+6. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
 
