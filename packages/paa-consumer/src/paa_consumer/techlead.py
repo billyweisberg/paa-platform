@@ -884,7 +884,10 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
 
     if latest_techlead_packet and latest_techlead_packet.get('schema_type') == 'worker_result_packet':
         worker_payload = latest_techlead_packet.get('payload') or {}
-        worker_role = worker_payload.get('worker_role') or 'Worker'
+        worker_role = worker_payload.get('worker_role')
+        if not worker_role:
+            packet_from_role = handoff_runtime.normalize_role_name(latest_techlead_packet.get('from_role'))
+            worker_role = packet_from_role or 'Worker'
         if worker_role == 'Python Dev':
             stage = 'techlead_dev_review_pending'
             summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
@@ -1501,7 +1504,7 @@ def default_result_packet_paths(repo_root: Path, issue_number: int, target_role:
     if target_role == 'Delivery Architect':
         stem = f'delivery-review.issue{issue_number}.{slug}'
     elif target_role == 'Python Dev':
-        stem = f'slice-result.issue{issue_number}.{slug}'
+        stem = f'worker-result.issue{issue_number}.{slug}'
     else:
         stem = f'qa-verification.issue{issue_number}.{slug}'
     return reports_dir / f'{stem}.json', reports_dir / f'{stem}.md'
@@ -2531,16 +2534,21 @@ def role_entry_helper(args):
         result_command = [
             str(producer_wrapper),
             'authority',
-            'materialize-slice-result-packet',
+            'materialize-worker-result-packet',
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
+            '--worker-role', 'python-team',
+            '--worker-family', 'implementation',
+            '--result-type', '<worker_result_type>',
             '--repo', str(worktree_path),
             '--issue-number', str(issue_number),
             '--issue-url', str(issue_url),
             '--pr-number', str(pr_number),
             '--pr-url', str(pr_url),
             '--branch', current_branch,
-            '--dev-input-file', '<dev_input_json>',
+            '--worker-input-file', '<worker_input_json>',
+            '--source-assignment-path', artifact['path'],
+            '--source-assignment-type', artifact['assignment_type'],
             '--persist-db',
         ]
     else:
@@ -2658,13 +2666,14 @@ def role_result_assist(args):
             ],
         }
     elif role_label == 'Python Dev':
-        result_family = 'slice_result_packet'
-        input_flag = '--dev-input-file'
+        result_family = 'worker_result_packet'
+        input_flag = '--worker-input-file'
         expected_assignment_type = 'implement_authorized_slice'
         input_contract = {
             'required_top_level_keys': [
-                'result_summary',
-                'validation',
+                'result_type',
+                'implementation_summary',
+                'validation_summary',
                 'artifacts',
                 'merge_status',
             ],
@@ -2727,16 +2736,21 @@ def role_result_assist(args):
         result_compile_command = [
             str(producer_wrapper),
             'authority',
-            'materialize-slice-result-packet',
+            'materialize-worker-result-packet',
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
+            '--worker-role', 'python-team',
+            '--worker-family', 'implementation',
+            '--result-type', '<worker_result_type>',
             '--repo', str(worktree_path),
             '--issue-number', str(issue_number),
             '--issue-url', str(issue_url),
             '--pr-number', str(pr_number),
             '--pr-url', str(pr_url),
             '--branch', str(current_branch),
-            '--dev-input-file', str(result_input_path),
+            '--worker-input-file', str(result_input_path),
+            '--source-assignment-path', str(artifact.get('path')),
+            '--source-assignment-type', str(artifact.get('assignment_type')),
             '--persist-db',
         ]
     else:
@@ -2820,19 +2834,21 @@ def role_return_bridge(args):
     review_output_path = args.review_output.resolve() if getattr(args, 'review_output', None) else default_review_output_path.resolve()
 
     compile_command = assist['manual_result_surfaces']['result_compile_command'].split()
-    if role_label == 'Delivery Architect':
-        delivery_input = handoff_runtime.load_json(result_input_path)
-        delivery_result_type = delivery_input.get('result_type')
-        if not delivery_result_type:
+    if role_label in {'Delivery Architect', 'Python Dev'}:
+        result_input = handoff_runtime.load_json(result_input_path)
+        result_type = result_input.get('result_type')
+        if not result_type:
             return {
                 'ok': False,
-                'reason': 'delivery_result_type_missing',
-                'details': 'Delivery Architect return bridge requires result_input_file to include a top-level result_type.',
+                'reason': 'result_type_missing',
+                'details': f'{role_label} return bridge requires result_input_file to include a top-level result_type.',
                 'assist': assist,
                 'result_input_path': str(result_input_path),
             }
         compile_command = [
-            delivery_result_type if token == '<delivery_result_type>' else token
+            result_type
+            if token in {'<delivery_result_type>', '<worker_result_type>'}
+            else token
             for token in compile_command
         ]
     compile_command.extend([
