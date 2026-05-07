@@ -208,6 +208,10 @@ def main() -> int:
         argv = ['superseded-cleanup', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-closed-cleanup':
+        argv = ['closed-cleanup', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'techlead-role-entry':
         argv = ['role-entry', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)

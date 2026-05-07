@@ -329,8 +329,9 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
   - retires a stale superseded `python-team` worktree
   - preserves the superseded role branch
 - Phase H6 closed cleanup:
-  - terminal cleanup slice, if still needed after H5
-  - should only be implemented after superseded cleanup is proven
+  - first terminal cleanup slice
+  - retires a stale closed `python-team` worktree
+  - preserves both the role branch and canonical branch in this slice
 - branch reset automation on top of `techlead-lineage`
 - supersede-lineage cleanup flow
 - close-slice cleanup flow
@@ -402,6 +403,8 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase H4 positive synthetic physical cleanup validation
 - Phase H5 superseded cleanup
 - Phase H5 positive synthetic superseded cleanup validation
+- Phase H6 closed cleanup
+- Phase H6 positive synthetic closed cleanup validation
 
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
@@ -410,12 +413,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. decide whether Phase H6 closed cleanup is needed now
-2. then decide whether the next mutation slice should be:
-   - implement Phase H6 closed cleanup
-   - or shift to Phase I hardening
-3. run full end-to-end acceptance and automation hardening before unpausing real automations
-4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
+1. shift to Phase I hardening unless a stronger branch-retirement policy is explicitly required first
+2. run full end-to-end acceptance and automation hardening before unpausing real automations
+3. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
 ## Guardrails
 

@@ -28,6 +28,7 @@ CONSUMER_COMMANDS = (
     'techlead-reset-required',
     'techlead-reset-cleanup',
     'techlead-superseded-cleanup',
+    'techlead-closed-cleanup',
     'techlead-role-entry',
     'techlead-role-result-assist',
     'techlead-role-return',

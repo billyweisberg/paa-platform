@@ -123,6 +123,19 @@ Dedicated superseded-cleanup path:
 
 Use this only after TechLead has already recorded or derived a `superseded` lineage state. In this slice it removes the stale owned `python-team` worktree, preserves the superseded role branch, and returns a structured cleanup record. It does not recreate worktrees, delete branches, or perform close cleanup.
 
+Dedicated closed-cleanup path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-closed-cleanup \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  [--target-role python-team] \
+  [--send-decision]
+```
+
+Use this only after TechLead has already recorded or derived a `closed` lineage state. In this slice it removes the stale owned `python-team` worktree, preserves both the role branch and canonical branch for audit, and returns a structured cleanup record. It does not recreate worktrees or delete branches.
+
 Narrow branch mutation path:
 
 ```bash
