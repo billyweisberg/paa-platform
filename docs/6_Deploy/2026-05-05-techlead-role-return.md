@@ -15,7 +15,7 @@ This slice intentionally does only four things:
   --repo-root <consumer_repo> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa> \
+  --target-role <delivery-architect|python-team|qa> \
   [--send]
 ```
 
@@ -42,10 +42,15 @@ If the assist context is valid and the role result input file exists, it returns
 
 This bridge intentionally preserves the current Phase A physical queue names:
 
-- `slice_result_packet` -> `fractal-core-qa`
+- `worker_result_packet` -> `fractal-core-architecture`
 - `qa_verification_packet` -> `fractal-core-architecture`
+- `delivery_review_packet` -> `fractal-core-architecture`
 
-That keeps the transport model aligned with the existing transition contract while semantic routing still targets `TechLead`.
+That keeps the transport model aligned with the current TechLead-owned semantic routing model.
+
+Legacy compatibility note:
+- `slice_result_packet` still exists as a legacy Python lane artifact
+- it is no longer the active default used by the Python role-return bridge
 
 ## Scope
 

@@ -15,7 +15,7 @@ This slice intentionally does only four things:
   --repo-root <consumer_repo> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa>
+  --target-role <delivery-architect|python-team|qa>
 ```
 
 Optional overrides:
@@ -48,14 +48,23 @@ The output includes:
 ## Role-specific result families
 
 For `Python Dev`:
-- result family: `slice_result_packet`
+- result family: `worker_result_packet`
 - expected assignment type: `implement_authorized_slice`
-- input flag: `--dev-input-file`
+- input flag: `--worker-input-file`
+
+For `Delivery Architect`:
+- result family: `delivery_review_packet`
+- expected assignment type: `delivery_architecture_review`
+- input flag: `--delivery-input-file`
 
 For `QA`:
 - result family: `qa_verification_packet`
 - expected assignment type: `verify_authorized_slice`
 - input flag: `--qa-input-file`
+
+Legacy compatibility note:
+- `slice_result_packet` is no longer the active Python bridge result family
+- it remains available only for overlap and historical support
 
 Important:
 - role work still happens in the prepared worktree

@@ -18,6 +18,8 @@ When the role needs the receive-side context, use `techlead-inspect-role-worktre
 When the role is ready to enter manually, use `techlead-role-entry` only to verify alignment and print the exact next execution surfaces, then stop.
 When the role is ready to prepare its return packet, use `techlead-role-result-assist` only to validate required result context and print the exact compile surface, then stop.
 When the role is ready to bridge its result back, use `techlead-role-return` only to compile, validate, and optionally send the result packet back toward `TechLead`.
+Treat `worker_result_packet` as the active Python result family.
+Treat `slice_result_packet` as legacy compatibility only; do not teach it as the default Python bridge path.
 Do not auto-send new packets in this phase; keep next-step execution human/report-driven unless explicitly instructed.
 Flag any issue work that is not using the shared branch pattern `issue-<issue_number>`.
 """

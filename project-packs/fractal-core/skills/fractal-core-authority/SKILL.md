@@ -30,18 +30,26 @@ Use repo-local producer tooling only in the canonical producer repo:
   --next-issue-url <next_issue_url> \
   --baseline-file <baseline_json> \
   --persist-db
-{{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-slice-result-packet \
+{{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-worker-result-packet \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
+  --worker-role python-team \
+  --worker-family implementation \
+  --result-type <worker_result_type> \
   --repo {{REPO_ROOT}} \
   --issue-number <issue_number> \
   --issue-url <issue_url> \
   --pr-number <pr_number> \
   --pr-url <pr_url> \
   --branch issue-<issue_number> \
-  --dev-input-file <dev_input_json> \
+  --worker-input-file <worker_input_json> \
+  --source-assignment-path <techlead_assignment_packet_json> \
+  --source-assignment-type implement_authorized_slice \
   --persist-db
 ```
+
+For legacy compatibility only, `materialize-slice-result-packet` still exists.
+Do not treat it as the active Python bridge default.
 
 Do not emit producer packets from a consumer repo. On consumer repos, use authority inspection plus `paa-consumer` queue and TechLead commands instead.
 

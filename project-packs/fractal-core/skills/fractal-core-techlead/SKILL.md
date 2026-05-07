@@ -33,6 +33,7 @@ Supported Phase C emission path:
 Initial supported cases:
 - `techlead_dev_review_pending` -> emit assignment to `QA`
 - explicit `--target-role python-team` invocation -> emit assignment to `Python Dev`
+- explicit `--target-role delivery-architect` invocation -> emit assignment to `Delivery Architect`
 
 Supported branch-aware decision path:
 
@@ -66,7 +67,7 @@ Narrow branch mutation path:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa> \
+  --target-role <delivery-architect|python-team|qa> \
   --action <ensure|reset>
 ```
 
@@ -80,7 +81,7 @@ Narrow role-worktree path:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa> \
+  --target-role <delivery-architect|python-team|qa> \
   [--branch-action <ensure|reset>]
 ```
 
@@ -94,7 +95,7 @@ Narrow TechLead handoff path:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  [--target-role <python-team|qa>] \
+  [--target-role <delivery-architect|python-team|qa>] \
   [--send]
 ```
 
@@ -111,7 +112,7 @@ Receive-side role-worktree inspection:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa>
+  --target-role <delivery-architect|python-team|qa>
 ```
 
 This path is intentionally narrow:
@@ -126,7 +127,7 @@ Role-side entry helper:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa>
+  --target-role <delivery-architect|python-team|qa>
 ```
 
 This path is intentionally narrow:
@@ -142,7 +143,7 @@ Role-side result assist helper:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa>
+  --target-role <delivery-architect|python-team|qa>
 ```
 
 This path is intentionally narrow:
@@ -158,7 +159,7 @@ Role-side return bridge:
   --repo-root {{REPO_ROOT}} \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --target-role <python-team|qa> \
+  --target-role <delivery-architect|python-team|qa> \
   [--send]
 ```
 
@@ -167,6 +168,15 @@ This path is intentionally narrow:
 - compile the role result packet
 - validate the compiled packet and resolve the queue
 - optionally send it back toward `TechLead`
+
+Current active result families:
+- `Python Dev` -> `worker_result_packet`
+- `QA` -> `qa_verification_packet`
+- `Delivery Architect` -> `delivery_review_packet`
+
+Legacy compatibility note:
+- `slice_result_packet` still exists for historical/runtime overlap
+- do not treat it as the active Python bridge default
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-status --validate-schema --output {{REPO_ROOT}}/.project/data/paa/reports/techlead-status-report.json
