@@ -307,6 +307,10 @@ Defer it until the hub loop is fully hardened, but keep it explicitly on the pla
 Automate the safe parts of branch/worktree lifecycle after lineage and query/reporting are proven.
 
 ### Planned slices
+- Phase H1 worktree ownership contract:
+  - `TechLead` owns lineage and branch authorization
+  - role automation owns create-or-reuse of its own deterministic role worktree
+  - `TechLead` worktree helpers remain admin/recovery surfaces, not the normal runtime owner
 - branch reset automation on top of `techlead-lineage`
 - supersede-lineage cleanup flow
 - close-slice cleanup flow
@@ -316,12 +320,13 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
 - fail-closed protections if active worktree state is ambiguous
 
 ### Acceptance criteria
+- worktree ownership is explicit and consistent with the hub model
 - reset, supersede, and close actions can mutate execution surfaces safely
 - cleanup is driven by lineage state, not guesswork
 - no branch/worktree mutation happens without a queryable lineage precursor
 
 ### Status
-- not started
+- active
 
 ## Phase I: Operational Hardening, E2E Acceptance, And Automation Unpause
 
@@ -377,9 +382,10 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. begin Phase H lifecycle hygiene work on top of the current proven role set
-2. run full end-to-end acceptance and automation hardening before unpausing real automations
-3. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
+1. define and adopt Phase H1 worktree ownership for the MVP automation model
+2. add worktree ownership metadata/reporting before any cleanup automation
+3. run full end-to-end acceptance and automation hardening before unpausing real automations
+4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
 ## Guardrails
 
@@ -413,10 +419,11 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- begin Phase H from the current proven role set
+- begin Phase H1 by locking down worktree ownership in the MVP automation model
 
 Immediately after that:
-- move through the remaining lifecycle and acceptance phases with the current role set
+- add ownership reporting before cleanup automation
+- then move through the remaining lifecycle and acceptance phases with the current role set
 - keep the deferred worker-family expansion requirement explicitly on the roadmap for a later return
 
 That keeps the system on the shortest path to a real functioning hub without reopening the packet model again midstream.
