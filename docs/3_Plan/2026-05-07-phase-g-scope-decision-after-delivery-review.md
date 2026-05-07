@@ -41,9 +41,15 @@ Keep Phase G focused on the current proven role set and packet families:
 
 ## What moves later
 
-Additional worker-role family expansion moves to a later phase only if and when:
-- there is a real new worker role to integrate
-- the current hub loop is already stable enough that expansion will not blur the control model
+Additional worker-role family expansion moves to a later phase, but it is now a declared requirement.
+
+Defer it until the current hub loop is fully hardened, then return to integrate:
+- `Frontend Dev`
+- `Backend Dev`
+- `Infra Dev`
+- `Docs Dev`
+
+This is not optional cleanup. It is postponed scope that must stay visible in the plan.
 
 ## Practical implication
 
@@ -52,4 +58,4 @@ The next work should not be “add more worker roles.”
 The next work should be:
 - finish the remaining lifecycle and acceptance slices with the current role set
 - keep packet model churn low
-- avoid reopening the worker contract unless a real new worker lane actually needs it
+- avoid reopening the worker contract until the current loop is hardened enough to absorb the expansion cleanly

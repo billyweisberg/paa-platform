@@ -282,12 +282,16 @@ Finish the hub model so it is not effectively a Python-only special case.
 ### Planned slices
 - demote `slice_result_packet` to legacy compatibility after the generic worker lane is proven
 - finish the Delivery Architect -> TechLead -> Python Dev decision lane before broadening worker-role expansion
-- after that, confirm the hub contract works for multiple worker-role families:
-  - `Frontend Dev`
-  - `Backend Dev`
-  - `Infra Dev`
-  - `Docs Dev`
 - ensure route policy remains spoke-to-TechLead only
+
+### Deferred required expansion
+Worker-role family expansion is a real requirement, not optional future polish.
+
+Defer it until the hub loop is fully hardened, but keep it explicitly on the plan for a later return:
+- `Frontend Dev`
+- `Backend Dev`
+- `Infra Dev`
+- `Docs Dev`
 
 ### Acceptance criteria
 - TechLead can route at least one non-Python spoke cleanly
@@ -295,7 +299,7 @@ Finish the hub model so it is not effectively a Python-only special case.
 - Delivery Architect is no longer only a design concept in docs
 
 ### Status
-- active
+- complete for the current proven role set
 
 ## Phase H: Lifecycle Hygiene And Worktree Cleanup Automation
 
@@ -373,10 +377,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. close out the rest of Phase G around the proven worker/delivery packet families
-2. keep worker-role expansion deferred until the Delivery Architect decision lane is stable
-3. automate lifecycle hygiene only after lineage query/reporting remains trustworthy under repeated runs
-4. run full end-to-end acceptance and automation hardening before unpausing real automations
+1. begin Phase H lifecycle hygiene work on top of the current proven role set
+2. run full end-to-end acceptance and automation hardening before unpausing real automations
+3. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
 ## Guardrails
 
@@ -410,9 +413,10 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- close Phase G deliberately instead of broadening into more worker families immediately
+- begin Phase H from the current proven role set
 
 Immediately after that:
-- move to the remaining acceptance and lifecycle phases with the current role set
+- move through the remaining lifecycle and acceptance phases with the current role set
+- keep the deferred worker-family expansion requirement explicitly on the roadmap for a later return
 
 That keeps the system on the shortest path to a real functioning hub without reopening the packet model again midstream.
