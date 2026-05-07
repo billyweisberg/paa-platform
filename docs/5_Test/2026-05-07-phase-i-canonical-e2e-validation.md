@@ -134,3 +134,47 @@ The next hardening target should be:
 1. eliminate queue-order masking from TechLead derivation
 2. align Delivery Architect result-assist contract with the real compiler requirement
 3. make `techlead-status` reflect the active canonical run coherently
+
+
+## Hardening rerun result
+
+A second canonical rerun was executed after the following fixes landed:
+- deeper queue preview for TechLead derivation
+- Delivery Architect result-assist contract updated to declare `result_type`
+- top-level `techlead-status` updated to infer active work from live queue traffic when authority task state is absent
+
+### Rerun outcome
+
+The rerun resolved the three original blockers:
+- Delivery Architect return no longer required hidden manual knowledge of `result_type`
+- TechLead derived `Delivery Architect -> Python Dev` without manually clearing the older assignment packet
+- TechLead derived `Python Dev -> QA` without manually clearing older queue packets
+- top-level `techlead-status` stayed coherent during the in-flight rerun and correctly surfaced:
+  - `techlead_assignment_issued`
+  - `techlead_delivery_review_pending`
+  - `techlead_qa_review_pending`
+
+### Residual hardening finding
+
+A queue-state drift issue still remains after cleanup.
+
+Observed after the rerun cleanup:
+- queue preview returned empty for all three queues
+- reconciled `messages_ready` returned `0` for all three queues
+- raw broker `messages_ready` still reported stale nonzero counts:
+  - `fractal-core-python`: `messages_ready_raw = 1`
+  - `fractal-core-qa`: `messages_ready_raw = 1`
+  - `fractal-core-architecture`: `messages_ready_raw = 4`
+
+This means:
+- the active routing/derivation path is no longer blocked by queue-order masking
+- but broker-state accounting still drifts after ack cleanup and remains a Phase I hardening concern
+
+### Updated unpause interpretation
+
+The original three active-flow blockers are resolved.
+
+The automation unpause gate is still **not satisfied** because queue-state drift still appears after the rerun cleanup.
+
+Current remaining blocker:
+1. raw broker `messages_ready` remains stale after cleanup even when preview and reconciled queue state are empty

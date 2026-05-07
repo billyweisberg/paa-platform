@@ -72,9 +72,12 @@ Canonical Phase I E2E result:
 - automation unpause gate: fail
 
 Current blocking findings:
-1. queue-order masking in TechLead derivation requires manual claim/ack of earlier packets before later result packets become visible to the next routing step
-2. Delivery Architect result-assist guidance does not fully match the active compiler contract because `result_type` is required but not declared in the helper contract
-3. top-level `techlead-status` does not reflect the active canonical run coherently and still reports blocked/unknown state while issue-scoped runtime surfaces are correctly interpreting in-flight work
+1. raw broker `messages_ready` remains stale after cleanup even when preview and reconciled queue state are empty
+
+Resolved in the hardening rerun:
+- queue-order masking in TechLead derivation
+- Delivery Architect result-assist contract mismatch on `result_type`
+- top-level `techlead-status` active-work inference/reporting drift
 
 Reference validation note:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
