@@ -188,6 +188,10 @@ def main() -> int:
         argv = ['inspect-role-worktree', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-worktree-ownership':
+        argv = ['worktree-ownership', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'techlead-role-entry':
         argv = ['role-entry', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)

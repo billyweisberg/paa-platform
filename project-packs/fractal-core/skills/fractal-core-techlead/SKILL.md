@@ -60,6 +60,18 @@ Dedicated lineage query path:
   --brief-id-external <brief_id_external>
 ```
 
+Dedicated worktree ownership query path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-worktree-ownership \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <delivery-architect|python-team|qa>
+```
+
+Use this before any future cleanup/reset automation that needs to know which role owns a worktree instance.
+
 Narrow branch mutation path:
 
 ```bash

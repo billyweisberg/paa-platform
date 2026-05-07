@@ -311,6 +311,9 @@ Automate the safe parts of branch/worktree lifecycle after lineage and query/rep
   - `TechLead` owns lineage and branch authorization
   - role automation owns create-or-reuse of its own deterministic role worktree
   - `TechLead` worktree helpers remain admin/recovery surfaces, not the normal runtime owner
+- Phase H1 worktree ownership metadata/reporting:
+  - owning role is queryable through runtime reporting
+  - ownership remains deterministic and cleanup-free
 - branch reset automation on top of `techlead-lineage`
 - supersede-lineage cleanup flow
 - close-slice cleanup flow
@@ -382,8 +385,8 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. define and adopt Phase H1 worktree ownership for the MVP automation model
-2. add worktree ownership metadata/reporting before any cleanup automation
+1. add stale worktree detection on top of the ownership model
+2. then begin reset/supersede/close lifecycle hygiene work
 3. run full end-to-end acceptance and automation hardening before unpausing real automations
 4. return later for the deferred-but-required multi-worker family expansion after the hub loop is fully hardened
 
@@ -419,11 +422,11 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- begin Phase H1 by locking down worktree ownership in the MVP automation model
+- add stale worktree detection on top of the ownership model
 
 Immediately after that:
-- add ownership reporting before cleanup automation
-- then move through the remaining lifecycle and acceptance phases with the current role set
+- move into cleanup-safe lifecycle slices
+- then move through the remaining acceptance phases with the current role set
 - keep the deferred worker-family expansion requirement explicitly on the roadmap for a later return
 
 That keeps the system on the shortest path to a real functioning hub without reopening the packet model again midstream.

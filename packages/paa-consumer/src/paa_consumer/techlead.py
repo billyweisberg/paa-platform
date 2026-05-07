@@ -27,6 +27,18 @@ ROLE_BRANCH_SUFFIX = {
     'python-team': 'dev',
     'qa': 'qa',
 }
+
+ROLE_LABEL_BY_CLI = {
+    'delivery-architect': 'Delivery Architect',
+    'python-team': 'Python Dev',
+    'qa': 'QA',
+}
+
+ROLE_CLI_BY_SUFFIX = {
+    'delivery': 'delivery-architect',
+    'dev': 'python-team',
+    'qa': 'qa',
+}
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 
 
@@ -388,6 +400,46 @@ def role_branch_name(issue_number: int, target_role: str, explicit: str | None) 
     return f'issue-{issue_number}-{suffix}'
 
 
+def role_label_for_cli(target_role: str) -> str:
+    return ROLE_LABEL_BY_CLI[target_role]
+
+
+def target_role_for_branch(role_branch: str | None) -> str | None:
+    if not role_branch:
+        return None
+    for suffix, target_role in ROLE_CLI_BY_SUFFIX.items():
+        if role_branch.endswith(f'-{suffix}'):
+            return target_role
+    return None
+
+
+def worktree_ownership_record(
+    repo_root: Path,
+    target_role: str,
+    role_branch: str,
+    worktree_path: Path,
+    worktree_entry: dict | None = None,
+) -> dict:
+    entry = worktree_entry or git_worktree_for_path(repo_root, worktree_path)
+    checked_out_branch = entry.get('branch') if entry else None
+    return {
+        'ownership_model': 'role_automation_self_service',
+        'lineage_owner_role': 'TechLead',
+        'runtime_owner_role': role_label_for_cli(target_role),
+        'runtime_owner_role_cli': target_role,
+        'admin_surface_role': 'TechLead',
+        'ownership_source': 'deterministic_role_worktree_contract',
+        'role_branch': role_branch,
+        'worktree_path': str(worktree_path),
+        'default_worktree_path': str(default_role_worktree_path(repo_root, role_branch)),
+        'uses_default_worktree_path': worktree_path.resolve() == default_role_worktree_path(repo_root, role_branch).resolve(),
+        'registered': entry is not None,
+        'checked_out_branch': checked_out_branch,
+        'branch_aligned': checked_out_branch == role_branch if checked_out_branch is not None else None,
+        'worktree_head': entry.get('head') if entry else None,
+    }
+
+
 def default_role_worktree_path(repo_root: Path, role_branch: str) -> Path:
     return Path.home() / '.codex' / 'worktrees' / 'paa' / repo_root.name / role_branch
 
@@ -479,6 +531,20 @@ def derive_lineage_section(current_task, pr, queues, escalations):
             lineage_state = 'active'
         else:
             lineage_state = 'unknown'
+    worktree_target_role = target_role_for_branch(role_branch)
+    worktree_path = None
+    worktree_entry = None
+    worktree_ownership = None
+    if worktree_target_role and role_branch:
+        worktree_path = default_role_worktree_path(REPO_ROOT, role_branch)
+        worktree_entry = git_worktree_for_path(REPO_ROOT, worktree_path)
+        worktree_ownership = worktree_ownership_record(
+            REPO_ROOT,
+            worktree_target_role,
+            role_branch,
+            worktree_path,
+            worktree_entry=worktree_entry,
+        )
     return {
         'canonical_branch': canonical_branch,
         'active_role_branch': role_branch,
@@ -492,6 +558,7 @@ def derive_lineage_section(current_task, pr, queues, escalations):
         'current_packet_type': lineage_packet.get('schema_type') if lineage_packet else None,
         'current_packet_message_id': lineage_packet.get('message_id') if lineage_packet else None,
         'current_packet_queue': lineage_packet.get('queue_name') if lineage_packet else None,
+        'worktree_ownership': worktree_ownership,
     }
 
 
@@ -1197,6 +1264,7 @@ def build_report():
         'current_packet_type': None,
         'current_packet_message_id': None,
         'current_packet_queue': None,
+        'worktree_ownership': None,
     }
 
     if current_task:
@@ -2322,6 +2390,13 @@ def prepare_role_worktree(args):
             'role_branch': role_branch,
             'worktree_path': str(existing_path),
             'worktree_head': existing_branch_worktree.get('head'),
+            'worktree_ownership': worktree_ownership_record(
+                repo_root,
+                args.target_role,
+                role_branch,
+                existing_path,
+                worktree_entry=existing_branch_worktree,
+            ),
             'branch_prepare': branch_result,
             'created': False,
             'reused': True,
@@ -2348,6 +2423,13 @@ def prepare_role_worktree(args):
             'role_branch': role_branch,
             'worktree_path': str(requested_path),
             'worktree_head': existing_path_worktree.get('head'),
+            'worktree_ownership': worktree_ownership_record(
+                repo_root,
+                args.target_role,
+                role_branch,
+                requested_path,
+                worktree_entry=existing_path_worktree,
+            ),
             'branch_prepare': branch_result,
             'created': False,
             'reused': True,
@@ -2374,6 +2456,13 @@ def prepare_role_worktree(args):
         'role_branch': role_branch,
         'worktree_path': str(requested_path),
         'worktree_head': created_worktree.get('head') if created_worktree else None,
+        'worktree_ownership': worktree_ownership_record(
+            repo_root,
+            args.target_role,
+            role_branch,
+            requested_path,
+            worktree_entry=created_worktree,
+        ),
         'branch_prepare': branch_result,
         'created': True,
         'reused': False,
@@ -2486,12 +2575,7 @@ def inspect_role_worktree(args):
             'worktree_path': str(worktree_path),
         }
 
-    role_map = {
-        'python-team': 'Python Dev',
-        'qa': 'QA',
-        'delivery-architect': 'Delivery Architect',
-    }
-    human_role = role_map[args.target_role]
+    human_role = role_label_for_cli(args.target_role)
     default_output_path, default_review_output_path = default_assignment_paths(repo_root, issue_number, human_role)
     assignment_path = (args.assignment_path.resolve() if args.assignment_path else default_output_path.resolve())
     review_output_path = (args.review_output.resolve() if args.review_output else default_review_output_path.resolve())
@@ -2531,6 +2615,13 @@ def inspect_role_worktree(args):
         'role_branch': role_branch,
         'worktree_path': str(worktree_path),
         'current_branch': current_branch,
+        'worktree_ownership': worktree_ownership_record(
+            repo_root,
+            args.target_role,
+            role_branch,
+            worktree_path,
+            worktree_entry=worktree_entry,
+        ),
         'assignment_artifact': {
             'path': str(assignment_path),
             'review_output_path': str(review_output_path),
@@ -2545,6 +2636,46 @@ def inspect_role_worktree(args):
         },
         'lineage_view': lineage_view,
         'next_step_hint': 'open_worktree_and_begin_role_execution_manually',
+    }
+
+
+def worktree_ownership(args):
+    repo_root = args.repo_root.resolve()
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    if not lineage_view.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'ambiguous_lineage_view',
+            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
+            'lineage_view': lineage_view,
+        }
+
+    issue_number = lineage_view['issue_number']
+    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
+    worktree_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
+    worktree_entry = git_worktree_for_path(repo_root, worktree_path)
+    ownership = worktree_ownership_record(
+        repo_root,
+        args.target_role,
+        role_branch,
+        worktree_path,
+        worktree_entry=worktree_entry,
+    )
+    return {
+        'ok': True,
+        'repo_root': str(repo_root),
+        'package_id_external': args.package_id_external,
+        'brief_id_external': args.brief_id_external,
+        'issue_number': issue_number,
+        'workflow_stage': lineage_view.get('workflow_stage'),
+        'worktree_ownership': ownership,
+        'lineage_view': lineage_view,
+        'next_step_hint': 'role_automation_may_prepare_or_reuse_its_owned_worktree' if not ownership.get('registered') else 'role_automation_may_enter_owned_worktree',
     }
 
 
@@ -3160,6 +3291,15 @@ def parse_args(argv: list[str] | None = None):
     inspect.add_argument('--assignment-path', type=Path)
     inspect.add_argument('--review-output', type=Path)
 
+    ownership = sub.add_parser('worktree-ownership')
+    ownership.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for worktree ownership inspection.')
+    ownership.add_argument('--package-id-external', required=True)
+    ownership.add_argument('--brief-id-external', required=True)
+    ownership.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    ownership.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
+    ownership.add_argument('--role-branch')
+    ownership.add_argument('--worktree-path', type=Path)
+
     entry = sub.add_parser('role-entry')
     entry.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for role entry guidance.')
     entry.add_argument('--package-id-external', required=True)
@@ -3271,6 +3411,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'inspect-role-worktree':
         result = inspect_role_worktree(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'worktree-ownership':
+        result = worktree_ownership(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

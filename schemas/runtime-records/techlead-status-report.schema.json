@@ -183,7 +183,8 @@
         "reset_reason",
         "current_packet_type",
         "current_packet_message_id",
-        "current_packet_queue"
+        "current_packet_queue",
+        "worktree_ownership"
       ],
       "properties": {
         "canonical_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
@@ -197,7 +198,44 @@
         "reset_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "current_packet_type": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "current_packet_message_id": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
-        "current_packet_queue": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+        "current_packet_queue": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "worktree_ownership": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/worktreeOwnership"}]}
+      }
+    },
+    "worktreeOwnership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownership_model",
+        "lineage_owner_role",
+        "runtime_owner_role",
+        "runtime_owner_role_cli",
+        "admin_surface_role",
+        "ownership_source",
+        "role_branch",
+        "worktree_path",
+        "default_worktree_path",
+        "uses_default_worktree_path",
+        "registered",
+        "checked_out_branch",
+        "branch_aligned",
+        "worktree_head"
+      ],
+      "properties": {
+        "ownership_model": {"type": "string", "minLength": 1},
+        "lineage_owner_role": {"type": "string", "minLength": 1},
+        "runtime_owner_role": {"type": "string", "minLength": 1},
+        "runtime_owner_role_cli": {"type": "string", "minLength": 1},
+        "admin_surface_role": {"type": "string", "minLength": 1},
+        "ownership_source": {"type": "string", "minLength": 1},
+        "role_branch": {"type": "string", "minLength": 1},
+        "worktree_path": {"type": "string", "minLength": 1},
+        "default_worktree_path": {"type": "string", "minLength": 1},
+        "uses_default_worktree_path": {"type": "boolean"},
+        "registered": {"type": "boolean"},
+        "checked_out_branch": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "branch_aligned": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+        "worktree_head": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       }
     },
     "automations": {
