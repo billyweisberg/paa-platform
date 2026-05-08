@@ -41,6 +41,30 @@ ROLE_CLI_BY_SUFFIX = {
 }
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 QUEUE_PREVIEW_DEPTH = 10
+ROLE_QUEUE_GATE = {
+    'delivery-architect': {
+        'queue_name': 'fractal-core-architecture',
+        'to_role': 'Delivery Architect',
+        'schema_types': {'techlead_assignment_packet'},
+    },
+    'python-team': {
+        'queue_name': 'fractal-core-python',
+        'to_role': 'Python Dev',
+        'schema_types': {'techlead_assignment_packet', 'architect_cycle_packet'},
+    },
+    'qa': {
+        'queue_name': 'fractal-core-qa',
+        'to_role': 'QA',
+        'schema_types': {'techlead_assignment_packet'},
+    },
+}
+TECHLEAD_GATE_SCHEMA_TYPES = {
+    'slice_result_packet',
+    'worker_result_packet',
+    'qa_verification_packet',
+    'delivery_review_packet',
+    'techlead_decision_packet',
+}
 
 
 def repo_auth_script(repo_root: Path) -> Path:
@@ -599,6 +623,161 @@ def newest_packet(*packets):
             latest = packet
             latest_dt = created_at
     return latest
+
+
+def queue_gate_candidates(
+    queues,
+    *,
+    queue_name: str | None = None,
+    to_role: str | None = None,
+    schema_types: set[str] | None = None,
+):
+    candidates = []
+    normalized_to_role = handoff_runtime.normalize_role_name(to_role) if to_role else None
+    for current_queue_name, queue_data in queues.items():
+        if queue_name and current_queue_name != queue_name:
+            continue
+        preview = queue_data.get('preview') or []
+        for item in preview:
+            payload = item.get('payload_preview') or {}
+            payload_to_role = handoff_runtime.normalize_role_name(payload.get('to_role'))
+            if normalized_to_role and payload_to_role != normalized_to_role:
+                continue
+            if schema_types and payload.get('schema_type') not in schema_types:
+                continue
+            candidate = dict(payload)
+            candidate['queue_name'] = current_queue_name
+            candidate['issue_number'] = issue_number_from_packet_preview(payload)
+            candidates.append(candidate)
+    candidates.sort(
+        key=lambda candidate: parse_created_at(candidate.get('created_at')) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    return candidates
+
+
+def active_workflow_context(repo_root: Path, project_slug: str):
+    current, manifest = load_authority(repo_root)
+    tasks = current.get('tasks', [])
+    current_task = tasks[0] if tasks else None
+    queues = queue_state(repo_root)
+    issue = None
+    pr = None
+    qa_packet = None
+    workflow_stage = 'blocked'
+    owner_role = 'Unknown'
+    recommended_actions = []
+    if current_task:
+        qa_packet = latest_qa_packet(current_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
+        fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
+        issue, pr = github_state(current_task['issue_number'], fallback_pr_number=fallback_pr_number)
+        workflow_stage, owner_role, _escalations, recommended_actions, _unattended_safe = derive_workflow(
+            current_task,
+            issue,
+            pr,
+            qa_packet,
+            queues,
+        )
+    return {
+        'authority': current,
+        'manifest': manifest,
+        'current_task': current_task,
+        'queues': queues,
+        'issue': issue,
+        'pr': pr,
+        'qa_packet': qa_packet,
+        'workflow_stage': workflow_stage,
+        'owner_role': owner_role,
+        'recommended_actions': recommended_actions,
+        'project_slug': project_slug,
+    }
+
+
+def automation_preflight(args):
+    repo_root = args.repo_root.resolve()
+    target_role = args.target_role
+    context = active_workflow_context(repo_root, args.project_slug)
+    queues = context['queues']
+    current_task = context['current_task']
+    active_issue_number = current_task.get('issue_number') if current_task else None
+    workflow_stage = context['workflow_stage']
+    owner_role = context['owner_role']
+
+    queue_snapshot = {
+        queue_name: {
+            'messages_ready': queue_data.get('messages_ready'),
+            'messages_unacknowledged': queue_data.get('messages_unacknowledged'),
+        }
+        for queue_name, queue_data in queues.items()
+    }
+
+    if target_role == 'techlead':
+        queue_candidates = queue_gate_candidates(
+            queues,
+            to_role='TechLead',
+            schema_types=TECHLEAD_GATE_SCHEMA_TYPES,
+        )
+        owner_match = owner_role == 'TechLead'
+        recommendation_match = any(
+            (action.get('target_role') or '') == 'TechLead'
+            for action in (context.get('recommended_actions') or [])
+        )
+        should_invoke_model = bool(queue_candidates or owner_match or recommendation_match)
+        if queue_candidates:
+            gate_reason = 'queue_packet_for_techlead'
+        elif owner_match:
+            gate_reason = 'active_techlead_work_in_progress'
+        elif recommendation_match:
+            gate_reason = 'recommended_action_targets_techlead'
+        else:
+            gate_reason = 'no_techlead_work_detected'
+    else:
+        gate = ROLE_QUEUE_GATE[target_role]
+        queue_candidates = queue_gate_candidates(
+            queues,
+            queue_name=gate['queue_name'],
+            to_role=gate['to_role'],
+            schema_types=gate['schema_types'],
+        )
+        owner_match = owner_role == ROLE_LABEL_BY_CLI[target_role]
+        should_invoke_model = bool(queue_candidates or owner_match)
+        if queue_candidates:
+            gate_reason = 'claimable_assignment_packet_available'
+        elif owner_match:
+            gate_reason = 'active_role_work_in_progress'
+        else:
+            gate_reason = 'no_role_work_detected'
+
+    return {
+        'ok': True,
+        'repo_root': str(repo_root),
+        'target_role': target_role,
+        'role_label': 'TechLead' if target_role == 'techlead' else ROLE_LABEL_BY_CLI[target_role],
+        'should_invoke_model': should_invoke_model,
+        'skip_model_invocation': not should_invoke_model,
+        'gate_reason': gate_reason,
+        'workflow_stage': workflow_stage,
+        'current_owner_role': owner_role,
+        'active_issue_number': active_issue_number,
+        'queue_candidates': [
+            {
+                'message_id': candidate.get('message_id'),
+                'schema_type': candidate.get('schema_type'),
+                'queue_name': candidate.get('queue_name'),
+                'issue_number': candidate.get('issue_number'),
+                'from_role': candidate.get('from_role'),
+                'to_role': candidate.get('to_role'),
+                'created_at': candidate.get('created_at'),
+            }
+            for candidate in queue_candidates
+        ],
+        'queue_snapshot': queue_snapshot,
+        'next_step_hint': (
+            'invoke_model_for_role_run'
+            if should_invoke_model
+            else 'exit_without_model_invocation'
+        ),
+    }
 
 
 def derive_lineage_section(current_task, pr, queues, escalations):
@@ -1333,14 +1512,14 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
     return stage, owner, escalations, recommended, unattended_safe
 
 
-def build_report():
-    current, manifest = load_authority()
+def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJECT_SLUG):
+    current, manifest = load_authority(repo_root)
     tasks = current.get('tasks', [])
     current_task = tasks[0] if tasks else None
-    queues = queue_state()
-    auto_roles, architect_missing = automation_state()
+    queues = queue_state(repo_root)
+    auto_roles, architect_missing = automation_state(repo_root)
     authority_version = manifest['project']['authority_version']
-    authority_status, mirrors = mirror_status(authority_version)
+    authority_status, mirrors = mirror_status(authority_version, repo_root)
 
     active_work = None
     escalations = []
@@ -1377,7 +1556,7 @@ def build_report():
         }
 
     if report_task:
-        qa_packet = latest_qa_packet(report_task['issue_number'])
+        qa_packet = latest_qa_packet(report_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
         fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
         issue, pr = github_state(report_task['issue_number'], fallback_pr_number=fallback_pr_number)
         workflow_stage, owner_role, wf_escalations, wf_recommended, wf_safe = derive_workflow(report_task, issue, pr, qa_packet, queues)
@@ -1431,7 +1610,7 @@ def build_report():
         DEFAULT_DB_CONTAINER,
         DEFAULT_DB_NAME,
         DEFAULT_DB_USER,
-        DEFAULT_PROJECT_SLUG,
+        project_slug,
         active_issue_number,
     )
 
@@ -4013,6 +4192,7 @@ def parse_args(argv: list[str] | None = None):
     sub = parser.add_subparsers(dest='command')
 
     status = sub.add_parser('status')
+    status.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for TechLead status generation.')
     status.add_argument('--output', type=Path, help='Write the JSON report to this path.')
     status.add_argument('--schema', type=Path, default=DEFAULT_SCHEMA, help='Schema path to use with --validate-schema.')
     status.add_argument('--validate-schema', action='store_true', help='Validate the generated report against the TechLead JSON schema.')
@@ -4225,13 +4405,18 @@ def parse_args(argv: list[str] | None = None):
     decision.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
     decision.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
 
+    preflight = sub.add_parser('automation-preflight')
+    preflight.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for non-model automation preflight.')
+    preflight.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    preflight.add_argument('--target-role', choices=['techlead', 'delivery-architect', 'python-team', 'qa'], required=True)
+
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
     if args.command in {None, 'status'}:
-        report = build_report()
+        report = build_report(args.repo_root.resolve(), args.project_slug)
         if args.validate_schema:
             validate_report(report, args.schema)
         persistence = None
@@ -4332,6 +4517,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'emit-decision':
         result = emit_decision(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'automation-preflight':
+        result = automation_preflight(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

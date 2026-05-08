@@ -16,6 +16,7 @@ CONSUMER_COMMANDS = (
     'queue-list-claims',
     'queue-ack',
     'queue-requeue',
+    'automation-preflight',
     'techlead-status',
     'techlead-emit-next-assignment',
     'techlead-lineage',

@@ -161,6 +161,10 @@ def main() -> int:
             parser.error('queue-requeue requires --repo-root and --claim-id')
         return run_queue_command(Path(args.repo_root).resolve(), ['requeue', '--claim-id', args.claim_id, *remainder])
 
+    if args.command == 'automation-preflight':
+        argv = ['automation-preflight', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'techlead-status':
         return techlead_main(['status', *remainder])
 
