@@ -1,12 +1,12 @@
 ---
 name: fractal-core-authority
-description: Repo-local authority and packet compilation commands for producer or consumer repos using installed PAA runtime.
+description: Repo-local authority inspection and packet compilation commands for producer or consumer repos using installed PAA runtime.
 ---
 
-Branch policy for the full implementation cycle:
-- Use one shared branch per issue: `issue-<issue_number>`.
-- Do not invent role-specific or random branch names.
-- Delivery Architect, Dev, and QA all work on the same issue branch for that issue.
+Lineage policy:
+- Canonical issue branch: `issue-<issue_number>`
+- Deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-python-team`, and `issue-<issue_number>-qa` are valid only when TechLead authorizes isolated role execution.
+- Do not invent random branch names.
 
 Use repo-local authority inspection on any repo with installed PAA runtime:
 
@@ -36,22 +36,47 @@ Use repo-local producer tooling only in the canonical producer repo:
   --worker-role python-team \
   --worker-family implementation \
   --result-type <worker_result_type> \
-  --repo {{REPO_ROOT}} \
+  --repo <prepared_role_worktree> \
   --issue-number <issue_number> \
   --issue-url <issue_url> \
   --pr-number <pr_number> \
   --pr-url <pr_url> \
-  --branch issue-<issue_number> \
+  --branch <canonical_or_authorized_role_branch> \
   --worker-input-file <worker_input_json> \
   --source-assignment-path <techlead_assignment_packet_json> \
   --source-assignment-type implement_authorized_slice \
+  --persist-db
+{{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-delivery-review-packet \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --repo <prepared_role_worktree> \
+  --issue-number <issue_number> \
+  --issue-url <issue_url> \
+  --pr-number <pr_number> \
+  --pr-url <pr_url> \
+  --branch <canonical_or_authorized_role_branch> \
+  --result-type <delivery_result_type> \
+  --delivery-input-file <delivery_input_json> \
+  --source-assignment-path <techlead_assignment_packet_json> \
+  --source-assignment-type delivery_architecture_review \
+  --persist-db
+{{REPO_ROOT}}/.codex/paa/bin/paa-producer authority materialize-qa-verification-packet \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --repo <prepared_role_worktree> \
+  --issue-number <issue_number> \
+  --issue-url <issue_url> \
+  --pr-number <pr_number> \
+  --pr-url <pr_url> \
+  --branch <canonical_or_authorized_role_branch> \
+  --qa-input-file <qa_input_json> \
   --persist-db
 ```
 
 For legacy compatibility only, `materialize-slice-result-packet` still exists.
 Do not treat it as the active Python bridge default.
 
-Do not emit producer packets from a consumer repo. On consumer repos, use authority inspection plus `paa-consumer` queue and TechLead commands instead.
+Do not emit producer packets from a consumer repo unless the role-execution contract explicitly points to the repo-local producer wrapper as part of the return path.
 
 Use repo-local readiness tooling:
 
