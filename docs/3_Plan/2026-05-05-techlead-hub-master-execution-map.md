@@ -402,6 +402,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-automation-preflight-validation.md`
 - execution-environment contract:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+- role skill hardening validation note:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-role-skill-hardening-validation.md`
 
 ### Roadmap decision after Phase I gate pass
 - stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
@@ -449,10 +451,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. create the missing dedicated Delivery Architect execution skill and harden the Python Dev/QA role skills into real execution-agent skills
-2. only then execute the deliberate cutover/unpause sequence for the current proven role set
-3. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
-4. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
+1. execute the deliberate cutover/unpause sequence for the current proven role set
+2. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
+3. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
 
