@@ -296,15 +296,12 @@ After prompt and skill alignment:
 
 ## Roadmap choice after this plan
 
-The right next roadmap choice is:
-- stay in `Phase I`
-- finish automation execution readiness for the current proven role set
-- only after that return to deferred multi-worker expansion
+This plan remains useful for automation readiness, but it is no longer the top-level sequencing authority.
 
-Reason:
-- current role-set transport and lifecycle are proven
-- the next real risk is execution-agent readiness, not packet design
-- returning to multi-worker expansion before fixing automation execution semantics would compound the wrong layer
+Updated rule:
+- worker-family expansion is now promoted before further automation cutover work
+- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the active sequencing authority for target-state expansion
+- resume the remaining automation pilot phases only after automation surfaces are reconciled with that target worker-family model
 
 ## Immediate next implementation slice
 

@@ -30,6 +30,7 @@ This map is synthesized from:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-handoff-to-role-worktree.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-inspect-role-worktree.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-role-entry.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
 
 ## Target Model
 
@@ -434,9 +435,10 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-phase1-ui-visibility-validation.md`
 
 ### Roadmap decision after Phase I gate pass
-- stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
-- do not jump back to multi-worker expansion yet
-- return to deferred worker-family expansion only after current-role-set automations are explicit, stable, and runnable
+- the prior defer-until-after-cutover rule is superseded
+- worker-family expansion is now promoted before further automation cutover work
+- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the active authority for that expansion
+- resume automation cutover and pilot work only after automation surfaces are reconciled with the target worker-family model
 
 ## Completed Slices Ledger
 
@@ -489,9 +491,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute Phase I4 Phase 2 no-work poll and non-invocation validation
-2. continue through the remaining Phase I4 pilot phases before final deliberate unpause
-3. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
+1. execute Stage W1 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+2. then execute Stage W2 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+3. keep the remaining Phase I4 pilot work paused until automation surfaces are reconciled with the target worker-family model
 
 ## Guardrails
 
