@@ -404,6 +404,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
 - role skill hardening validation note:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-role-skill-hardening-validation.md`
+- current proven role set test plan:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 
 ### Roadmap decision after Phase I gate pass
 - stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
