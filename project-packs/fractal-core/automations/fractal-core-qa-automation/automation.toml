@@ -14,6 +14,7 @@ Receive assignments from TechLead and return QA verification packets only to Tec
 Use `issue-<issue_number>` as the canonical issue branch unless TechLead authorizes an isolated role execution surface.
 When isolated execution is authorized, create or reuse the deterministic QA role branch/worktree surface such as `issue-<issue_number>-qa`.
 Do not invent unapproved branch names or route directly to Architect.
+Use the installed logged preflight helper before any other role action.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=15"

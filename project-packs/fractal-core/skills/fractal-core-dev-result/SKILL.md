@@ -9,24 +9,33 @@ Role:
 - Return `worker_result_packet` only to `TechLead`.
 - `slice_result_packet` remains legacy-compatible only.
 
+Automation logging:
+- bootstrap repo-local run logging before preflight through:
+  - `{{REPO_ROOT}}/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
+
 Role identity contract:
 - The calling automation must provide:
   - `worker role cli`
   - `worker display name`
   - `worker family`
   - `role branch suffix`
+- `automation id`
 - Substitute those values into the commands and expectations below.
 - Example:
-  - `Python Dev` / `python-team` / `implementation` / `dev`
+  - `Python Dev` / `python-team` / `implementation` / `dev` / `python-team-automation`
 
 Execution contract:
 - Launch from the canonical consumer repo root: `{{REPO_ROOT}}`
 - Poll for work without model invocation first:
 
 ```bash
-{{REPO_ROOT}}/.codex/paa/bin/paa-consumer automation-preflight \
+{{REPO_ROOT}}/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh \
   --repo-root {{REPO_ROOT}} \
-  --target-role <worker_role_cli>
+  --automation-id <automation_id> \
+  --role-key <worker_role_cli> \
+  --role-display-name <worker_display_name> \
+  --target-role <worker_role_cli> \
+  --phase preflight
 ```
 
 - If `should_invoke_model = false`, exit without further work.

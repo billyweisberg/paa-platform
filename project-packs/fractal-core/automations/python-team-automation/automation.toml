@@ -17,11 +17,13 @@ Role identity for this automation:
 - worker role cli: `python-team`
 - worker display name: `Python Dev`
 - worker family: `implementation`
+- automation id: `python-team-automation`
 - deterministic role branch suffix: `dev`
 When following the Team Worker execution skill, substitute `python-team` anywhere the skill shows `<worker_role_cli>`.
 Use `issue-<issue_number>` as the canonical issue branch unless TechLead authorizes an isolated role execution surface.
 When isolated execution is authorized, create or reuse the deterministic Python role branch/worktree surface such as `issue-<issue_number>-dev`.
 Do not invent unapproved branch names or route directly to QA.
+Bootstrap repo-local automation logging through the installed preflight helper before any other role action.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"

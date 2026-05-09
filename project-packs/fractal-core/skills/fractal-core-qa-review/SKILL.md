@@ -13,9 +13,13 @@ Execution contract:
 - Poll for work without model invocation first:
 
 ```bash
-{{REPO_ROOT}}/.codex/paa/bin/paa-consumer automation-preflight \
+{{REPO_ROOT}}/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh \
   --repo-root {{REPO_ROOT}} \
-  --target-role qa
+  --automation-id fractal-core-qa-automation \
+  --role-key qa \
+  --role-display-name "QA" \
+  --target-role qa \
+  --phase preflight
 ```
 
 - If `should_invoke_model = false`, exit without further work.

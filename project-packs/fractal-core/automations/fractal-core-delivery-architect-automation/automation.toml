@@ -14,6 +14,7 @@ Use `issue-<issue_number>` as the canonical issue branch unless TechLead authori
 When isolated execution is authorized, create or reuse the deterministic Delivery Architect role branch/worktree surface such as `issue-<issue_number>-delivery`.
 Do not invent random or unapproved branch names.
 Do not depend on producer repo paths or deprecated `$HOME/.codex` runtime assets.
+Use the installed logged preflight helper before any other role action.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"

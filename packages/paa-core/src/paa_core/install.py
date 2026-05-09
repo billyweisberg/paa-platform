@@ -107,6 +107,17 @@ def _copy_optional_tree(src: Path, dst: Path) -> None:
     shutil.copytree(src, dst)
 
 
+def _install_selected_files(src_root: Path, dst_root: Path, names: list[str]) -> None:
+    dst_root.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        src = src_root / name
+        if not src.exists():
+            raise FileNotFoundError(f"Required runtime helper not found: {src}")
+        _copy_file(src, dst_root / name)
+        if src.suffix == ".sh" or src.suffix == ".py":
+            (dst_root / name).chmod(0o755)
+
+
 def _render_text_template(src: Path, dst: Path, replacements: dict[str, str]) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     text = src.read_text()
@@ -265,6 +276,7 @@ def _install_common_layout(
 
     ensure_directory(codex_root / "bin")
     ensure_directory(codex_root / "lib")
+    ensure_directory(codex_root / "scripts" / "runtime")
     ensure_directory(codex_root / 'schemas' / 'authority-package')
     ensure_directory(codex_root / 'schemas' / 'handoff-packets')
     ensure_directory(codex_root / 'schemas' / 'runtime-records')
@@ -318,6 +330,7 @@ def _install_common_layout(
 def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
     """Install or update the producer-mode repo-local PAA payload."""
 
+    root = platform_repo_root()
     result = _install_common_layout(
         repo_root,
         mode="producer",
@@ -332,6 +345,15 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
     ensure_directory(result.runtime_data_root / "publish")
     ensure_directory(result.runtime_data_root / "cache")
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
+    _install_selected_files(
+        root / "scripts" / "runtime",
+        result.codex_install_root / "scripts" / "runtime",
+        [
+            "bootstrap_automation_logging.sh",
+            "log_automation_event.py",
+            "run_automation_preflight_with_logging.sh",
+        ],
+    )
     _install_selected_rendered_dirs(
         pack_root / 'skills',
         repo_root / '.codex' / 'skills',
@@ -359,6 +381,7 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
 def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
     """Install or update the consumer-mode repo-local PAA payload."""
 
+    root = platform_repo_root()
     result = _install_common_layout(
         repo_root,
         mode="consumer",
@@ -374,6 +397,15 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         ensure_directory(result.runtime_data_root / name)
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-consumer', 'paa_consumer')
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
+    _install_selected_files(
+        root / "scripts" / "runtime",
+        result.codex_install_root / "scripts" / "runtime",
+        [
+            "bootstrap_automation_logging.sh",
+            "log_automation_event.py",
+            "run_automation_preflight_with_logging.sh",
+        ],
+    )
     _install_selected_rendered_dirs(
         pack_root / 'skills',
         repo_root / '.codex' / 'skills',

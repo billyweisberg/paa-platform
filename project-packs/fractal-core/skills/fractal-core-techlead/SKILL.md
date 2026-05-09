@@ -13,6 +13,21 @@ Phase B adds first-class TechLead packet artifacts:
 - `techlead_decision_packet` records the durable routing, pause, reset, merge-prep, or escalation decision
 - keep assignment sending operator-invoked in this phase; do not assume auto-dispatch
 
+Automation preflight with logging:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh \
+  --repo-root {{REPO_ROOT}} \
+  --automation-id fractal-core-techlead-automation \
+  --role-key techlead \
+  --role-display-name "TechLead" \
+  --target-role techlead \
+  --phase preflight
+```
+
+If `should_invoke_model = false`, exit without further work.
+If `should_invoke_model = true`, continue with repo-local TechLead runtime only.
+
 Operator-facing dispatch path:
 
 ```bash

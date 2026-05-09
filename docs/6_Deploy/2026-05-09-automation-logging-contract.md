@@ -89,7 +89,10 @@ Recommended defaults:
 ## Bootstrap helper
 
 Current helper:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+- source:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+- installed consumer path:
+  - `.codex/paa/scripts/runtime/bootstrap_automation_logging.sh`
 
 Purpose:
 - create the run directory
@@ -113,7 +116,10 @@ Usage shape:
 ## Event append helper
 
 Current helper:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
+- source:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
+- installed consumer path:
+  - `.codex/paa/scripts/runtime/log_automation_event.py`
 
 Purpose:
 - append one JSONL event to the current run log
@@ -129,6 +135,21 @@ Example:
   --message "no work present" \
   --extra-json '{"should_invoke_model": false}'
 ```
+
+## Logged preflight helper
+
+Current helper:
+- source:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_automation_preflight_with_logging.sh`
+- installed consumer path:
+  - `.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
+
+Purpose:
+- bootstrap a run log
+- execute `automation-preflight`
+- persist the raw preflight JSON
+- append a structured preflight event
+- print the preflight JSON back to stdout for the caller
 
 ## Minimum event fields
 
@@ -194,6 +215,19 @@ That gives us durable proof that:
 - no model invocation was needed
 
 This is especially important for `Stage W7 Phase 2`.
+
+## Current practical boundary
+
+This contract currently starts at the first runtime-controlled step the automation can execute.
+
+That means:
+- we can now log the no-work preflight path and later runtime steps
+- we can read those repo-local logs after a UI-launched automation run
+
+It does not mean:
+- we can observe a hidden pre-model scheduler hook inside the Codex app itself
+
+So the current logging truth begins when the automation executes the installed logged-preflight helper, not before.
 
 ## Stdout and stderr capture
 
