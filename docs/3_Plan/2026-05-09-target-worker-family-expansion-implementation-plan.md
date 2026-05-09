@@ -428,11 +428,12 @@ This plan is complete when:
 - Stage W7
   - automation pilot work has now been re-baselined against the Team Worker Roles model
   - Stage W7 Phase 0 readiness snapshot has passed
+  - Stage W7 Phase 1 UI visibility validation has passed
 - app/UI-visible proof for the expanded Team Worker launch surface still remains to be executed
 
 ## Immediate Next Slice
 
 1. execute Stage W7:
    - use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the pilot authority
-   - continue from Phase 1 UI visibility validation
-2. then validate app/UI visibility and launch behavior against the Team Worker-aware registration set
+   - continue from Phase 2 no-work poll and non-invocation validation
+2. then validate app/UI launch behavior against the Team Worker-aware registration set
