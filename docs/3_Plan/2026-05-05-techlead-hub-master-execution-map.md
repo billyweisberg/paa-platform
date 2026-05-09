@@ -529,10 +529,10 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- execute the Team Worker-aware automation pilot baseline from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+- continue the Team Worker-aware automation pilot from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
-Immediately after that:
-- verify app/UI visibility and launch behavior for the Team Worker-aware registration set
+Immediate next step:
+- execute `Stage W7 Phase 3: Team Worker single-role launch environment validation`
 - keep the architecture-queue preview-depth limitation visible as an observability hardening follow-up
 
 That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.

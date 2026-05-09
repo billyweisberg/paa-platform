@@ -277,5 +277,6 @@ At the moment this plan is written:
 - pilot execution remains paused
 - the launcher/bootstrap layer is now aligned enough to resume the pilot
 - repo-local automation logging is now available before resuming `Phase 2`
-- the next live step remains `Phase 2: no-work poll and non-invocation validation`
+- `Phase 2: no-work poll and non-invocation validation` has passed
+- the next live step remains `Phase 3: Team Worker single-role launch environment validation`
 - no final unpause decision should be made until this W7 plan is executed
