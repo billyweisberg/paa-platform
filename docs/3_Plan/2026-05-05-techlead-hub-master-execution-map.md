@@ -489,14 +489,13 @@ This is the short completed ledger we should carry forward instead of relying on
 - broader Team Worker Roles expansion beyond the proven `Python Dev` generic lane
 - additional Delivery Architect result outcomes beyond `ready_for_dev`
 - `queue-check` preview depth remains shallow on architecture-queue history; routing/status now tolerate it, but operator visibility is still incomplete and should be hardened before broader scale-out
-- installed consumer `techlead-status --validate-schema` currently has a vendored `jsonschema` / `rpds` import defect that should be handled as operational hardening
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. finish the remaining launcher/bootstrap details inside Stage W5 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-2. then execute Stage W7 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-3. keep the remaining Phase I4 pilot work paused until automation surfaces are reconciled with the Team Worker Roles model
+1. execute Stage W7 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+2. use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the active automation pilot authority
+3. treat `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md` as superseded
 
 ## Guardrails
 
@@ -530,10 +529,10 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- finish the remaining launcher/bootstrap details for Team Worker Roles
+- execute the Team Worker-aware automation pilot baseline from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
 Immediately after that:
-- return to the paused automation pilot work once the launch surfaces match the target model
-- keep the `techlead-status --validate-schema` vendor defect visible as a hardening follow-up
+- verify app/UI visibility and launch behavior for the Team Worker-aware registration set
+- keep the architecture-queue preview-depth limitation visible as an observability hardening follow-up
 
 That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.

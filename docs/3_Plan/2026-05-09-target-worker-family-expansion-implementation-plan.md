@@ -344,6 +344,16 @@ This plan is complete when:
   - initial installed-runtime validation passed for `Docs Dev`
 
 - Stage W5 has an initial implementation pass
+  - home-level UI registrations now exist for:
+    - `fractal-core-techlead-automation`
+    - `fractal-core-delivery-architect-automation`
+    - `python-team-automation`
+    - `fractal-core-qa-automation`
+    - `frontend-dev-automation`
+    - `backend-dev-automation`
+    - `infra-dev-automation`
+    - `docs-dev-automation`
+  - home-level UI registration prompts are now synchronized to the repo-local installed Team Worker-aware automation definitions
   - the shared Team Worker execution skill contract is now role-agnostic
   - project-pack automation definitions now exist for:
     - `python-team`
@@ -353,6 +363,7 @@ This plan is complete when:
     - `docs-dev`
   - consumer install manifest now installs those Team Worker automations
   - installed consumer runtime now carries those automation definitions
+  - installed consumer vendoring now validates `techlead-status --validate-schema` successfully again
 
 - Stage W6 is complete
   - `TechLead -> Docs Dev -> TechLead` now succeeds on the generic worker bridge
@@ -360,14 +371,12 @@ This plan is complete when:
 
 ### Still open in this plan
 
-- Stage W6
 - Stage W7
-  - automation pilot work remains paused until the automation surfaces match the Team Worker Roles model
-- automation launcher/bootstrap still needs a final app/UI-ready cutover pass
+  - automation pilot work must now be re-baselined against the Team Worker Roles model before further pilot execution
+- app/UI-visible proof for the expanded Team Worker launch surface still remains to be executed
 
 ## Immediate Next Slice
 
-1. execute Stage W5:
-   - finish the remaining launcher/bootstrap cutover details for Team Worker Roles
-2. then execute Stage W7:
-   - re-baseline the paused automation pilot work against the Team Worker Roles model
+1. execute Stage W7:
+   - use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the pilot authority
+2. then validate app/UI visibility and launch behavior against the Team Worker-aware registration set

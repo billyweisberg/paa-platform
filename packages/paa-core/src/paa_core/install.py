@@ -173,6 +173,7 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
         shutil.rmtree(vendor_root)
     vendor_root.mkdir(parents=True, exist_ok=True)
     if shutil.which("uv"):
+        vendor_python = "3.12"
         subprocess.run(
             [
                 "uv",
@@ -180,7 +181,7 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
                 "install",
                 "--quiet",
                 "--python",
-                sys.executable,
+                vendor_python,
                 "--target",
                 str(vendor_root),
                 *package_specs,
@@ -191,9 +192,15 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
         if lock_path.exists():
             lock_path.unlink()
         return
+    vendor_python = shutil.which("python3.12")
+    if vendor_python is None:
+        if sys.version_info >= (3, 12):
+            vendor_python = sys.executable
+        else:
+            raise RuntimeError("PAA vendor install requires python3.12 or newer when uv is unavailable.")
     subprocess.run(
         [
-            sys.executable,
+            vendor_python,
             '-m',
             'pip',
             'install',
@@ -227,6 +234,9 @@ def _write_wrapper(script_path: Path, module_name: str) -> None:
         f"    exec uv run --directory \"$RUNTIME_ROOT\" --python 3.12 --no-project python -m {module_name} \"$@\"\n"
         "  fi\n"
         f"  exec uv run --python 3.12 --isolated python -m {module_name} \"$@\"\n"
+        "fi\n\n"
+        "if command -v python3.12 >/dev/null 2>&1; then\n"
+        f"  exec python3.12 -m {module_name} \"$@\"\n"
         "fi\n\n"
         "if command -v python3 >/dev/null 2>&1; then\n"
         "  PYTHON_OK=\"$(python3 -c 'import sys; print(int(sys.version_info >= (3, 12)))')\"\n"

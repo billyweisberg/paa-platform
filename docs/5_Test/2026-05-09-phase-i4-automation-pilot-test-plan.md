@@ -1,3 +1,6 @@
+Superseded by:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+
 # Phase I4 Automation Pilot Test Plan
 
 ## Purpose
