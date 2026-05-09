@@ -19,6 +19,7 @@ Use this contract together with:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/config/team-worker-roles.json`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 This document supersedes any earlier Python-only automation interpretation when the target role is a Team Worker Role.
 
@@ -141,6 +142,22 @@ Required behavior:
 - if `should_invoke_model = true`, continue with repo-local runtime only
 
 Success for this layer means Team Worker polling is cheap when no work exists.
+
+## Logging contract
+
+Before live pilot execution resumes, Team Worker automations should bootstrap repo-local automation logging through:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+
+They should append structured lifecycle events through:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
+
+The detailed logging authority is:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
+
+Minimum expectation for no-work polling:
+- create a run envelope
+- log at least one preflight event
+- preserve proof that the model was not invoked
 
 ## Worktree transition contract
 

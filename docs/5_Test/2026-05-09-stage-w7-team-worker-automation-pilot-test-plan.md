@@ -13,6 +13,7 @@ This plan exists so we stop testing a temporary automation surface and instead v
 - repo-local installed runtime wrappers
 - deterministic no-work preflight
 - deterministic role worktree transition
+- repo-local automation logging
 
 ## Pilot scope
 
@@ -62,6 +63,8 @@ without widening immediately into every possible worker lane at once.
   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/team-worker-roles.json`
 - home-level UI registration root:
   - `/Users/billyweisberg/.codex/automations`
+- automation logging contract:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 Default proving fixture:
 - issue: `106`
@@ -157,6 +160,7 @@ Confirm that Team Worker-aware automations still honor the deterministic no-work
 - empty queue baseline
 - app-launched no-work automation runs
 - `automation-preflight` runtime behavior
+- automation logging bootstrap
 
 ### Expected outputs
 - no model invocation for:
@@ -166,6 +170,8 @@ Confirm that Team Worker-aware automations still honor the deterministic no-work
   - `QA`
   - `Docs Dev`
 - no worktree side effects
+- one durable log envelope per no-work run
+- preflight event evidence preserved for each tested role
 
 ### Success
 - generalized Team Worker launcher prompts did not break non-model preflight behavior
@@ -174,6 +180,8 @@ Confirm that Team Worker-aware automations still honor the deterministic no-work
 - user-visible app behavior
 - runtime preflight checks
 - queue checks
+- run-log inspection under:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/`
 
 ### Knobs
 - which role to test first
@@ -268,4 +276,6 @@ One of:
 At the moment this plan is written:
 - pilot execution remains paused
 - the launcher/bootstrap layer is now aligned enough to resume the pilot
+- repo-local automation logging is now available before resuming `Phase 2`
+- the next live step remains `Phase 2: no-work poll and non-invocation validation`
 - no final unpause decision should be made until this W7 plan is executed
