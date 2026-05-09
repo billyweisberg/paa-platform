@@ -472,6 +472,7 @@ This is the short completed ledger we should carry forward instead of relying on
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
 - additional Delivery Architect result outcomes beyond `ready_for_dev`
+- `queue-check` preview depth remains shallow on architecture-queue history; routing/status now tolerate it, but operator visibility is still incomplete and should be hardened before broader scale-out
 
 ## Remaining Slices By Priority
 

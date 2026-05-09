@@ -65,6 +65,15 @@ The gate is satisfied only when the current role set is:
 - and safe enough to unpause deliberately rather than experimentally
 
 
+## Residual visibility limitation
+
+- `queue-check` preview on `fractal-core-architecture` can stay shallow and may show only the oldest visible packet while newer pending packets still influence TechLead derivation and top-level status correctly.
+- Current assessment:
+  - not a blocker for the current proven role set
+  - still a real observability defect
+- Required follow-up before broader scale-out:
+  - improve queue preview/reporting depth so operators and future automations can inspect pending architecture-queue history without ambiguity
+
 ## Current gate result
 
 Canonical Phase I E2E result:
