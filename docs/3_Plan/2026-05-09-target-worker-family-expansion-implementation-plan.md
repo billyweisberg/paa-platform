@@ -36,6 +36,60 @@ Use this plan together with:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-05-phase-g-worker-result-and-delivery-review-contracts.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-05-techlead-hub-master-execution-map.md`
 
+## Work Area Checklist
+
+- [x] dynamic role registry
+  - status: complete
+  - authority:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/config/team-worker-roles.json`
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+
+- [ ] runtime role derivation
+  - status: in progress, substantial
+  - done:
+    - assignment targeting is registry-aware
+    - worker result acceptance is registry-aware
+    - key role bridge surfaces accept Team Worker role keys
+  - remaining:
+    - sweep ancillary normalization, reporting, and edge-path surfaces to remove remaining fixed-role assumptions
+
+- [ ] routing and queue policy
+  - status: in progress, shared-queue model only
+  - done:
+    - route policy for Team Worker assignment/result paths is data-driven
+    - current queue binding model derives from the registry
+  - remaining:
+    - decide whether to stay on a shared implementation queue or introduce per-role/per-family queue topology
+
+- [ ] branch and worktree policy
+  - status: mostly complete
+  - done:
+    - role branch suffixes are registry-defined
+    - deterministic worktree behavior remains intact
+    - non-Python proof exists through `Docs Dev`
+  - remaining:
+    - broaden live automation proof for Team Worker app-launched execution surfaces
+
+- [ ] automation contract
+  - status: in progress
+  - done:
+    - repo-local Team Worker automation definitions exist
+    - home-level UI registrations are aligned to the Team Worker-aware installed automation definitions
+    - deterministic no-work preflight exists
+    - installed consumer vendor/runtime path is healthy again
+    - explicit Team Worker automation contract now exists:
+      - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+  - remaining:
+    - prove app/UI-launched Team Worker behavior through Stage W7
+
+- [ ] migration plan
+  - status: complete as authority, in progress as rollout
+  - authority:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+  - rollout proof already complete:
+    - `TechLead -> Docs Dev -> TechLead -> QA`
+
 ## Why We Are Doing This Now
 
 The current proven role set validated the hub loop:
@@ -372,11 +426,13 @@ This plan is complete when:
 ### Still open in this plan
 
 - Stage W7
-  - automation pilot work must now be re-baselined against the Team Worker Roles model before further pilot execution
+  - automation pilot work has now been re-baselined against the Team Worker Roles model
+  - Stage W7 Phase 0 readiness snapshot has passed
 - app/UI-visible proof for the expanded Team Worker launch surface still remains to be executed
 
 ## Immediate Next Slice
 
 1. execute Stage W7:
    - use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the pilot authority
+   - continue from Phase 1 UI visibility validation
 2. then validate app/UI visibility and launch behavior against the Team Worker-aware registration set
