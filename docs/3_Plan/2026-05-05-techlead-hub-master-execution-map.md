@@ -493,7 +493,7 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute Stage W5 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+1. finish the remaining launcher/bootstrap details inside Stage W5 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
 2. then execute Stage W6 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
 3. keep the remaining Phase I4 pilot work paused until automation surfaces are reconciled with the Team Worker Roles model
 
@@ -529,7 +529,7 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- generalize automation definitions and bootstrap contracts for Team Worker Roles
+- finish the remaining launcher/bootstrap details for Team Worker Roles
 
 Immediately after that:
 - prove one additional non-Python Team Worker Roles lane with `Docs Dev`

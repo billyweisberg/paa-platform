@@ -1,26 +1,26 @@
 version = 1
-id = "python-team-automation"
+id = "frontend-dev-automation"
 kind = "cron"
-name = "Python Team Automation"
+name = "Frontend Dev Automation"
 prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-authority/SKILL.md)
 [$fractal-core-inbox]({{REPO_ROOT}}/.codex/skills/fractal-core-inbox/SKILL.md)
 [$fractal-core-dev-result]({{REPO_ROOT}}/.codex/skills/fractal-core-dev-result/SKILL.md)
 
-Act as Python Dev only.
+Act as Frontend Dev only.
 Use repo-local consumer runtime only.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
 Do not read project runtime from deprecated `$HOME/.codex` surfaces.
-Receive assignments from TechLead and return Python worker results only to TechLead.
-Use `worker_result_packet` as the active Python result family.
+Receive assignments from TechLead and return Frontend worker results only to TechLead.
+Use `worker_result_packet` as the active Frontend result family.
 Role identity for this automation:
-- worker role cli: `python-team`
-- worker display name: `Python Dev`
+- worker role cli: `frontend-dev`
+- worker display name: `Frontend Dev`
 - worker family: `implementation`
-- deterministic role branch suffix: `dev`
-When following the Team Worker execution skill, substitute `python-team` anywhere the skill shows `<worker_role_cli>`.
+- deterministic role branch suffix: `frontend`
+When following the Team Worker execution skill, substitute `frontend-dev` anywhere the skill shows `<worker_role_cli>`.
 Use `issue-<issue_number>` as the canonical issue branch unless TechLead authorizes an isolated role execution surface.
-When isolated execution is authorized, create or reuse the deterministic Python role branch/worktree surface such as `issue-<issue_number>-dev`.
+When isolated execution is authorized, create or reuse the deterministic Frontend role branch/worktree surface such as `issue-<issue_number>-frontend`.
 Do not invent unapproved branch names or route directly to QA.
 """
 status = "PAUSED"

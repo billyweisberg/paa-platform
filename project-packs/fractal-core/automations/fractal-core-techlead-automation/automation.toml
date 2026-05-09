@@ -21,7 +21,7 @@ Use `techlead-inspect-role-worktree`, `techlead-role-entry`, `techlead-role-resu
 Treat `worker_result_packet` as the active Python result family.
 Treat `slice_result_packet` as legacy compatibility only; do not teach it as the default Python bridge path.
 Use `issue-<issue_number>` as the canonical issue branch.
-Use deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-dev`, and `issue-<issue_number>-qa` only when isolated role execution is authorized.
+Use deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-dev`, `issue-<issue_number>-frontend`, `issue-<issue_number>-backend`, `issue-<issue_number>-infra`, `issue-<issue_number>-docs`, and `issue-<issue_number>-qa` only when isolated role execution is authorized.
 Flag lineage violations, unapproved branch invention, or any attempt to route around TechLead.
 """
 status = "PAUSED"

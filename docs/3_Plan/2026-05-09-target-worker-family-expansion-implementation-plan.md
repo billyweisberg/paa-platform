@@ -343,18 +343,28 @@ This plan is complete when:
   - role bridge CLI surfaces now accept Team Worker Role keys, not just `python-team`
   - initial installed-runtime validation passed for `Docs Dev`
 
+- Stage W5 has an initial implementation pass
+  - the shared Team Worker execution skill contract is now role-agnostic
+  - project-pack automation definitions now exist for:
+    - `python-team`
+    - `frontend-dev`
+    - `backend-dev`
+    - `infra-dev`
+    - `docs-dev`
+  - consumer install manifest now installs those Team Worker automations
+  - installed consumer runtime now carries those automation definitions
+
 ### Still open in this plan
 
-- Stage W5
-  - automation definitions and launcher/bootstrap contracts still need to become Team Worker Role aware
 - Stage W6
   - full `TechLead -> Docs Dev -> TechLead` proof is still outstanding
 - Stage W7
   - automation pilot work remains paused until the automation surfaces match the Team Worker Roles model
+- automation launcher/bootstrap still needs a final app/UI-ready cutover pass
 
 ## Immediate Next Slice
 
 1. execute Stage W5:
-   - generalize automation definitions and bootstrap contracts for Team Worker Roles
+   - finish the remaining launcher/bootstrap cutover details for Team Worker Roles
 2. then execute Stage W6:
    - prove one additional non-Python lane end to end with `Docs Dev`
