@@ -5,7 +5,7 @@ description: Repo-local authority inspection and packet compilation commands for
 
 Lineage policy:
 - Canonical issue branch: `issue-<issue_number>`
-- Deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-python-team`, and `issue-<issue_number>-qa` are valid only when TechLead authorizes isolated role execution.
+- Deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-dev`, and `issue-<issue_number>-qa` are valid only when TechLead authorizes isolated role execution.
 - Do not invent random branch names.
 
 Use repo-local authority inspection on any repo with installed PAA runtime:

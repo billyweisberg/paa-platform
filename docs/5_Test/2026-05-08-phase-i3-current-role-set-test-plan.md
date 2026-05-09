@@ -75,7 +75,7 @@ This prevents us from spending live queue/worktree effort before the local contr
   - `issue-<issue_number>`
 - deterministic role branch patterns:
   - `issue-<issue_number>-delivery`
-  - `issue-<issue_number>-python-team`
+  - `issue-<issue_number>-dev`
   - `issue-<issue_number>-qa`
 
 ### Default live test data set

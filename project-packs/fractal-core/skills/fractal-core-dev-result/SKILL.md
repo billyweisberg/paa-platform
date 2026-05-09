@@ -21,7 +21,7 @@ Execution contract:
 
 - If `should_invoke_model = false`, exit without further work.
 - If `should_invoke_model = true`, stay on repo-local consumer runtime only.
-- Use the canonical issue branch `issue-<issue_number>` unless TechLead-authorized isolated role execution requires the deterministic role branch `issue-<issue_number>-python-team`.
+- Use the canonical issue branch `issue-<issue_number>` unless TechLead-authorized isolated role execution requires the deterministic role branch `issue-<issue_number>-dev`.
 - Do not invent branch names.
 - Do not route directly to `QA`.
 - Do not depend on deprecated `$HOME/.codex` runtime assets.

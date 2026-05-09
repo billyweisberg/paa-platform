@@ -60,7 +60,7 @@ Observed result:
 - `fractal-core-dev-result` includes:
   - `automation-preflight`
   - `worker_result_packet`
-  - `issue-<issue_number>-python-team`
+  - `issue-<issue_number>-dev`
 - `fractal-core-qa-review` includes:
   - `automation-preflight`
   - `qa_verification_packet`

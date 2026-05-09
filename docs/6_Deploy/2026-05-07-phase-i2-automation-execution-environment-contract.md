@@ -57,7 +57,7 @@ Deterministic role worktrees live under:
 
 Current deterministic role branch forms:
 - `issue-<issue_number>-delivery`
-- `issue-<issue_number>-python-team`
+- `issue-<issue_number>-dev`
 - `issue-<issue_number>-qa`
 
 Canonical branch form:
@@ -91,7 +91,7 @@ After the role worktree is prepared and inspected, the role automation must swit
 
 Examples:
 - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-delivery`
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-python-team`
+- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-dev`
 - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-qa`
 
 Role work must execute there, not back in the canonical consumer repo root.

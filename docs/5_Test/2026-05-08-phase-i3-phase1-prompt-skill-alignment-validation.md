@@ -76,7 +76,7 @@ Observed:
   - `techlead-role-return`
 - prompt/skill surfaces teach deterministic role branches:
   - `issue-<issue_number>-delivery`
-  - `issue-<issue_number>-python-team`
+  - `issue-<issue_number>-dev`
   - `issue-<issue_number>-qa`
 
 Result:

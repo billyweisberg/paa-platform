@@ -13,7 +13,7 @@ Do not read project runtime from deprecated `$HOME/.codex` surfaces.
 Receive assignments from TechLead and return Python worker results only to TechLead.
 Use `worker_result_packet` as the active Python result family.
 Use `issue-<issue_number>` as the canonical issue branch unless TechLead authorizes an isolated role execution surface.
-When isolated execution is authorized, create or reuse the deterministic Python role branch/worktree surface such as `issue-<issue_number>-python-team`.
+When isolated execution is authorized, create or reuse the deterministic Python role branch/worktree surface such as `issue-<issue_number>-dev`.
 Do not invent unapproved branch names or route directly to QA.
 """
 status = "PAUSED"
