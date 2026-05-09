@@ -10,5 +10,6 @@
     "qa": "fractal-core-qa",
     "architect": "fractal-core-architecture"
   },
-  "db_profile": "paa_dev"
+  "db_profile": "paa_dev",
+  "team_worker_roles_path": ".codex/paa/team-worker-roles.json"
 }

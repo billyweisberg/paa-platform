@@ -14,6 +14,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from paa_core.team_worker_roles import (
+    active_team_worker_roles,
+    techlead_assignment_route_pairs,
+    team_worker_result_route_pairs,
+)
+
 DEFAULT_HOST = os.environ.get("FRACTAL_CORE_RABBITMQ_HOST", "127.0.0.1")
 DEFAULT_MANAGEMENT_PORT = int(os.environ.get("FRACTAL_CORE_RABBITMQ_MANAGEMENT_PORT", "15672"))
 DEFAULT_AMQP_PORT = int(os.environ.get("FRACTAL_CORE_RABBITMQ_AMQP_PORT", "5672"))
@@ -38,20 +44,10 @@ SUPPORTED_SCHEMA_TYPES = {
 ROUTE_POLICY_BY_SCHEMA = {
     "architect_cycle_packet": {("Architect", "Python Dev")},
     "slice_result_packet": {("Python Dev", "TechLead")},
-    "worker_result_packet": {
-        ("Python Dev", "TechLead"),
-        ("Frontend Dev", "TechLead"),
-        ("Backend Dev", "TechLead"),
-        ("Infra Dev", "TechLead"),
-        ("Docs Dev", "TechLead"),
-    },
+    "worker_result_packet": set(),
     "qa_verification_packet": {("QA", "TechLead")},
     "delivery_review_packet": {("Delivery Architect", "TechLead")},
-    "techlead_assignment_packet": {
-        ("TechLead", "Delivery Architect"),
-        ("TechLead", "Python Dev"),
-        ("TechLead", "QA"),
-    },
+    "techlead_assignment_packet": set(),
     "techlead_decision_packet": {
         ("TechLead", "Authority Architect"),
         ("TechLead", "TechLead"),
@@ -244,7 +240,18 @@ def normalize_role_name(raw_role: Optional[str]) -> Optional[str]:
         "TechLead": "TechLead",
         "techlead": "TechLead",
     }
+    for role in active_team_worker_roles():
+        mapping[role.key] = role.display_name
+        mapping[role.display_name] = role.display_name
     return mapping.get(raw_role, raw_role)
+
+
+def route_policy_for_schema(schema_type: Optional[str]) -> set[tuple[str, str]] | None:
+    if schema_type == "worker_result_packet":
+        return team_worker_result_route_pairs()
+    if schema_type == "techlead_assignment_packet":
+        return techlead_assignment_route_pairs()
+    return ROUTE_POLICY_BY_SCHEMA.get(schema_type)
 
 
 def role_name_for_db(raw_role: Optional[str]) -> Optional[str]:
@@ -1030,7 +1037,7 @@ def validate_envelope(message, require_authority=True):
         for field in required:
             if field not in payload:
                 errors.append(f"missing payload field: {field}")
-    expected_route = ROUTE_POLICY_BY_SCHEMA.get(message.get("schema_type"))
+    expected_route = route_policy_for_schema(message.get("schema_type"))
     if expected_route:
         actual_from_role = normalize_role_name(message.get("from_role"))
         actual_to_role = normalize_role_name(message.get("to_role"))

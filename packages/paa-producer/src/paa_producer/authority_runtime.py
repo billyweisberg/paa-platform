@@ -12,6 +12,7 @@ from typing import Optional
 from paa_core.config import load_producer_project_config
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_core.runtime_paths import default_installed_artifact_path, default_installed_manifest_path, producer_manifest_candidates
+from paa_core.team_worker_roles import team_worker_role_by_display_name, team_worker_role_by_key
 from paa_producer.issue_loader import load_issue_into_paa
 
 MANIFEST_ENV = 'FRACTAL_CORE_AUTHORITY_MANIFEST'
@@ -416,25 +417,26 @@ def normalize_techlead_role(raw_role: str) -> str:
         'authority-architect': 'Authority Architect',
         'techlead': 'TechLead',
     }
+    dynamic_role = team_worker_role_by_key(raw_role, repo_root=repo_root_from_cwd())
+    if dynamic_role:
+        return dynamic_role.display_name
     return mapping.get(raw_role, raw_role)
 
 
 def normalize_worker_role(raw_role: str) -> str:
-    mapping = {
-        'python-team': 'Python Dev',
-        'frontend-dev': 'Frontend Dev',
-        'backend-dev': 'Backend Dev',
-        'infra-dev': 'Infra Dev',
-        'docs-dev': 'Docs Dev',
-    }
-    return mapping.get(raw_role, raw_role)
+    dynamic_role = team_worker_role_by_key(raw_role, repo_root=repo_root_from_cwd())
+    if dynamic_role:
+        return dynamic_role.display_name
+    return raw_role
 
 
 def techlead_worktree_hint(issue_number: int, target_role: Optional[str]) -> Optional[str]:
     if target_role is None:
         return None
+    dynamic_role = team_worker_role_by_display_name(target_role, repo_root=repo_root_from_cwd())
+    if dynamic_role:
+        return f'issue-{issue_number}-{dynamic_role.branch_suffix}'
     suffix_map = {
-        'Python Dev': 'dev',
         'QA': 'qa',
         'Delivery Architect': 'delivery',
         'Authority Architect': 'authority',

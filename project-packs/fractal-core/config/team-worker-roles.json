@@ -1,0 +1,63 @@
+{
+  "version": "2026-05-09",
+  "queue_bindings": {
+    "implementation": "fractal-core-python"
+  },
+  "worker_roles": [
+    {
+      "key": "python-team",
+      "display_name": "Python Dev",
+      "family": "implementation",
+      "branch_suffix": "dev",
+      "queue_binding": "implementation",
+      "automation_id": "python-team-automation",
+      "skill_id": "fractal-core-dev-result",
+      "result_packet_family": "worker_result_packet",
+      "active": true
+    },
+    {
+      "key": "frontend-dev",
+      "display_name": "Frontend Dev",
+      "family": "implementation",
+      "branch_suffix": "frontend",
+      "queue_binding": "implementation",
+      "automation_id": "frontend-dev-automation",
+      "skill_id": "fractal-core-dev-result",
+      "result_packet_family": "worker_result_packet",
+      "active": true
+    },
+    {
+      "key": "backend-dev",
+      "display_name": "Backend Dev",
+      "family": "implementation",
+      "branch_suffix": "backend",
+      "queue_binding": "implementation",
+      "automation_id": "backend-dev-automation",
+      "skill_id": "fractal-core-dev-result",
+      "result_packet_family": "worker_result_packet",
+      "active": true
+    },
+    {
+      "key": "infra-dev",
+      "display_name": "Infra Dev",
+      "family": "infra",
+      "branch_suffix": "infra",
+      "queue_binding": "implementation",
+      "automation_id": "infra-dev-automation",
+      "skill_id": "fractal-core-dev-result",
+      "result_packet_family": "worker_result_packet",
+      "active": true
+    },
+    {
+      "key": "docs-dev",
+      "display_name": "Docs Dev",
+      "family": "docs",
+      "branch_suffix": "docs",
+      "queue_binding": "implementation",
+      "automation_id": "docs-dev-automation",
+      "skill_id": "fractal-core-dev-result",
+      "result_packet_family": "worker_result_packet",
+      "active": true
+    }
+  ]
+}

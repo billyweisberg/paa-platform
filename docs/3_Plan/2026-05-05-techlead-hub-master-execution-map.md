@@ -31,6 +31,7 @@ This map is synthesized from:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-inspect-role-worktree.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-role-entry.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 
 ## Target Model
 
@@ -86,7 +87,7 @@ Current phase is:
 Meaning:
 - the hub loop has now been executed end-to-end for the current proven role set
 - lifecycle depth through reset, superseded, and closed cleanup is implemented for the narrow `python-team` path
-- remaining work is now hardening, reporting coherence, and future worker-family expansion
+- remaining work is now hardening, reporting coherence, and Team Worker Roles expansion
 
 ### What is complete vs incomplete
 
@@ -97,7 +98,7 @@ Active and not yet complete:
 - Phase `I`
 
 Deferred future requirement:
-- broader worker-family expansion after Phase I hardening
+- broader Team Worker Roles expansion after Phase I hardening
 
 ## Phase Map
 
@@ -436,8 +437,9 @@ Turn the working hub model into a reliable operating system for agents, not a pr
 
 ### Roadmap decision after Phase I gate pass
 - the prior defer-until-after-cutover rule is superseded
-- worker-family expansion is now promoted before further automation cutover work
-- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the active authority for that expansion
+- Team Worker Roles expansion is now promoted before further automation cutover work
+- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md` as the active design authority for that expansion
+- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the sequencing plan beneath that authority
 - resume automation cutover and pilot work only after automation surfaces are reconciled with the target worker-family model
 
 ## Completed Slices Ledger
@@ -484,16 +486,16 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase I3 Phase 8 cutover readiness decision
 
 ### Still open inside active flow
-- broader worker-family expansion beyond the proven `Python Dev` generic lane
+- broader Team Worker Roles expansion beyond the proven `Python Dev` generic lane
 - additional Delivery Architect result outcomes beyond `ready_for_dev`
 - `queue-check` preview depth remains shallow on architecture-queue history; routing/status now tolerate it, but operator visibility is still incomplete and should be hardened before broader scale-out
 
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute Stage W1 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-2. then execute Stage W2 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-3. keep the remaining Phase I4 pilot work paused until automation surfaces are reconciled with the target worker-family model
+1. execute Stage W5 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+2. then execute Stage W6 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+3. keep the remaining Phase I4 pilot work paused until automation surfaces are reconciled with the Team Worker Roles model
 
 ## Guardrails
 
@@ -527,11 +529,10 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- implement the first physical cleanup slice for `reset_required`
+- generalize automation definitions and bootstrap contracts for Team Worker Roles
 
 Immediately after that:
-- continue through reset/supersede/close lifecycle hygiene one narrow decision at a time
-- then move through the remaining acceptance phases with the current role set
-- keep the deferred worker-family expansion requirement explicitly on the roadmap for a later return
+- prove one additional non-Python Team Worker Roles lane with `Docs Dev`
+- then return to the paused automation pilot work once the launch surfaces match the target model
 
-That keeps the system on the shortest path to a real functioning hub without reopening the packet model again midstream.
+That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.

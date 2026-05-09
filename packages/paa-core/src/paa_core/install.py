@@ -334,6 +334,10 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         replacements,
         _manifest_names(manifest, 'producer', 'automations'),
     )
+    config_root = pack_root / 'config'
+    if config_root.exists():
+        for config_path in config_root.glob('*.json'):
+            _copy_file(config_path, result.codex_install_root / config_path.name)
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         f"This repo carries the producer-mode PAA payload under `.codex/paa/`.\n"
@@ -372,6 +376,10 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         replacements,
         _manifest_names(manifest, 'consumer', 'automations'),
     )
+    config_root = pack_root / 'config'
+    if config_root.exists():
+        for config_path in config_root.glob('*.json'):
+            _copy_file(config_path, result.codex_install_root / config_path.name)
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
         f"This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"

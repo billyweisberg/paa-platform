@@ -38,6 +38,7 @@ class ConsumerProjectConfig:
     github_repo: str
     queue_names: dict[str, str]
     db_profile: str
+    team_worker_roles_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ class ProducerConsumerProjectConfig:
     github_repo: str
     queue_names: dict[str, str]
     db_profile: str
+    team_worker_roles_path: str | None = None
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -98,6 +100,7 @@ def load_consumer_project_config(path: Path) -> ConsumerProjectConfig:
         github_repo=data["github_repo"],
         queue_names=data["queue_names"],
         db_profile=data["db_profile"],
+        team_worker_roles_path=data.get("team_worker_roles_path"),
     )
 
 
@@ -119,4 +122,5 @@ def load_producer_consumer_project_config(path: Path) -> ProducerConsumerProject
         github_repo=data["github_repo"],
         queue_names=data["queue_names"],
         db_profile=data["db_profile"],
+        team_worker_roles_path=data.get("team_worker_roles_path"),
     )

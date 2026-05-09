@@ -4,4 +4,5 @@ __all__ = [
     "config",
     "package_metadata",
     "paths",
+    "team_worker_roles",
 ]

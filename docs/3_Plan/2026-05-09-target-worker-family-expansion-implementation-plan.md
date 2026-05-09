@@ -1,8 +1,13 @@
 # Target Worker-Family Expansion Implementation Plan
 
+Superseded as the top-level design authority by:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+
+This note remains useful as the implementation sequencing plan for the expansion work, but the term `Team Worker Roles` is now the authoritative design vocabulary.
+
 ## Purpose
 
-Make worker-family expansion a first-class implementation authority instead of a deferred note.
+Make Team Worker Roles expansion a first-class implementation authority instead of a deferred note.
 
 This plan exists to prevent rebuilding the automation layer twice.
 From this point forward, the target implementation must assume the broader worker family is real and must be accommodated directly in:
@@ -16,9 +21,16 @@ From this point forward, the target implementation must assume the broader worke
 
 ## Authority Statement
 
-This document is now the implementation authority for worker-family expansion.
+This document is now subordinate to the `Team Worker Roles` design spec.
 
-When automation design, runtime behavior, or prompt text conflicts with the older current-role-set-only assumptions, this document wins.
+Use the design spec as the authority for:
+- terminology
+- role model
+- source-of-truth rules
+- route derivation expectations
+- automation implications
+
+Use this document as the implementation sequencing plan layered beneath that authority.
 
 Use this plan together with:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-05-phase-g-worker-result-and-delivery-review-contracts.md`
@@ -35,7 +47,7 @@ The current proven role set validated the hub loop:
 That proof was necessary.
 It is not sufficient as the final target architecture.
 
-The deferred worker-family requirement is now promoted because:
+The deferred Team Worker Roles requirement is now promoted because:
 - future worker roles are a real requirement, not optional stretch work
 - re-hardening automations for only the current role set would create duplicate migration work
 - the generic worker lane already exists in runtime through `worker_result_packet`
@@ -310,11 +322,39 @@ This plan is complete when:
 - at least one non-Python worker-family lane has been proven through `worker_result_packet`
 - current proven role set behavior still passes after the generalization work
 
+## Current Implementation Status
+
+### Completed in the first Team Worker Roles slice
+
+- Stage W1 is complete
+  - project-level Team Worker Role registry exists
+  - deterministic branch suffixes are now defined as data
+  - consumer and producer installs now carry the registry file
+
+- Stage W2 has an initial implementation pass
+  - explicit Team Worker Role assignment emission can now target registry-defined worker roles
+  - Delivery Architect `ready_for_dev` follow-up can now derive any active Team Worker Role from the registry
+
+- Stage W3 has an initial implementation pass
+  - route validation for `techlead_assignment_packet` and `worker_result_packet` is now registry-derived
+  - role normalization accepts registry-defined Team Worker Role names
+
+- Stage W4 has an initial implementation pass
+  - role bridge CLI surfaces now accept Team Worker Role keys, not just `python-team`
+  - initial installed-runtime validation passed for `Docs Dev`
+
+### Still open in this plan
+
+- Stage W5
+  - automation definitions and launcher/bootstrap contracts still need to become Team Worker Role aware
+- Stage W6
+  - full `TechLead -> Docs Dev -> TechLead` proof is still outstanding
+- Stage W7
+  - automation pilot work remains paused until the automation surfaces match the Team Worker Roles model
+
 ## Immediate Next Slice
 
-1. promote this plan into the master execution map as the authority for worker-family expansion
-2. execute Stage W1:
-   - consolidate role vocabulary and branch naming
-3. then execute Stage W2:
-   - generalize TechLead assignment semantics
-
+1. execute Stage W5:
+   - generalize automation definitions and bootstrap contracts for Team Worker Roles
+2. then execute Stage W6:
+   - prove one additional non-Python lane end to end with `Docs Dev`

@@ -3,6 +3,7 @@
   "project_pack": "fractal-core",
   "mode": "producer",
   "authority_manifest_path": "docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json",
+  "team_worker_roles_path": ".codex/paa/team-worker-roles.json",
   "supporting_docs_root": "docs/architecture/tom-baby7-fractal-core",
   "artifact_examples_root": "docs/architecture/tom-baby7-fractal-core/artifact-examples",
   "publication_output_root": ".project/data/paa/publish",
