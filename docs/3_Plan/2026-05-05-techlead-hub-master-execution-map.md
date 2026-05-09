@@ -412,6 +412,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-phase0-baseline-validation.md`
 - Phase I3 Phase 1 prompt and skill alignment validation:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-phase1-prompt-skill-alignment-validation.md`
+- Phase I3 Phase 2 preflight gate validation:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase2-preflight-gate-validation.md`
 
 ### Roadmap decision after Phase I gate pass
 - stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
@@ -453,6 +455,7 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase I canonical E2E validation for the current proven role set
 - Phase I3 Phase 0 baseline and installation sanity validation
 - Phase I3 Phase 1 prompt and skill contract alignment validation
+- Phase I3 Phase 2 non-model preflight gate validation
 
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
@@ -461,7 +464,7 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute Phase I3 Phase 2 non-model preflight gate from the current proven role set test plan
+1. execute Phase I3 Phase 3 execution environment contract adherence from the current proven role set test plan
 2. continue through the remaining Phase I3 test phases in order before deliberate cutover/unpause
 3. execute the deliberate cutover/unpause sequence for the current proven role set only after the full Phase I3 plan passes
 4. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
