@@ -406,6 +406,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-role-skill-hardening-validation.md`
 - current proven role set test plan:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+- Phase I3 Phase 0 baseline validation:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-phase0-baseline-validation.md`
 
 ### Roadmap decision after Phase I gate pass
 - stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
@@ -445,6 +447,7 @@ This is the short completed ledger we should carry forward instead of relying on
 - Phase H6 closed cleanup
 - Phase H6 positive synthetic closed cleanup validation
 - Phase I canonical E2E validation for the current proven role set
+- Phase I3 Phase 0 baseline and installation sanity validation
 
 ### Still open inside active flow
 - broader worker-family expansion beyond the proven `Python Dev` generic lane
@@ -453,9 +456,10 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute the deliberate cutover/unpause sequence for the current proven role set
-2. keep runtime reconciliation as the authoritative queue-state surface if raw broker counters lag briefly after cleanup
-3. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
+1. execute Phase I3 Phase 1 prompt and skill contract alignment from the current proven role set test plan
+2. continue through the remaining Phase I3 test phases in order before deliberate cutover/unpause
+3. execute the deliberate cutover/unpause sequence for the current proven role set only after the full Phase I3 plan passes
+4. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
 
