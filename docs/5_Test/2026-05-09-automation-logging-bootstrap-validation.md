@@ -45,6 +45,18 @@ Validated against:
    - a no-work preflight JSON result
    - a `preflight_check` JSONL event with `status = no_work`
    - a summary file with `status = preflight_complete`
+9. reproduced the app-launch failure mode under a stripped `PATH`
+10. fixed the logged-preflight runtime path so it:
+   - prefers the repo-local `.venv/bin/python`
+   - defaults `UV_CACHE_DIR` to repo-local `.codex-work/uv-cache`
+   - avoids plain `python3` calls inside the helper stack
+11. reran the installed helper under:
+   - `PATH=/usr/bin:/bin:/usr/sbin:/sbin`
+12. verified the stripped-path run still produced:
+   - `should_invoke_model = false`
+   - `gate_reason = no_role_work_detected`
+   - `summary.status = preflight_complete`
+   - `events.jsonl` with `preflight_check` and `status = no_work`
 
 ## Observed output location
 
@@ -75,5 +87,6 @@ Observed installed consumer logged-preflight event:
 
 - reusable automation logging surfaces now exist
 - the installed consumer runtime now carries the logged-preflight helper the automations can call directly
+- the installed logged-preflight path is now resilient to stripped app launch environments that do not expose `python3.12` or writable home `uv` cache state
 - repo-local durable logging is now available before resuming `Stage W7 Phase 2`
 - the paused Team Worker pilot can resume exactly where it left off, but with logging in place

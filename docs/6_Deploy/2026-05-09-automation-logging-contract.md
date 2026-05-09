@@ -85,6 +85,12 @@ The logging bootstrap must define at least:
 Recommended defaults:
 - `PAA_AUTOMATION_LOG_LEVEL=INFO`
 - `PAA_AUTOMATION_LOG_FORMAT=jsonl`
+- `UV_CACHE_DIR=<repo_root>/.codex-work/uv-cache`
+
+Interpreter selection rule:
+- prefer the repo-local consumer `.venv/bin/python` when present
+- otherwise prefer a known Python 3.12+ interpreter
+- do not rely on plain `python3` resolving to a compatible interpreter in app-launched automation runs
 
 ## Bootstrap helper
 
@@ -98,6 +104,7 @@ Purpose:
 - create the run directory
 - create `stdout.log`, `stderr.log`, `events.jsonl`, and `summary.json`
 - emit shell `export` lines so a launcher can bring the logging env into scope
+- establish a compatible Python interpreter and repo-local `UV_CACHE_DIR` before later helper steps run
 
 Usage shape:
 
@@ -228,6 +235,10 @@ It does not mean:
 - we can observe a hidden pre-model scheduler hook inside the Codex app itself
 
 So the current logging truth begins when the automation executes the installed logged-preflight helper, not before.
+
+It also means:
+- launchers must not assume the Codex app exposes a modern Python on `PATH`
+- launchers must self-bootstrap the interpreter and `UV_CACHE_DIR` contract from repo-local surfaces
 
 ## Stdout and stderr capture
 

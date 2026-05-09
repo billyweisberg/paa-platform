@@ -68,6 +68,37 @@ done
 
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 LOG_ROOT="$REPO_ROOT/.project/data/paa/logs/automations"
+WORK_ROOT="$REPO_ROOT/.codex-work"
+if [ -z "${UV_CACHE_DIR:-}" ]; then
+  UV_CACHE_DIR="$WORK_ROOT/uv-cache"
+fi
+mkdir -p "$UV_CACHE_DIR"
+export UV_CACHE_DIR
+
+if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+  PAA_PYTHON="$REPO_ROOT/.venv/bin/python"
+elif [ -x "/opt/homebrew/opt/python@3.13/bin/python3" ]; then
+  PAA_PYTHON="/opt/homebrew/opt/python@3.13/bin/python3"
+elif command -v python3.13 >/dev/null 2>&1; then
+  PAA_PYTHON="$(command -v python3.13)"
+elif command -v python3.12 >/dev/null 2>&1; then
+  PAA_PYTHON="$(command -v python3.12)"
+elif [ -x "/opt/homebrew/bin/python3" ]; then
+  PAA_PYTHON="/opt/homebrew/bin/python3"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON_OK="$(python3 -c 'import sys; print(int(sys.version_info >= (3, 12)))')"
+  if [ "$PYTHON_OK" = "1" ]; then
+    PAA_PYTHON="$(command -v python3)"
+  else
+    echo "Automation logging requires Python 3.12+; found unsupported python3 on PATH." >&2
+    exit 1
+  fi
+else
+  echo "Automation logging requires Python 3.12+ but no supported interpreter was found." >&2
+  exit 1
+fi
+export PAA_PYTHON
+
 RUN_ID="$(date -u +%Y-%m-%dT%H-%M-%SZ)-$$"
 RUN_DIR="$LOG_ROOT/$AUTOMATION_ID/$RUN_ID"
 EVENTS_FILE="$RUN_DIR/events.jsonl"
@@ -81,7 +112,7 @@ mkdir -p "$RUN_DIR"
 : > "$STDERR_LOG"
 : > "$EVENTS_FILE"
 
-python3 - <<'PY' "$SUMMARY_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT" "$WORKTREE_PATH" "$ISSUE_NUMBER" "$PACKAGE_ID_EXTERNAL" "$BRIEF_ID_EXTERNAL" "$LOG_LEVEL" "$LOG_FORMAT"
+"$PAA_PYTHON" - <<'PY' "$SUMMARY_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT" "$WORKTREE_PATH" "$ISSUE_NUMBER" "$PACKAGE_ID_EXTERNAL" "$BRIEF_ID_EXTERNAL" "$LOG_LEVEL" "$LOG_FORMAT"
 import json, sys
 from datetime import datetime, UTC
 (
@@ -120,7 +151,7 @@ with open(summary_path, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
 
-python3 - <<'PY' "$EVENTS_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT"
+"$PAA_PYTHON" - <<'PY' "$EVENTS_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT"
 import json, sys
 from datetime import datetime, UTC
 (events_file, run_id, automation_id, role_key, role_display_name, phase, repo_root) = sys.argv[1:]
@@ -153,6 +184,8 @@ export PAA_AUTOMATION_STDERR_LOG='$STDERR_LOG'
 export PAA_AUTOMATION_SUMMARY_FILE='$SUMMARY_FILE'
 export PAA_AUTOMATION_LOG_LEVEL='$LOG_LEVEL'
 export PAA_AUTOMATION_LOG_FORMAT='$LOG_FORMAT'
+export PAA_PYTHON='$PAA_PYTHON'
+export UV_CACHE_DIR='$UV_CACHE_DIR'
 ENVVARS
 
 printf '%s\n' \
@@ -168,4 +201,6 @@ printf '%s\n' \
   "export PAA_AUTOMATION_STDERR_LOG='$STDERR_LOG'" \
   "export PAA_AUTOMATION_SUMMARY_FILE='$SUMMARY_FILE'" \
   "export PAA_AUTOMATION_LOG_LEVEL='$LOG_LEVEL'" \
-  "export PAA_AUTOMATION_LOG_FORMAT='$LOG_FORMAT'"
+  "export PAA_AUTOMATION_LOG_FORMAT='$LOG_FORMAT'" \
+  "export PAA_PYTHON='$PAA_PYTHON'" \
+  "export UV_CACHE_DIR='$UV_CACHE_DIR'"

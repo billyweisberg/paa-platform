@@ -92,7 +92,7 @@ PREFLIGHT_OUTPUT="$($CONSUMER automation-preflight --repo-root "$REPO_ROOT" --ta
 printf '%s\n' "$PREFLIGHT_OUTPUT" > "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 printf '%s\n' "$PREFLIGHT_OUTPUT" >> "$PAA_AUTOMATION_STDOUT_LOG"
 
-PRETTY_MESSAGE="$(python3 - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
+PRETTY_MESSAGE="$("$PAA_PYTHON" - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 import json, sys
 from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text())
@@ -101,7 +101,7 @@ reason = payload.get('gate_reason')
 print(f"should_invoke_model={should}; gate_reason={reason}")
 PY
 )"
-EXTRA_JSON="$(python3 - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
+EXTRA_JSON="$("$PAA_PYTHON" - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 import json, sys
 from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text())
@@ -114,7 +114,7 @@ print(json.dumps({
 }))
 PY
 )"
-MODEL_FLAG="$(python3 - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
+MODEL_FLAG="$("$PAA_PYTHON" - <<'PY' "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 import json, sys
 from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text())
@@ -123,7 +123,7 @@ PY
 )"
 
 if [ "$MODEL_FLAG" = "1" ]; then
-  "$EVENT_HELPER" \
+  "$PAA_PYTHON" "$EVENT_HELPER" \
     --event preflight_check \
     --phase "$PHASE" \
     --status work_present \
@@ -132,7 +132,7 @@ if [ "$MODEL_FLAG" = "1" ]; then
     --cwd "$REPO_ROOT" \
     --extra-json "$EXTRA_JSON"
 else
-  "$EVENT_HELPER" \
+  "$PAA_PYTHON" "$EVENT_HELPER" \
     --event preflight_check \
     --phase "$PHASE" \
     --status no_work \
@@ -141,7 +141,7 @@ else
     --extra-json "$EXTRA_JSON"
 fi
 
-python3 - <<'PY' "$PAA_AUTOMATION_SUMMARY_FILE" "$PAA_AUTOMATION_RUN_DIR/preflight.json"
+"$PAA_PYTHON" - <<'PY' "$PAA_AUTOMATION_SUMMARY_FILE" "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 import json, sys
 from pathlib import Path
 summary_path = Path(sys.argv[1])
