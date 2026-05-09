@@ -426,6 +426,8 @@ Turn the working hub model into a reliable operating system for agents, not a pr
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase7-lifecycle-safety-validation.md`
 - Phase I3 Phase 8 cutover readiness decision:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase8-cutover-readiness-decision.md`
+- Phase I4 automation pilot test plan:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md`
 
 ### Roadmap decision after Phase I gate pass
 - stay in `Phase I` long enough to finalize automation execution readiness and deliberate cutover/unpause hygiene for the current proven role set
@@ -483,8 +485,8 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute one supervised app/UI-launched automation pilot for the current proven role set
-2. after that pilot, decide whether to deliberately unpause the current proven role set
+1. execute Phase I4 automation pilot testing from the new pilot plan
+2. after that pilot plan completes, decide whether to deliberately unpause the current proven role set
 3. return next to the deferred-but-required multi-worker family expansion after current-role-set cutover is complete
 
 ## Guardrails
