@@ -8,6 +8,7 @@ from typing import Any
 
 from paa_core import handoff_runtime
 from paa_core.runtime_paths import repo_queue_state_root
+from paa_core.team_worker_roles import team_worker_queue_name_by_display_name
 
 
 TECHLEAD_QUEUE_BY_ROLE = {
@@ -40,7 +41,7 @@ def _normalize_role(role: Any) -> str | None:
     return handoff_runtime.normalize_role_name(role)
 
 
-def resolve_techlead_packet_queue(message: dict[str, Any]) -> str:
+def resolve_techlead_packet_queue(message: dict[str, Any], repo_root: Path | None = None) -> str:
     schema_type = message.get('schema_type')
     payload = message.get('payload') or {}
     if schema_type == 'techlead_assignment_packet':
@@ -53,6 +54,8 @@ def resolve_techlead_packet_queue(message: dict[str, Any]) -> str:
             f"techlead_decision_packet, got {schema_type!r}"
         )
     queue_name = TECHLEAD_QUEUE_BY_ROLE.get(role or '')
+    if not queue_name and role:
+        queue_name = team_worker_queue_name_by_display_name(role, repo_root=repo_root)
     if not queue_name:
         raise RuntimeError(f'No queue mapping is defined for TechLead packet role {role!r}')
     return queue_name
@@ -70,6 +73,7 @@ def resolve_packet_queue(message: dict[str, Any]) -> str:
 def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
     os.environ.setdefault('FRACTAL_CORE_HANDOFF_STATE_DIR', str(repo_queue_state_root(repo_root)))
     message = handoff_runtime.load_json(message_file)
+    schema_type = message.get('schema_type')
     errors = handoff_runtime.validate_envelope(message, require_authority=True)
     if errors:
         return {
@@ -77,7 +81,7 @@ def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
             'message_file': str(message_file),
             'errors': errors,
         }
-    queue_name = resolve_packet_queue(message)
+    queue_name = resolve_techlead_packet_queue(message, repo_root=repo_root) if schema_type in {'techlead_assignment_packet', 'techlead_decision_packet'} else resolve_packet_queue(message)
     client = handoff_runtime.RabbitMQManagementClient(
         user=handoff_runtime.DEFAULT_USER,
         password=handoff_runtime.DEFAULT_PASSWORD,

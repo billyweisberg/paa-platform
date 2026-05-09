@@ -197,3 +197,18 @@ def techlead_assignment_route_pairs(repo_root: Path | None = None) -> set[tuple[
     pairs.update({("TechLead", role.display_name) for role in active_team_worker_roles(repo_root=repo_root)})
     return pairs
 
+
+def team_worker_queue_name_by_key(key: str, repo_root: Path | None = None) -> str | None:
+    config = load_team_worker_roles(repo_root=repo_root)
+    role = next((item for item in config.worker_roles if item.key == key and item.active), None)
+    if role is None:
+        return None
+    return config.queue_bindings.get(role.queue_binding)
+
+
+def team_worker_queue_name_by_display_name(display_name: str, repo_root: Path | None = None) -> str | None:
+    config = load_team_worker_roles(repo_root=repo_root)
+    role = next((item for item in config.worker_roles if item.display_name == display_name and item.active), None)
+    if role is None:
+        return None
+    return config.queue_bindings.get(role.queue_binding)

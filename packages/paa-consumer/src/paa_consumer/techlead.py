@@ -2003,7 +2003,7 @@ def derive_next_assignment_context(args) -> dict:
             'recommended_actions': recommended,
             'unattended_safe': unattended_safe,
         }
-    if workflow_stage == 'techlead_dev_review_pending' and (pending_dev_packet or pending_worker_packet):
+    if workflow_stage in {'techlead_dev_review_pending', 'techlead_worker_review_pending'} and (pending_dev_packet or pending_worker_packet):
         if not pr:
             return {
                 'ok': False,
@@ -2150,7 +2150,7 @@ def derive_next_assignment_context(args) -> dict:
         'reason': 'no_supported_emission_available',
         'details': (
             f'Current workflow stage {workflow_stage!r} does not support next-assignment emission in this slice. '
-            'Only techlead_dev_review_pending -> QA and explicit Team Worker Role or Delivery Architect emission are supported.'
+            'Only techlead_worker_review_pending/techlead_dev_review_pending -> QA and explicit Team Worker Role or Delivery Architect emission are supported.'
         ),
         'recommended_actions': recommended,
         'unattended_safe': unattended_safe,
@@ -2821,10 +2821,12 @@ def handoff_to_role_worktree(args):
     role_cli = None
     if derived_target_role == 'QA':
         role_cli = 'qa'
-    elif derived_target_role == 'Python Dev':
-        role_cli = 'python-team'
     elif derived_target_role == 'Delivery Architect':
         role_cli = 'delivery-architect'
+    else:
+        worker_role = team_worker_role_for_label(derived_target_role, repo_root=repo_root)
+        if worker_role:
+            role_cli = worker_role.key
     if role_cli is None:
         return {
             'ok': False,

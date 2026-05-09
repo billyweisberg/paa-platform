@@ -354,10 +354,13 @@ This plan is complete when:
   - consumer install manifest now installs those Team Worker automations
   - installed consumer runtime now carries those automation definitions
 
+- Stage W6 is complete
+  - `TechLead -> Docs Dev -> TechLead` now succeeds on the generic worker bridge
+  - TechLead can derive `QA` from the returned docs worker packet
+
 ### Still open in this plan
 
 - Stage W6
-  - full `TechLead -> Docs Dev -> TechLead` proof is still outstanding
 - Stage W7
   - automation pilot work remains paused until the automation surfaces match the Team Worker Roles model
 - automation launcher/bootstrap still needs a final app/UI-ready cutover pass
@@ -366,5 +369,5 @@ This plan is complete when:
 
 1. execute Stage W5:
    - finish the remaining launcher/bootstrap cutover details for Team Worker Roles
-2. then execute Stage W6:
-   - prove one additional non-Python lane end to end with `Docs Dev`
+2. then execute Stage W7:
+   - re-baseline the paused automation pilot work against the Team Worker Roles model

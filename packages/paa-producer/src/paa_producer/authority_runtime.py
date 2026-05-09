@@ -12,7 +12,7 @@ from typing import Optional
 from paa_core.config import load_producer_project_config
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_core.runtime_paths import default_installed_artifact_path, default_installed_manifest_path, producer_manifest_candidates
-from paa_core.team_worker_roles import team_worker_role_by_display_name, team_worker_role_by_key
+from paa_core.team_worker_roles import active_team_worker_roles, team_worker_role_by_display_name, team_worker_role_by_key
 from paa_producer.issue_loader import load_issue_into_paa
 
 MANIFEST_ENV = 'FRACTAL_CORE_AUTHORITY_MANIFEST'
@@ -29,12 +29,13 @@ DEFAULT_GOVERNANCE_REMINDERS = [
 PACKET_COMPILER_AGENT_BY_SCHEMA = {
     'architect_cycle_packet': 'Fractal Core Architect Automation',
     'slice_result_packet': 'Python Team Automation',
-    'worker_result_packet': 'Python Team Automation',
     'qa_verification_packet': 'Fractal Core QA Automation',
     'delivery_review_packet': 'Fractal Core Delivery Architect Automation',
     'techlead_assignment_packet': 'Fractal Core TechLead Automation',
     'techlead_decision_packet': 'Fractal Core TechLead Automation',
 }
+TEAM_WORKER_CLI_CHOICES = [role.key for role in active_team_worker_roles(repo_root=repo_root_from_cwd())]
+TEAM_WORKER_DECISION_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa', 'authority-architect']
 
 
 def resolve_manifest(explicit=None):
@@ -149,7 +150,20 @@ def persist_packet_compilation(
     issue_number = packet.get('github_context', {}).get('issue_number')
     work_item_id = resolve_work_item_id(project_slug, issue_number)
     schema_type = packet['schema_type']
-    agent_name = PACKET_COMPILER_AGENT_BY_SCHEMA[schema_type]
+    if schema_type == 'worker_result_packet':
+        from_role = packet.get('from_role')
+        role = team_worker_role_by_key(from_role, repo_root=repo_root_from_cwd()) if from_role else None
+        agent_name = role.automation_id.replace('-', ' ').title().replace(' Automation', ' Automation') if role else 'Python Team Automation'
+        if role:
+            agent_name = {
+                'python-team-automation': 'Python Team Automation',
+                'frontend-dev-automation': 'Frontend Dev Automation',
+                'backend-dev-automation': 'Backend Dev Automation',
+                'infra-dev-automation': 'Infra Dev Automation',
+                'docs-dev-automation': 'Docs Dev Automation',
+            }.get(role.automation_id, agent_name)
+    else:
+        agent_name = PACKET_COMPILER_AGENT_BY_SCHEMA[schema_type]
     artifacts = {
         'packet_schema_type': schema_type,
         'package_id_external': package_id_external,
@@ -2612,7 +2626,7 @@ def build_parser():
     p.add_argument('--package-id-external', required=True)
     p.add_argument('--brief-id-external', required=True)
     p.add_argument('--packet-project', default='fractal-core')
-    p.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa'], required=True)
+    p.add_argument('--target-role', choices=['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa'], required=True)
     p.add_argument('--repo', required=True)
     p.add_argument('--issue-number', type=int, required=True)
     p.add_argument('--issue-url', required=True)
@@ -2663,7 +2677,7 @@ def build_parser():
     p.add_argument('--worktree-hint')
     p.add_argument('--reset-reason')
     p.add_argument('--to-role', choices=['authority-architect', 'techlead'], default='authority-architect')
-    p.add_argument('--target-role', choices=['delivery-architect', 'python-team', 'qa', 'authority-architect'])
+    p.add_argument('--target-role', choices=TEAM_WORKER_DECISION_CHOICES)
     p.add_argument('--decision-type', required=True)
     p.add_argument('--decision-rationale', required=True)
     p.add_argument('--next-assignment-type')
