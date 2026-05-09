@@ -78,7 +78,11 @@ The gate is satisfied only when the current role set is:
 
 Canonical Phase I E2E result:
 - transport loop: pass for the current proven role set
-- automation unpause gate: pass for the current proven role set
+- automation unpause gate: not yet final for the current proven role set
+
+Phase I3 cutover decision:
+- readiness verdict: ready only for additional supervised pilot
+- final deliberate unpause remains blocked on actual app/UI automation visibility and launcher-path proof
 
 Resolved in the hardening rerun:
 - queue-order masking in TechLead derivation
