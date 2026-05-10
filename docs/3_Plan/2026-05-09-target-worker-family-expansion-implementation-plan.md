@@ -430,11 +430,12 @@ This plan is complete when:
   - Stage W7 Phase 0 readiness snapshot has passed
   - Stage W7 Phase 1 UI visibility validation has passed
 - Stage W7 Phase 2 no-work poll and non-invocation validation has passed
-- app/UI-launched execution proof for a Team Worker role still remains to be executed
+- Stage W7 Phase 3 Team Worker single-role launch environment validation has passed
+- supervised live pilot execution with a fresh disposable fixture still remains to be executed
 
 ## Immediate Next Slice
 
-1. execute Stage W7 Phase 3:
+1. execute Stage W7 Phase 4:
    - use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the pilot authority
-   - validate one Team Worker role from the real app launch boundary
-2. then continue into the supervised Team Worker live pilot slice
+   - use a fresh disposable fixture instead of closed issue `#106`
+2. keep the preflight-only observability gap visible while validating the live pilot slice

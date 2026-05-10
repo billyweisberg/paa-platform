@@ -532,7 +532,7 @@ The next slice should be:
 - continue the Team Worker-aware automation pilot from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
 Immediate next step:
-- execute `Stage W7 Phase 3: Team Worker single-role launch environment validation`
-- keep the architecture-queue preview-depth limitation visible as an observability hardening follow-up
+- execute `Stage W7 Phase 4: supervised Team Worker live pilot slice` with a fresh disposable fixture
+- keep the architecture-queue preview-depth limitation and preflight-only automation logging limitation visible as observability hardening follow-ups
 
 That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.
