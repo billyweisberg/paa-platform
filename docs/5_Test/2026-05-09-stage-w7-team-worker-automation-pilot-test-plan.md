@@ -74,6 +74,22 @@ Default proving fixture:
 - brief id external:
   - `fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics`
 
+Active disposable Phase 4 pilot fixture:
+- issue: `108`
+- PR: `109`
+- canonical branch:
+  - `issue-108`
+- target doc:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+- package id external:
+  - `fcore-stagew7-2026-05-10-issue108-team-worker-automation-runtime-note`
+- brief id external:
+  - `fcore-coder-2026-05-10-issue108-team-worker-automation-runtime-note`
+- task id:
+  - `py-pilot-team-worker-automation-runtime-note`
+- phase 4 starting handoff:
+  - `TechLead -> Delivery Architect`
+
 ## Test sequence
 
 1. `Phase 0` Team Worker pilot readiness snapshot

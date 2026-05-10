@@ -159,6 +159,26 @@ Minimum expectation for no-work polling:
 - log at least one preflight event
 - preserve proof that the model was not invoked
 
+## Automation memory contract
+
+Team Worker automations must use a repo-local durable memory file under:
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/<automation_id>.md`
+
+Why:
+- Codex app runs may not expose a filesystem view of home-folder automation memory through MCP
+- app-launched shells may not define `CODEX_HOME`
+- repo-local memory keeps the automation state inspectable from the same repo boundary as logs, reports, and queue evidence
+
+Required behavior:
+- read and write the repo-local memory file directly
+- do not treat `/Users/billyweisberg/.codex/automations/<automation_id>/memory.md` as the authoritative memory surface
+- do not require `CODEX_HOME` to resolve the active memory path
+
+Current Fractal Core examples:
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/docs-dev-automation.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/python-team-automation.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/frontend-dev-automation.md`
+
 ## Worktree transition contract
 
 When work exists, the Team Worker automation must:

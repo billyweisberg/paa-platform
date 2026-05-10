@@ -81,6 +81,7 @@ The logging bootstrap must define at least:
 - `PAA_AUTOMATION_SUMMARY_FILE`
 - `PAA_AUTOMATION_LOG_LEVEL`
 - `PAA_AUTOMATION_LOG_FORMAT`
+- `PAA_AUTOMATION_MEMORY_FILE`
 
 Recommended defaults:
 - `PAA_AUTOMATION_LOG_LEVEL=INFO`
@@ -103,8 +104,17 @@ Current helper:
 Purpose:
 - create the run directory
 - create `stdout.log`, `stderr.log`, `events.jsonl`, and `summary.json`
+- create the repo-local automation memory directory and memory file
 - emit shell `export` lines so a launcher can bring the logging env into scope
 - establish a compatible Python interpreter and repo-local `UV_CACHE_DIR` before later helper steps run
+
+Repo-local memory root:
+- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/automation-memory/`
+
+The bootstrap must ensure:
+- `<memory_root>/<automation_id>.md` exists
+- `summary.json` records the resolved `memory_file`
+- later runtime helpers can inspect that path without relying on `CODEX_HOME`
 
 Usage shape:
 

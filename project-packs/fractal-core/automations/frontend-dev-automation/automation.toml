@@ -10,6 +10,8 @@ Act as Frontend Dev only.
 Use repo-local consumer runtime only.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
+Use repo-local automation memory file `{{REPO_ROOT}}/.project/data/paa/automation-memory/frontend-dev-automation.md` as the authoritative durable memory for this automation.
+Read and write that path directly. Do not rely on `$CODEX_HOME` or home-folder automation memory.
 Do not read project runtime from deprecated `$HOME/.codex` surfaces.
 Receive assignments from TechLead and return Frontend worker results only to TechLead.
 Use `worker_result_packet` as the active Frontend result family.

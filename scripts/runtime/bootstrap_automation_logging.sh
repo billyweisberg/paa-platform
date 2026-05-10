@@ -68,6 +68,7 @@ done
 
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 LOG_ROOT="$REPO_ROOT/.project/data/paa/logs/automations"
+MEMORY_ROOT="$REPO_ROOT/.project/data/paa/automation-memory"
 WORK_ROOT="$REPO_ROOT/.codex-work"
 if [ -z "${UV_CACHE_DIR:-}" ]; then
   UV_CACHE_DIR="$WORK_ROOT/uv-cache"
@@ -106,13 +107,16 @@ STDOUT_LOG="$RUN_DIR/stdout.log"
 STDERR_LOG="$RUN_DIR/stderr.log"
 SUMMARY_FILE="$RUN_DIR/summary.json"
 ENV_FILE="$RUN_DIR/env.sh"
+MEMORY_FILE="$MEMORY_ROOT/$AUTOMATION_ID.md"
 
 mkdir -p "$RUN_DIR"
+mkdir -p "$MEMORY_ROOT"
+: > "$MEMORY_FILE"
 : > "$STDOUT_LOG"
 : > "$STDERR_LOG"
 : > "$EVENTS_FILE"
 
-"$PAA_PYTHON" - <<'PY' "$SUMMARY_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT" "$WORKTREE_PATH" "$ISSUE_NUMBER" "$PACKAGE_ID_EXTERNAL" "$BRIEF_ID_EXTERNAL" "$LOG_LEVEL" "$LOG_FORMAT"
+"$PAA_PYTHON" - <<'PY' "$SUMMARY_FILE" "$RUN_ID" "$AUTOMATION_ID" "$ROLE_KEY" "$ROLE_DISPLAY_NAME" "$PHASE" "$REPO_ROOT" "$WORKTREE_PATH" "$ISSUE_NUMBER" "$PACKAGE_ID_EXTERNAL" "$BRIEF_ID_EXTERNAL" "$LOG_LEVEL" "$LOG_FORMAT" "$MEMORY_FILE"
 import json, sys
 from datetime import datetime, UTC
 (
@@ -129,6 +133,7 @@ from datetime import datetime, UTC
     brief_id_external,
     log_level,
     log_format,
+    memory_file,
 ) = sys.argv[1:]
 payload = {
     "run_id": run_id,
@@ -142,6 +147,7 @@ payload = {
     "issue_number": issue_number or None,
     "package_id_external": package_id_external or None,
     "brief_id_external": brief_id_external or None,
+    "memory_file": memory_file,
     "log_level": log_level,
     "log_format": log_format,
     "status": "started",
@@ -184,6 +190,7 @@ export PAA_AUTOMATION_STDERR_LOG='$STDERR_LOG'
 export PAA_AUTOMATION_SUMMARY_FILE='$SUMMARY_FILE'
 export PAA_AUTOMATION_LOG_LEVEL='$LOG_LEVEL'
 export PAA_AUTOMATION_LOG_FORMAT='$LOG_FORMAT'
+export PAA_AUTOMATION_MEMORY_FILE='$MEMORY_FILE'
 export PAA_PYTHON='$PAA_PYTHON'
 export UV_CACHE_DIR='$UV_CACHE_DIR'
 ENVVARS
@@ -202,5 +209,6 @@ printf '%s\n' \
   "export PAA_AUTOMATION_SUMMARY_FILE='$SUMMARY_FILE'" \
   "export PAA_AUTOMATION_LOG_LEVEL='$LOG_LEVEL'" \
   "export PAA_AUTOMATION_LOG_FORMAT='$LOG_FORMAT'" \
+  "export PAA_AUTOMATION_MEMORY_FILE='$MEMORY_FILE'" \
   "export PAA_PYTHON='$PAA_PYTHON'" \
   "export UV_CACHE_DIR='$UV_CACHE_DIR'"
