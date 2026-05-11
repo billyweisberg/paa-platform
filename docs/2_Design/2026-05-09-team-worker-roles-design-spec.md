@@ -202,7 +202,15 @@ Examples:
 ### Worktree paths
 
 Derived from role branch:
-- `/Users/billyweisberg/.codex/worktrees/paa/<repo_name>/<role_branch>`
+- default repo-local root:
+  - `<repo_root>/.codex-work/worktrees/paa/<role_branch>`
+- optional override root:
+  - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
+
+Why the repo-local default:
+- app-launched Codex automations are sandboxed to writable repo-local surfaces
+- home-folder worktree roots are readable from shell sessions but not reliably writable from app-launched local-mode automation runs
+- Team Worker execution needs a deterministic surface that both PAA and Codex can mutate
 
 ### Ownership rule
 
@@ -328,4 +336,3 @@ This design is successfully implemented when:
 2. teach runtime loaders to read it
 3. replace hard-coded worker normalization and branch suffix maps with registry-driven lookups
 4. then generalize worker route policy and worker bridge behavior
-

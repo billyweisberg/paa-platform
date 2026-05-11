@@ -194,7 +194,10 @@ Deterministic role branch form:
 - `issue-<issue_number>-<branch_suffix>`
 
 Deterministic worktree path form:
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/<role_branch>`
+- default repo-local root:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/<role_branch>`
+- optional override root:
+  - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 
 The Team Worker automation must never invent a branch suffix outside the registry-derived role branch contract.
 The Team Worker automation must not assume TechLead has already registered the role worktree before the role begins execution.

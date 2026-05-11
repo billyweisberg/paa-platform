@@ -53,7 +53,10 @@ Required launch behavior:
 ## Worktree root contract
 
 Deterministic role worktrees live under:
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/<role_branch>`
+- default repo-local root:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/<role_branch>`
+- optional override root:
+  - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 
 Current deterministic role branch forms:
 - `issue-<issue_number>-delivery`

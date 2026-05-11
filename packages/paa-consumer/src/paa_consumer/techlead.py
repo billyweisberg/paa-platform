@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -548,8 +549,15 @@ def worktree_staleness_assessment(
     }
 
 
+def default_role_worktree_root(repo_root: Path) -> Path:
+    override = os.environ.get('PAA_ROLE_WORKTREE_ROOT')
+    if override:
+        return Path(override).expanduser().resolve()
+    return (repo_root / '.codex-work' / 'worktrees' / 'paa').resolve()
+
+
 def default_role_worktree_path(repo_root: Path, role_branch: str) -> Path:
-    return Path.home() / '.codex' / 'worktrees' / 'paa' / repo_root.name / role_branch
+    return default_role_worktree_root(repo_root) / role_branch
 
 
 def git_current_branch(repo_root: Path) -> str | None:
