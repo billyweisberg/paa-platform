@@ -356,6 +356,7 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         result.codex_install_root / "scripts" / "runtime",
         [
             "bootstrap_automation_logging.sh",
+            "install_pilot_authority_overlay.py",
             "log_automation_event.py",
             "run_automation_preflight_with_logging.sh",
         ],
@@ -408,6 +409,7 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         result.codex_install_root / "scripts" / "runtime",
         [
             "bootstrap_automation_logging.sh",
+            "install_pilot_authority_overlay.py",
             "log_automation_event.py",
             "run_automation_preflight_with_logging.sh",
         ],

@@ -87,6 +87,10 @@ Active disposable Phase 4 pilot fixture:
   - `fcore-coder-2026-05-10-issue108-team-worker-automation-runtime-note`
 - task id:
   - `py-pilot-team-worker-automation-runtime-note`
+- pilot authority overlay helper:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py`
+- pilot overlay install root:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-108`
 - phase 4 starting handoff:
   - `TechLead -> Delivery Architect`
 
@@ -248,6 +252,7 @@ Run one supervised live slice through the Team Worker-aware automation surface.
 - app-launched automations wake in the correct sequence
 - no hidden queue-order reasoning is required
 - top-level `techlead-status` remains coherent
+- disposable pilot fixture is present in the installed current authority surface through the pilot overlay step
 - disposable worktrees are created only when work exists
 - queues return cleanly to zero after cleanup
 
@@ -258,6 +263,7 @@ Run one supervised live slice through the Team Worker-aware automation surface.
 - UI observation
 - queue checks
 - worktree checks
+- installed authority checks
 - packet validation and acknowledgment checks
 - top-level TechLead status checks
 

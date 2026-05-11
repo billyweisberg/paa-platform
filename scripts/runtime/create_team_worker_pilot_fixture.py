@@ -175,6 +175,10 @@ def build_fixture_artifacts(
     package["authority_context"]["task_id"] = task_id
     package["authority_context"]["task_title"] = title
     package["authority_context"]["issue_number"] = issue_number
+    package["authority_context"]["milestone_id"] = "m9-team-worker-automation-pilot"
+    package["authority_context"]["phase_id"] = "p9-team-worker-automation-pilot"
+    package["authority_context"]["predecessor_tasks"] = []
+    package["authority_context"]["allowed_successors"] = []
     package["product_and_source_basis"]["product_outcome_statement"] = (
         "Publish a small documentation note that explains Team Worker automation runtime states "
         "so the Codex app launcher boundary is easier to reason about."
@@ -229,6 +233,8 @@ def build_fixture_artifacts(
     brief["authority_context"]["task_id"] = task_id
     brief["authority_context"]["issue_number"] = issue_number
     brief["authority_context"]["pr_number"] = pr_number
+    brief["authority_context"]["milestone_id"] = "m9-team-worker-automation-pilot"
+    brief["authority_context"]["phase_id"] = "p9-team-worker-automation-pilot"
     brief["slice_scope_ref"]["slice_name"] = slice_name
     brief["slice_scope_ref"]["authorized_delta_family"] = delta_family
     brief["component_assignment"]["component_name"] = "RetirementBoundaryDiagnostics"

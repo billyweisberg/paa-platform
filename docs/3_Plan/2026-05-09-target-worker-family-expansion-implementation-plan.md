@@ -79,6 +79,8 @@ Use this plan together with:
     - installed consumer vendor/runtime path is healthy again
     - explicit Team Worker automation contract now exists:
       - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+    - pilot-only authority overlay/install step now exists for disposable fixtures:
+      - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-10-pilot-authority-overlay-install.md`
   - remaining:
     - prove app/UI-launched Team Worker behavior through Stage W7
 
