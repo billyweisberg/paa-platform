@@ -226,7 +226,15 @@ def build_fixture_artifacts(
         "Do not broaden into runtime or queue behavior changes.",
         "Do not change Team Worker routing or worktree logic in this slice.",
     ]
-    package["component_model_slice"]["primary_component"] = "RetirementBoundaryDiagnostics"
+    package["architectural_authority_constraints"]["required_architecture_seams"] = [
+        "Keep the pilot note downstream of runtime behavior and queue semantics.",
+        "Use the note to describe runtime states, not to redefine them.",
+    ]
+    package["architectural_authority_constraints"]["forbidden_module_growth_patterns"] = [
+        "Do not convert the docs-only pilot into runtime code changes.",
+        "Do not broaden the note into full launcher redesign guidance.",
+    ]
+    package["component_model_slice"]["primary_component"] = "TeamWorkerAutomationPilotNote"
 
     brief = json.loads(json.dumps(base_brief))
     brief["brief_id"] = brief_id
@@ -237,12 +245,25 @@ def build_fixture_artifacts(
     brief["authority_context"]["phase_id"] = "p9-team-worker-automation-pilot"
     brief["slice_scope_ref"]["slice_name"] = slice_name
     brief["slice_scope_ref"]["authorized_delta_family"] = delta_family
-    brief["component_assignment"]["component_name"] = "RetirementBoundaryDiagnostics"
+    brief["slice_scope_ref"]["out_of_scope_delta_families"] = [
+        "runtime-behavior-change",
+        "automation-launcher-redesign",
+        "queue-topology-redesign",
+    ]
+    brief["component_assignment"]["component_name"] = "TeamWorkerAutomationPilotNote"
     brief["component_assignment"]["component_role"] = "docs note describing Team Worker automation runtime states"
     brief["component_assignment"]["system_layer"] = "documentation"
     brief["component_assignment"]["tier"] = "docs"
     brief["component_assignment"]["component_aspects"] = ["docs"]
     brief["component_assignment"]["target_modules"] = [doc_rel_path]
+    brief["architecture_constraints"]["required_architecture_seams"] = [
+        "Keep the pilot note descriptive, not normative for runtime behavior.",
+        "Describe no-work, stale-assignment, and active-work states from the current PAA/Codex boundary.",
+    ]
+    brief["architecture_constraints"]["target_module_boundaries"] = [
+        "Edit the pilot note only.",
+        "Do not make runtime, queue, or worktree code changes in this docs slice.",
+    ]
     brief["architecture_constraints"]["allowed_edit_surfaces"] = [doc_rel_path]
     brief["architecture_constraints"]["forbidden_edit_surfaces"] = [
         "runtime code",
@@ -250,24 +271,110 @@ def build_fixture_artifacts(
         "automation launcher code",
         "unrelated docs",
     ]
+    brief["architecture_constraints"]["forbidden_module_growth_patterns"] = [
+        "Do not turn the note into a runtime redesign plan.",
+        "Do not broaden into unrelated PAA architecture documentation.",
+    ]
+    brief["collaboration_context"]["pattern_name"] = "team worker pilot runtime-state documentation"
+    brief["collaboration_context"]["collaborating_components"] = [
+        "TechLead Automation",
+        "Delivery Architect Automation",
+        "Python Team Automation",
+        "Docs Dev Automation",
+        "QA Automation",
+    ]
+    brief["collaboration_context"]["callers"] = [
+        "Codex app automation launcher",
+        "repo-local PAA runtime wrappers",
+    ]
+    brief["collaboration_context"]["callees"] = [
+        "repo-local authority install",
+        "automation preflight and logging helpers",
+    ]
+    brief["collaboration_context"]["event_emitters"] = [
+        "automation preflight logging",
+        "queue packet transitions",
+    ]
+    brief["collaboration_context"]["event_consumers"] = [
+        "operators running the supervised Team Worker pilot",
+        "future PAA projects adopting the same automation pattern",
+    ]
+    brief["execution_prerequisites"]["prerequisite_briefs"] = []
+    brief["execution_prerequisites"]["blocking_dependency_edges"] = []
+    brief["execution_prerequisites"]["parallel_safe_with"] = []
+    brief["execution_prerequisites"]["shared_surface_conflicts"] = []
+    brief["execution_prerequisites"]["sequencing_notes"] = [
+        "Use the current Team Worker pilot fixture only after the pilot authority overlay is installed.",
+        "Keep the slice docs-only so the supervised automation path stays low risk.",
+    ]
+    brief["dependency_contract"]["dependencies_to_inject"] = [
+        "installed current authority pilot overlay",
+        "repo-local automation logging bootstrap",
+    ]
+    brief["dependency_contract"]["runtime_inputs"] = [
+        "Team Worker assignment and result packet flow",
+        "repo-local worktree ownership behavior",
+    ]
+    brief["dependency_contract"]["configuration_inputs"] = [
+        "installed Team Worker automation contract",
+        "repo-local current authority package with pilot overlay",
+    ]
+    brief["dependency_contract"]["forbidden_hidden_dependencies"] = [
+        "Do not rely on hidden app memory or home-folder-only state.",
+        "Do not assume runtime behavior that is not visible in repo-local logs or current authority artifacts.",
+    ]
     brief["behavioral_contract"]["behavior_to_add_or_change"] = [
         "Document no-work polling for Team Worker automations.",
         "Document claimable-work detection and stale-assignment handling.",
         "Keep the note narrowly scoped to app-launched Team Worker runtime states.",
     ]
+    brief["behavioral_contract"]["invariants_to_preserve"] = [
+        "The slice remains docs-only.",
+        "No queue semantics or worktree ownership behavior changes are introduced.",
+        "The note reflects the actual current Team Worker runtime behavior.",
+    ]
+    brief["behavioral_contract"]["edge_cases"] = [
+        "No-work poll runs should be described without implying model invocation.",
+        "Stale-assignment handling should be described distinctly from active implementation work.",
+    ]
+    brief["behavioral_contract"]["error_conditions"] = [
+        "Treat any runtime behavior change in the diff as out of scope.",
+        "Treat any new dependency on hidden home-folder state as a failure.",
+    ]
+    brief["execution_readiness"]["readiness_class"] = "execution_ready"
+    brief["execution_readiness"]["dependency_readiness"] = []
+    brief["execution_readiness"]["blocking_causes"] = []
+    brief["execution_readiness"]["parallel_group_id"] = None
+    brief["execution_readiness"]["recommended_next_owner"] = "Python Dev"
+    brief["execution_readiness"]["readiness_snapshot_source"] = package_id
     brief["test_contract"]["tests_to_run"] = [
         f"test -f {doc_rel_path}",
         f"git diff -- {doc_rel_path}",
     ]
     brief["test_contract"]["tests_to_add_or_update"] = []
     brief["test_contract"]["artifacts_expected"] = ["docs note"]
+    brief["test_contract"]["protected_baseline_checks"] = [
+        "No runtime code paths changed",
+        "No queue topology changed",
+        "No launcher or worktree policy changed",
+    ]
     brief["change_budget"]["expected_touch_surfaces"] = [doc_rel_path]
     brief["change_budget"]["max_responsibility_expansion"] = (
         "This pilot slice may create or refine the Team Worker automation runtime note only."
     )
+    brief["change_budget"]["pre_handoff_scope_checks"] = [
+        "The pilot note is the only touched surface.",
+        "No runtime, queue, or worktree code paths changed.",
+        "The note reflects Team Worker runtime behavior proven during Stage W7.",
+    ]
     brief["anti_goals"]["anti_goals"] = [
         "Do not change runtime behavior during the pilot docs slice.",
         "Do not broaden into queue, worktree, or Codex launcher redesign work.",
+    ]
+    brief["anti_goals"]["common_failure_modes"] = [
+        "The note starts prescribing future architecture instead of describing the current proven behavior.",
+        "The slice accidentally changes runtime or queue code while trying to improve the pilot note.",
+        "The note relies on hidden operator memory instead of durable repo-local evidence.",
     ]
 
     package_path = fixture_root / "artifacts" / f"stage1_design_package.issue{issue_number}.team_worker_automation_runtime_note.json"

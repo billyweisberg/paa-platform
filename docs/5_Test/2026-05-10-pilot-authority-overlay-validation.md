@@ -56,6 +56,12 @@ The install also normalizes the copied fixture artifacts so their `authority_con
 - `milestone_id = m9-team-worker-automation-pilot`
 - `phase_id = p9-team-worker-automation-pilot`
 
+The live fixture builder now also rewrites the embedded brief/package sections away from the borrowed retirement-diagnostics template and toward the real pilot slice, including:
+
+- `component_name = TeamWorkerAutomationPilotNote`
+- Team Worker pilot-specific collaboration/dependency/test guidance
+- docs-only scope checks aligned to `docs/paa-team-worker-automation-pilot.md`
+
 ### Installed authority task proof
 
 Issue `108` now resolves from the installed authority manifest with:
