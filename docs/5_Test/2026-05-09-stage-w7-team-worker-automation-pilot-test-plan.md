@@ -259,6 +259,12 @@ Run one supervised live slice through the Team Worker-aware automation surface.
 ### Success
 - the Team Worker model is proven from the actual app/UI launcher boundary, not only from CLI/runtime surfaces
 
+### Current live progress
+- `pass` through:
+  - `TechLead -> Delivery Architect -> TechLead -> Python Dev`
+- next supervised hop:
+  - `TechLead -> QA`
+
 ### Evaluation
 - UI observation
 - queue checks
