@@ -1,6 +1,6 @@
 ---
 name: fractal-core-dev-result
-description: Execute a Team Worker Role assignment from a prepared role worktree and return a worker result packet to TechLead using repo-local PAA tooling.
+description: Execute a Team Worker Role assignment from its owned deterministic role worktree and return a worker result packet to TechLead using repo-local PAA tooling.
 ---
 
 Role:
@@ -47,7 +47,20 @@ Execution contract:
 
 Receive-side execution flow:
 
-1. Inspect the prepared role worktree:
+1. Create or reuse the owned deterministic role worktree first:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-prepare-role-worktree \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --target-role <worker_role_cli>
+```
+
+- This is the required first step when real work exists.
+- Team Worker roles own create-or-reuse of their own deterministic worktree beneath TechLead-authorized lineage.
+
+2. Inspect the prepared role worktree:
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree \
@@ -57,7 +70,7 @@ Receive-side execution flow:
   --target-role <worker_role_cli>
 ```
 
-2. Resolve the entry context and exact execution surfaces:
+3. Resolve the entry context and exact execution surfaces:
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-role-entry \
@@ -67,13 +80,13 @@ Receive-side execution flow:
   --target-role <worker_role_cli>
 ```
 
-3. Change into the prepared role worktree returned by the role-entry context.
+4. Change into the prepared role worktree returned by the role-entry context.
 
-4. Perform the assigned work there.
+5. Perform the assigned work there.
 - Prefer `uv run` from the prepared worktree for repo work.
 - Do not silently switch to unrelated interpreter state.
 
-5. Prepare the return-packet context:
+6. Prepare the return-packet context:
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-role-result-assist \
@@ -83,7 +96,7 @@ Receive-side execution flow:
   --target-role <worker_role_cli>
 ```
 
-6. Return the worker result packet to TechLead:
+7. Return the worker result packet to TechLead:
 
 ```bash
 {{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-role-return \
@@ -101,6 +114,7 @@ Team Worker Role result contract:
 
 Fail-closed rules:
 - do not proceed if preflight says no work
-- do not proceed if the prepared worktree is missing or on the wrong branch
+- do not proceed if `techlead-prepare-role-worktree` fails
+- do not proceed if the prepared worktree is missing or on the wrong branch after prepare-or-reuse
 - do not teach `slice_result_packet` as the active lane
 - do not route directly to `QA`

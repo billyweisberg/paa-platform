@@ -222,6 +222,7 @@ Validate one app-launched Team Worker automation against the real runtime/enviro
 - correct no-work bypass behavior when no packet exists
 - deterministic Team Worker role worktree path
 - correct `worker_result_packet` role identity
+- Team Worker execution skill prepares or reuses its owned deterministic role worktree before inspection and role entry
 
 ### Success
 - one non-Python Team Worker automation launches coherently from the app boundary

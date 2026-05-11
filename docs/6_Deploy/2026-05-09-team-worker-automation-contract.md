@@ -183,11 +183,12 @@ Current Fractal Core examples:
 
 When work exists, the Team Worker automation must:
 
-1. inspect the prepared role worktree
-2. resolve role entry context
-3. change cwd into the prepared deterministic role worktree
-4. perform assigned work there
-5. return `worker_result_packet` only to `TechLead`
+1. create or reuse the owned deterministic role worktree
+2. inspect the prepared role worktree
+3. resolve role entry context
+4. change cwd into the prepared deterministic role worktree
+5. perform assigned work there
+6. return `worker_result_packet` only to `TechLead`
 
 Deterministic role branch form:
 - `issue-<issue_number>-<branch_suffix>`
@@ -196,6 +197,7 @@ Deterministic worktree path form:
 - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/<role_branch>`
 
 The Team Worker automation must never invent a branch suffix outside the registry-derived role branch contract.
+The Team Worker automation must not assume TechLead has already registered the role worktree before the role begins execution.
 
 ## Result-return contract
 
