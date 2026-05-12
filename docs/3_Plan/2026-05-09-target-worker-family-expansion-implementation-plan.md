@@ -446,5 +446,5 @@ This plan is complete when:
 
 ## Immediate Next Slice
 
-1. generalize the remaining Team Worker automation contract away from `local` launcher assumptions and reconcile it with true Codex-native worktree/environment configuration
+1. harden the Team Worker `local` launcher contract around the intended PAA-managed role worktree model
 2. keep full-run automation observability visible beyond preflight-only logs
