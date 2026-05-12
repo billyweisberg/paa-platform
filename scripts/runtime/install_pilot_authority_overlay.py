@@ -4,11 +4,36 @@
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import shutil
 import sys
+
+
+def _bootstrap_runtime_imports() -> None:
+    script_path = Path(__file__).resolve()
+    runtime_root = script_path.parents[2]
+    source_root = script_path.parents[3] if len(script_path.parents) > 3 else None
+    for candidate in [runtime_root / "vendor", runtime_root / "lib"]:
+        if candidate.exists():
+            candidate_str = str(candidate)
+            if candidate_str not in sys.path:
+                sys.path.insert(0, candidate_str)
+    if source_root is not None:
+        for candidate in [
+            source_root / "packages" / "paa-core" / "src",
+            source_root / "packages" / "paa-producer" / "src",
+        ]:
+            if candidate.exists():
+                candidate_str = str(candidate)
+                if candidate_str not in sys.path:
+                    sys.path.insert(0, candidate_str)
+
+
+_bootstrap_runtime_imports()
+
+from paa_core.db import run_psql, sql_literal
 
 
 def load_json(path: Path) -> dict:
@@ -21,7 +46,7 @@ def write_json(path: Path, payload: dict) -> None:
 
 
 def utc_now() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def authority_install_root(repo_root: Path) -> Path:
@@ -50,6 +75,208 @@ def current_metadata_path(repo_root: Path) -> Path:
 
 def current_artifacts_root(repo_root: Path) -> Path:
     return authority_install_root(repo_root) / "artifacts"
+
+
+def _normalize_design_package_status(status: str | None) -> str:
+    if status in {"draft", "under_review", "approved_for_derivation", "superseded", "rejected"}:
+        return status
+    return "approved_for_derivation"
+
+
+def _normalize_brief_status(status: str | None) -> str:
+    if status in {"draft", "approved", "active", "superseded", "consumed", "rejected"}:
+        return status
+    return "approved"
+
+
+def _normalize_readiness_state(state: str | None) -> str:
+    if state in {
+        "not_derivation_ready",
+        "derivation_ready",
+        "blocked_on_dependency",
+        "blocked_on_contract",
+        "execution_ready",
+        "parallel_ready",
+        "active",
+        "completed",
+    }:
+        return state
+    return "execution_ready"
+
+
+def sync_overlay_traceability(repo_root: Path, issue_number: int, package: dict, brief: dict) -> None:
+    package_id = str(package.get("package_id") or "")
+    brief_id = str(brief.get("brief_id") or "")
+    if not package_id or not brief_id:
+        raise RuntimeError("Pilot overlay sync requires package_id and brief_id.")
+
+    authority_context = brief.get("authority_context") or {}
+    component_assignment = brief.get("component_assignment") or {}
+    execution_readiness = brief.get("execution_readiness") or {}
+    package_status = _normalize_design_package_status(package.get("status"))
+    brief_status = _normalize_brief_status(brief.get("status"))
+    readiness_state = _normalize_readiness_state(execution_readiness.get("readiness_class"))
+    blocking_causes = execution_readiness.get("blocking_causes") or []
+    blocking_cause = "; ".join(str(item) for item in blocking_causes) if blocking_causes else None
+    primary_component_name = (package.get("component_model_slice") or {}).get("primary_component") or component_assignment.get("component_name")
+    package_metadata = {
+        "real_slice": True,
+        "issue_number": issue_number,
+        "implementation_target_ref": (package.get("implementation_target") or {}).get("implementation_target_id"),
+        "spec_fragment_ref": (package.get("spec_fragment") or {}).get("spec_fragment_id"),
+        "overlay_sync": "pilot_fixture",
+    }
+    brief_metadata = {
+        "real_slice": True,
+        "issue_number": issue_number,
+        "loader": "pilot-authority-overlay",
+        "overlay_sync": "pilot_fixture",
+    }
+    sequence_metadata = {
+        "source": "pilot-authority-overlay",
+        "issue_number": issue_number,
+        "authority_version": authority_context.get("authority_version"),
+    }
+    sql = f"""
+BEGIN;
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug='fractal-core-python'
+), wi AS (
+  SELECT wi.work_item_id
+  FROM paa.work_items wi
+  JOIN project p ON p.project_id = wi.project_id
+  WHERE wi.issue_number = {issue_number}
+  LIMIT 1
+), component AS (
+  SELECT c.component_id
+  FROM paa.components c
+  JOIN project p ON p.project_id = c.project_id
+  WHERE c.name = {sql_literal(primary_component_name)}
+  LIMIT 1
+)
+UPDATE paa.work_items wi
+SET
+  title = COALESCE({sql_literal(authority_context.get('task_title'))}, wi.title),
+  authority_version_id = (
+    SELECT authority_version_id
+    FROM paa.authority_versions
+    WHERE version_label = {sql_literal(authority_context.get('authority_version'))}
+    LIMIT 1
+  ),
+  implementation_target_ref = {sql_literal((package.get('implementation_target') or {}).get('implementation_target_id'))},
+  spec_fragment_ref = {sql_literal((package.get('spec_fragment') or {}).get('spec_fragment_id'))},
+  domain_ref = {sql_literal(json.dumps({
+      "delta_family": (package.get("spec_fragment") or {}).get("authorized_delta_family"),
+      "real_slice": True,
+      "source": "pilot-authority-overlay",
+  }))}::jsonb,
+  updated_at = now()
+FROM project
+WHERE wi.project_id = project.project_id
+  AND wi.issue_number = {issue_number};
+
+UPDATE paa.design_packages dp
+SET
+  authority_version_id = (
+    SELECT authority_version_id
+    FROM paa.authority_versions
+    WHERE version_label = {sql_literal(authority_context.get('authority_version'))}
+    LIMIT 1
+  ),
+  work_item_id = (
+    SELECT wi.work_item_id
+    FROM paa.work_items wi
+    JOIN paa.projects p ON p.project_id = wi.project_id
+    WHERE p.slug = 'fractal-core-python'
+      AND wi.issue_number = {issue_number}
+    LIMIT 1
+  ),
+  primary_component_id = (
+    SELECT c.component_id
+    FROM paa.components c
+    JOIN paa.projects p ON p.project_id = c.project_id
+    WHERE p.slug = 'fractal-core-python'
+      AND c.name = {sql_literal(primary_component_name)}
+    LIMIT 1
+  ),
+  schema_version = {sql_literal(package.get('schema_version') or '1.0.0')},
+  status = {sql_literal(package_status)}::paa.design_package_status,
+  package_json = {sql_literal(json.dumps(package))}::jsonb,
+  provenance_json = provenance_json || {sql_literal(json.dumps({'overlay_source': 'pilot-authority-overlay'}))}::jsonb,
+  metadata_json = {sql_literal(json.dumps(package_metadata))}::jsonb,
+  updated_at = now()
+WHERE dp.package_id_external = {sql_literal(package_id)};
+
+UPDATE paa.coder_run_briefs cb
+SET
+  authority_version_id = (
+    SELECT authority_version_id
+    FROM paa.authority_versions
+    WHERE version_label = {sql_literal(authority_context.get('authority_version'))}
+    LIMIT 1
+  ),
+  work_item_id = (
+    SELECT wi.work_item_id
+    FROM paa.work_items wi
+    JOIN paa.projects p ON p.project_id = wi.project_id
+    WHERE p.slug = 'fractal-core-python'
+      AND wi.issue_number = {issue_number}
+    LIMIT 1
+  ),
+  primary_component_id = (
+    SELECT c.component_id
+    FROM paa.components c
+    JOIN paa.projects p ON p.project_id = c.project_id
+    WHERE p.slug = 'fractal-core-python'
+      AND c.name = {sql_literal(primary_component_name)}
+    LIMIT 1
+  ),
+  schema_version = {sql_literal(brief.get('schema_version') or '1.1.0')},
+  status = {sql_literal(brief_status)}::paa.coder_brief_status,
+  slice_scope_ref_json = {sql_literal(json.dumps(brief.get('slice_scope_ref') or {}))}::jsonb,
+  component_assignment_json = {sql_literal(json.dumps(component_assignment))}::jsonb,
+  architecture_constraints_json = {sql_literal(json.dumps(brief.get('architecture_constraints') or {}))}::jsonb,
+  collaboration_context_json = {sql_literal(json.dumps(brief.get('collaboration_context') or {}))}::jsonb,
+  dependency_contract_json = {sql_literal(json.dumps(brief.get('dependency_contract') or {}))}::jsonb,
+  behavioral_contract_json = {sql_literal(json.dumps(brief.get('behavioral_contract') or {}))}::jsonb,
+  test_contract_json = {sql_literal(json.dumps(brief.get('test_contract') or {}))}::jsonb,
+  change_budget_json = {sql_literal(json.dumps(brief.get('change_budget') or {}))}::jsonb,
+  anti_goals_json = {sql_literal(json.dumps(brief.get('anti_goals') or {}))}::jsonb,
+  brief_json = {sql_literal(json.dumps(brief))}::jsonb,
+  metadata_json = {sql_literal(json.dumps(brief_metadata))}::jsonb,
+  updated_at = now()
+WHERE cb.brief_id_external = {sql_literal(brief_id)};
+
+UPDATE paa.coder_brief_sequence_states s
+SET
+  primary_component_id = (
+    SELECT c.component_id
+    FROM paa.components c
+    JOIN paa.projects p ON p.project_id = c.project_id
+    WHERE p.slug = 'fractal-core-python'
+      AND c.name = {sql_literal(primary_component_name)}
+    LIMIT 1
+  ),
+  readiness_state = {sql_literal(readiness_state)}::paa.readiness_state,
+  blocking_cause = {sql_literal(blocking_cause)},
+  parallel_group_id = {sql_literal(execution_readiness.get('parallel_group_id'))},
+  computed_at = now(),
+  metadata_json = metadata_json || {sql_literal(json.dumps(sequence_metadata))}::jsonb
+WHERE s.design_package_id = (
+    SELECT dp.design_package_id
+    FROM paa.design_packages dp
+    WHERE dp.package_id_external = {sql_literal(package_id)}
+    LIMIT 1
+  )
+  AND s.coder_run_brief_id = (
+    SELECT cb.coder_run_brief_id
+    FROM paa.coder_run_briefs cb
+    WHERE cb.brief_id_external = {sql_literal(brief_id)}
+    LIMIT 1
+  );
+COMMIT;
+""".strip()
+    run_psql(sql)
 
 
 def build_overlay_task(summary: dict, package: dict, brief: dict, *, package_path: Path, brief_path: Path) -> dict:
@@ -223,6 +450,7 @@ def install_overlay(repo_root: Path, issue_number: int) -> dict:
     write_json(summary_path(repo_root, issue_number), summary)
     write_json(overlay_dir / "overlay-metadata.json", overlay_metadata)
     write_json(overlay_dir / "manifest-task.json", task)
+    sync_overlay_traceability(repo_root, issue_number, package, brief)
 
     return {
         "ok": True,

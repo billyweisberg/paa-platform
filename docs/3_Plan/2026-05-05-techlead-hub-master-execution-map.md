@@ -529,19 +529,18 @@ Do not jump to wide automation or many-role expansion before the `TechLead -> ro
 ## Recommended Next Step
 
 The next slice should be:
-- continue the Team Worker-aware automation pilot from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+- treat the Team Worker pilot as complete enough to pivot from pilot proof to automation-model reconciliation
 
 Immediate next step:
-- execute `Stage W7 Phase 4: supervised Team Worker live pilot slice` with a fresh disposable fixture
-- keep the architecture-queue preview-depth limitation and preflight-only automation logging limitation visible as observability hardening follow-ups
+- reconcile Team Worker automation surfaces with true Codex-native worktree/environment configuration
+- keep the architecture-queue preview-depth limitation and full-run automation observability limitation visible as hardening follow-ups
 
-That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.
+That keeps the system moving toward the target implementation instead of continuing to restage the already-proven pilot loop.
 ## 2026-05-12 update
 
 - `Stage W7 Phase 4` Team Worker live pilot slice passed through `QA`
 - current issue `108` / PR `109` was merged and closed
 - TechLead closeout after `qa_verification_packet pass` is now implemented and validated
 - canonical branch freshness before role-worktree preparation is now hardened and validated
-- the remaining gaps are now:
-  1. decide whether recorded closeout decision packets should remain on `fractal-core-architecture` or be auto-acknowledged after persistence
-  2. resolve active-work traceability metadata drift still showing stale component identity for issue `108`
+- self-addressed terminal closeout decision packets now auto-acknowledge after persistence/send
+- issue `108` traceability metadata now resolves to `TeamWorkerAutomationPilotNote` in the DB-backed reporting view

@@ -432,19 +432,19 @@ This plan is complete when:
   - `TechLead -> Docs Dev -> TechLead` now succeeds on the generic worker bridge
   - TechLead can derive `QA` from the returned docs worker packet
 
-### Still open in this plan
+### Stage W7 status
 
-- Stage W7
-  - automation pilot work has now been re-baselined against the Team Worker Roles model
-  - Stage W7 Phase 0 readiness snapshot has passed
-  - Stage W7 Phase 1 UI visibility validation has passed
-- Stage W7 Phase 2 no-work poll and non-invocation validation has passed
-- Stage W7 Phase 3 Team Worker single-role launch environment validation has passed
-- supervised live pilot execution with a fresh disposable fixture still remains to be executed
+- Stage W7 automation pilot work is now complete through the supervised pilot closeout path
+  - Stage W7 Phase 0 readiness snapshot passed
+  - Stage W7 Phase 1 UI visibility validation passed
+  - Stage W7 Phase 2 no-work poll and non-invocation validation passed
+  - Stage W7 Phase 3 Team Worker single-role launch environment validation passed
+  - Stage W7 Phase 4 supervised live pilot slice passed on disposable issue `108`
+  - Delivery Architect, Python Dev, QA, and TechLead closeout behavior all executed on the Team Worker model
+  - passing QA closeout now auto-acknowledges the self-addressed terminal closeout decision packet after persistence/send
+  - pilot overlay install now synchronizes DB-backed traceability rows so issue `108` resolves to `TeamWorkerAutomationPilotNote` in `paa.v_work_item_full_chain_traceability`
 
 ## Immediate Next Slice
 
-1. execute Stage W7 Phase 4:
-   - use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the pilot authority
-   - use a fresh disposable fixture instead of closed issue `#106`
-2. keep the preflight-only observability gap visible while validating the live pilot slice
+1. generalize the remaining Team Worker automation contract away from `local` launcher assumptions and reconcile it with true Codex-native worktree/environment configuration
+2. keep full-run automation observability visible beyond preflight-only logs

@@ -2682,6 +2682,45 @@ def closeout_qa_pass(args):
         ]
         qa_ack = run_json(ack_cmd)
 
+    decision_ack = None
+    if args.send_decision and decision_result.get('sent'):
+        architecture_state = queue_state(repo_root).get('fractal-core-architecture', {})
+        architecture_preview = architecture_state.get('preview') or []
+        head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
+        decision_message_id = decision_result.get('message_id')
+        if head_payload and head_payload.get('message_id') == decision_message_id:
+            claim_cmd = [
+                str(repo_queue_script(repo_root)),
+                'queue-claim-next',
+                '--repo-root', str(repo_root),
+                '--queue', 'fractal-core-architecture',
+                '--claimed-by', f"{args.claimed_by}-decision",
+            ]
+            claim_result = run_json(claim_cmd)
+            if claim_result.get('message_id') == decision_message_id:
+                ack_cmd = [
+                    str(repo_queue_script(repo_root)),
+                    'queue-ack',
+                    '--repo-root', str(repo_root),
+                    '--queue', 'fractal-core-architecture',
+                    '--claim-id', claim_result['claim_id'],
+                ]
+                decision_ack = run_json(ack_cmd)
+            else:
+                decision_ack = {
+                    'ok': False,
+                    'reason': 'claimed_wrong_decision_packet',
+                    'expected_message_id': decision_message_id,
+                    'claim': claim_result,
+                }
+        else:
+            decision_ack = {
+                'ok': False,
+                'reason': 'decision_packet_not_queue_head',
+                'expected_message_id': decision_message_id,
+                'architecture_queue_head': head_payload,
+            }
+
     return {
         'ok': True,
         'issue_number': args.issue_number,
@@ -2695,6 +2734,7 @@ def closeout_qa_pass(args):
         },
         'decision': decision_result,
         'qa_ack': qa_ack,
+        'decision_ack': decision_ack,
         'next_step_hint': 'run_closed_cleanup_if_registered_role_worktrees_should_be_pruned',
     }
 
