@@ -3,9 +3,6 @@
   "producer": {
     "skills": [
       "fractal-core-authority",
-      "fractal-core-delivery-review",
-      "fractal-core-dev-result",
-      "fractal-core-qa-review",
       "fractal-core-architect-handoff"
     ],
     "automations": [
