@@ -382,6 +382,11 @@ def git_resolve_ref(repo_root: Path, ref_name: str) -> str | None:
     return stdout.strip()
 
 
+def git_fetch_branch(repo_root: Path, branch_name: str) -> bool:
+    code, _stdout, _error = run_text_with_errors(['git', 'fetch', 'origin', branch_name], cwd=repo_root)
+    return code == 0
+
+
 def git_branch_usage(repo_root: Path, branch_name: str) -> list[str]:
     code, stdout, _error = run_text_with_errors(['git', 'worktree', 'list', '--porcelain'], cwd=repo_root)
     if code != 0 or stdout is None:
@@ -568,11 +573,14 @@ def git_current_branch(repo_root: Path) -> str | None:
 
 
 def resolve_canonical_source_ref(repo_root: Path, canonical_branch: str) -> tuple[str | None, str | None]:
-    if git_local_branch_exists(repo_root, canonical_branch):
-        return canonical_branch, git_resolve_ref(repo_root, canonical_branch)
+    if git_fetch_branch(repo_root, canonical_branch) and git_remote_branch_exists(repo_root, canonical_branch):
+        remote_ref = f'origin/{canonical_branch}'
+        return remote_ref, git_resolve_ref(repo_root, remote_ref)
     if git_remote_branch_exists(repo_root, canonical_branch):
         remote_ref = f'origin/{canonical_branch}'
         return remote_ref, git_resolve_ref(repo_root, remote_ref)
+    if git_local_branch_exists(repo_root, canonical_branch):
+        return canonical_branch, git_resolve_ref(repo_root, canonical_branch)
     return None, None
 
 
@@ -2575,6 +2583,122 @@ def emit_decision(args):
     return result
 
 
+def closeout_qa_pass(args):
+    repo_root = args.repo_root.resolve()
+    qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
+    if qa_packet is None:
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_found',
+            'details': f'No repo-local QA verification packet was found for issue #{args.issue_number}.',
+        }
+    if qa_packet.get('verification_status') != 'pass':
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_pass',
+            'details': f"QA packet {qa_packet.get('message_id')!r} is not a passing packet.",
+            'qa_packet': qa_packet,
+        }
+
+    issue_full, pr_full = github_state(args.issue_number, fallback_pr_number=qa_packet.get('pr_number'))
+    pr_merged = bool(pr_full and pr_full.get('mergedAt'))
+    issue_closed = (issue_full.get('state') or '').upper() == 'CLOSED'
+    if not pr_merged and not issue_closed:
+        return {
+            'ok': False,
+            'reason': 'slice_not_merged_or_closed',
+            'details': 'QA pass closeout requires a merged PR or a closed issue before TechLead records closed lineage.',
+            'qa_packet': qa_packet,
+            'github_state': {
+                'issue_state': issue_full.get('state'),
+                'pr_state': pr_full.get('state') if pr_full else None,
+                'pr_merged_at': pr_full.get('mergedAt') if pr_full else None,
+            },
+        }
+
+    emit_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        decision_type='closed',
+        send=args.send_decision,
+        source_packet_path=Path(qa_packet['path']),
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        superseded_branch=None,
+        worktree_hint=args.worktree_hint,
+        reset_reason=None,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    decision_result = emit_decision(emit_args)
+    if not decision_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'decision_emission_failed',
+            'details': 'TechLead could not record the closed decision for the passing QA packet.',
+            'qa_packet': qa_packet,
+            'decision': decision_result,
+        }
+
+    qa_ack = None
+    if args.ack_qa_packet:
+        architecture_state = queue_state(repo_root).get('fractal-core-architecture', {})
+        architecture_preview = architecture_state.get('preview') or []
+        head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
+        if not head_payload or head_payload.get('message_id') != qa_packet.get('message_id'):
+            return {
+                'ok': False,
+                'reason': 'qa_packet_not_queue_head',
+                'details': 'The passing QA packet is not the next claimable architecture-queue message; refusing to acknowledge the wrong packet.',
+                'qa_packet': qa_packet,
+                'architecture_queue_head': head_payload,
+                'decision': decision_result,
+            }
+        claim_cmd = [
+            str(repo_queue_script(repo_root)),
+            'queue-claim-next',
+            '--repo-root', str(repo_root),
+            '--queue', 'fractal-core-architecture',
+            '--claimed-by', args.claimed_by,
+        ]
+        claim_result = run_json(claim_cmd)
+        if claim_result.get('message_id') != qa_packet.get('message_id'):
+            return {
+                'ok': False,
+                'reason': 'claimed_wrong_packet',
+                'details': 'Architecture queue claim did not return the expected passing QA packet.',
+                'qa_packet': qa_packet,
+                'claim': claim_result,
+                'decision': decision_result,
+            }
+        ack_cmd = [
+            str(repo_queue_script(repo_root)),
+            'queue-ack',
+            '--repo-root', str(repo_root),
+            '--queue', 'fractal-core-architecture',
+            '--claim-id', claim_result['claim_id'],
+        ]
+        qa_ack = run_json(ack_cmd)
+
+    return {
+        'ok': True,
+        'issue_number': args.issue_number,
+        'qa_packet': qa_packet,
+        'github_state': {
+            'issue_state': issue_full.get('state'),
+            'issue_closed_at': issue_full.get('closedAt'),
+            'pr_number': pr_full.get('number') if pr_full else None,
+            'pr_state': pr_full.get('state') if pr_full else None,
+            'pr_merged_at': pr_full.get('mergedAt') if pr_full else None,
+        },
+        'decision': decision_result,
+        'qa_ack': qa_ack,
+        'next_step_hint': 'run_closed_cleanup_if_registered_role_worktrees_should_be_pruned',
+    }
+
+
 def prepare_role_branch(args):
     repo_root = args.repo_root.resolve()
     lineage_view = build_lineage_view(
@@ -4455,6 +4579,21 @@ def parse_args(argv: list[str] | None = None):
     decision.add_argument('--output', type=Path, help='Write the compiled packet JSON to this path.')
     decision.add_argument('--review-output', type=Path, help='Write the compiled packet review markdown to this path.')
 
+    closeout = sub.add_parser('closeout-qa-pass')
+    closeout.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for closeout commands.')
+    closeout.add_argument('--package-id-external', required=True)
+    closeout.add_argument('--brief-id-external', required=True)
+    closeout.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    closeout.add_argument('--issue-number', type=int, required=True)
+    closeout.add_argument('--send-decision', action='store_true', help='Send the compiled closed decision packet after validation succeeds.')
+    closeout.add_argument('--ack-qa-packet', action='store_true', help='Acknowledge the passing QA packet after the closeout decision succeeds.')
+    closeout.add_argument('--claimed-by', default='techlead-closeout-qa-pass')
+    closeout.add_argument('--canonical-branch')
+    closeout.add_argument('--role-branch')
+    closeout.add_argument('--worktree-hint')
+    closeout.add_argument('--output', type=Path)
+    closeout.add_argument('--review-output', type=Path)
+
     preflight = sub.add_parser('automation-preflight')
     preflight.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for non-model automation preflight.')
     preflight.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
@@ -4567,6 +4706,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'emit-decision':
         result = emit_decision(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'closeout-qa-pass':
+        result = closeout_qa_pass(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

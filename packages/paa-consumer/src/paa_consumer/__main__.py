@@ -232,6 +232,10 @@ def main() -> int:
         argv = ['emit-decision', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-closeout-qa-pass':
+        argv = ['closeout-qa-pass', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'validate-runtime':
         repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(validate(repo_root), indent=2))

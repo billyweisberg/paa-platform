@@ -62,16 +62,17 @@ Use this plan together with:
     - decide whether to stay on a shared implementation queue or introduce per-role/per-family queue topology
 
 - [ ] branch and worktree policy
-  - status: mostly complete
+  - status: substantially complete
   - done:
     - role branch suffixes are registry-defined
     - deterministic worktree behavior remains intact
     - non-Python proof exists through `Docs Dev`
+    - canonical source resolution now prefers `origin/<canonical_branch>` when available
   - remaining:
-    - broaden live automation proof for Team Worker app-launched execution surfaces
+    - broaden live automation proof for Team Worker app-launched execution surfaces beyond the current proving lane if desired
 
 - [ ] automation contract
-  - status: substantially proved; acceptance-path hardening remains
+  - status: substantially complete
   - done:
     - repo-local Team Worker automation definitions exist
     - home-level UI registrations are aligned to the Team Worker-aware installed automation definitions
@@ -85,9 +86,10 @@ Use this plan together with:
       - `Delivery Architect`
       - `Python Dev`
       - `QA`
+    - TechLead closeout for `qa_verification_packet pass` now exists and is validated
   - remaining:
-    - add first-class acceptance/closeout automation after passing QA packets
-    - harden canonical-branch freshness before role-worktree preparation
+    - decide whether recorded closeout decision packets should remain queue-visible or be auto-acknowledged after persistence
+    - resolve traceability metadata drift for the active work chain
 
 - [ ] migration plan
   - status: complete as authority, in progress as rollout

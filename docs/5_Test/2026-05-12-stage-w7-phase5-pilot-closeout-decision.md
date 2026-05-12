@@ -38,26 +38,28 @@ The current pilot slice for issue `108` / PR `109` is ready for acceptance and m
 - QA returned `pass`
 - the pilot docs slice stayed within authorized docs-only scope
 
-## What Is Not Yet Complete
-
-Two follow-ups remain visible:
+## What Was Completed During Closeout Hardening
 
 1. acceptance transition automation
-- there is not yet a first-class consumer-side automated acceptance/merge transition for:
-  - `techlead_qa_review_pending` -> accepted closeout
+- implemented:
+  - `techlead-closeout-qa-pass`
+- validated in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-techlead-closeout-qa-pass-validation.md`
 
 2. canonical branch freshness hardening
-- role-worktree preparation should ensure the local canonical branch is refreshed before deriving the role branch/worktree
+- role-branch preparation now prefers `origin/<canonical_branch>` when available
+- validated in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-canonical-branch-freshness-validation.md`
 
 ## Decision
 
 The Stage W7 pilot should be treated as:
 
 - successful system proof
-- ready for merge-prep closeout on the current slice
-- not yet the final unattended end-to-end acceptance implementation
+- successfully closed on the current slice
+- not yet the final fully unattended end-to-end acceptance implementation
 
 ## Next Follow-Up Work
 
-1. add acceptance/closeout automation after passing QA packets
-2. harden canonical branch freshness before role-worktree preparation
+1. decide whether recorded closeout decision packets should remain on `fractal-core-architecture` or be auto-acknowledged after persistence
+2. fix active-work traceability metadata drift that still shows stale component identity for issue `108`

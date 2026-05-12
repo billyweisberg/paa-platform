@@ -34,5 +34,6 @@ CONSUMER_COMMANDS = (
     'techlead-role-result-assist',
     'techlead-role-return',
     'techlead-emit-decision',
+    'techlead-closeout-qa-pass',
     'validate-runtime',
 )

@@ -539,7 +539,9 @@ That keeps the system moving toward the target implementation instead of re-hard
 ## 2026-05-12 update
 
 - `Stage W7 Phase 4` Team Worker live pilot slice passed through `QA`
-- current issue `108` / PR `109` is merge-prep ready
+- current issue `108` / PR `109` was merged and closed
+- TechLead closeout after `qa_verification_packet pass` is now implemented and validated
+- canonical branch freshness before role-worktree preparation is now hardened and validated
 - the remaining gaps are now:
-  1. acceptance/closeout automation after `qa_verification_packet pass`
-  2. canonical branch freshness hardening before role-worktree preparation
+  1. decide whether recorded closeout decision packets should remain on `fractal-core-architecture` or be auto-acknowledged after persistence
+  2. resolve active-work traceability metadata drift still showing stale component identity for issue `108`
