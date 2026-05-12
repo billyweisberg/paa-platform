@@ -176,15 +176,6 @@ def _install_selected_rendered_dirs(
     _prune_installed_dirs(dst_root, allowed_dirs)
 
 
-def _install_local_environment_setup(pack_root: Path, repo_root: Path) -> None:
-    src = pack_root / "local-environment" / "setup.sh"
-    if not src.exists():
-        return
-    dst = repo_root / ".codex" / "setup.sh"
-    _copy_file(src, dst)
-    dst.chmod(0o755)
-
-
 def _preferred_vendor_python(codex_root: Path) -> str | None:
     repo_root = codex_root.parent.parent
     repo_venv_python = repo_root / ".venv" / "bin" / "python"
@@ -444,7 +435,6 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         replacements,
         _manifest_names(manifest, 'consumer', 'automations'),
     )
-    _install_local_environment_setup(pack_root, repo_root)
     config_root = pack_root / 'config'
     if config_root.exists():
         for config_path in config_root.glob('*.json'):

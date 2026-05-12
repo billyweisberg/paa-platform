@@ -98,30 +98,22 @@ No Team Worker automation prompt should hard-code a future worker role that cont
 
 ### Launch root
 
-Codex should create the execution surface from the canonical consumer checkout:
+All Team Worker automations launch from the canonical consumer repo root:
 - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
-
-That checkout is the source for:
-- the Codex-native worktree
-- the shared repo-local `.venv`
-- the shared PAA runtime state under `.project/data/paa`
 
 ### Execution environment
 
-Current launcher base is now:
-- `execution_environment = "worktree"`
+Current launcher base remains:
+- `execution_environment = "local"`
 
 Meaning:
-- Codex launches the automation inside an app-managed git worktree
-- repo-local `.codex/setup.sh` runs first as the Local Environment bootstrap
-- the bootstrap:
-  - pins Python to the shared repo `.venv` or an explicit 3.12+ interpreter
-  - sets repo-local `UV_CACHE_DIR`
-  - exposes shared queue/log/runtime state through `.project/data/paa`
-  - installs a worktree-local `.codex/paa` wrapper set when needed
-- the automation prompt then runs from the current worktree root, not from the main checkout
+- launch from canonical repo root
+- run no-work preflight there first
+- resolve queue/runtime/authority state there first
+- transition into the prepared Team Worker role worktree only after real work exists
 
-This keeps code edits isolated in the Codex worktree while preserving one shared PAA runtime state boundary.
+This does not mean Team Worker code executes on the shared canonical repo root.
+It means the launcher begins from the canonical repo root before changing into the prepared worktree.
 
 ### Required launcher references
 
@@ -135,18 +127,13 @@ Current expected skill reference set:
 - `fractal-core-inbox`
 - `fractal-core-dev-result`
 
-Each prompt must also state:
-- current worktree root is the active consumer repo root for code work
-- `.codex/setup.sh` already prepared the worktree environment
-- `./.venv/bin/python` or `uv run` must be used instead of raw `python3`
-
 ## Preflight contract
 
 Every Team Worker automation must begin with deterministic non-model preflight:
 
 ```bash
-./.codex/paa/bin/paa-consumer automation-preflight \
-  --repo-root . \
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer automation-preflight \
+  --repo-root {{REPO_ROOT}} \
   --target-role <worker_role_cli>
 ```
 
@@ -175,7 +162,7 @@ Minimum expectation for no-work polling:
 ## Automation memory contract
 
 Team Worker automations must use a repo-local durable memory file under:
-- `.project/data/paa/automation-memory/<automation_id>.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/<automation_id>.md`
 
 Why:
 - Codex app runs may not expose a filesystem view of home-folder automation memory through MCP
@@ -188,9 +175,9 @@ Required behavior:
 - do not require `CODEX_HOME` to resolve the active memory path
 
 Current Fractal Core examples:
-- `.project/data/paa/automation-memory/docs-dev-automation.md`
-- `.project/data/paa/automation-memory/python-team-automation.md`
-- `.project/data/paa/automation-memory/frontend-dev-automation.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/docs-dev-automation.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/python-team-automation.md`
+- `{{REPO_ROOT}}/.project/data/paa/automation-memory/frontend-dev-automation.md`
 
 ## Worktree transition contract
 

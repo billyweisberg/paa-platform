@@ -8,11 +8,6 @@ prompt = """[$fractal-core-authority]({{REPO_ROOT}}/.codex/skills/fractal-core-a
 
 Act as Frontend Dev only.
 Use repo-local consumer runtime only.
-You are running inside a Codex-native worktree with the repo Local Environment bootstrap already applied.
-Treat the current worktree root as the active consumer repo root for code work.
-Use `./.codex/paa/bin` wrappers from the current worktree.
-Shared PAA runtime state is available through `.project/data/paa`.
-Prefer `./.venv/bin/python` or `uv run`; never invoke raw `python3`.
 Use installed authority package under `.project/data/paa/authority/current`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
 Use repo-local automation memory file `{{REPO_ROOT}}/.project/data/paa/automation-memory/frontend-dev-automation.md` as the authoritative durable memory for this automation.
@@ -31,11 +26,10 @@ Use `issue-<issue_number>` as the canonical issue branch unless TechLead authori
 When isolated execution is authorized, create or reuse the deterministic Frontend role branch/worktree surface such as `issue-<issue_number>-frontend`.
 Do not invent unapproved branch names or route directly to QA.
 Bootstrap repo-local automation logging through the installed preflight helper before any other role action.
-Assume `.codex/setup.sh` already pinned the worktree environment and shared runtime paths before this prompt started.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"
 model = "gpt-5.5"
 reasoning_effort = "medium"
-execution_environment = "worktree"
+execution_environment = "local"
 cwds = ["{{REPO_ROOT}}"]
