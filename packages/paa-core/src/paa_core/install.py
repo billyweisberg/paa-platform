@@ -176,6 +176,14 @@ def _install_selected_rendered_dirs(
     _prune_installed_dirs(dst_root, allowed_dirs)
 
 
+def _preferred_vendor_python(codex_root: Path) -> str | None:
+    repo_root = codex_root.parent.parent
+    repo_venv_python = repo_root / ".venv" / "bin" / "python"
+    if repo_venv_python.exists():
+        return str(repo_venv_python)
+    return None
+
+
 def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None:
     if not package_specs:
         return
@@ -183,8 +191,9 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
     if vendor_root.exists():
         shutil.rmtree(vendor_root)
     vendor_root.mkdir(parents=True, exist_ok=True)
+    preferred_python = _preferred_vendor_python(codex_root)
     if shutil.which("uv"):
-        vendor_python = "3.12"
+        vendor_python = preferred_python or "3.12"
         subprocess.run(
             [
                 "uv",
@@ -203,7 +212,7 @@ def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None
         if lock_path.exists():
             lock_path.unlink()
         return
-    vendor_python = shutil.which("python3.12")
+    vendor_python = preferred_python or shutil.which("python3.12")
     if vendor_python is None:
         if sys.version_info >= (3, 12):
             vendor_python = sys.executable

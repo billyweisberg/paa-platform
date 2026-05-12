@@ -71,7 +71,7 @@ Use this plan together with:
     - broaden live automation proof for Team Worker app-launched execution surfaces
 
 - [ ] automation contract
-  - status: in progress
+  - status: substantially proved; acceptance-path hardening remains
   - done:
     - repo-local Team Worker automation definitions exist
     - home-level UI registrations are aligned to the Team Worker-aware installed automation definitions
@@ -81,8 +81,13 @@ Use this plan together with:
       - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
     - pilot-only authority overlay/install step now exists for disposable fixtures:
       - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-10-pilot-authority-overlay-install.md`
+    - Stage W7 supervised Team Worker pilot slice passed through:
+      - `Delivery Architect`
+      - `Python Dev`
+      - `QA`
   - remaining:
-    - prove app/UI-launched Team Worker behavior through Stage W7
+    - add first-class acceptance/closeout automation after passing QA packets
+    - harden canonical-branch freshness before role-worktree preparation
 
 - [ ] migration plan
   - status: complete as authority, in progress as rollout

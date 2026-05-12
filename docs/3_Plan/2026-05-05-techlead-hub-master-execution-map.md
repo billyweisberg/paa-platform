@@ -536,3 +536,10 @@ Immediate next step:
 - keep the architecture-queue preview-depth limitation and preflight-only automation logging limitation visible as observability hardening follow-ups
 
 That keeps the system moving toward the target implementation instead of re-hardening a temporary worker shape.
+## 2026-05-12 update
+
+- `Stage W7 Phase 4` Team Worker live pilot slice passed through `QA`
+- current issue `108` / PR `109` is merge-prep ready
+- the remaining gaps are now:
+  1. acceptance/closeout automation after `qa_verification_packet pass`
+  2. canonical branch freshness hardening before role-worktree preparation

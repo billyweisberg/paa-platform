@@ -271,13 +271,19 @@ def load_ready_coder_briefs_from_paa(
         if not line.strip():
             continue
         brief_id_external, brief_json, readiness_state, blocking_cause, parallel_group_id, source_artifact, schema_path = line.split('\t')
+        brief_json_obj = json.loads(brief_json)
+        source_artifact_path = Path(source_artifact).expanduser().resolve() if source_artifact else None
+        # Prefer the installed/source artifact when it exists so packet payloads follow the
+        # current authority overlay rather than stale DB-cached brief JSON.
+        if source_artifact_path and source_artifact_path.exists():
+            brief_json_obj = json.loads(source_artifact_path.read_text())
         rows.append({
             'brief_id_external': brief_id_external,
-            'brief_json': json.loads(brief_json),
+            'brief_json': brief_json_obj,
             'readiness_state': readiness_state,
             'blocking_cause': blocking_cause or None,
             'parallel_group_id': parallel_group_id or None,
-            'source_artifact': source_artifact or None,
+            'source_artifact': str(source_artifact_path) if source_artifact_path else None,
             'schema_path': schema_path,
         })
     return rows

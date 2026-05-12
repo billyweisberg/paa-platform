@@ -238,6 +238,61 @@ Validate one app-launched Team Worker automation against the real runtime/enviro
 ### Knobs
 - chosen Team Worker proving role
 - send versus compile-only return behavior
+
+Status:
+- `pass`
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-10-stage-w7-phase3-team-worker-launch-environment-validation.md`
+
+## Phase 4: Supervised Team Worker Live Pilot Slice
+
+### Goal
+Prove one full supervised Team Worker pilot slice across the real app-launched spoke path.
+
+### Active fixture
+- issue `108`
+- PR `109`
+- canonical branch `issue-108`
+- docs target:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+
+### Success
+- Delivery Architect, Python Dev, and QA each execute from the app boundary
+- result packets return correctly to TechLead
+- the slice remains within the authorized docs-only scope
+- QA returns `pass`
+
+### Evaluation
+- queue state
+- repo-local run logs
+- result packet inspection
+- PR/branch state
+
+Status:
+- `pass`
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-11-stage-w7-phase4-python-leg-validation.md`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-stage-w7-phase4-qa-leg-validation.md`
+
+## Phase 5: Final Deliberate Unpause Decision
+
+### Goal
+Decide whether the pilot is a successful Team Worker proof and identify any remaining closeout gaps.
+
+### Success
+- the pilot is no longer blocked on spoke execution
+- remaining defects are specific hardening or acceptance-path gaps
+
+### Evaluation
+- TechLead runtime status
+- queue cleanup state
+- QA findings
+- pilot acceptance readiness
+
+Status:
+- `pilot pass / closeout pending`
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-stage-w7-phase5-pilot-closeout-decision.md`
 - whether to use disposable issue fixture or historical issue fixture
 
 ## Phase 4: Supervised Team Worker live pilot slice
