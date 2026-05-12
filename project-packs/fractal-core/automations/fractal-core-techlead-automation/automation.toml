@@ -5,6 +5,11 @@ name = "Fractal Core TechLead Automation"
 prompt = """[$fractal-core-techlead]({{REPO_ROOT}}/.codex/skills/fractal-core-techlead/SKILL.md)
 
 Use repo-local consumer runtime only.
+You are running inside a Codex-native worktree with the repo Local Environment bootstrap already applied.
+Treat the current worktree root as the active consumer repo root for code work.
+Use `./.codex/paa/bin` wrappers from the current worktree.
+Shared PAA runtime state is available through `.project/data/paa`.
+Prefer `./.venv/bin/python` or `uv run`; never invoke raw `python3`.
 Use `{{REPO_ROOT}}` as the canonical consumer repo root.
 Use repo-local automation memory file `{{REPO_ROOT}}/.project/data/paa/automation-memory/fractal-core-techlead-automation.md` as the authoritative durable memory for this automation.
 Read and write that path directly. Do not rely on `$CODEX_HOME` or home-folder automation memory.
@@ -26,10 +31,11 @@ Use `issue-<issue_number>` as the canonical issue branch.
 Use deterministic role branches such as `issue-<issue_number>-delivery`, `issue-<issue_number>-dev`, `issue-<issue_number>-frontend`, `issue-<issue_number>-backend`, `issue-<issue_number>-infra`, `issue-<issue_number>-docs`, and `issue-<issue_number>-qa` only when isolated role execution is authorized.
 Flag lineage violations, unapproved branch invention, or any attempt to route around TechLead.
 Use the installed logged preflight helper before any TechLead status or routing action.
+Assume `.codex/setup.sh` already pinned the worktree environment and shared runtime paths before this prompt started.
 """
 status = "PAUSED"
 rrule = "RRULE:FREQ=MINUTELY;INTERVAL=30"
 model = "gpt-5.4"
 reasoning_effort = "medium"
-execution_environment = "local"
+execution_environment = "worktree"
 cwds = ["{{REPO_ROOT}}"]

@@ -448,3 +448,22 @@ This plan is complete when:
 
 1. generalize the remaining Team Worker automation contract away from `local` launcher assumptions and reconcile it with true Codex-native worktree/environment configuration
 2. keep full-run automation observability visible beyond preflight-only logs
+
+## 2026-05-11 Codex-native reconciliation update
+
+- Team Worker automations now target `execution_environment = "worktree"` across:
+  - project-pack source
+  - repo-local installed consumer automations
+  - home-level UI registrations
+- the consumer repo now carries a repo-local Local Environment bootstrap at:
+  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/setup.sh`
+- the project pack now ships the same bootstrap source at:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/local-environment/setup.sh`
+- consumer runtime install now deploys that bootstrap automatically
+- disposable validation proved that the bootstrap:
+  - installs a worktree-local `.codex/paa`
+  - links `.venv` from the canonical checkout
+  - links `.project/data/paa` from the canonical checkout
+  - writes pinned environment values into `.codex-work/local-environment.env`
+- validation record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-11-codex-native-worktree-local-environment-validation.md`
