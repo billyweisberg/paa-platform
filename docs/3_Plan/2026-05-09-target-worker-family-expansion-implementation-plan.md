@@ -87,9 +87,12 @@ Use this plan together with:
       - `Python Dev`
       - `QA`
     - TechLead closeout for `qa_verification_packet pass` now exists and is validated
+    - self-addressed terminal closeout `techlead_decision_packet`s now auto-ack after persistence/send
+    - pilot overlay install now synchronizes DB-backed traceability rows for disposable fixtures
+    - reverted the off-model Codex-native worktree automation change and restored the intended `local` launcher contract
   - remaining:
-    - decide whether recorded closeout decision packets should remain queue-visible or be auto-acknowledged after persistence
-    - resolve traceability metadata drift for the active work chain
+    - keep full-run automation observability visible beyond preflight-only logs
+    - rerun a fresh disposable end-to-end slice after the launcher-model restore if we want a final post-revert full-flow confirmation
 
 - [ ] migration plan
   - status: complete as authority, in progress as rollout
@@ -98,6 +101,7 @@ Use this plan together with:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
   - rollout proof already complete:
     - `TechLead -> Docs Dev -> TechLead -> QA`
+    - Stage W7 supervised full pilot on disposable issue `108` completed through Delivery Architect, Python Dev, QA, and TechLead closeout
 
 ## Why We Are Doing This Now
 
