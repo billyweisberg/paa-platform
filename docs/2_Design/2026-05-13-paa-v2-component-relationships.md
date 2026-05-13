@@ -48,8 +48,9 @@ Key asymmetries:
 2. installed execution package supplies execution-time truth but does not own transitions
 3. runtime lifecycle engine performs transitions but does not invent its own execution-time authority
 4. workflow state machine owns current workflow truth but does not execute work
-5. RabbitMQ carries wakeup and transport signals but does not own workflow truth
-6. skills and automations invoke runtime entry points but do not own transactional semantics
+5. data access components provide structured access but do not own higher-level semantics
+6. RabbitMQ carries wakeup and transport signals but does not own workflow truth
+7. skills and automations invoke runtime entry points but do not own transactional semantics
 
 ## Relationship Matrix
 
@@ -62,6 +63,19 @@ Key asymmetries:
 | Published Authority Artifacts | Installed Execution Package | Data | materializes execution-time package content |
 | Consumer Repo | Installed Execution Package | Data + Hosting | hosts installed execution package surface |
 | Installed Execution Package | Runtime Lifecycle Engine | Data + Control Constraint | supplies execution-time truth and bounds legal runtime actions |
+| Runtime Lifecycle Engine | Workflow State Repository | Data Access Request | reads/writes authoritative workflow-state records through a repository boundary |
+| Runtime Lifecycle Engine | Execution Package Repository | Data Access Request | reads installed execution-time package content through a repository boundary |
+| Runtime Lifecycle Engine | Component Design Repository | Data Access Request | reads stable component-design and slice-derivation records through a repository boundary |
+| Runtime Lifecycle Engine | Runtime Event Repository | Data Access Request | reads and persists runtime transport/execution history through a repository boundary |
+| Workflow State Machine | Workflow State Repository | Data Access Request | loads and persists authoritative workflow-state records through a repository boundary |
+| Reporting And Traceability Projection | Projection Repository | Data Access Request | reads and writes reporting projections through a repository boundary |
+| Reporting And Traceability Projection | Workflow State Repository | Data Access Request | reads authoritative workflow-state records for projection only |
+| Reporting And Traceability Projection | Runtime Event Repository | Data Access Request | reads runtime event history for projection only |
+| Component Design Repository | PAA Postgres DB | Data | reads and writes stable component-design and slice-derivation records |
+| Workflow State Repository | PAA Postgres DB | Data | reads and writes workflow-state and workflow-transition records |
+| Runtime Event Repository | PAA Postgres DB | Data | reads and writes handoff, queue, execution, and acceptance event records |
+| Execution Package Repository | Repo-local Artifacts / Logs / Evidence | Data | reads installed execution-package artifacts and metadata |
+| Projection Repository | PAA Postgres DB | Data | reads and writes projection views or materialized reporting records |
 | Runtime Lifecycle Engine | Workflow State Machine | Control | requests legal workflow transitions |
 | Workflow State Machine | PAA Postgres DB | Data | persists authoritative workflow state |
 | PAA Postgres DB | Workflow State Machine | Data | reloads authoritative current state |
@@ -78,6 +92,27 @@ Key asymmetries:
 | Runtime Lifecycle Engine | GitHub Issues / PRs | Control + Data | validates state, comments, merges, closes |
 | GitHub Issues / PRs | Runtime Lifecycle Engine | Data | supplies issue/PR/merge state |
 | Runtime Lifecycle Engine | Repo-local Artifacts / Logs / Evidence | Data | writes execution evidence |
+
+
+### Data access layer rule
+
+Structured access to the PAA data model must pass through explicit Data Access Components.
+
+That means higher-level components should not mix:
+- raw SQL against unrelated tables
+- direct installed-package file reads
+- direct projection/report file interpretation
+
+inside the same lifecycle path.
+
+The Data Access Layer exists to separate:
+- workflow-state access
+- execution-package access
+- component-design access
+- runtime-event access
+- projection access
+
+so those concerns stop bleeding into each other.
 
 ## Explicit Logical Relationships
 

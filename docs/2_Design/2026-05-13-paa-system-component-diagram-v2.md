@@ -24,12 +24,13 @@ V2 corrects the component model so the next rounds of design and implementation 
 
 ## Design Delta From V1
 
-V2 introduces or clarifies three central components:
+V2 introduces or clarifies four central component groups:
 1. `Workflow State Machine`
 2. `Installed Execution Package`
 3. `Runtime Lifecycle Engine`
+4. `Data Access Layer`
 
-These three components are the core design correction.
+These component groups are the core design correction.
 
 ## System Components
 
@@ -48,6 +49,14 @@ flowchart TD
     WSM["Workflow State Machine"]
     WTP["Worktree Policy And Preparation"]
     REP["Reporting And Traceability Projection"]
+  end
+
+  subgraph DAL["Data Access Layer"]
+    WSR["Workflow State Repository"]
+    EPR["Execution Package Repository"]
+    CDR["Component Design Repository"]
+    RER["Runtime Event Repository"]
+    PRJ["Projection Repository"]
   end
 
   subgraph TransportPersistence["Transport And Persistence"]
@@ -75,15 +84,24 @@ flowchart TD
   PKG --> IEP
   CREPO --> IEP
 
-  IEP --> RLE
+  IEP --> EPR
   RLE --> WSM
-  WSM --> DB
-  DB --> WSM
+  RLE --> WSR
+  RLE --> EPR
+  RLE --> CDR
+  RLE --> RER
+  REP --> PRJ
+  WSM --> WSR
+
+  WSR --> DB
+  CDR --> DB
+  RER --> DB
+  PRJ --> DB
+  EPR --> ART
 
   RLE --> WTP
   WTP --> CREPO
   RLE --> REP
-  REP --> DB
   REP --> ART
 
   TL --> RLE
@@ -198,6 +216,60 @@ Owns:
 - lineage views
 - accepted-chain reporting
 - report materialization from authoritative runtime state
+
+### Data access layer
+
+#### `Workflow State Repository`
+**Role**
+Provide structured read/write access to authoritative workflow state and transition history.
+
+Owns access to:
+- workflow state records
+- workflow transition records
+- queue-claim records once DB-primary
+
+#### `Execution Package Repository`
+**Role**
+Provide structured access to installed execution-package content and install metadata.
+
+Owns access to:
+- installed authority manifest
+- installed design package artifacts
+- installed coder brief artifacts
+- package metadata and overlay activation state
+
+#### `Component Design Repository`
+**Role**
+Provide structured access to stable component definitions and slice-derivation design records.
+
+Owns access to:
+- `paa.components`
+- `paa.component_surfaces`
+- `paa.component_relationships`
+- `paa.design_packages`
+- `paa.coder_run_briefs`
+- `paa.component_dependency_edges`
+- `paa.coder_brief_sequence_states`
+
+#### `Runtime Event Repository`
+**Role**
+Provide structured access to transport, execution, and acceptance event history.
+
+Owns access to:
+- `paa.handoffs`
+- `paa.queue_messages`
+- `paa.automation_runs`
+- `paa.acceptance_events`
+- `paa.execution_records`
+
+#### `Projection Repository`
+**Role**
+Provide structured access to reporting views and projection records without redefining underlying truth.
+
+Owns access to:
+- reporting views
+- projection tables or materialized views
+- operator-summary read models
 
 ### Transport and persistence
 
