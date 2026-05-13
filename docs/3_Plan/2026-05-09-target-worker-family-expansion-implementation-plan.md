@@ -87,12 +87,17 @@ Use this plan together with:
       - `Python Dev`
       - `QA`
     - TechLead closeout for `qa_verification_packet pass` now exists and is validated
+    - TechLead autonomous acceptance for `qa_verification_packet pass` now exists and is validated:
+      - merge PR
+      - close issue
+      - record closeout decision
+      - acknowledge QA packet
     - self-addressed terminal closeout `techlead_decision_packet`s now auto-ack after persistence/send
     - pilot overlay install now synchronizes DB-backed traceability rows for disposable fixtures
     - reverted the off-model Codex-native worktree automation change and restored the intended `local` launcher contract
   - remaining:
     - keep full-run automation observability visible beyond preflight-only logs
-    - rerun a fresh disposable end-to-end slice after the launcher-model restore if we want a final post-revert full-flow confirmation
+    - fix the slice-specific closed-lineage reporting drift still visible after issue `110` closeout
 
 - [ ] migration plan
   - status: complete as authority, in progress as rollout
@@ -102,6 +107,7 @@ Use this plan together with:
   - rollout proof already complete:
     - `TechLead -> Docs Dev -> TechLead -> QA`
     - Stage W7 supervised full pilot on disposable issue `108` completed through Delivery Architect, Python Dev, QA, and TechLead closeout
+    - Stage W7 fresh rerun on disposable issue `110` completed through Delivery Architect, Python Dev, QA, and autonomous TechLead acceptance/closeout
 
 ## Why We Are Doing This Now
 

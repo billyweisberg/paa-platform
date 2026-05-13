@@ -13,6 +13,7 @@ Treat Dev result packets and QA verification packets as TechLead-owned decisions
 Recognize `techlead_assignment_packet` as an issued routing intent and `techlead_decision_packet` as the durable reason for the next route, pause, reset, supersede, close, or merge-prep action.
 In supported cases, TechLead may emit the next assignment packet through `techlead-emit-next-assignment`.
 In supported branch-aware cases, TechLead may emit `techlead_decision_packet` through `techlead-emit-decision` to record reset, superseded, or closed lineage state.
+When a passing QA packet recommends `accept_and_merge`, TechLead should use `techlead-accept-and-merge` as the autonomous acceptance surface instead of stopping at merge-prep.
 TechLead owns canonical branch lineage, role-branch authorization, and routing decisions.
 Role automations own create-or-reuse of their own deterministic role worktrees beneath TechLead-authorized lineage.
 Use `techlead-lineage` as the dedicated lineage inspection surface before any branch mutation.

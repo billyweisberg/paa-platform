@@ -236,6 +236,10 @@ def main() -> int:
         argv = ['closeout-qa-pass', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
 
+    if args.command == 'techlead-accept-and-merge':
+        argv = ['accept-and-merge', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
+        return techlead_main(argv + remainder)
+
     if args.command == 'validate-runtime':
         repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(validate(repo_root), indent=2))

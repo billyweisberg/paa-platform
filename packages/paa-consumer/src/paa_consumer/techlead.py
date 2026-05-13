@@ -2869,6 +2869,183 @@ def closeout_qa_pass(args):
     }
 
 
+def accept_and_merge_qa_pass(args):
+    repo_root = args.repo_root.resolve()
+    qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
+    if qa_packet is None:
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_found',
+            'details': f'No repo-local QA verification packet was found for issue #{args.issue_number}.',
+        }
+    if qa_packet.get('verification_status') != 'pass':
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_pass',
+            'details': f"QA packet {qa_packet.get('message_id')!r} is not a passing packet.",
+            'qa_packet': qa_packet,
+        }
+
+    recommended_action = (qa_packet.get('recommended_action') or {})
+    merge_recommendation = recommended_action.get('merge_recommendation')
+    if merge_recommendation not in {'accept_and_merge', 'merge'}:
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_accept_and_merge',
+            'details': (
+                'TechLead acceptance requires a QA recommendation of '
+                f"`accept_and_merge` or `merge`; received {merge_recommendation!r}."
+            ),
+            'qa_packet': qa_packet,
+        }
+
+    issue_full, pr_full = github_state(args.issue_number, fallback_pr_number=qa_packet.get('pr_number'))
+    if pr_full is None:
+        return {
+            'ok': False,
+            'reason': 'pr_not_found',
+            'details': f'No PR could be resolved for issue #{args.issue_number}.',
+            'qa_packet': qa_packet,
+            'github_state': {'issue_state': issue_full.get('state') if issue_full else None},
+        }
+
+    merge_state = run_json([
+        'gh', 'pr', 'view', str(pr_full['number']),
+        '--repo', 'billyweisberg/fractal-core-python',
+        '--json', 'number,state,isDraft,mergeStateStatus,mergedAt,statusCheckRollup,url',
+    ])
+    ci_status = derive_ci_status(merge_state)
+    pr_merged = bool(merge_state.get('mergedAt'))
+    pr_open = (merge_state.get('state') or '').upper() == 'OPEN'
+    if not pr_merged:
+        if not pr_open:
+            return {
+                'ok': False,
+                'reason': 'pr_not_open_for_merge',
+                'details': f"PR #{pr_full['number']} is not open and not merged.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+        if merge_state.get('isDraft'):
+            return {
+                'ok': False,
+                'reason': 'pr_is_draft',
+                'details': f"PR #{pr_full['number']} is still draft and cannot be accepted by TechLead.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+        if ci_status != 'green':
+            return {
+                'ok': False,
+                'reason': 'pr_checks_not_green',
+                'details': f"PR #{pr_full['number']} does not have green checks.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+                'ci_status': ci_status,
+            }
+        if merge_state.get('mergeStateStatus') != 'CLEAN':
+            return {
+                'ok': False,
+                'reason': 'pr_not_mergeable_cleanly',
+                'details': (
+                    f"PR #{pr_full['number']} is not in CLEAN merge state; "
+                    f"received {merge_state.get('mergeStateStatus')!r}."
+                ),
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+
+    merge_result = {
+        'ok': True,
+        'already_merged': pr_merged,
+        'merge_method': args.merge_method,
+        'pr_number': pr_full['number'],
+        'pr_url': pr_full.get('url'),
+    }
+    if not pr_merged:
+        merge_cmd = [
+            'gh', 'pr', 'merge', str(pr_full['number']),
+            '--repo', 'billyweisberg/fractal-core-python',
+            f'--{args.merge_method}',
+        ]
+        merge_code, merge_stdout, merge_error = run_text_with_errors(merge_cmd)
+        merge_result.update({
+            'ok': merge_code == 0,
+            'stdout': merge_stdout.strip() if merge_stdout else '',
+            'stderr': merge_error if merge_code != 0 else '',
+        })
+        if merge_code != 0:
+            return {
+                'ok': False,
+                'reason': 'pr_merge_failed',
+                'details': f"TechLead could not merge PR #{pr_full['number']}.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+                'merge': merge_result,
+            }
+
+    issue_after_merge, pr_after_merge = github_state(args.issue_number, fallback_pr_number=pr_full.get('number'))
+    issue_close = {'ok': True, 'already_closed': (issue_after_merge.get('state') or '').upper() == 'CLOSED'}
+    if not issue_close['already_closed']:
+        close_cmd = [
+            'gh', 'issue', 'close', str(args.issue_number),
+            '--repo', 'billyweisberg/fractal-core-python',
+            '--reason', 'completed',
+            '--comment', args.issue_close_comment or f'Closed by TechLead after QA pass and merge of PR #{pr_full["number"]}.',
+        ]
+        close_code, close_stdout, close_error = run_text_with_errors(close_cmd)
+        issue_close.update({
+            'ok': close_code == 0,
+            'stdout': close_stdout.strip() if close_stdout else '',
+            'stderr': close_error if close_code != 0 else '',
+        })
+        if close_code != 0:
+            return {
+                'ok': False,
+                'reason': 'issue_close_failed',
+                'details': f'TechLead merged the PR but could not close issue #{args.issue_number}.',
+                'qa_packet': qa_packet,
+                'merge': merge_result,
+                'issue_close': issue_close,
+            }
+
+    closeout_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        issue_number=args.issue_number,
+        send_decision=True,
+        ack_qa_packet=True,
+        claimed_by=args.claimed_by,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        worktree_hint=args.worktree_hint,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    closeout_result = closeout_qa_pass(closeout_args)
+    if not closeout_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'closeout_after_merge_failed',
+            'details': 'TechLead merged the PR but could not record the QA-pass closeout state.',
+            'qa_packet': qa_packet,
+            'merge': merge_result,
+            'issue_close': issue_close,
+            'closeout': closeout_result,
+        }
+
+    return {
+        'ok': True,
+        'issue_number': args.issue_number,
+        'merge': merge_result,
+        'issue_close': issue_close,
+        'closeout': closeout_result,
+        'next_step_hint': 'run techlead-status to confirm closed lineage and empty spoke queues',
+    }
+
+
 def prepare_role_branch(args):
     repo_root = args.repo_root.resolve()
     lineage_view = build_lineage_view(
@@ -4792,6 +4969,21 @@ def parse_args(argv: list[str] | None = None):
     closeout.add_argument('--output', type=Path)
     closeout.add_argument('--review-output', type=Path)
 
+    accept = sub.add_parser('accept-and-merge')
+    accept.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for autonomous TechLead acceptance commands.')
+    accept.add_argument('--package-id-external', required=True)
+    accept.add_argument('--brief-id-external', required=True)
+    accept.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    accept.add_argument('--issue-number', type=int, required=True)
+    accept.add_argument('--merge-method', choices=['merge', 'squash', 'rebase'], default='merge')
+    accept.add_argument('--issue-close-comment')
+    accept.add_argument('--claimed-by', default='techlead-accept-and-merge')
+    accept.add_argument('--canonical-branch')
+    accept.add_argument('--role-branch')
+    accept.add_argument('--worktree-hint')
+    accept.add_argument('--output', type=Path)
+    accept.add_argument('--review-output', type=Path)
+
     preflight = sub.add_parser('automation-preflight')
     preflight.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for non-model automation preflight.')
     preflight.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
@@ -4909,6 +5101,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'closeout-qa-pass':
         result = closeout_qa_pass(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'accept-and-merge':
+        result = accept_and_merge_qa_pass(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1
