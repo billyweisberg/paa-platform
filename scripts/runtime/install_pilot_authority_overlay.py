@@ -15,7 +15,7 @@ def _bootstrap_runtime_imports() -> None:
     script_path = Path(__file__).resolve()
     runtime_root = script_path.parents[2]
     source_root = script_path.parents[3] if len(script_path.parents) > 3 else None
-    for candidate in [runtime_root / "vendor", runtime_root / "lib"]:
+    for candidate in [runtime_root / "lib"]:
         if candidate.exists():
             candidate_str = str(candidate)
             if candidate_str not in sys.path:
@@ -33,7 +33,14 @@ def _bootstrap_runtime_imports() -> None:
 
 _bootstrap_runtime_imports()
 
-from paa_core.db import run_psql, sql_literal
+
+def _load_db_helpers():
+    from paa_core.db import run_psql, sql_literal
+
+    return run_psql, sql_literal
+
+
+run_psql, sql_literal = _load_db_helpers()
 
 
 def load_json(path: Path) -> dict:

@@ -7,7 +7,6 @@ from datetime import datetime, UTC
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory
@@ -176,65 +175,6 @@ def _install_selected_rendered_dirs(
     _prune_installed_dirs(dst_root, allowed_dirs)
 
 
-def _preferred_vendor_python(codex_root: Path) -> str | None:
-    repo_root = codex_root.parent.parent
-    repo_venv_python = repo_root / ".venv" / "bin" / "python"
-    if repo_venv_python.exists():
-        return str(repo_venv_python)
-    return None
-
-
-def _install_vendor_packages(codex_root: Path, package_specs: list[str]) -> None:
-    if not package_specs:
-        return
-    vendor_root = codex_root / 'vendor'
-    if vendor_root.exists():
-        shutil.rmtree(vendor_root)
-    vendor_root.mkdir(parents=True, exist_ok=True)
-    preferred_python = _preferred_vendor_python(codex_root)
-    if shutil.which("uv"):
-        vendor_python = preferred_python or "3.12"
-        subprocess.run(
-            [
-                "uv",
-                "pip",
-                "install",
-                "--quiet",
-                "--python",
-                vendor_python,
-                "--target",
-                str(vendor_root),
-                *package_specs,
-            ],
-            check=True,
-        )
-        lock_path = vendor_root / ".lock"
-        if lock_path.exists():
-            lock_path.unlink()
-        return
-    vendor_python = preferred_python or shutil.which("python3.12")
-    if vendor_python is None:
-        if sys.version_info >= (3, 12):
-            vendor_python = sys.executable
-        else:
-            raise RuntimeError("PAA vendor install requires python3.12 or newer when uv is unavailable.")
-    subprocess.run(
-        [
-            vendor_python,
-            '-m',
-            'pip',
-            'install',
-            '--quiet',
-            '--disable-pip-version-check',
-            '--no-compile',
-            '--target',
-            str(vendor_root),
-            *package_specs,
-        ],
-        check=True,
-    )
-
-
 def _write_wrapper(script_path: Path, module_name: str) -> None:
     script_path.write_text(
         "#!/bin/sh\n"
@@ -245,33 +185,13 @@ def _write_wrapper(script_path: Path, module_name: str) -> None:
         "done\n"
         "SCRIPT_DIR=\"$(CDPATH= cd -- \"$(dirname -- \"$SCRIPT_PATH\")\" && pwd)\"\n"
         "REPO_ROOT=\"$(CDPATH= cd -- \"$SCRIPT_DIR/../../..\" && pwd)\"\n"
-        "RUNTIME_ROOT=\"$REPO_ROOT/.codex/paa\"\n"
-        "VENDOR_ROOT=\"$REPO_ROOT/.codex/paa/vendor\"\n"
         "LIB_ROOT=\"$REPO_ROOT/.codex/paa/lib\"\n"
-        "export PYTHONPATH=\"$VENDOR_ROOT:$LIB_ROOT${PYTHONPATH:+:$PYTHONPATH}\"\n\n"
-        "if [ -x \"$REPO_ROOT/.venv/bin/python\" ]; then\n"
-        f"  exec \"$REPO_ROOT/.venv/bin/python\" -m {module_name} \"$@\"\n"
+        "export PYTHONPATH=\"$LIB_ROOT${PYTHONPATH:+:$PYTHONPATH}\"\n\n"
+        "if [ ! -x \"$REPO_ROOT/.venv/bin/python\" ]; then\n"
+        "  echo 'PAA wrapper requires repo-local .venv at $REPO_ROOT/.venv/bin/python. Run uv sync first.' >&2\n"
+        "  exit 1\n"
         "fi\n\n"
-        "if command -v uv >/dev/null 2>&1; then\n"
-        "  if [ -f \"$REPO_ROOT/pyproject.toml\" ]; then\n"
-        f"    exec uv run --directory \"$RUNTIME_ROOT\" --python 3.12 --no-project python -m {module_name} \"$@\"\n"
-        "  fi\n"
-        f"  exec uv run --python 3.12 --isolated python -m {module_name} \"$@\"\n"
-        "fi\n\n"
-        "if [ -x \"/opt/homebrew/opt/python@3.13/bin/python3\" ]; then\n"
-        f"  exec /opt/homebrew/opt/python@3.13/bin/python3 -m {module_name} \"$@\"\n"
-        "fi\n\n"
-        "if command -v python3.12 >/dev/null 2>&1; then\n"
-        f"  exec python3.12 -m {module_name} \"$@\"\n"
-        "fi\n\n"
-        "if command -v python3 >/dev/null 2>&1; then\n"
-        "  PYTHON_OK=\"$(python3 -c 'import sys; print(int(sys.version_info >= (3, 12)))')\"\n"
-        "  if [ \"$PYTHON_OK\" = \"1\" ]; then\n"
-        f"    exec python3 -m {module_name} \"$@\"\n"
-        "  fi\n"
-        "fi\n\n"
-        "echo 'PAA wrapper requires uv with Python 3.12 support, or python3 >= 3.12 on PATH.' >&2\n"
-        "exit 1\n"
+        f"exec \"$REPO_ROOT/.venv/bin/python\" -m {module_name} \"$@\"\n"
     )
     script_path.chmod(0o755)
 
@@ -283,7 +203,6 @@ def _install_common_layout(
     package_names: list[str],
     example_config_name: str,
     project_pack: str,
-    vendor_packages: list[str] | None = None,
 ) -> InstallResult:
     root = platform_repo_root()
     codex_root = ensure_directory(repo_root / CODEX_INSTALL_ROOT)
@@ -296,7 +215,8 @@ def _install_common_layout(
     ensure_directory(codex_root / 'schemas' / 'handoff-packets')
     ensure_directory(codex_root / 'schemas' / 'runtime-records')
     ensure_directory(codex_root / 'templates' / 'configs')
-    ensure_directory(codex_root / 'vendor')
+    if (codex_root / 'vendor').exists():
+        shutil.rmtree(codex_root / 'vendor')
 
     for package_name in package_names:
         src = root / "packages" / package_name / "src"
@@ -315,8 +235,6 @@ def _install_common_layout(
         _copy_file(template_path, codex_root / "templates" / "configs" / template_path.name)
 
     _copy_file(templates_root / example_config_name, codex_root / "project-config.example.json")
-
-    _install_vendor_packages(codex_root, vendor_packages or [])
 
     _write_json(
         codex_root / "install-metadata.json",
@@ -352,7 +270,6 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         package_names=["paa-core", "paa-producer"],
         example_config_name="project-config.producer.example.json",
         project_pack=project_pack,
-        vendor_packages=[],
     )
     pack_root = project_pack_root(project_pack)
     manifest = project_pack_manifest(project_pack)
@@ -404,7 +321,6 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
         package_names=["paa-core", "paa-consumer", "paa-producer"],
         example_config_name="project-config.consumer.example.json",
         project_pack=project_pack,
-        vendor_packages=['jsonschema>=4,<5'],
     )
     pack_root = project_pack_root(project_pack)
     manifest = project_pack_manifest(project_pack)
