@@ -2368,6 +2368,26 @@ def emit_next_assignment(args):
         if send_code != 0:
             result['ok'] = False
             result['error'] = send_error
+            return result
+        source_packet_message_id = context.get('source_packet_message_id')
+        source_packet_path = context.get('source_packet_path')
+        source_packet_ack = None
+        if source_packet_message_id and source_packet_path:
+            from paa_consumer.inbox import resolve_packet_queue
+            source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
+            source_queue = resolve_packet_queue(source_packet)
+            if source_queue:
+                source_packet_ack = acknowledge_source_assignment(
+                    repo_root,
+                    source_packet_message_id,
+                    source_queue,
+                    claimed_by='techlead-emit-next-assignment',
+                )
+                result['source_packet_ack'] = source_packet_ack
+                if not source_packet_ack.get('ok'):
+                    result['ok'] = False
+                    result['error'] = 'sent_next_assignment_but_failed_to_close_source_packet'
+                    return result
     return result
 
 
