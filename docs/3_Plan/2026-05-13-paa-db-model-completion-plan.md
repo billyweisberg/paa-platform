@@ -108,7 +108,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.verification_obligations`
 
 - [ ] projection and file-surface demotion
-  - status: not started
+  - status: boundary policy complete, implementation demotion not started
   - action: `demote`
   - target surfaces:
     - repo-local report JSON
@@ -363,6 +363,9 @@ Deliverables:
 - accepted-chain projection policy
 - file-export policy
 
+Completed policy artifact:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-projection-boundary-policy.md`
+
 Exit criteria:
 - report files, markdown exports, and status summaries are explicitly downstream of DB truth
 
@@ -398,16 +401,31 @@ This plan is complete when all of the following are true:
 4. the runtime-event layer is separated cleanly from workflow state
 5. the stable component foundation is separated cleanly from derivative slice artifacts
 6. file-primary operational truth is eliminated from the target model
-7. the Data Access Layer can be designed and implemented against the completed target model without assuming transitional file truth
+7. the Data Access Layer can be designed against the completed target model without assuming transitional file truth
+
+## Plan Status Decision
+
+The DB model is now complete enough for Data Access Layer design.
+
+That means:
+- entity-design baselines are complete for the missing DB-primary families
+- normalization rules are complete for stable versus derivative component truth
+- the projection boundary is complete
+
+What is not complete yet:
+- DB migration design
+- schema migration implementation
+- projection-demotion implementation in runtime code
+- Data Access Layer implementation
 
 ## Recommended Next Moves After This Plan
 
-After this plan is accepted, execute in this order:
-1. finalize the workflow-state entity design
-2. finalize execution-package install and overlay DB entity design
-3. finalize component-design alignment rules
-4. finalize projection boundary
-5. only then resume detailed Data Access Layer design and implementation
+After this plan baseline is accepted, execute in this order:
+1. resume detailed Data Access Layer design against the completed model
+2. design the DB migration set that realizes the new entity families and normalization statuses
+3. implement the DB migrations
+4. implement repository/Data Access Components against the migrated model
+5. then implement runtime migration away from file-primary operational truth
 
 ## Hard Conclusion
 
