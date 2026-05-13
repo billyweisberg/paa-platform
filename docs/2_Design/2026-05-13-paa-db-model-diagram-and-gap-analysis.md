@@ -470,3 +470,14 @@ That means the right next steps are:
 3. The second major gap is the lack of DB-primary execution-package install/overlay state.
 4. The third major gap is incomplete normalization of full reusable Component Design records.
 5. The schema is already rich enough that the next moves should be targeted additions and alignment rules, not another fresh reinvention.
+
+
+## Update: Component Element Realization Layer
+
+The DB model now also includes a second-level Component Element Realization layer comprising:
+- `paa.component_element_realization_types`
+- `paa.component_element_type_realization_types`
+- `paa.component_element_realizations`
+- `paa.coder_brief_realization_targets`
+
+This layer closes the structured-implementation-targeting gap between stable Component Elements and coder-brief execution instructions.

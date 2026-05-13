@@ -45,6 +45,13 @@ The repository owns structured access to these DB tables:
 - `paa.component_relationships`
 - `paa.component_element_types`
 - `paa.component_elements`
+- `paa.component_element_type_realization_types`
+- `paa.component_element_realization_types`
+- `paa.component_element_realizations`
+- `paa.component_element_realization_types`
+- `paa.component_element_type_realization_types`
+- `paa.component_element_realizations`
+- `paa.coder_brief_realization_targets`
 
 ### Derivative slice-design layer
 - `paa.design_packages`
@@ -102,12 +109,21 @@ Includes:
 - component relationships
 - component element taxonomy references
 - component element instances
+- allowed realization kinds
+- concrete realization instances
 
 Backed by:
 - `paa.component_surfaces`
 - `paa.component_relationships`
 - `paa.component_element_types`
 - `paa.component_elements`
+- `paa.component_element_type_realization_types`
+- `paa.component_element_realization_types`
+- `paa.component_element_realizations`
+- `paa.component_element_realization_types`
+- `paa.component_element_type_realization_types`
+- `paa.component_element_realizations`
+- `paa.coder_brief_realization_targets`
 
 ### 3. Design Package View
 
@@ -213,12 +229,18 @@ Backed by:
 - create component element instance
 - update component element definition and provenance
 - change component element status
+- seed or upsert component element realization taxonomy
+- register allowed realization kinds for an element type
+- create component element realization instance
+- update component element realization definition and artifact refs
+- create or update coder brief realization targets
 
 ### Invariants
 - `component_element_types` is the standardized vocabulary for Component Elements
 - `component_elements` must attach to stable component identity
 - multi-instance element families use `element_key` for stable component-local identity
 - derivative packages and briefs must not become the only place where a reusable Component Element exists
+- a brief target that expects a concrete implementation artifact should resolve to a `component_element_realization`, not only a top-level element label
 
 ## D. Design Package Access
 
@@ -248,6 +270,7 @@ Backed by:
 - list briefs by `primary_component_id`
 - list briefs by normalization status
 - resolve brief-targetable component element labels for a brief context
+- list realization targets for a brief in execution order
 
 ### Write capabilities
 - create coder brief

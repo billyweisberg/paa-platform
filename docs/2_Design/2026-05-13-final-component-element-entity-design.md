@@ -190,6 +190,13 @@ The stable source of truth becomes:
 - component-element taxonomy in `paa.component_element_types`
 - component-element instances in `paa.component_elements`
 
+## Extension: Component Element Realizations
+
+This note is now extended by:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-element-realization-model.md`
+
+That extension adds the second-level realization taxonomy needed to constrain autonomous implementation runs.
+
 ## What This Design Does Not Do Yet
 
 This design does not yet:
@@ -198,7 +205,7 @@ This design does not yet:
 - change runtime code
 - rewrite coder-brief derivation
 
-It only completes the missing stable Component Element entity layer in the DB model.
+It only completes the stable `Component Element` layer itself. Realization-level targeting is defined in the follow-on realization model note.
 
 ## Final Conclusion
 
