@@ -462,6 +462,38 @@ def latest_qa_packet(issue_number, reports_dir: Path = QA_WORK_DIR):
     return latest
 
 
+def latest_techlead_decision_packet(issue_number, reports_dir: Path = QA_WORK_DIR):
+    candidates = []
+    for packet_path in sorted(reports_dir.glob(f'techlead-decision.issue{issue_number}.*.json')):
+        try:
+            packet = json.loads(packet_path.read_text())
+        except Exception:
+            continue
+        if packet.get('schema_type') != 'techlead_decision_packet':
+            continue
+        if packet.get('github_context', {}).get('issue_number') not in {None, issue_number}:
+            continue
+        created_at = packet.get('created_at')
+        candidates.append({
+            'path': str(packet_path),
+            'message_id': packet.get('message_id'),
+            'schema_type': packet.get('schema_type'),
+            'created_at': created_at,
+            'from_role': packet.get('from_role'),
+            'to_role': packet.get('to_role'),
+            'payload': packet.get('payload') or {},
+            '_created_dt': parse_created_at(created_at),
+            '_mtime': packet_path.stat().st_mtime,
+        })
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (item['_created_dt'] or datetime.min.replace(tzinfo=timezone.utc), item['_mtime']))
+    latest = candidates[-1]
+    latest.pop('_created_dt', None)
+    latest.pop('_mtime', None)
+    return latest
+
+
 def git_local_branch_exists(repo_root: Path, branch_name: str) -> bool:
     return subprocess.run(
         ['git', 'show-ref', '--verify', '--quiet', f'refs/heads/{branch_name}'],
@@ -930,7 +962,7 @@ def automation_preflight(args):
     }
 
 
-def derive_lineage_section(current_task, pr, queues, escalations):
+def derive_lineage_section(current_task, pr, queues, escalations, reports_dir: Path = QA_WORK_DIR):
     issue_number = current_task['issue_number'] if current_task else None
     assignment_packet = latest_packet_preview(
         queues,
@@ -942,7 +974,8 @@ def derive_lineage_section(current_task, pr, queues, escalations):
         issue_number,
         schema_type='techlead_decision_packet',
     ) if issue_number else None
-    lineage_packet = newest_packet(decision_packet, assignment_packet)
+    local_decision_packet = latest_techlead_decision_packet(issue_number, reports_dir=reports_dir) if issue_number else None
+    lineage_packet = newest_packet(decision_packet, assignment_packet, local_decision_packet)
     payload = (lineage_packet or {}).get('payload') or {}
     canonical_branch = payload.get('canonical_branch') or (pr.get('headRefName') if pr else None)
     role_branch = payload.get('role_branch')
@@ -994,10 +1027,21 @@ def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: 
     issue_number = resolve_issue_number_from_package(package, package_id_external)
     current_task = resolve_task_summary(manifest, package, issue_number)
     queues = queue_state(repo_root)
+    local_decision_packet = latest_techlead_decision_packet(issue_number, reports_dir=repo_reports_dir(repo_root))
     qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
     issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
     workflow_stage, owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
-    lineage = derive_lineage_section(current_task, pr, queues, escalations)
+    lineage = derive_lineage_section(current_task, pr, queues, escalations, reports_dir=repo_reports_dir(repo_root))
+    if (
+        local_decision_packet
+        and (local_decision_packet.get('payload') or {}).get('lineage_state') == 'closed'
+        and not any((queue_data.get('preview') or []) for queue_data in queues.values())
+        and pr
+        and pr.get('mergedAt')
+        and (issue.get('state') or '').upper() == 'CLOSED'
+    ):
+        workflow_stage = 'techlead_decision_recorded'
+        owner_role = 'TechLead'
     ambiguity_reasons = []
     if lineage['current_packet_type'] is None and lineage['canonical_branch'] is None and not pr:
         ambiguity_reasons.append('no_lineage_packet_or_pr_context')
@@ -1871,6 +1915,84 @@ def resolve_work_item_id(db_container, db_name, db_user, project_slug, issue_num
     return output or None
 
 
+def persist_techlead_acceptance_event(
+    db_container,
+    db_name,
+    db_user,
+    project_slug,
+    issue_number,
+    qa_packet,
+    pr_state,
+):
+    issue_number = int(issue_number)
+    decision_notes = (
+        f"TechLead accepted issue #{issue_number} after QA pass from packet "
+        f"{qa_packet.get('message_id')} and merged PR #{pr_state.get('number')}."
+    )
+    metadata_json = json.dumps({
+        'qa_packet_id': qa_packet.get('message_id'),
+        'qa_verification_status': qa_packet.get('verification_status'),
+        'merge_recommendation': ((qa_packet.get('recommended_action') or {}).get('merge_recommendation')),
+        'pr_number': pr_state.get('number'),
+        'pr_url': pr_state.get('url'),
+        'merge_state_status': pr_state.get('mergeStateStatus'),
+        'merged_at': pr_state.get('mergedAt'),
+    })
+    sql = f"""
+    WITH project AS (
+      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
+    ), work_item AS (
+      SELECT wi.work_item_id
+      FROM paa.work_items wi
+      JOIN project p ON p.project_id = wi.project_id
+      WHERE wi.issue_number = {issue_number}
+      LIMIT 1
+    ), techlead_agent AS (
+      SELECT a.agent_id
+      FROM paa.agents a
+      JOIN project p ON p.project_id = a.project_id
+      WHERE a.name = 'Fractal Core TechLead Automation'
+      LIMIT 1
+    ), techlead_role AS (
+      SELECT r.role_id
+      FROM paa.roles r
+      JOIN project p ON p.project_id = r.project_id
+      WHERE r.name = 'TechLead'
+      LIMIT 1
+    )
+    INSERT INTO paa.acceptance_events (
+      project_id,
+      work_item_id,
+      accepted_by_agent_id,
+      accepted_by_role_id,
+      decision,
+      notes,
+      merge_commit_sha,
+      metadata_json,
+      created_at
+    )
+    SELECT
+      project.project_id,
+      work_item.work_item_id,
+      techlead_agent.agent_id,
+      techlead_role.role_id,
+      'accepted'::paa.acceptance_decision,
+      {sql_literal(decision_notes)},
+      {sql_literal(pr_state.get('mergeCommit', {}).get('oid'))},
+      {sql_literal(metadata_json)}::jsonb,
+      {sql_literal(pr_state.get('mergedAt') or qa_packet.get('created_at'))}::timestamptz
+    FROM project, work_item, techlead_agent, techlead_role
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM paa.acceptance_events ae
+      WHERE ae.work_item_id = work_item.work_item_id
+        AND ae.decision = 'accepted'::paa.acceptance_decision
+        AND ae.metadata_json->>'qa_packet_id' = {sql_literal(qa_packet.get('message_id'))}
+    );
+    """
+    run_psql(db_container, db_name, db_user, sql)
+
+
 def load_traceability_section(db_container, db_name, db_user, project_slug, active_issue_number):
     section = {
         'status': 'unavailable',
@@ -2076,6 +2198,7 @@ def derive_next_assignment_context(args) -> dict:
             ),
             'source_packet_message_id': None,
             'source_packet_path': None,
+            'source_packet_queue': None,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2115,6 +2238,7 @@ def derive_next_assignment_context(args) -> dict:
             ),
             'source_packet_message_id': None,
             'source_packet_path': None,
+            'source_packet_queue': None,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2131,6 +2255,8 @@ def derive_next_assignment_context(args) -> dict:
         branch_name = pr.get('headRefName') or f'issue-{issue_number}'
         source_packet = pending_worker_packet or pending_dev_packet
         source_message_id = source_packet.get('message_id')
+        source_packet_path = source_packet.get('path')
+        source_packet_queue = source_packet.get('queue_name')
         return {
             'ok': True,
             'workflow_stage': workflow_stage,
@@ -2152,7 +2278,8 @@ def derive_next_assignment_context(args) -> dict:
                 f'for issue #{issue_number} to QA on branch {branch_name}.'
             ),
             'source_packet_message_id': source_message_id,
-            'source_packet_path': None,
+            'source_packet_path': source_packet_path,
+            'source_packet_queue': source_packet_queue,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2234,6 +2361,7 @@ def derive_next_assignment_context(args) -> dict:
                 ),
                 'source_packet_message_id': source_message_id,
                 'source_packet_path': source_packet_path,
+                'source_packet_queue': 'fractal-core-architecture',
                 'issue': issue,
                 'pr': pr,
                 'recommended_actions': recommended,
@@ -2371,11 +2499,14 @@ def emit_next_assignment(args):
             return result
         source_packet_message_id = context.get('source_packet_message_id')
         source_packet_path = context.get('source_packet_path')
+        source_packet_queue = context.get('source_packet_queue')
         source_packet_ack = None
-        if source_packet_message_id and source_packet_path:
-            from paa_consumer.inbox import resolve_packet_queue
-            source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
-            source_queue = resolve_packet_queue(source_packet)
+        if source_packet_message_id and (source_packet_path or source_packet_queue):
+            source_queue = source_packet_queue
+            if source_packet_path:
+                from paa_consumer.inbox import resolve_packet_queue
+                source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
+                source_queue = resolve_packet_queue(source_packet)
             if source_queue:
                 source_packet_ack = acknowledge_source_assignment(
                     repo_root,
@@ -2737,6 +2868,16 @@ def closeout_qa_pass(args):
             },
         }
 
+    persist_techlead_acceptance_event(
+        getattr(args, 'db_container', DEFAULT_DB_CONTAINER),
+        getattr(args, 'db_name', DEFAULT_DB_NAME),
+        getattr(args, 'db_user', DEFAULT_DB_USER),
+        args.project_slug,
+        args.issue_number,
+        qa_packet,
+        pr_full or {},
+    )
+
     emit_args = SimpleNamespace(
         repo_root=repo_root,
         package_id_external=args.package_id_external,
@@ -2857,6 +2998,199 @@ def closeout_qa_pass(args):
         'qa_ack': qa_ack,
         'decision_ack': decision_ack,
         'next_step_hint': 'run_closed_cleanup_if_registered_role_worktrees_should_be_pruned',
+    }
+
+
+def accept_and_merge_qa_pass(args):
+    repo_root = args.repo_root.resolve()
+    qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
+    if qa_packet is None:
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_found',
+            'details': f'No repo-local QA verification packet was found for issue #{args.issue_number}.',
+        }
+    if qa_packet.get('verification_status') != 'pass':
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_pass',
+            'details': f"QA packet {qa_packet.get('message_id')!r} is not a passing packet.",
+            'qa_packet': qa_packet,
+        }
+
+    recommended_action = (qa_packet.get('recommended_action') or {})
+    merge_recommendation = recommended_action.get('merge_recommendation')
+    if merge_recommendation not in {'accept_and_merge', 'merge'}:
+        return {
+            'ok': False,
+            'reason': 'qa_packet_not_accept_and_merge',
+            'details': (
+                'TechLead acceptance requires a QA recommendation of '
+                f"`accept_and_merge` or `merge`; received {merge_recommendation!r}."
+            ),
+            'qa_packet': qa_packet,
+        }
+
+    issue_full, pr_full = github_state(args.issue_number, fallback_pr_number=qa_packet.get('pr_number'))
+    if pr_full is None:
+        return {
+            'ok': False,
+            'reason': 'pr_not_found',
+            'details': f'No PR could be resolved for issue #{args.issue_number}.',
+            'qa_packet': qa_packet,
+            'github_state': {'issue_state': issue_full.get('state') if issue_full else None},
+        }
+
+    merge_state = run_json([
+        'gh', 'pr', 'view', str(pr_full['number']),
+        '--repo', 'billyweisberg/fractal-core-python',
+        '--json', 'number,state,isDraft,mergeStateStatus,mergedAt,statusCheckRollup,url',
+    ])
+    ci_status = derive_ci_status(merge_state)
+    pr_merged = bool(merge_state.get('mergedAt'))
+    pr_open = (merge_state.get('state') or '').upper() == 'OPEN'
+    if not pr_merged:
+        if not pr_open:
+            return {
+                'ok': False,
+                'reason': 'pr_not_open_for_merge',
+                'details': f"PR #{pr_full['number']} is not open and not merged.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+        if merge_state.get('isDraft'):
+            return {
+                'ok': False,
+                'reason': 'pr_is_draft',
+                'details': f"PR #{pr_full['number']} is still draft and cannot be accepted by TechLead.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+        if ci_status != 'green':
+            return {
+                'ok': False,
+                'reason': 'pr_checks_not_green',
+                'details': f"PR #{pr_full['number']} does not have green checks.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+                'ci_status': ci_status,
+            }
+        if merge_state.get('mergeStateStatus') != 'CLEAN':
+            return {
+                'ok': False,
+                'reason': 'pr_not_mergeable_cleanly',
+                'details': (
+                    f"PR #{pr_full['number']} is not in CLEAN merge state; "
+                    f"received {merge_state.get('mergeStateStatus')!r}."
+                ),
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+            }
+
+    merge_result = {
+        'ok': True,
+        'already_merged': pr_merged,
+        'merge_method': args.merge_method,
+        'pr_number': pr_full['number'],
+        'pr_url': pr_full.get('url'),
+    }
+    if not pr_merged:
+        merge_cmd = [
+            'gh', 'pr', 'merge', str(pr_full['number']),
+            '--repo', 'billyweisberg/fractal-core-python',
+            f'--{args.merge_method}',
+        ]
+        merge_code, merge_stdout, merge_error = run_text_with_errors(merge_cmd)
+        merge_result.update({
+            'ok': merge_code == 0,
+            'stdout': merge_stdout.strip() if merge_stdout else '',
+            'stderr': merge_error if merge_code != 0 else '',
+        })
+        if merge_code != 0:
+            return {
+                'ok': False,
+                'reason': 'pr_merge_failed',
+                'details': f"TechLead could not merge PR #{pr_full['number']}.",
+                'qa_packet': qa_packet,
+                'pr': merge_state,
+                'merge': merge_result,
+            }
+
+    issue_after_merge, pr_after_merge = github_state(args.issue_number, fallback_pr_number=pr_full.get('number'))
+    issue_close = {'ok': True, 'already_closed': (issue_after_merge.get('state') or '').upper() == 'CLOSED'}
+    if not issue_close['already_closed']:
+        close_cmd = [
+            'gh', 'issue', 'close', str(args.issue_number),
+            '--repo', 'billyweisberg/fractal-core-python',
+            '--reason', 'completed',
+            '--comment', args.issue_close_comment or f'Closed by TechLead after QA pass and merge of PR #{pr_full["number"]}.',
+        ]
+        close_code, close_stdout, close_error = run_text_with_errors(close_cmd)
+        issue_close.update({
+            'ok': close_code == 0,
+            'stdout': close_stdout.strip() if close_stdout else '',
+            'stderr': close_error if close_code != 0 else '',
+        })
+        if close_code != 0:
+            return {
+                'ok': False,
+                'reason': 'issue_close_failed',
+                'details': f'TechLead merged the PR but could not close issue #{args.issue_number}.',
+                'qa_packet': qa_packet,
+                'merge': merge_result,
+                'issue_close': issue_close,
+            }
+
+    final_issue_state, final_pr_state = github_state(args.issue_number, fallback_pr_number=pr_full.get('number'))
+
+    closeout_args = SimpleNamespace(
+        repo_root=repo_root,
+        package_id_external=args.package_id_external,
+        brief_id_external=args.brief_id_external,
+        project_slug=args.project_slug,
+        issue_number=args.issue_number,
+        send_decision=True,
+        ack_qa_packet=True,
+        claimed_by=args.claimed_by,
+        canonical_branch=args.canonical_branch,
+        role_branch=args.role_branch,
+        worktree_hint=args.worktree_hint,
+        output=args.output,
+        review_output=args.review_output,
+    )
+    closeout_result = closeout_qa_pass(closeout_args)
+    if not closeout_result.get('ok'):
+        return {
+            'ok': False,
+            'reason': 'closeout_after_merge_failed',
+            'details': 'TechLead merged the PR but could not record the QA-pass closeout state.',
+            'qa_packet': qa_packet,
+            'merge': merge_result,
+            'issue_close': issue_close,
+            'github_state_after_merge': {
+                'issue_state': final_issue_state.get('state') if final_issue_state else None,
+                'issue_closed_at': final_issue_state.get('closedAt') if final_issue_state else None,
+                'pr_number': final_pr_state.get('number') if final_pr_state else None,
+                'pr_state': final_pr_state.get('state') if final_pr_state else None,
+                'pr_merged_at': final_pr_state.get('mergedAt') if final_pr_state else None,
+            },
+            'closeout': closeout_result,
+        }
+
+    return {
+        'ok': True,
+        'issue_number': args.issue_number,
+        'merge': merge_result,
+        'issue_close': issue_close,
+        'github_state_after_merge': {
+            'issue_state': final_issue_state.get('state') if final_issue_state else None,
+            'issue_closed_at': final_issue_state.get('closedAt') if final_issue_state else None,
+            'pr_number': final_pr_state.get('number') if final_pr_state else None,
+            'pr_state': final_pr_state.get('state') if final_pr_state else None,
+            'pr_merged_at': final_pr_state.get('mergedAt') if final_pr_state else None,
+        },
+        'closeout': closeout_result,
+        'next_step_hint': 'run techlead-status to confirm closed lineage and empty spoke queues',
     }
 
 
@@ -4783,6 +5117,21 @@ def parse_args(argv: list[str] | None = None):
     closeout.add_argument('--output', type=Path)
     closeout.add_argument('--review-output', type=Path)
 
+    accept = sub.add_parser('accept-and-merge')
+    accept.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for autonomous TechLead acceptance commands.')
+    accept.add_argument('--package-id-external', required=True)
+    accept.add_argument('--brief-id-external', required=True)
+    accept.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+    accept.add_argument('--issue-number', type=int, required=True)
+    accept.add_argument('--merge-method', choices=['merge', 'squash', 'rebase'], default='merge')
+    accept.add_argument('--issue-close-comment')
+    accept.add_argument('--claimed-by', default='techlead-accept-and-merge')
+    accept.add_argument('--canonical-branch')
+    accept.add_argument('--role-branch')
+    accept.add_argument('--worktree-hint')
+    accept.add_argument('--output', type=Path)
+    accept.add_argument('--review-output', type=Path)
+
     preflight = sub.add_parser('automation-preflight')
     preflight.add_argument('--repo-root', type=Path, default=REPO_ROOT, help='Consumer repo root for non-model automation preflight.')
     preflight.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
@@ -4900,6 +5249,11 @@ def main(argv=None):
         return 0 if result.get('ok') else 1
     if args.command == 'closeout-qa-pass':
         result = closeout_qa_pass(args)
+        sys.stdout.write(json.dumps(result, indent=2))
+        sys.stdout.write('\n')
+        return 0 if result.get('ok') else 1
+    if args.command == 'accept-and-merge':
+        result = accept_and_merge_qa_pass(args)
         sys.stdout.write(json.dumps(result, indent=2))
         sys.stdout.write('\n')
         return 0 if result.get('ok') else 1

@@ -6,8 +6,8 @@ Date:
 ## Verdict
 
 - `pilot pass`
-- `closeout state = merge-prep ready`
-- `full unattended acceptance path = not yet complete`
+- `closeout state = autonomously accepted and closed`
+- `full unattended acceptance path = complete`
 
 ## Summary
 
@@ -31,12 +31,15 @@ The pilot proved:
 
 ## What Is Ready
 
-The current pilot slice for issue `108` / PR `109` is ready for acceptance and merge preparation:
+The current pilot slice family is now proven through autonomous acceptance and closeout:
 
-- PR `109` is ready for review
-- fast checks are green
-- QA returned `pass`
-- the pilot docs slice stayed within authorized docs-only scope
+- issue `108` / PR `109` proved the earlier closeout hardening path
+- issue `110` / PR `111` proved the final autonomous acceptance surface:
+  - `TechLead` merged the PR
+  - `TechLead` closed the issue
+  - `TechLead` recorded the closed decision
+  - `TechLead` acknowledged the passing QA packet
+  - the terminal self-addressed closeout packet auto-acknowledged after send
 
 ## What Was Completed During Closeout Hardening
 
@@ -46,7 +49,13 @@ The current pilot slice for issue `108` / PR `109` is ready for acceptance and m
 - validated in:
   - `docs/5_Test/2026-05-12-techlead-closeout-qa-pass-validation.md`
 
-2. canonical branch freshness hardening
+2. autonomous accept-and-merge automation
+- implemented:
+  - `techlead-accept-and-merge`
+- validated in:
+  - `docs/5_Test/2026-05-12-techlead-accept-and-merge-validation.md`
+
+3. canonical branch freshness hardening
 - role-branch preparation now prefers `origin/<canonical_branch>` when available
 - validated in:
   - `docs/5_Test/2026-05-12-canonical-branch-freshness-validation.md`
@@ -57,9 +66,9 @@ The Stage W7 pilot should be treated as:
 
 - successful system proof
 - successfully closed on the current slice
-- not yet the final fully unattended end-to-end acceptance implementation
+- now inclusive of the final unattended acceptance implementation path
 
 ## Next Follow-Up Work
 
-1. decide whether recorded closeout decision packets should remain on `fractal-core-architecture` or be auto-acknowledged after persistence
-2. fix active-work traceability metadata drift that still shows stale component identity for issue `108`
+1. fix the slice-specific lineage/reporting drift that still shows stale active lineage for closed issue `110`
+2. keep broader full-run observability visible beyond preflight-only logs

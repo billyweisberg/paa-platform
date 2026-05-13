@@ -12,6 +12,7 @@ Phase B adds first-class TechLead packet artifacts:
 - `techlead_assignment_packet` records the issued next assignment and target role
 - `techlead_decision_packet` records the durable routing, pause, reset, merge-prep, or escalation decision
 - keep assignment sending operator-invoked in this phase; do not assume auto-dispatch
+- when a passing `qa_verification_packet` recommends `accept_and_merge`, TechLead should use the dedicated acceptance path instead of stopping at merge-prep
 
 Automation preflight with logging:
 
@@ -49,6 +50,27 @@ Initial supported cases:
 - `techlead_dev_review_pending` -> emit assignment to `QA`
 - explicit `--target-role python-team` invocation -> emit assignment to `Python Dev`
 - explicit `--target-role delivery-architect` invocation -> emit assignment to `Delivery Architect`
+
+Autonomous QA-pass acceptance path:
+
+```bash
+{{REPO_ROOT}}/.codex/paa/bin/paa-consumer techlead-accept-and-merge \
+  --repo-root {{REPO_ROOT}} \
+  --package-id-external <package_id_external> \
+  --brief-id-external <brief_id_external> \
+  --issue-number <issue_number>
+```
+
+Use this when:
+- the active TechLead-owned packet is a passing `qa_verification_packet`
+- QA recommends `accept_and_merge`
+- PR checks are green and the PR is mergeable
+
+This path is the autonomous acceptance surface:
+- merge the PR through GitHub
+- close the issue if it remains open
+- record the closed TechLead decision
+- acknowledge the passing QA packet
 
 Supported branch-aware decision path:
 

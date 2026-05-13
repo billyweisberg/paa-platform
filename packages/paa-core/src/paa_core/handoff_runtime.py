@@ -619,7 +619,8 @@ def evidence_result_from_text(result_text: str) -> str:
 
 
 def persist_slice_result(message: dict):
-    if message.get("schema_type") != "slice_result_packet":
+    schema_type = message.get("schema_type")
+    if schema_type not in {"slice_result_packet", "worker_result_packet"}:
         return
     project_slug = project_slug_from_message(message)
     issue_number = issue_number_from_message(message)
@@ -629,7 +630,19 @@ def persist_slice_result(message: dict):
     if issue_number is None:
         return
     normalized_checks = []
-    if isinstance(local_checks, list) and local_checks:
+    if schema_type == "worker_result_packet":
+        validation_summary = payload.get("validation_summary") or []
+        if isinstance(validation_summary, list):
+            for entry in validation_summary:
+                if not isinstance(entry, str):
+                    continue
+                lowered = entry.lower()
+                inferred_result = entry if any(token in lowered for token in ("pass", "warn", "fail")) else "pass"
+                normalized_checks.append({
+                    "command": entry,
+                    "result": inferred_result,
+                })
+    elif isinstance(local_checks, list) and local_checks:
         normalized_checks = local_checks
     else:
         commands = validation.get("commands") or []
@@ -696,12 +709,12 @@ def persist_slice_result(message: dict):
         artifact_location = f"dev-packet:{message.get('message_id')}:{verification_key}"
         metadata_json = json.dumps({
             "packet_id": message.get("message_id"),
-            "schema_type": message.get("schema_type"),
+            "schema_type": schema_type,
             "command": command,
             "result_text": result_text,
             "github_context": github_context,
             "github_validation": github_validation,
-            "result_summary": payload.get("result_summary"),
+            "result_summary": payload.get("result_summary") or payload.get("implementation_summary"),
             "packet_artifacts": payload.get("artifacts"),
         })
         sql = f"""
