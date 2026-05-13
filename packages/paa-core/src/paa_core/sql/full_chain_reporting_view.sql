@@ -40,7 +40,10 @@ WITH latest_design_package AS (
     ar.artifacts_json->>'brief_id_external' AS brief_id_external
   FROM paa.automation_runs ar
   WHERE ar.work_item_id IS NOT NULL
-    AND ar.trigger_type = 'packet_compilation:slice_result_packet'
+    AND ar.trigger_type IN (
+      'packet_compilation:slice_result_packet',
+      'packet_compilation:worker_result_packet'
+    )
   ORDER BY ar.work_item_id, COALESCE(ar.finished_at, ar.started_at, ar.created_at) DESC, ar.created_at DESC, ar.automation_run_id DESC
 ), latest_qa_run AS (
   SELECT DISTINCT ON (ar.work_item_id)
