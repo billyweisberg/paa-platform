@@ -20,6 +20,7 @@ It is a design audit intended to make the remaining consolidation targets explic
 
 Read alongside:
 - `docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
+- `docs/2_Design/2026-05-13-paa-runtime-consolidation-design-correction.md`
 - `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
 - `docs/2_Design/2026-05-09-paa-service-contracts.md`
 - `docs/2_Design/2026-05-09-paa-data-contracts.md`

@@ -5,6 +5,7 @@
 Primary consolidated handoff reference:
 - `docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
 - `docs/2_Design/2026-05-13-paa-hybrid-implementation-audit.md`
+- `docs/2_Design/2026-05-13-paa-runtime-consolidation-design-correction.md`
 
 Document the primary service contracts between major PAA runtime components.
 
