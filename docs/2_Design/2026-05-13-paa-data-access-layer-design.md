@@ -21,6 +21,7 @@ This note adds the Data Access Layer to the PAA System Design as a first-class c
 Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-design-repository-contract.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-workflow-state-repository-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-runtime-event-repository-contract.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-schema-and-data-surface-audit.md`
@@ -145,12 +146,14 @@ Provide structured access to stable component-design records, stable Component E
 
 ### Role
 
-Provide structured access to transport, execution, acceptance, and execution-record history.
+Provide structured access to transport, execution, acceptance, evidence, structured transition-input, and automation run-event history.
 
 ### Owns access to
 - `paa.handoffs`
 - `paa.queue_messages`
 - `paa.automation_runs`
+- `paa.transition_inputs`
+- `paa.automation_run_events`
 - `paa.acceptance_events`
 - `paa.execution_records`
 - `paa.evidence`
