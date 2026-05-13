@@ -5,12 +5,16 @@ from __future__ import annotations
 from typing import Protocol
 
 from .models import (
+    BriefRealizationTargetUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
     ComponentElementRealizationTypeRecord,
+    ComponentElementRealizationUpsertSpec,
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    ElementTypeRealizationLinkSpec,
+    RealizationTypeUpsertSpec,
 )
 
 
@@ -38,3 +42,18 @@ class ComponentDesignRepository(Protocol):
         self, coder_run_brief_id: str
     ) -> list[CoderBriefRealizationTargetRecord]:
         """Return brief realization targets in execution order."""
+
+
+    def upsert_realization_type(self, spec: RealizationTypeUpsertSpec) -> None:
+        """Create or update one realization taxonomy row by stable key."""
+
+    def upsert_element_type_realization_link(self, spec: ElementTypeRealizationLinkSpec) -> None:
+        """Create or update one allowed realization mapping for a component element type."""
+
+    def upsert_component_element_realization(
+        self, spec: ComponentElementRealizationUpsertSpec
+    ) -> None:
+        """Create or update one concrete realization instance."""
+
+    def upsert_brief_realization_target(self, spec: BriefRealizationTargetUpsertSpec) -> None:
+        """Create or update one brief realization target binding."""

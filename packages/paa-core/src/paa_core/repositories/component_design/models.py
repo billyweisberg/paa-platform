@@ -94,3 +94,59 @@ class CoderBriefRealizationTargetRecord:
     target_notes: str | None
     target_contract: dict[str, Any]
     metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class RealizationTypeUpsertSpec:
+    realization_key: str
+    label: str
+    category: str
+    description: str | None = None
+    is_brief_targetable: bool = True
+    is_multi_instance: bool = True
+    sort_order: int = 0
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ElementTypeRealizationLinkSpec:
+    element_type_key: str
+    realization_key: str
+    is_default: bool = False
+    sort_order: int = 0
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ComponentElementRealizationUpsertSpec:
+    project_id: str
+    component_id: str
+    component_element_id: str
+    realization_type_key: str
+    realization_key: str
+    title: str | None = None
+    status: str = 'draft'
+    sequence_order: int = 0
+    definition: dict[str, Any] | None = None
+    artifact_ref: dict[str, Any] | None = None
+    provenance: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
+    created_by_role_id: str | None = None
+    created_by_agent_id: str | None = None
+
+
+@dataclass(frozen=True)
+class BriefRealizationTargetUpsertSpec:
+    project_id: str
+    coder_run_brief_id: str
+    component_id: str
+    component_element_id: str
+    component_element_realization_id: str
+    target_intent: str = 'implement'
+    work_item_id: str | None = None
+    depends_on_target_id: str | None = None
+    sequence_order: int = 0
+    is_required: bool = True
+    target_notes: str | None = None
+    target_contract: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None

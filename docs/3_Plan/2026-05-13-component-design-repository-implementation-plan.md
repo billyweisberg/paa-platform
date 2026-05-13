@@ -98,7 +98,8 @@ This plan is successful when:
 
 ## Current Leave-Off Point
 
-After the repository package layout refactor, resume at:
-- realization taxonomy upsert
-- realization instance create/update
-- coder brief realization target create/update
+This write slice is now implemented for the first repository boundary.
+
+Next recommended resume point:
+- integrate `ComponentDesignRepository` reads/writes into the first producer or consumer runtime path that currently uses ad hoc SQL or JSON for component-element realization access
+- then begin the next repository implementation slice on `WorkflowStateRepository` or `ExecutionPackageRepository` code

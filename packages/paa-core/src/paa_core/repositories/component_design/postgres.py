@@ -8,12 +8,16 @@ from typing import Any
 from paa_core.db import DBSettings, run_psql, sql_literal
 
 from .models import (
+    BriefRealizationTargetUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
     ComponentElementRealizationTypeRecord,
+    ComponentElementRealizationUpsertSpec,
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    ElementTypeRealizationLinkSpec,
+    RealizationTypeUpsertSpec,
 )
 
 
@@ -177,6 +181,162 @@ FROM (
 """
         return [self._brief_target_from_row(row) for row in self._query_json_rows(sql)]
 
+
+
+    def upsert_realization_type(self, spec: RealizationTypeUpsertSpec) -> None:
+        sql = f"""
+INSERT INTO paa.component_element_realization_types (
+  realization_key,
+  label,
+  category,
+  description,
+  is_brief_targetable,
+  is_multi_instance,
+  sort_order,
+  metadata_json
+)
+VALUES (
+  {sql_literal(spec.realization_key)},
+  {sql_literal(spec.label)},
+  {sql_literal(spec.category)},
+  {sql_literal(spec.description)},
+  {self._bool_sql(spec.is_brief_targetable)},
+  {self._bool_sql(spec.is_multi_instance)},
+  {int(spec.sort_order)},
+  {self._json_sql(spec.metadata)}::jsonb
+)
+ON CONFLICT (realization_key) DO UPDATE SET
+  label = EXCLUDED.label,
+  category = EXCLUDED.category,
+  description = EXCLUDED.description,
+  is_brief_targetable = EXCLUDED.is_brief_targetable,
+  is_multi_instance = EXCLUDED.is_multi_instance,
+  sort_order = EXCLUDED.sort_order,
+  metadata_json = EXCLUDED.metadata_json,
+  updated_at = now();
+"""
+        run_psql(sql, settings=self._settings)
+
+    def upsert_element_type_realization_link(self, spec: ElementTypeRealizationLinkSpec) -> None:
+        sql = f"""
+INSERT INTO paa.component_element_type_realization_types (
+  component_element_type_id,
+  component_element_realization_type_id,
+  is_default,
+  sort_order,
+  metadata_json
+)
+SELECT
+  cet.component_element_type_id,
+  cert.component_element_realization_type_id,
+  {self._bool_sql(spec.is_default)},
+  {int(spec.sort_order)},
+  {self._json_sql(spec.metadata)}::jsonb
+FROM paa.component_element_types cet
+JOIN paa.component_element_realization_types cert
+  ON cert.realization_key = {sql_literal(spec.realization_key)}
+WHERE cet.element_key = {sql_literal(spec.element_type_key)}
+ON CONFLICT (component_element_type_id, component_element_realization_type_id) DO UPDATE SET
+  is_default = EXCLUDED.is_default,
+  sort_order = EXCLUDED.sort_order,
+  metadata_json = EXCLUDED.metadata_json;
+"""
+        run_psql(sql, settings=self._settings)
+
+    def upsert_component_element_realization(
+        self, spec: ComponentElementRealizationUpsertSpec
+    ) -> None:
+        sql = f"""
+INSERT INTO paa.component_element_realizations (
+  project_id,
+  component_id,
+  component_element_id,
+  component_element_realization_type_id,
+  realization_key,
+  title,
+  status,
+  sequence_order,
+  definition_json,
+  artifact_ref_json,
+  provenance_json,
+  metadata_json,
+  created_by_role_id,
+  created_by_agent_id
+)
+SELECT
+  {sql_literal(spec.project_id)}::uuid,
+  {sql_literal(spec.component_id)}::uuid,
+  {sql_literal(spec.component_element_id)}::uuid,
+  cert.component_element_realization_type_id,
+  {sql_literal(spec.realization_key)},
+  {sql_literal(spec.title)},
+  {sql_literal(spec.status)}::paa.component_realization_status,
+  {int(spec.sequence_order)},
+  {self._json_sql(spec.definition)}::jsonb,
+  {self._json_sql(spec.artifact_ref)}::jsonb,
+  {self._json_sql(spec.provenance)}::jsonb,
+  {self._json_sql(spec.metadata)}::jsonb,
+  {self._uuid_or_null(spec.created_by_role_id)},
+  {self._uuid_or_null(spec.created_by_agent_id)}
+FROM paa.component_element_realization_types cert
+WHERE cert.realization_key = {sql_literal(spec.realization_type_key)}
+ON CONFLICT (component_element_id, component_element_realization_type_id, realization_key) DO UPDATE SET
+  title = EXCLUDED.title,
+  status = EXCLUDED.status,
+  sequence_order = EXCLUDED.sequence_order,
+  definition_json = EXCLUDED.definition_json,
+  artifact_ref_json = EXCLUDED.artifact_ref_json,
+  provenance_json = EXCLUDED.provenance_json,
+  metadata_json = EXCLUDED.metadata_json,
+  updated_at = now();
+"""
+        run_psql(sql, settings=self._settings)
+
+    def upsert_brief_realization_target(self, spec: BriefRealizationTargetUpsertSpec) -> None:
+        sql = f"""
+INSERT INTO paa.coder_brief_realization_targets (
+  project_id,
+  work_item_id,
+  coder_run_brief_id,
+  component_id,
+  component_element_id,
+  component_element_realization_id,
+  depends_on_target_id,
+  target_intent,
+  sequence_order,
+  is_required,
+  target_notes,
+  target_contract_json,
+  metadata_json
+)
+VALUES (
+  {sql_literal(spec.project_id)}::uuid,
+  {self._uuid_or_null(spec.work_item_id)},
+  {sql_literal(spec.coder_run_brief_id)}::uuid,
+  {sql_literal(spec.component_id)}::uuid,
+  {sql_literal(spec.component_element_id)}::uuid,
+  {sql_literal(spec.component_element_realization_id)}::uuid,
+  {self._uuid_or_null(spec.depends_on_target_id)},
+  {sql_literal(spec.target_intent)}::paa.brief_target_intent,
+  {int(spec.sequence_order)},
+  {self._bool_sql(spec.is_required)},
+  {sql_literal(spec.target_notes)},
+  {self._json_sql(spec.target_contract)}::jsonb,
+  {self._json_sql(spec.metadata)}::jsonb
+)
+ON CONFLICT (coder_run_brief_id, component_element_realization_id, target_intent) DO UPDATE SET
+  work_item_id = EXCLUDED.work_item_id,
+  component_id = EXCLUDED.component_id,
+  component_element_id = EXCLUDED.component_element_id,
+  depends_on_target_id = EXCLUDED.depends_on_target_id,
+  sequence_order = EXCLUDED.sequence_order,
+  is_required = EXCLUDED.is_required,
+  target_notes = EXCLUDED.target_notes,
+  target_contract_json = EXCLUDED.target_contract_json,
+  metadata_json = EXCLUDED.metadata_json;
+"""
+        run_psql(sql, settings=self._settings)
+
     def _query_json_rows(self, sql: str) -> list[dict[str, Any]]:
         out = run_psql(sql, settings=self._settings)
         rows: list[dict[str, Any]] = []
@@ -282,3 +442,18 @@ FROM (
             target_contract=row.get('target_contract') or {},
             metadata=row.get('metadata') or {},
         )
+
+
+    @staticmethod
+    def _json_sql(value: dict[str, Any] | None) -> str:
+        return sql_literal(json.dumps(value or {}, sort_keys=True))
+
+    @staticmethod
+    def _bool_sql(value: bool) -> str:
+        return 'true' if value else 'false'
+
+    @staticmethod
+    def _uuid_or_null(value: str | None) -> str:
+        if value is None:
+            return 'NULL'
+        return f"{sql_literal(value)}::uuid"

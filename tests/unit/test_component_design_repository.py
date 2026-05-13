@@ -7,7 +7,13 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.repositories.component_design import PostgresComponentDesignRepository
+from paa_core.repositories.component_design import (
+    BriefRealizationTargetUpsertSpec,
+    ComponentElementRealizationUpsertSpec,
+    ElementTypeRealizationLinkSpec,
+    PostgresComponentDesignRepository,
+    RealizationTypeUpsertSpec,
+)
 
 
 class ComponentDesignRepositoryTests(unittest.TestCase):
@@ -48,6 +54,89 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
 
         self.assertEqual([row.sequence_order for row in rows], [1, 2])
         self.assertEqual(rows[1].depends_on_target_id, 'a')
+
+    def test_upsert_realization_type_emits_upsert_sql(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = RealizationTypeUpsertSpec(
+            realization_key='repository_interface',
+            label='Repository Interface',
+            category='code_artifact',
+            description='Repository interface contract',
+            is_brief_targetable=True,
+            is_multi_instance=False,
+            sort_order=10,
+            metadata={'scope': 'dal'},
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+            repo.upsert_realization_type(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.component_element_realization_types', sql)
+        self.assertIn('repository_interface', sql)
+        self.assertIn('ON CONFLICT (realization_key) DO UPDATE', sql)
+
+    def test_upsert_element_type_realization_link_emits_mapping_sql(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ElementTypeRealizationLinkSpec(
+            element_type_key='interfaces',
+            realization_key='repository_interface',
+            is_default=True,
+            sort_order=10,
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+            repo.upsert_element_type_realization_link(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.component_element_type_realization_types', sql)
+        self.assertIn("WHERE cet.element_key = 'interfaces'", sql)
+        self.assertIn("cert.realization_key = 'repository_interface'", sql)
+
+    def test_upsert_component_element_realization_emits_upsert_sql(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ComponentElementRealizationUpsertSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            component_id='22222222-2222-2222-2222-222222222222',
+            component_element_id='33333333-3333-3333-3333-333333333333',
+            realization_type_key='concrete_repository_class',
+            realization_key='postgres_workflow_state_repository',
+            title='Postgres Workflow State Repository',
+            status='active',
+            sequence_order=2,
+            definition={'ops': ['get', 'list']},
+            artifact_ref={'module': 'postgres.py'},
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+            repo.upsert_component_element_realization(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.component_element_realizations', sql)
+        self.assertIn('postgres_workflow_state_repository', sql)
+        self.assertIn("WHERE cert.realization_key = 'concrete_repository_class'", sql)
+        self.assertIn('ON CONFLICT (component_element_id, component_element_realization_type_id, realization_key) DO UPDATE', sql)
+
+    def test_upsert_brief_realization_target_emits_upsert_sql(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = BriefRealizationTargetUpsertSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            work_item_id='22222222-2222-2222-2222-222222222222',
+            coder_run_brief_id='33333333-3333-3333-3333-333333333333',
+            component_id='44444444-4444-4444-4444-444444444444',
+            component_element_id='55555555-5555-5555-5555-555555555555',
+            component_element_realization_id='66666666-6666-6666-6666-666666666666',
+            depends_on_target_id='77777777-7777-7777-7777-777777777777',
+            target_intent='implement',
+            sequence_order=2,
+            is_required=True,
+            target_notes='Implement after interface',
+            target_contract={'required_methods': ['get_component_by_name']},
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+            repo.upsert_brief_realization_target(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.coder_brief_realization_targets', sql)
+        self.assertIn('required_methods', sql)
+        self.assertIn('ON CONFLICT (coder_run_brief_id, component_element_realization_id, target_intent) DO UPDATE', sql)
 
 
 if __name__ == '__main__':
