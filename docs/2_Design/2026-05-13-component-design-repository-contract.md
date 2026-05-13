@@ -46,10 +46,8 @@ The repository owns structured access to these DB tables:
 - `paa.component_element_types`
 - `paa.component_elements`
 - `paa.component_element_type_realization_types`
-- `paa.component_element_realization_types`
-- `paa.component_element_realizations`
-- `paa.component_element_realization_types`
 - `paa.component_element_type_realization_types`
+- `paa.component_element_realization_types`
 - `paa.component_element_realizations`
 - `paa.coder_brief_realization_targets`
 
@@ -118,10 +116,8 @@ Backed by:
 - `paa.component_element_types`
 - `paa.component_elements`
 - `paa.component_element_type_realization_types`
-- `paa.component_element_realization_types`
-- `paa.component_element_realizations`
-- `paa.component_element_realization_types`
 - `paa.component_element_type_realization_types`
+- `paa.component_element_realization_types`
 - `paa.component_element_realizations`
 - `paa.coder_brief_realization_targets`
 

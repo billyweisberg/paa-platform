@@ -5,4 +5,5 @@ __all__ = [
     "package_metadata",
     "paths",
     "team_worker_roles",
+    "repositories",
 ]
