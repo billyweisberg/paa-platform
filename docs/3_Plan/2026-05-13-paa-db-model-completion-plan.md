@@ -63,7 +63,7 @@ Each current or proposed data surface falls into one of these plan actions:
 ## Work Area Checklist
 
 - [ ] workflow-state layer
-  - status: not started
+  - status: entity design complete, migration design not started
   - action: `add`
   - target entities:
     - `paa.workflow_states`
@@ -279,6 +279,10 @@ Deliverables:
 - runtime-event table classification matrix
 - projection-only surface list
 
+Completed artifacts:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-stable-table-classification-and-ownership-map.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-db-model-diagram-and-gap-analysis.md`
+
 Exit criteria:
 - no ambiguity remains about whether a given surface is foundational, derivative, event, or projection-only
 
@@ -292,6 +296,10 @@ Deliverables:
 - schema contract for `workflow_transitions`
 - schema contract for `queue_claims`
 - mapping from current runtime lifecycle to those entities
+
+Completed entity-design artifacts:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-workflow-state-machine-data-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-workflow-state-entity-design.md`
 
 Exit criteria:
 - current owner, current stage, transition history, and claim state can be answered from DB without depending on repo-local files
