@@ -41,6 +41,7 @@ This note consolidates and should be read alongside:
 - `docs/2_Design/2026-05-09-paa-sequence-diagrams.md`
 - `docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
 - `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+- `docs/2_Design/2026-05-13-paa-hybrid-implementation-audit.md`
 
 ## Core Model
 
@@ -272,6 +273,7 @@ That means:
 
 This aligns with:
 - `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+- `docs/2_Design/2026-05-13-paa-hybrid-implementation-audit.md`
 
 ## Current Known Weaknesses
 
