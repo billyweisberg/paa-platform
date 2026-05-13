@@ -63,7 +63,7 @@ Each current or proposed data surface falls into one of these plan actions:
 ## Work Area Checklist
 
 - [ ] workflow-state layer
-  - status: entity design complete, migration design not started
+  - status: entity design complete, migration implemented, runtime adoption not started
   - action: `add`
   - target entities:
     - `paa.workflow_states`
@@ -71,14 +71,14 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.queue_claims` or equivalent lease model
 
 - [ ] execution-package registration DB entity layer
-  - status: entity design complete, migration design not started
+  - status: entity design complete, migration implemented, runtime adoption not started
   - action: `add`
   - target entities:
     - `paa.execution_package_installs`
     - `paa.execution_package_overlays`
 
 - [ ] component-design foundation normalization
-  - status: normalization rules complete, schema extensions not started
+  - status: normalization rules complete, schema extensions implemented, runtime adoption not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.components`
@@ -87,7 +87,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.component_dependency_edges`
 
 - [ ] derivative slice-artifact normalization
-  - status: normalization rules complete, schema extensions not started
+  - status: normalization rules complete, schema extensions implemented, runtime adoption not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.design_packages`
@@ -96,7 +96,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.coder_brief_sequence_states`
 
 - [ ] runtime-event and execution-history alignment
-  - status: entity design complete, migration design not started
+  - status: entity design complete, migration implemented, runtime adoption not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.handoffs`
@@ -108,7 +108,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.verification_obligations`
 
 - [ ] projection and file-surface demotion
-  - status: boundary policy complete, implementation demotion not started
+  - status: boundary policy complete, schema baseline implemented, runtime demotion not started
   - action: `demote`
   - target surfaces:
     - repo-local report JSON
@@ -301,6 +301,9 @@ Completed entity-design artifacts:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-workflow-state-machine-data-contract.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-workflow-state-entity-design.md`
 
+Implemented migration baseline:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/006-step6-workflow-install-runtime-normalization.sql`
+
 Exit criteria:
 - current owner, current stage, transition history, and claim state can be answered from DB without depending on repo-local files
 
@@ -316,6 +319,9 @@ Deliverables:
 
 Completed entity-design artifact:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-execution-package-registration-entity-design.md`
+
+Implemented migration baseline:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/006-step6-workflow-install-runtime-normalization.sql`
 
 Exit criteria:
 - active installed package and active overlays can be determined from DB without relying only on local metadata files
@@ -333,6 +339,9 @@ Deliverables:
 Completed entity-design artifact:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-runtime-input-and-run-event-entity-design.md`
 
+Implemented migration baseline:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/006-step6-workflow-install-runtime-normalization.sql`
+
 Exit criteria:
 - major transition inputs and major automation milestones are DB-queryable
 
@@ -348,6 +357,9 @@ Deliverables:
 
 Completed normalization-rule artifact:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-design-normalization-rules.md`
+
+Implemented schema baseline:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/006-step6-workflow-install-runtime-normalization.sql`
 
 Exit criteria:
 - new slice artifacts cannot silently outrun the stable component catalog in the same way as the current Team Worker drift
@@ -365,6 +377,9 @@ Deliverables:
 
 Completed policy artifact:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-projection-boundary-policy.md`
+
+Implemented schema baseline:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/006-step6-workflow-install-runtime-normalization.sql`
 
 Exit criteria:
 - report files, markdown exports, and status summaries are explicitly downstream of DB truth
@@ -413,19 +428,19 @@ That means:
 - the projection boundary is complete
 
 What is not complete yet:
-- DB migration design
-- schema migration implementation
+- applying the new migration to live databases
+- runtime adoption of the new DB-primary entities
 - projection-demotion implementation in runtime code
 - Data Access Layer implementation
 
 ## Recommended Next Moves After This Plan
 
 After this plan baseline is accepted, execute in this order:
-1. resume detailed Data Access Layer design against the completed model
-2. design the DB migration set that realizes the new entity families and normalization statuses
-3. implement the DB migrations
-4. implement repository/Data Access Components against the migrated model
-5. then implement runtime migration away from file-primary operational truth
+1. apply and validate the new migration against the target database
+2. resume detailed Data Access Layer design against the completed model
+3. implement repository/Data Access Components against the migrated model
+4. implement runtime migration away from file-primary operational truth
+5. then remove obsolete file-primary recovery paths
 
 ## Hard Conclusion
 
