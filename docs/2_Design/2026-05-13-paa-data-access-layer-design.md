@@ -19,6 +19,7 @@ This note adds the Data Access Layer to the PAA System Design as a first-class c
 ## Related Notes
 
 Read alongside:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-design-repository-contract.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-schema-and-data-surface-audit.md`
@@ -114,12 +115,14 @@ Provide structured access to installed execution-package content and install met
 
 ### Role
 
-Provide structured access to stable component-design records and slice-derivation design records.
+Provide structured access to stable component-design records, stable Component Element records, and slice-derivation design records.
 
 ### Owns access to
 - `paa.components`
 - `paa.component_surfaces`
 - `paa.component_relationships`
+- `paa.component_element_types`
+- `paa.component_elements`
 - `paa.design_packages`
 - `paa.design_package_signoffs`
 - `paa.coder_run_briefs`
