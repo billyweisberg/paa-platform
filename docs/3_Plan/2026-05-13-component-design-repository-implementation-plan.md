@@ -94,3 +94,11 @@ This plan is successful when:
 2. a concrete Postgres implementation exists
 3. the implementation can read realization taxonomy, realization instances, and brief realization targets through the repository boundary
 4. no realization-layer reads require direct raw SQL in callers
+
+
+## Current Leave-Off Point
+
+After the repository package layout refactor, resume at:
+- realization taxonomy upsert
+- realization instance create/update
+- coder brief realization target create/update

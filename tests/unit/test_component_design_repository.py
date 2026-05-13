@@ -19,7 +19,7 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
                 '{"component_element_type_id":"2","element_key":"functions","label":"Functions","category":"behavior","description":null,"is_brief_targetable":true,"is_multi_instance":true,"sort_order":70,"metadata":{"x":1}}',
             ]
         )
-        with patch('paa_core.repositories.component_design.run_psql', return_value=output):
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
             rows = repo.list_component_element_types()
 
         self.assertEqual([row.element_key for row in rows], ['interfaces', 'functions'])
@@ -28,7 +28,7 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
     def test_list_realization_types_for_element_type_parses_flags(self) -> None:
         repo = PostgresComponentDesignRepository()
         output = '{"component_element_realization_type_id":"10","realization_key":"repository_interface","label":"Repository Interface","category":"code_artifact","description":"desc","is_brief_targetable":true,"is_multi_instance":false,"sort_order":10,"metadata":{},"is_default_for_element_type":true,"element_type_sort_order":5}'
-        with patch('paa_core.repositories.component_design.run_psql', return_value=output):
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
             rows = repo.list_realization_types_for_element_type('interfaces')
 
         self.assertEqual(len(rows), 1)
@@ -43,7 +43,7 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
                 '{"coder_brief_realization_target_id":"b","project_id":"p","work_item_id":"w","coder_run_brief_id":"b","component_id":"c","component_element_id":"e2","component_element_realization_id":"r2","depends_on_target_id":"a","target_intent":"implement","sequence_order":2,"is_required":true,"target_notes":"second","target_contract":{},"metadata":{}}',
             ]
         )
-        with patch('paa_core.repositories.component_design.run_psql', return_value=output):
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
             rows = repo.list_brief_realization_targets('b')
 
         self.assertEqual([row.sequence_order for row in rows], [1, 2])
