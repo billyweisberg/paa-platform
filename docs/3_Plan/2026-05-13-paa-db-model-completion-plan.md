@@ -78,7 +78,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.execution_package_overlays`
 
 - [ ] component-design foundation normalization
-  - status: not started
+  - status: normalization rules complete, schema extensions not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.components`
@@ -87,7 +87,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.component_dependency_edges`
 
 - [ ] derivative slice-artifact normalization
-  - status: not started
+  - status: normalization rules complete, schema extensions not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.design_packages`
@@ -96,7 +96,7 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.coder_brief_sequence_states`
 
 - [ ] runtime-event and execution-history alignment
-  - status: not started
+  - status: entity design complete, migration design not started
   - action: `keep` and `extend`
   - target tables:
     - `paa.handoffs`
@@ -330,6 +330,9 @@ Deliverables:
 - schema contract for `automation_run_events`
 - event-classification rules for which run facts remain raw logs versus DB facts
 
+Completed entity-design artifact:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-runtime-input-and-run-event-entity-design.md`
+
 Exit criteria:
 - major transition inputs and major automation milestones are DB-queryable
 
@@ -342,6 +345,9 @@ Deliverables:
 - V2 stable component population plan
 - alignment rules between `paa.components` and `paa.design_packages` / `paa.coder_run_briefs`
 - decision on which glossary-level Component Design elements need first-class stable records now versus later
+
+Completed normalization-rule artifact:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-design-normalization-rules.md`
 
 Exit criteria:
 - new slice artifacts cannot silently outrun the stable component catalog in the same way as the current Team Worker drift
