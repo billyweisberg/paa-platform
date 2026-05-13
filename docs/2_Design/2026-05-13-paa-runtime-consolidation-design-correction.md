@@ -6,7 +6,7 @@ Date: 2026-05-13
 
 Define the concrete design correction for the three highest-impact hybrid implementations still active in PAA:
 1. authoritative workflow-state model
-2. installed authority package as sole execution-time truth
+2. installed execution package as sole execution-time truth
 3. runtime-vs-skill contract reduction
 
 This note is a design correction, not a rollout plan.
@@ -26,9 +26,9 @@ Read alongside:
 ## Design Summary
 
 The corrected PAA runtime model is:
-- workflow state is authoritative in durable runtime state
+- workflow state is authoritative in a durable workflow state machine
 - queue packets are wakeup and transport signals, not workflow truth
-- installed authority package is the sole execution-time authority for consumer repos
+- installed execution package is the sole execution-time truth for consumer repos
 - runtime code owns lifecycle invariants
 - skills and automations express role intent and operator guidance only
 - repo-local files are artifacts, logs, and evidence, not primary workflow-state truth
@@ -39,12 +39,12 @@ This correction removes the most harmful ambiguity from the current system.
 
 This correction clarifies three component roles.
 
-### 1. Workflow State Authority
+### 1. Workflow State Machine
 
 **Role**
 Own the authoritative current workflow owner, workflow stage, and handoff-closeout state for each active slice.
 
-### 2. Execution Authority Package
+### 2. Installed Execution Package
 
 **Role**
 Provide the single authorized package/brief/config context from which consumer runtime decisions are made.
@@ -84,7 +84,7 @@ The runtime may project this state into reports and logs, but it should not reco
 
 ### Service contract
 
-The Workflow State Authority must provide:
+The Workflow State Machine must provide:
 1. `load_current_workflow_state(slice_key)`
 2. `transition_workflow_state(source_state, transition_type, transition_evidence)`
 3. `mark_source_packet_closed(source_packet_message_id)`
@@ -93,7 +93,7 @@ The Workflow State Authority must provide:
 
 ### Messages received
 
-The Workflow State Authority accepts transition intents from:
+The Workflow State Machine accepts transition intents from:
 - `TechLead` assignment emission
 - role result return
 - QA verification return
@@ -101,7 +101,7 @@ The Workflow State Authority accepts transition intents from:
 
 ### Messages published
 
-The Workflow State Authority should publish normalized transition events such as:
+The Workflow State Machine should publish normalized transition events such as:
 - `workflow_state_transitioned`
 - `workflow_owner_changed`
 - `workflow_terminal_decision_recorded`
@@ -126,7 +126,7 @@ It remains external engineering truth used for validation and closeout, not as t
 3. A stale queue packet cannot change workflow interpretation.
 4. Top-level status, lineage, and accepted-chain reporting must all derive from the same workflow semantics.
 
-## 2. Installed Authority Package As Sole Execution-Time Truth
+## 2. Installed Execution Package As Sole Execution-Time Truth
 
 ### Role
 
@@ -145,14 +145,14 @@ There are two valid authority phases:
 - DB may persist publication records and indexes
 
 2. **Execution-time authority**
-- consumer repo executes only against the installed authority package under:
+- consumer repo executes only against the installed execution package under:
   - `.project/data/paa/authority/current/`
 
 The consumer runtime must not reconcile multiple competing authority truths during normal execution.
 
 ### Service contract
 
-The Execution Authority Package must provide:
+The Installed Execution Package must provide:
 1. `load_current_authority_manifest()`
 2. `load_design_package(package_id_external)`
 3. `load_coder_brief(brief_id_external)`
@@ -161,7 +161,7 @@ The Execution Authority Package must provide:
 
 ### Data contract
 
-The installed authority package must fully contain the execution-time data needed for:
+The installed execution package must fully contain the execution-time data needed for:
 - assignment compilation
 - result validation
 - branch/worktree derivation
@@ -173,7 +173,7 @@ Consumer runtime should not require live DB reads to reconstruct active package 
 ### Corrected authority boundary
 
 Producer DB is authoritative for publication workflows.
-Installed authority package is authoritative for consumer execution workflows.
+Installed execution package is authoritative for consumer execution workflows.
 
 That means:
 - DB content may be used to build the package
@@ -182,15 +182,15 @@ That means:
 
 ### Overlay rule
 
-Pilot or disposable overlays are allowed only if they materialize into the installed authority package surface before execution.
+Pilot or disposable overlays are allowed only if they materialize into the installed execution package surface before execution.
 
-An overlay is valid only after it becomes part of the installed execution-time authority surface.
+An overlay is valid only after it becomes part of the installed execution-time package surface.
 
 ### Required invariants
 
-1. Consumer execution logic has one authority surface.
+1. Consumer execution logic has one installed execution package surface.
 2. Package/brief drift cannot exist between execution inputs and runtime validation inputs.
-3. A queue packet cannot authorize work outside the installed authority package.
+3. A queue packet cannot authorize work outside the installed execution package.
 4. Overlay content must behave exactly like installed authority content once applied.
 
 ## 3. Runtime-Vs-Skill Contract Reduction
@@ -265,14 +265,14 @@ Automation prompt text should not be a hidden workflow engine.
 
 ## Corrected Component Relationships
 
-### Relationship 1: Workflow State Authority <-> Runtime Lifecycle Engine
+### Relationship 1: Workflow State Machine <-> Runtime Lifecycle Engine
 
 The Runtime Lifecycle Engine performs transitions.
-The Workflow State Authority persists and exposes the resulting authoritative state.
+The Workflow State Machine persists and exposes the resulting authoritative state.
 
-### Relationship 2: Execution Authority Package <-> Runtime Lifecycle Engine
+### Relationship 2: Installed Execution Package <-> Runtime Lifecycle Engine
 
-The Runtime Lifecycle Engine reads all execution-time authorization from the installed authority package.
+The Runtime Lifecycle Engine reads all execution-time authorization from the installed execution package.
 It does not reconcile active authority against a competing DB copy.
 
 ### Relationship 3: Skills / Automations <-> Runtime Lifecycle Engine
@@ -289,8 +289,8 @@ It does not define workflow truth.
 
 ### Corrected handoff sequence
 
-1. runtime loads authoritative workflow state
-2. runtime loads installed execution authority package
+1. runtime loads the authoritative workflow state machine state
+2. runtime loads installed execution package
 3. runtime determines whether work is claimable
 4. runtime claims and validates the source packet
 5. runtime executes the bounded transition
@@ -307,7 +307,7 @@ The queue and artifacts now follow authoritative runtime state, not the other wa
 Repo-local files still matter, but their role narrows.
 
 ### Files that remain important
-- installed authority package artifacts
+- installed execution package artifacts
 - compiled review/result/decision artifacts
 - automation logs
 - automation memory
@@ -323,7 +323,7 @@ Repo-local files still matter, but their role narrows.
 The correction should be considered satisfied only when all of the following are true:
 
 1. `techlead-status`, lineage, and accepted-chain reporting derive from one workflow-state model.
-2. Consumer runtime executes from one installed authority surface only.
+2. Consumer runtime executes from one installed execution package surface only.
 3. Skills can be simplified without losing correctness.
 4. Prompt wording changes cannot change queue-closeout semantics.
 5. Queue residue can be operationally noisy without altering workflow truth.
@@ -337,8 +337,8 @@ The correct architecture is not:
 - skills/prompts as hidden transaction logic
 
 The correct architecture is:
-- durable workflow state as truth
-- installed authority package as execution-time truth
+- durable workflow state machine as truth
+- installed execution package as execution-time truth
 - runtime lifecycle engine as the sole owner of transactional semantics
 - skills and automations reduced to declarative role guidance
 
