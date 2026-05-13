@@ -2076,6 +2076,7 @@ def derive_next_assignment_context(args) -> dict:
             ),
             'source_packet_message_id': None,
             'source_packet_path': None,
+            'source_packet_queue': None,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2115,6 +2116,7 @@ def derive_next_assignment_context(args) -> dict:
             ),
             'source_packet_message_id': None,
             'source_packet_path': None,
+            'source_packet_queue': None,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2131,6 +2133,8 @@ def derive_next_assignment_context(args) -> dict:
         branch_name = pr.get('headRefName') or f'issue-{issue_number}'
         source_packet = pending_worker_packet or pending_dev_packet
         source_message_id = source_packet.get('message_id')
+        source_packet_path = source_packet.get('path')
+        source_packet_queue = source_packet.get('queue_name')
         return {
             'ok': True,
             'workflow_stage': workflow_stage,
@@ -2152,7 +2156,8 @@ def derive_next_assignment_context(args) -> dict:
                 f'for issue #{issue_number} to QA on branch {branch_name}.'
             ),
             'source_packet_message_id': source_message_id,
-            'source_packet_path': None,
+            'source_packet_path': source_packet_path,
+            'source_packet_queue': source_packet_queue,
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2234,6 +2239,7 @@ def derive_next_assignment_context(args) -> dict:
                 ),
                 'source_packet_message_id': source_message_id,
                 'source_packet_path': source_packet_path,
+                'source_packet_queue': 'fractal-core-architecture',
                 'issue': issue,
                 'pr': pr,
                 'recommended_actions': recommended,
@@ -2371,11 +2377,14 @@ def emit_next_assignment(args):
             return result
         source_packet_message_id = context.get('source_packet_message_id')
         source_packet_path = context.get('source_packet_path')
+        source_packet_queue = context.get('source_packet_queue')
         source_packet_ack = None
-        if source_packet_message_id and source_packet_path:
-            from paa_consumer.inbox import resolve_packet_queue
-            source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
-            source_queue = resolve_packet_queue(source_packet)
+        if source_packet_message_id and (source_packet_path or source_packet_queue):
+            source_queue = source_packet_queue
+            if source_packet_path:
+                from paa_consumer.inbox import resolve_packet_queue
+                source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
+                source_queue = resolve_packet_queue(source_packet)
             if source_queue:
                 source_packet_ack = acknowledge_source_assignment(
                     repo_root,
