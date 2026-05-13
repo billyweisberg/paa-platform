@@ -78,24 +78,8 @@ export UV_CACHE_DIR
 
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
   PAA_PYTHON="$REPO_ROOT/.venv/bin/python"
-elif [ -x "/opt/homebrew/opt/python@3.13/bin/python3" ]; then
-  PAA_PYTHON="/opt/homebrew/opt/python@3.13/bin/python3"
-elif command -v python3.13 >/dev/null 2>&1; then
-  PAA_PYTHON="$(command -v python3.13)"
-elif command -v python3.12 >/dev/null 2>&1; then
-  PAA_PYTHON="$(command -v python3.12)"
-elif [ -x "/opt/homebrew/bin/python3" ]; then
-  PAA_PYTHON="/opt/homebrew/bin/python3"
-elif command -v python3 >/dev/null 2>&1; then
-  PYTHON_OK="$(python3 -c 'import sys; print(int(sys.version_info >= (3, 12)))')"
-  if [ "$PYTHON_OK" = "1" ]; then
-    PAA_PYTHON="$(command -v python3)"
-  else
-    echo "Automation logging requires Python 3.12+; found unsupported python3 on PATH." >&2
-    exit 1
-  fi
 else
-  echo "Automation logging requires Python 3.12+ but no supported interpreter was found." >&2
+  echo "Automation logging requires repo-local .venv at $REPO_ROOT/.venv/bin/python. Run uv sync first." >&2
   exit 1
 fi
 export PAA_PYTHON
