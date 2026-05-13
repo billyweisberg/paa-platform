@@ -17,6 +17,7 @@ It should be read as the relationship contract for:
 ## Related Notes
 
 Read alongside:
+- `docs/2_Design/2026-05-13-paa-db-primary-data-consolidation-audit.md`
 - `docs/2_Design/2026-05-13-paa-schema-and-data-surface-audit.md`
 - `docs/terminology/paa-engineering-terminology-glossary.md`
 - `docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`

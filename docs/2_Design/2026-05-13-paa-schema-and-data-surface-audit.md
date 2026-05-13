@@ -17,6 +17,7 @@ This note exists because the current system has real data richness in the DB and
 ## Related Notes
 
 Read alongside:
+- `docs/2_Design/2026-05-13-paa-db-primary-data-consolidation-audit.md`
 - `docs/2_Design/2026-05-09-paa-data-contracts.md`
 - `docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
 - `docs/2_Design/2026-05-13-paa-hybrid-implementation-audit.md`

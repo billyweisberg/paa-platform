@@ -15,6 +15,7 @@ It defines the corrected target architecture and the component boundaries that f
 ## Related Notes
 
 Read alongside:
+- `docs/2_Design/2026-05-13-paa-db-primary-data-consolidation-audit.md`
 - `docs/2_Design/2026-05-13-paa-schema-and-data-surface-audit.md`
 - `docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
 - `docs/terminology/paa-engineering-terminology-glossary.md`
