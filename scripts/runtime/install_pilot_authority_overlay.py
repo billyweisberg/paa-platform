@@ -33,7 +33,14 @@ def _bootstrap_runtime_imports() -> None:
 
 _bootstrap_runtime_imports()
 
-from paa_core.db import run_psql, sql_literal
+
+def _load_db_helpers():
+    from paa_core.db import run_psql, sql_literal
+
+    return run_psql, sql_literal
+
+
+run_psql, sql_literal = _load_db_helpers()
 
 
 def load_json(path: Path) -> dict:
