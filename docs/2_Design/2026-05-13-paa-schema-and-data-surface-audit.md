@@ -24,6 +24,7 @@ Read alongside:
 - `docs/2_Design/2026-05-13-paa-runtime-consolidation-design-correction.md`
 - `docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
+- `docs/2_Design/2026-05-13-existing-component-design-model-audit.md`
 
 ## Audit Scope
 
