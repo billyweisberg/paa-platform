@@ -22,6 +22,7 @@ Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-component-design-foundation-and-derivation-baseline.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-stable-table-classification-and-ownership-map.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-db-model-diagram-and-gap-analysis.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-component-element-entity-design.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/terminology/paa-engineering-terminology-glossary.md`
 
 ## Normalization Goal
@@ -135,8 +136,12 @@ At minimum, these missing areas should be treated as stable-component concerns:
 - Component Lifecycle
 - Component Configuration
 
+Implementation decision:
+- these concerns are first normalized through a stable Component Element taxonomy and per-component Component Element records
+- they do not require one top-level table per glossary element in the first stable model
+
 Practical consequence:
-- if we later add stable extension tables such as service contracts, state models, or event contracts, they belong under stable component identity, not under per-slice package rows
+- if we later add stronger child tables such as service-contract details or event-contract details, they belong under stable component identity and stable Component Element identity, not under per-slice package rows
 
 ## Rule 7: derivative slices may specialize stable components, but must declare the specialization boundary
 

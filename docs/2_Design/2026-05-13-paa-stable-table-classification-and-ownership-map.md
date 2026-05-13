@@ -4,6 +4,9 @@ Date: 2026-05-13
 
 ## Purpose
 
+This note should be read alongside `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-component-element-entity-design.md`.
+
+
 Execute Phase 1 of the DB Model Completion Plan by making the current DB table set explicit in two ways:
 1. stable classification within the V2 PAA data model
 2. target ownership by V2 system component

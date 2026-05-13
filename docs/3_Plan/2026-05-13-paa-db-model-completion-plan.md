@@ -26,6 +26,7 @@ Use these design notes as the governing authority for this plan:
 - `docs/2_Design/2026-05-13-workflow-state-machine-foundation-mapping.md`
 - `docs/2_Design/2026-05-13-workflow-state-machine-data-contract.md`
 - `docs/2_Design/2026-05-13-paa-db-model-diagram-and-gap-analysis.md`
+- `docs/2_Design/2026-05-13-final-component-element-entity-design.md`
 
 ## Planning Rule
 
@@ -77,13 +78,15 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.execution_package_installs`
     - `paa.execution_package_overlays`
 
-- [ ] component-design foundation normalization
-  - status: normalization rules complete, schema extensions implemented, runtime adoption not started
-  - action: `keep` and `extend`
+- [x] component-design foundation normalization
+  - status: normalization rules complete, stable component element schema implemented, runtime adoption not started
+  - action: `keep`, `extend`, and `add`
   - target tables:
     - `paa.components`
     - `paa.component_surfaces`
     - `paa.component_relationships`
+    - `paa.component_element_types`
+    - `paa.component_elements`
     - `paa.component_dependency_edges`
 
 - [ ] derivative slice-artifact normalization
@@ -149,6 +152,8 @@ These should remain part of the target DB model:
 - `paa.components`
 - `paa.component_surfaces`
 - `paa.component_relationships`
+- `paa.component_element_types`
+- `paa.component_elements`
 - `paa.design_packages`
 - `paa.design_package_signoffs`
 - `paa.coder_run_briefs`
