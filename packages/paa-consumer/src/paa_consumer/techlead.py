@@ -49,7 +49,7 @@ ROLE_CLI_BY_SUFFIX = {
 ROLE_CLI_BY_SUFFIX.update({role.branch_suffix: role.key for role in active_team_worker_roles(repo_root=REPO_ROOT)})
 TEAM_WORKER_CLI_CHOICES = [role.key for role in active_team_worker_roles(repo_root=REPO_ROOT)]
 ROLE_BRIDGE_TARGET_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
-ROLE_EMIT_TARGET_CHOICES = [*TEAM_WORKER_CLI_CHOICES, 'qa']
+ROLE_EMIT_TARGET_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
 PREFLIGHT_TARGET_CHOICES = ['techlead', 'delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
 QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 QUEUE_PREVIEW_DEPTH = 10
