@@ -4,6 +4,9 @@
 
 Provide one visible system-level view of the current PAA architecture so future design work, especially Dynamic Worker Roles, is grounded in the real component boundaries.
 
+Primary updated system-design view:
+- `docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
+
 This note focuses on:
 - system components
 - control-plane relationships

@@ -16,6 +16,7 @@ It defines the corrected target architecture and the component boundaries that f
 
 Read alongside:
 - `docs/terminology/paa-engineering-terminology-glossary.md`
+- `docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
 - `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
 - `docs/2_Design/2026-05-13-paa-hybrid-implementation-audit.md`
