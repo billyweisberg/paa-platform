@@ -148,6 +148,107 @@ def run_json_with_errors(cmd):
     return 0, json.loads(result.stdout), None
 
 
+def claimed_source_assignment_claims(message_id: str, queue_name: str):
+    matches = []
+    for claim in handoff_runtime.list_claims(queue=queue_name, status='claimed'):
+        envelope = claim.get('original_envelope') or {}
+        if envelope.get('message_id') == message_id:
+            matches.append(claim)
+    return matches
+
+
+def acknowledge_existing_claim(claim_id: str):
+    path, claim = handoff_runtime.load_claim(claim_id)
+    claim['status'] = 'done'
+    claim['acked_at'] = handoff_runtime.utc_now()
+    handoff_runtime.save_json(path, claim)
+    handoff_runtime.update_queue_message_status(
+        (claim.get('original_envelope') or {}).get('message_id'),
+        'acknowledged',
+        'completed',
+        'acknowledged_at',
+    )
+    return {
+        'ok': True,
+        'claim_id': claim_id,
+        'status': claim.get('status'),
+        'state_dir': claim.get('state_dir'),
+        'message_id': (claim.get('original_envelope') or {}).get('message_id'),
+    }
+
+
+def acknowledge_source_assignment(repo_root: Path, message_id: str, queue_name: str, claimed_by: str):
+    matching_claims = claimed_source_assignment_claims(message_id, queue_name)
+    if len(matching_claims) > 1:
+        return {
+            'ok': False,
+            'reason': 'multiple_open_claims_for_source_assignment',
+            'details': f'More than one active claim exists for source assignment {message_id!r}.',
+            'message_id': message_id,
+            'queue_name': queue_name,
+            'matching_claim_ids': [claim.get('claim_id') for claim in matching_claims],
+        }
+    if len(matching_claims) == 1:
+        ack_result = acknowledge_existing_claim(matching_claims[0]['claim_id'])
+        ack_result['ack_mode'] = 'existing_claim'
+        ack_result['queue_name'] = queue_name
+        return ack_result
+
+    queue_script = repo_queue_script(repo_root)
+    claim_cmd = [
+        str(queue_script),
+        'queue-claim-next',
+        '--repo-root', str(repo_root),
+        '--queue', queue_name,
+        '--claimed-by', claimed_by,
+    ]
+    claim_code, claim_result, claim_error = run_json_with_errors(claim_cmd)
+    if claim_code != 0 or claim_result is None:
+        return {
+            'ok': False,
+            'reason': 'source_assignment_claim_failed',
+            'details': claim_error,
+            'message_id': message_id,
+            'queue_name': queue_name,
+            'claim_command': claim_cmd,
+        }
+    if not claim_result.get('claimed'):
+        return {
+            'ok': False,
+            'reason': 'source_assignment_not_claimable',
+            'details': f'No claimable queue message was available while trying to close source assignment {message_id!r}.',
+            'message_id': message_id,
+            'queue_name': queue_name,
+            'claim_result': claim_result,
+        }
+    if claim_result.get('message_id') != message_id:
+        requeue_cmd = [
+            str(queue_script),
+            'queue-requeue',
+            '--repo-root', str(repo_root),
+            '--claim-id', claim_result['claim_id'],
+        ]
+        requeue_code, requeue_result, requeue_error = run_json_with_errors(requeue_cmd)
+        return {
+            'ok': False,
+            'reason': 'unexpected_queue_head_when_closing_source_assignment',
+            'details': 'The next claimable queue message was not the expected source assignment; refusing to acknowledge the wrong packet.',
+            'message_id': message_id,
+            'queue_name': queue_name,
+            'claim_result': claim_result,
+            'requeue': requeue_result if requeue_code == 0 else {
+                'ok': False,
+                'error': requeue_error,
+                'claim_id': claim_result['claim_id'],
+            },
+        }
+
+    ack_result = acknowledge_existing_claim(claim_result['claim_id'])
+    ack_result['ack_mode'] = 'claim_then_ack'
+    ack_result['queue_name'] = queue_name
+    return ack_result
+
+
 def run_text(cmd, cwd: Path | None = None) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
     if result.returncode != 0:
@@ -4302,6 +4403,7 @@ def role_return_bridge(args):
         }
 
     send_result = None
+    source_assignment_ack = None
     if args.send:
         from paa_consumer.inbox import dispatch_packet
         send_result = dispatch_packet(repo_root, packet_path)
@@ -4315,6 +4417,32 @@ def role_return_bridge(args):
                 'validate': validate_result,
                 'send': send_result,
             }
+        assignment_artifact = assist.get('assignment_artifact') or {}
+        source_assignment_message_id = assignment_artifact.get('message_id')
+        source_assignment_path = assignment_artifact.get('path')
+        source_assignment_queue = None
+        if source_assignment_path:
+            from paa_consumer.inbox import resolve_packet_queue
+            source_assignment_packet = handoff_runtime.load_json(Path(source_assignment_path).resolve())
+            source_assignment_queue = resolve_packet_queue(source_assignment_packet)
+        if source_assignment_message_id and source_assignment_queue:
+            source_assignment_ack = acknowledge_source_assignment(
+                repo_root,
+                source_assignment_message_id,
+                source_assignment_queue,
+                claimed_by=f"{args.target_role}-role-return",
+            )
+            if not source_assignment_ack.get('ok'):
+                return {
+                    'ok': False,
+                    'reason': 'source_assignment_ack_failed',
+                    'details': 'Role result packet was sent, but the source assignment packet could not be closed cleanly.',
+                    'assist': assist,
+                    'compile': compile_result,
+                    'validate': validate_result,
+                    'send': send_result,
+                    'source_assignment_ack': source_assignment_ack,
+                }
 
     return {
         'ok': True,
@@ -4327,6 +4455,7 @@ def role_return_bridge(args):
         'compile': compile_result,
         'validate': validate_result,
         'send': send_result,
+        'source_assignment_ack': source_assignment_ack,
         'sent': bool(send_result and send_result.get('ok')),
         'resolved_queue': resolved_queue,
         'assist': assist,
