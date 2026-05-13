@@ -2,6 +2,9 @@
 
 ## Purpose
 
+Primary consolidated handoff reference:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
+
 Document the primary service contracts between major PAA runtime components.
 
 This note focuses on behavior, not just stored data.

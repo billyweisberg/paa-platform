@@ -2,6 +2,9 @@
 
 ## Purpose
 
+Primary consolidated handoff reference:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-handoff-execution-contract.md`
+
 Show the major call chains in the PAA system so design work can reason about runtime ownership, side effects, and hard-coded seams.
 
 These sequences focus on the current target architecture:
