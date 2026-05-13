@@ -18,20 +18,20 @@ When deciding the next slice, start here first.
 ## Planning Sources
 
 This map is synthesized from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-04-techlead-hub-implementation-delta-plan.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-05-phase-c-decision.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-05-phase-d-mini-plan-branch-worktree-lineage.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-05-phase-e-decision-lineage-query-helper.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-role-branch-mutation.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-role-worktree-mutation.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-handoff-to-role-worktree.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-inspect-role-worktree.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-05-techlead-role-entry.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+- `docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
+- `docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
+- `docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
+- `docs/3_Plan/2026-05-04-techlead-hub-implementation-delta-plan.md`
+- `docs/3_Plan/2026-05-05-phase-c-decision.md`
+- `docs/3_Plan/2026-05-05-phase-d-mini-plan-branch-worktree-lineage.md`
+- `docs/3_Plan/2026-05-05-phase-e-decision-lineage-query-helper.md`
+- `docs/6_Deploy/2026-05-05-techlead-role-branch-mutation.md`
+- `docs/6_Deploy/2026-05-05-techlead-role-worktree-mutation.md`
+- `docs/6_Deploy/2026-05-05-techlead-handoff-to-role-worktree.md`
+- `docs/6_Deploy/2026-05-05-techlead-inspect-role-worktree.md`
+- `docs/6_Deploy/2026-05-05-techlead-role-entry.md`
+- `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+- `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 
 ## Target Model
 
@@ -385,61 +385,61 @@ Turn the working hub model into a reliable operating system for agents, not a pr
 
 ### Phase I spine
 - canonical E2E runbook:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-runbook.md`
+  - `docs/5_Test/2026-05-07-phase-i-canonical-e2e-runbook.md`
 - consistency checklist and unpause gate:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
+  - `docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
 - Phase I entry plan:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-07-phase-i1-hardening-and-acceptance-plan.md`
+  - `docs/3_Plan/2026-05-07-phase-i1-hardening-and-acceptance-plan.md`
 - canonical E2E validation note:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
+  - `docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
 - cutover checklist for the current proven role set:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-cutover-checklist-current-role-set.md`
+  - `docs/6_Deploy/2026-05-07-phase-i-cutover-checklist-current-role-set.md`
 - automation creation/readiness plan:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-07-phase-i2-automation-creation-and-readiness-plan.md`
+  - `docs/3_Plan/2026-05-07-phase-i2-automation-creation-and-readiness-plan.md`
 - UI registration alignment note:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-ui-registration-alignment.md`
+  - `docs/5_Test/2026-05-07-phase-i2-ui-registration-alignment.md`
 - prompt alignment validation note:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-prompt-alignment-validation.md`
+  - `docs/5_Test/2026-05-07-phase-i2-prompt-alignment-validation.md`
 - automation preflight validation note:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-automation-preflight-validation.md`
+  - `docs/5_Test/2026-05-07-phase-i2-automation-preflight-validation.md`
 - execution-environment contract:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+  - `docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
 - local tooling baseline:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-08-local-tooling-baseline.md`
+  - `docs/6_Deploy/2026-05-08-local-tooling-baseline.md`
 - role skill hardening validation note:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i2-role-skill-hardening-validation.md`
+  - `docs/5_Test/2026-05-07-phase-i2-role-skill-hardening-validation.md`
 - current proven role set test plan:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+  - `docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 - Phase I3 Phase 0 baseline validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-phase0-baseline-validation.md`
+  - `docs/5_Test/2026-05-08-phase-i3-phase0-baseline-validation.md`
 - Phase I3 Phase 1 prompt and skill alignment validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-phase1-prompt-skill-alignment-validation.md`
+  - `docs/5_Test/2026-05-08-phase-i3-phase1-prompt-skill-alignment-validation.md`
 - Phase I3 Phase 2 preflight gate validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase2-preflight-gate-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase2-preflight-gate-validation.md`
 - Phase I3 Phase 3 execution environment validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase3-execution-environment-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase3-execution-environment-validation.md`
 - Phase I3 Phase 4 packet transport validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase4-packet-transport-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase4-packet-transport-validation.md`
 - Phase I3 Phase 5 role bridge surface validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase5-role-bridge-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase5-role-bridge-validation.md`
 - Phase I3 Phase 6 canonical supervised end-to-end slice validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase6-canonical-e2e-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase6-canonical-e2e-validation.md`
 - Phase I3 Phase 7 lifecycle safety validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase7-lifecycle-safety-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase7-lifecycle-safety-validation.md`
 - Phase I3 Phase 8 cutover readiness decision:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i3-phase8-cutover-readiness-decision.md`
+  - `docs/5_Test/2026-05-09-phase-i3-phase8-cutover-readiness-decision.md`
 - Phase I4 automation pilot test plan:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md`
+  - `docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md`
 - Phase I4 Phase 0 pilot readiness snapshot validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-phase0-pilot-readiness-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i4-phase0-pilot-readiness-validation.md`
 - Phase I4 Phase 1 UI visibility and launch surface validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-phase1-ui-visibility-validation.md`
+  - `docs/5_Test/2026-05-09-phase-i4-phase1-ui-visibility-validation.md`
 
 ### Roadmap decision after Phase I gate pass
 - the prior defer-until-after-cutover rule is superseded
 - Team Worker Roles expansion is now promoted before further automation cutover work
-- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md` as the active design authority for that expansion
-- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the sequencing plan beneath that authority
+- use `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md` as the active design authority for that expansion
+- use `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the sequencing plan beneath that authority
 - resume automation cutover and pilot work only after automation surfaces are reconciled with the target worker-family model
 
 ## Completed Slices Ledger
@@ -493,9 +493,9 @@ This is the short completed ledger we should carry forward instead of relying on
 ## Remaining Slices By Priority
 
 ### Immediate next slices
-1. execute Stage W7 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
-2. use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the active automation pilot authority
-3. treat `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md` as superseded
+1. execute Stage W7 from `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+2. use `docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md` as the active automation pilot authority
+3. treat `docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md` as superseded
 
 ## Guardrails
 

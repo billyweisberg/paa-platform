@@ -44,12 +44,12 @@ The current pilot slice for issue `108` / PR `109` is ready for acceptance and m
 - implemented:
   - `techlead-closeout-qa-pass`
 - validated in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-techlead-closeout-qa-pass-validation.md`
+  - `docs/5_Test/2026-05-12-techlead-closeout-qa-pass-validation.md`
 
 2. canonical branch freshness hardening
 - role-branch preparation now prefers `origin/<canonical_branch>` when available
 - validated in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-canonical-branch-freshness-validation.md`
+  - `docs/5_Test/2026-05-12-canonical-branch-freshness-validation.md`
 
 ## Decision
 

@@ -39,19 +39,19 @@ Before cutover, all of the following must be true:
 
 1. canonical E2E transport loop is proven
 - reference:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
+  - `docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
 
 2. automation unpause gate is satisfied for the current proven role set
 - reference:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
+  - `docs/6_Deploy/2026-05-07-phase-i-consistency-and-unpause-gate.md`
 
 3. current runtime command surface is installed in the consumer repo
 - required wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 
 4. authority mirror is aligned in the consumer repo
 - expected authority path:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 
 ## Cutover checklist
 

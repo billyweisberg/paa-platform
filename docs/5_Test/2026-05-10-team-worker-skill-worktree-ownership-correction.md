@@ -10,7 +10,7 @@ During the app-launched `Python Team Automation` run for issue `108`:
 - the automation successfully claimed the TechLead assignment packet
 - the role then failed at `techlead-inspect-role-worktree`
 - the expected worktree path was:
-  - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-108-dev`
+  - `<codex_home>/worktrees/paa/fractal-core-python/issue-108-dev`
 - the runtime reported that the worktree was not registered
 
 Result:
@@ -40,19 +40,19 @@ Updated the Team Worker execution skill so the required flow is now:
 6. `techlead-role-return --send`
 
 Updated source skill:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
 
 Updated installed consumer skill:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-dev-result/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-dev-result/SKILL.md`
 
 Updated contract:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+- `docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
 
 ## Validation
 
 The missing live worktree was then prepared successfully with:
 - role branch: `issue-108-dev`
-- worktree path: `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-108-dev`
+- worktree path: `<codex_home>/worktrees/paa/fractal-core-python/issue-108-dev`
 
 The previously claimed assignment was requeued so the Python automation could retry against the corrected role contract.
 

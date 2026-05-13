@@ -31,7 +31,7 @@ That meant the workflow still depended on prompt/skill compliance or manual clea
 ## Fix
 
 Updated:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 New behavior in `role_return_bridge()` when `--send` is used:
 1. send the role result packet
@@ -52,7 +52,7 @@ That keeps the closeout path safe while eliminating the common stale-assignment 
 
 ## Install status
 
-The consumer runtime in `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python` was refreshed after the source change.
+The consumer runtime in `<consumer_repo_root>` was refreshed after the source change.
 
 Installed runtime now contains:
 - `acknowledge_source_assignment()`

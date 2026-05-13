@@ -79,7 +79,7 @@ Owns:
 
 #### Producer repo
 Current proving repo:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `<producer_repo_root>`
 
 Holds:
 - authority-facing skills
@@ -126,7 +126,7 @@ Important current property:
 
 #### Consumer repo
 Current proving repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Holds:
 - repo-local consumer runtime install

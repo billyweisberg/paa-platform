@@ -6,15 +6,15 @@ Validate the first reusable automation logging bootstrap surfaces.
 
 ## Helpers validated
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_automation_preflight_with_logging.sh`
+- `scripts/runtime/bootstrap_automation_logging.sh`
+- `scripts/runtime/log_automation_event.py`
+- `scripts/runtime/run_automation_preflight_with_logging.sh`
 
 ## Disposable validation run
 
 Validated against:
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - automation id:
   - `docs-dev-automation`
 - role key:
@@ -38,7 +38,7 @@ Validated against:
    - `stderr.log` created
 5. compiled the event helper successfully with `py_compile`
 6. installed the logging helpers into the consumer runtime under:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/`
+   - `<consumer_repo_root>/.codex/paa/scripts/runtime/`
 7. ran the installed consumer logged-preflight helper for:
    - `docs-dev`
 8. verified the installed helper produced:
@@ -61,7 +61,7 @@ Validated against:
 ## Observed output location
 
 Example validated run directory:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T18-38-45Z-79585`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T18-38-45Z-79585`
 
 ## Observed event log content
 

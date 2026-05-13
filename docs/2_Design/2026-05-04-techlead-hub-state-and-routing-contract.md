@@ -15,9 +15,9 @@ It is intentionally grounded in the current PAA control spine.
 The goal is to change workflow topology and packet routing without pretending the database must be redesigned first.
 
 Related notes:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
+- `docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
+- `docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
+- `docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
 
 ## Control-spine assumptions
 

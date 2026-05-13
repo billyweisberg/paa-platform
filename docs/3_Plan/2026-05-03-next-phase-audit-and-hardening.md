@@ -8,7 +8,7 @@ This note is intentionally operational. It records what we know now, what remain
 ## Execution Checklist
 
 ### Core audit
-- [ ] Classify every remaining PAA-related numbered doc in `/Users/billyweisberg/Repos/Individual-Centricity/appdev/docs/architecture/tom-baby7-fractal-core/`
+- [ ] Classify every remaining PAA-related numbered doc in `<producer_repo_root>/docs/architecture/tom-baby7-fractal-core/`
 - [ ] Build a complete helper-script inventory across canonical repos and legacy surfaces
 - [ ] Confirm whether any live PAA runtime capability still exists only outside `paa-platform`
 
@@ -25,7 +25,7 @@ This note is intentionally operational. It records what we know now, what remain
 - [ ] Validate repo-local wrappers and automation runs against the chosen environment model
 
 ### Producer and consumer governance
-- [ ] Add `AGENTS.md` to `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- [ ] Add `AGENTS.md` to `<producer_repo_root>`
 - [ ] Define Authority Architect operating rules explicitly in producer repo docs
 - [ ] Reconfirm Delivery Architect boundaries in consumer-side automation/docs
 
@@ -65,7 +65,7 @@ Have we read all the docs related to PAA that were in the `appdev` repo? Are rem
 - No, we should not yet claim full coverage.
 - We did read and migrate the key lifecycle / derivation / runtime / reporting docs that directly affected the live control plane.
 - There are still many documents in:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev/docs/architecture/tom-baby7-fractal-core/`
+  - `<producer_repo_root>/docs/architecture/tom-baby7-fractal-core/`
 - Those remaining docs include both:
   - project/source-authority documents that should remain in `appdev`
   - possible PAA-related operational/design documents that still need classification
@@ -212,7 +212,7 @@ Have we read all the docs related to PAA that were in the `appdev` repo? Are rem
 - It should explicitly state that you and I act as Authority Architect on the producer side.
 
 ### Required action
-- Create `AGENTS.md` in `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- Create `AGENTS.md` in `<producer_repo_root>`
 - Include:
   - Authority Architect scope
   - relationship to Delivery Architect

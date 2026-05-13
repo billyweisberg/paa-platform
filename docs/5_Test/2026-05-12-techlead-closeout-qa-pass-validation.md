@@ -18,7 +18,7 @@ The goal is to let TechLead record a closed lineage decision and acknowledge the
 Validated against the live pilot slice:
 
 - repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - issue:
   - `108`
 - PR:
@@ -28,7 +28,7 @@ Executed through the installed consumer runtime module:
 
 ```bash
 PYTHONPATH=.codex/paa/lib .venv/bin/python -m paa_consumer techlead-closeout-qa-pass \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stagew7-2026-05-10-issue108-team-worker-automation-runtime-note \
   --brief-id-external fcore-coder-2026-05-10-issue108-team-worker-automation-runtime-note \
   --issue-number 108 \
@@ -49,8 +49,8 @@ PYTHONPATH=.codex/paa/lib .venv/bin/python -m paa_consumer techlead-closeout-qa-
 
 Generated closeout artifacts:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/techlead-decision.issue108.closed.json`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/techlead-decision.issue108.closed.md`
+- `<consumer_repo_root>/.project/data/paa/reports/techlead-decision.issue108.closed.json`
+- `<consumer_repo_root>/.project/data/paa/reports/techlead-decision.issue108.closed.md`
 
 ## Observed Runtime State After Closeout
 

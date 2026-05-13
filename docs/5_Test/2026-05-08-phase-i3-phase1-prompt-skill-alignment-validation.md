@@ -3,7 +3,7 @@
 ## Scope
 
 Execute `Phase 1: Prompt And Skill Contract Alignment` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+- `docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 
 Current proven role set:
 - `TechLead`
@@ -14,24 +14,24 @@ Current proven role set:
 ## Inputs
 
 Project-pack prompt and skill surfaces:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `project-packs/fractal-core/automations/python-team-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
 
 Installed consumer copies:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-techlead/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-delivery-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-dev-result/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-qa-review/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-techlead/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-delivery-review/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-dev-result/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-qa-review/SKILL.md`
 
 ## Checks Performed
 

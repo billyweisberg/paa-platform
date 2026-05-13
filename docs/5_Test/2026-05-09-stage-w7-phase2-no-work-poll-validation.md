@@ -14,13 +14,13 @@ Confirm that the Team Worker-aware app-launched automations:
 ## Inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - Team Worker-aware home-level UI registrations
 - empty queue baseline
 - installed logged-preflight helper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
+  - `<consumer_repo_root>/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
 - repo-local automation log root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/`
+  - `<consumer_repo_root>/.project/data/paa/logs/automations/`
 
 ## App-launched roles evaluated
 
@@ -42,11 +42,11 @@ Those defects were corrected in the installed runtime before the final Phase 2 r
 ## Evidence inspected
 
 Latest successful run directories:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/fractal-core-techlead-automation/2026-05-09T19-10-07Z-34399`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/fractal-core-delivery-architect-automation/2026-05-09T19-10-07Z-34382`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/python-team-automation/2026-05-09T19-10-10Z-34674`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/fractal-core-qa-automation/2026-05-09T19-10-05Z-34135`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T19-10-05Z-34128`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/fractal-core-techlead-automation/2026-05-09T19-10-07Z-34399`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/fractal-core-delivery-architect-automation/2026-05-09T19-10-07Z-34382`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/python-team-automation/2026-05-09T19-10-10Z-34674`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/fractal-core-qa-automation/2026-05-09T19-10-05Z-34135`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T19-10-05Z-34128`
 
 ## Observed outputs
 

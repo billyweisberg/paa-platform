@@ -7,16 +7,16 @@ Record that the current automation prompt surfaces no longer teach the obsolete 
 ## Surfaces updated
 
 Project-pack automation prompts:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `project-packs/fractal-core/automations/python-team-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
 
 Installed consumer copies:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
 
 ## Validation performed
 

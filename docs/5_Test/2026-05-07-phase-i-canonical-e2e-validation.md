@@ -9,7 +9,7 @@ This validation executed the canonical current-state hub loop for the current pr
 - `QA`
 
 The run used disposable role branches and disposable role worktrees under:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i-e2e-worktrees/`
+- `<consumer_repo_root>/.codex-work/phase-i-e2e-worktrees/`
 
 The run used:
 - package: `fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics`

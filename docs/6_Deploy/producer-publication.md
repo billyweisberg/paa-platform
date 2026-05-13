@@ -24,7 +24,7 @@ This command is designed for a producer repo that already contains:
 
 The current validated producer target is:
 
-- repo: `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- repo: `<producer_repo_root>`
 - branch: `codex/paa-producer-consolidation`
 
 That branch now carries the Fractal Core source authority tree, the stabilized manifest/tooling delta, and the repo-local producer install required to publish directly from `appdev`.

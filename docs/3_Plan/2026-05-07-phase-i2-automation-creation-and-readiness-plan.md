@@ -3,17 +3,17 @@
 ## Why this plan exists
 
 The current role automations do exist on disk in the consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
 
 But that is not the same thing as being ready for unattended execution.
 
 The gap is:
 - we have prompt files and cron registrations
 - but the role automations are not yet defined as complete execution agents with a clear repo/runtime/worktree contract
-- and UI visibility depends on a separate global registration surface under `/Users/billyweisberg/.codex/automations/`, not just the repo-local installed copies
+- and UI visibility depends on a separate global registration surface under `<codex_home>/automations/`, not just the repo-local installed copies
 
 So this plan is about turning them from:
 - present on disk
@@ -26,7 +26,7 @@ into:
 For the MVP, an automation is only real when all four surfaces line up:
 - project-pack template source in `paa-platform`
 - repo-local installed automation in the target repo `.codex/automations/`
-- global UI registration entry under `/Users/billyweisberg/.codex/automations/`
+- global UI registration entry under `<codex_home>/automations/`
 - execution-environment contract for worktree, `uv`, cwd, and required environment variables
 
 If any one of those is missing or stale, the automation is not ready for deliberate unpause.
@@ -37,14 +37,14 @@ If any one of those is missing or stale, the automation is not ready for deliber
 
 Earlier UI probe work already established the key distinction:
 - repo-local `.codex/automations/` content can exist and parse correctly
-- but the Codex UI is currently discovering home-level registrations under `/Users/billyweisberg/.codex/automations/`
+- but the Codex UI is currently discovering home-level registrations under `<codex_home>/automations/`
 
 Current observed home-level state:
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml` exists
-- `/Users/billyweisberg/.codex/automations/ui-probe-automation/automation.toml` exists
-- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml` is missing
-- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml` is missing
-- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml` exists, but is a deprecated home-folder placeholder rather than a current runnable registration
+- `<codex_home>/automations/fractal-core-techlead-automation/automation.toml` exists
+- `<codex_home>/automations/ui-probe-automation/automation.toml` exists
+- `<codex_home>/automations/fractal-core-delivery-architect-automation/automation.toml` is missing
+- `<codex_home>/automations/fractal-core-qa-automation/automation.toml` is missing
+- `<codex_home>/automations/python-team-automation/automation.toml` exists, but is a deprecated home-folder placeholder rather than a current runnable registration
 
 Conclusion:
 - Delivery Architect and QA are not UI-registerable yet
@@ -54,7 +54,7 @@ Conclusion:
 ### 1. TechLead automation exists, but its prompt is still transitional
 
 Current installed prompt:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
 
 Problems:
 - it still says:
@@ -300,7 +300,7 @@ This plan remains useful for automation readiness, but it is no longer the top-l
 
 Updated rule:
 - Team Worker Roles expansion is now promoted before further automation cutover work
-- use `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the active sequencing authority for target-state expansion
+- use `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md` as the active sequencing authority for target-state expansion
 - resume the remaining automation pilot phases only after automation surfaces are reconciled with that Team Worker Roles model
 
 ## Immediate next implementation slice

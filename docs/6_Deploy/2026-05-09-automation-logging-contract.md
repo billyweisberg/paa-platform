@@ -30,7 +30,7 @@ It covers:
 ## Canonical log root
 
 Consumer-side automation logs must live under:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/`
 
 Why here:
 - same durability boundary as queue state, reports, claims, artifacts, and evidence
@@ -53,7 +53,7 @@ For each automation run, create:
 - `<log_root>/<automation_id>/<run_id>/env.sh`
 
 Example:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T18-38-45Z-79585/events.jsonl`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/docs-dev-automation/2026-05-09T18-38-45Z-79585/events.jsonl`
 
 ## Run id contract
 
@@ -97,7 +97,7 @@ Interpreter selection rule:
 
 Current helper:
 - source:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+  - `scripts/runtime/bootstrap_automation_logging.sh`
 - installed consumer path:
   - `.codex/paa/scripts/runtime/bootstrap_automation_logging.sh`
 
@@ -109,7 +109,7 @@ Purpose:
 - establish a compatible Python interpreter and repo-local `UV_CACHE_DIR` before later helper steps run
 
 Repo-local memory root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/automation-memory/`
+- `<consumer_repo_root>/.project/data/paa/automation-memory/`
 
 The bootstrap must ensure:
 - `<memory_root>/<automation_id>.md` exists
@@ -119,8 +119,8 @@ The bootstrap must ensure:
 Usage shape:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+scripts/runtime/bootstrap_automation_logging.sh \
+  --repo-root <consumer_repo_root> \
   --automation-id docs-dev-automation \
   --role-key docs-dev \
   --role-display-name "Docs Dev" \
@@ -134,7 +134,7 @@ Usage shape:
 
 Current helper:
 - source:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
+  - `scripts/runtime/log_automation_event.py`
 - installed consumer path:
   - `.codex/paa/scripts/runtime/log_automation_event.py`
 
@@ -145,7 +145,7 @@ Purpose:
 Example:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py \
+scripts/runtime/log_automation_event.py \
   --event preflight_check \
   --phase stage-w7-phase2 \
   --status ok \
@@ -157,7 +157,7 @@ Example:
 
 Current helper:
 - source:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_automation_preflight_with_logging.sh`
+  - `scripts/runtime/run_automation_preflight_with_logging.sh`
 - installed consumer path:
   - `.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
 

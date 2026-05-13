@@ -15,7 +15,7 @@ Prove the full current-role-set loop under supervised live conditions for the cu
 ## Fixed inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - package id external:
   - `fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics`
 - brief id external:
@@ -31,13 +31,13 @@ Used disposable role branches and disposable role worktrees so the supervised sl
 
 - Delivery Architect
   - branch: `issue-106-delivery-phasei6`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase6/delivery/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase6/delivery/worktree`
 - Python Dev
   - branch: `issue-106-dev-phasei6`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase6/python/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase6/python/worktree`
 - QA
   - branch: `issue-106-qa-phasei6`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase6/qa/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase6/qa/worktree`
 
 ## Executed live sequence
 

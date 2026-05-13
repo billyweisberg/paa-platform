@@ -24,20 +24,20 @@ The pilot overlay installer now synchronizes DB-backed traceability fields direc
 
 Updated helper:
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py`
+- `scripts/runtime/install_pilot_authority_overlay.py`
 
 The installed consumer helper was also refreshed so the script can run directly from:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/install_pilot_authority_overlay.py`
+- `<consumer_repo_root>/.codex/paa/scripts/runtime/install_pilot_authority_overlay.py`
 
 ## Validation
 
 ### 1. Direct helper invocation works
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/scripts/runtime/install_pilot_authority_overlay.py \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --issue-number 108 \
   status
 ```

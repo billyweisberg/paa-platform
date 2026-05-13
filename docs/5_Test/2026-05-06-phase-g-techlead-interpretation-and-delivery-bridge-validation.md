@@ -31,8 +31,8 @@ After the older worker and assignment messages were claimed/acknowledged, the re
 Running:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics
 ```
@@ -52,8 +52,8 @@ That is the intended behavior for this slice:
 Validated explicit TechLead handoff:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-handoff-to-role-worktree \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-handoff-to-role-worktree \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role delivery-architect \
@@ -71,13 +71,13 @@ Observed:
 Validated explicit Delivery Architect return:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-return \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-return \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role delivery-architect \
   --role-branch issue-106-delivery-phaseg \
-  --result-input-path /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/role-result-input.issue106.delivery-architect.json \
+  --result-input-path <consumer_repo_root>/.project/data/paa/reports/role-result-input.issue106.delivery-architect.json \
   --send
 ```
 

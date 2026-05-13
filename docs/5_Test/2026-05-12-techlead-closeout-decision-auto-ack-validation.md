@@ -7,19 +7,19 @@ Validate that a self-addressed terminal `techlead_decision_packet` emitted by `t
 ## Setup
 
 - consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - live closed pilot slice:
   - issue `108`
   - PR `109`
 - passing QA packet still present on disk:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/qa-verification.issue108.qa.json`
+  - `<consumer_repo_root>/.project/data/paa/reports/qa-verification.issue108.qa.json`
 
 ## Command
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 PYTHONPATH="$PWD/.codex/paa/vendor:$PWD/.codex/paa/lib" ./.venv/bin/python -m paa_consumer techlead-closeout-qa-pass \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stagew7-2026-05-10-issue108-team-worker-automation-runtime-note \
   --brief-id-external fcore-coder-2026-05-10-issue108-team-worker-automation-runtime-note \
   --issue-number 108 \

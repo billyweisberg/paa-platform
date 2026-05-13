@@ -11,7 +11,7 @@ Record the root cause and fix for two app-launched automation environment defect
 ### 1. Home-folder automation memory boundary
 
 Observed behavior:
-- the automation attempted to use a memory file under `/Users/billyweisberg/.codex/automations/<automation_id>/memory.md`
+- the automation attempted to use a memory file under `<codex_home>/automations/<automation_id>/memory.md`
 - that path sits outside the repo tree and is not a reliable MCP filesystem surface for repo-scoped automation work
 
 Impact:
@@ -31,7 +31,7 @@ Impact:
 The Team Worker automation contract had already standardized repo-local logs, wrappers, queue state, and runtime artifacts, but it had not explicitly standardized automation memory.
 
 That left the automations drifting back to Codex home-folder memory conventions:
-- `/Users/billyweisberg/.codex/automations/<automation_id>/memory.md`
+- `<codex_home>/automations/<automation_id>/memory.md`
 - `$CODEX_HOME`
 
 Those assumptions were not compatible with the repo-local PAA runtime boundary we are testing.
@@ -44,16 +44,16 @@ Authoritative memory path is now repo-local:
 - `{{REPO_ROOT}}/.project/data/paa/automation-memory/<automation_id>.md`
 
 This path is now documented in:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
+- `docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+- `docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 ### Bootstrap fix
 
 Updated source helper:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+- `scripts/runtime/bootstrap_automation_logging.sh`
 
 Updated installed consumer helper:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/bootstrap_automation_logging.sh`
+- `<consumer_repo_root>/.codex/paa/scripts/runtime/bootstrap_automation_logging.sh`
 
 New behavior:
 - creates repo-local automation memory root
@@ -69,18 +69,18 @@ Updated Team Worker-aware automation definitions so they now instruct the model 
 - stop treating home-folder automation memory as authoritative
 
 Updated surfaces:
-- project-pack automation definitions in `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/`
-- installed consumer automation definitions in `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/`
-- active home-level UI registrations in `/Users/billyweisberg/.codex/automations/`
+- project-pack automation definitions in `project-packs/fractal-core/automations/`
+- installed consumer automation definitions in `<consumer_repo_root>/.codex/automations/`
+- active home-level UI registrations in `<codex_home>/automations/`
 
 ## Validation
 
 Validated with the installed consumer helper:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
+- `<consumer_repo_root>/.codex/paa/scripts/runtime/run_automation_preflight_with_logging.sh`
 
 Observed for `docs-dev-automation`:
 - `summary.json` includes:
-  - `memory_file = /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/automation-memory/docs-dev-automation.md`
+  - `memory_file = <consumer_repo_root>/.project/data/paa/automation-memory/docs-dev-automation.md`
 - repo-local memory file exists
 - no dependency on `CODEX_HOME` was required for the helper/bootstrap path
 

@@ -14,13 +14,13 @@ So this validation uses a repeatable synthetic runtime fixture instead of mutati
 ## Harness script
 
 Repo-owned validation harness:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h3_reset_required_fixture.py`
+- `scripts/runtime/validate_phase_h3_reset_required_fixture.py`
 
 Execution command:
 
 ```bash
 uv run --python 3.12 --no-project python \
-  /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h3_reset_required_fixture.py
+  scripts/runtime/validate_phase_h3_reset_required_fixture.py
 ```
 
 ## What the harness does

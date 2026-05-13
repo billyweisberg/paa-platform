@@ -21,7 +21,7 @@ Validated surfaces:
 ## Fixed inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - package id external:
   - `fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics`
 - brief id external:
@@ -37,13 +37,13 @@ Used disposable branch and worktree overrides to avoid mutating canonical determ
 
 - Delivery Architect
   - role branch: `issue-106-delivery-phasei3`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase5/delivery/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase5/delivery/worktree`
 - Python Dev
   - role branch: `issue-106-dev-phasei3`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase5/python/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase5/python/worktree`
 - QA
   - role branch: `issue-106-qa-phasei3`
-  - worktree: `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase5/qa/worktree`
+  - worktree: `<consumer_repo_root>/.codex-work/phase-i3/phase5/qa/worktree`
 
 ## Results
 

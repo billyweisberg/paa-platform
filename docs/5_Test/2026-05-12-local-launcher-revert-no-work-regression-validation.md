@@ -9,11 +9,11 @@ Confirm that, after reverting the mistaken Codex-native worktree automation chan
 ## Inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - automation:
   - `Python Team Automation`
 - durable automation memory:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/automation-memory/python-team-automation.md`
+  - `<consumer_repo_root>/.project/data/paa/automation-memory/python-team-automation.md`
 
 ## Observed result
 
@@ -26,7 +26,7 @@ No queue claim, role worktree preparation, branch mutation, PR action, or worker
 
 Durable memory captured the same result under:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/automation-memory/python-team-automation.md`
+- `<consumer_repo_root>/.project/data/paa/automation-memory/python-team-automation.md`
 
 ## Queue interpretation
 

@@ -31,14 +31,14 @@ This contract does not yet define:
 ## Canonical consumer repo root
 
 For the current proven role set, all consumer-side automations must treat this path as the canonical repo root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 All role automations must start from this repo identity even when they later execute inside a prepared role worktree.
 
 ## Launch cwd contract
 
 At automation launch time, the cwd must be the canonical consumer repo root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Why:
 - repo-local PAA wrappers are installed relative to this root
@@ -54,7 +54,7 @@ Required launch behavior:
 
 Deterministic role worktrees live under:
 - default repo-local root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/<role_branch>`
+  - `<consumer_repo_root>/.codex-work/worktrees/paa/<role_branch>`
 - optional override root:
   - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 
@@ -77,7 +77,7 @@ There are two allowed execution cwd states.
 ### 1. Preflight / routing / queue inspection
 
 Use the canonical consumer repo root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Allowed commands from this cwd:
 - `.codex/paa/bin/paa-consumer automation-preflight`
@@ -93,9 +93,9 @@ After the role worktree is prepared and inspected, the role automation must swit
 - `techlead-role-entry`
 
 Examples:
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-delivery`
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-dev`
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-qa`
+- `<codex_home>/worktrees/paa/fractal-core-python/issue-106-delivery`
+- `<codex_home>/worktrees/paa/fractal-core-python/issue-106-dev`
+- `<codex_home>/worktrees/paa/fractal-core-python/issue-106-qa`
 
 Role work must execute there, not back in the canonical consumer repo root.
 
@@ -104,10 +104,10 @@ Role work must execute there, not back in the canonical consumer repo root.
 All automations must use repo-local wrappers, not direct module invocation and not deprecated home-folder runtime entrypoints.
 
 Consumer wrapper:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 
 Producer wrapper:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 
 Required rules:
 - use repo-local wrappers for PAA queue, TechLead, and packet compilation actions
@@ -149,7 +149,7 @@ These environment variables must be correct when the automation runs.
 `FRACTAL_CORE_HANDOFF_STATE_DIR`
 - required durable queue state root
 - expected value pattern:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/queue-state/fractal-core-handoff`
+  - `<consumer_repo_root>/.project/data/paa/queue-state/fractal-core-handoff`
 - reason:
   - ensures claims and queue-runtime state stay repo-local and durable
 
@@ -183,13 +183,13 @@ Reason:
 Automations must not use deprecated home-folder runtime surfaces as operational dependencies.
 
 Forbidden as runtime roots:
-- `/Users/billyweisberg/.codex/skills/fractal-core-*`
-- `/Users/billyweisberg/.codex/skills/fractal-core-handoff-common/`
+- `<codex_home>/skills/fractal-core-*`
+- `<codex_home>/skills/fractal-core-handoff-common/`
 - deprecated home-folder automation prompts as execution truth
 
 Allowed home-folder usage in this phase:
-- global UI registration entries under `/Users/billyweisberg/.codex/automations/`
-- deterministic worktree root under `/Users/billyweisberg/.codex/worktrees/`
+- global UI registration entries under `<codex_home>/automations/`
+- deterministic worktree root under `<codex_home>/worktrees/`
 
 Important distinction:
 - home-folder automations are UI registration surfaces

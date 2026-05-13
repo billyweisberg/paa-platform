@@ -7,19 +7,19 @@ Recover the best historically-developed prompt intent for the `Fractal Core Deli
 ## Recovery Sources Reviewed
 
 ### Current authoritative sources
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
 
 ### Installed consumer copies
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-delivery-review/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-delivery-review/SKILL.md`
 
 ### Historical committed prompt surfaces
 - commit `6e0d090`
 - current role-execution skill installation history in `fractal-core-python`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-delivery-architect-automation/automation.toml`
 
 ## Recovery Constraint
 

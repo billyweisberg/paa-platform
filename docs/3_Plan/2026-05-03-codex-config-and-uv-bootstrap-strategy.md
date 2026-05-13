@@ -34,8 +34,8 @@ That creates the exact class of automation/session drift that has already hurt u
 
 ## Recommendation
 Adopt repo-local Codex project config files in canonical repos:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/config.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/config.toml`
+- `<producer_repo_root>/.codex/config.toml`
+- `<consumer_repo_root>/.codex/config.toml`
 
 These files should be used for **Codex-native session configuration** first.
 That includes things like:

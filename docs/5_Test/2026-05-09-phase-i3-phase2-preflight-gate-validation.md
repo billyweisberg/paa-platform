@@ -3,7 +3,7 @@
 ## Scope
 
 Execute `Phase 2: Non-Model Preflight Gate` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+- `docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 
 Current proven role set:
 - `TechLead`
@@ -14,11 +14,11 @@ Current proven role set:
 ## Inputs
 
 - consumer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - disposable assignment packet:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/phase-i3/phase-i3-preflight-python-assignment.json`
+  - `<consumer_repo_root>/.codex-work/phase-i3/phase-i3-preflight-python-assignment.json`
 - target positive-path queue:
   - `fractal-core-python`
 

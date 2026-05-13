@@ -26,8 +26,8 @@ Not changed:
 ### Handoff
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-handoff-to-role-worktree \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-handoff-to-role-worktree \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role python-team \
@@ -38,21 +38,21 @@ Not changed:
 ### Return
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-return \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-return \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role python-team \
   --role-branch issue-106-dev-phaseg-worker \
-  --result-input-path /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/role-result-input.issue106.python-dev.json \
+  --result-input-path <consumer_repo_root>/.project/data/paa/reports/role-result-input.issue106.python-dev.json \
   --send
 ```
 
 ### TechLead follow-up derivation
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics
 ```
@@ -75,7 +75,7 @@ Not changed:
 
 Compiled output:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/worker-result.issue106.python-dev.json`
+- `<consumer_repo_root>/.project/data/paa/reports/worker-result.issue106.python-dev.json`
 
 ### TechLead next-step derivation
 

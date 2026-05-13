@@ -3,7 +3,7 @@
 ## Scope
 
 Execute `Phase 0: Baseline And Installation Sanity` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+- `docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 
 Current proven role set:
 - `TechLead`
@@ -14,17 +14,17 @@ Current proven role set:
 ## Inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - consumer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 - authority manifest:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 - installed consumer automations:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/`
+  - `<consumer_repo_root>/.codex/automations/`
 - installed consumer skills:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/`
+  - `<consumer_repo_root>/.codex/skills/`
 - home-level UI registrations:
-  - `/Users/billyweisberg/.codex/automations/`
+  - `<codex_home>/automations/`
 
 ## Checks Performed
 
@@ -70,7 +70,7 @@ Result:
 ### Authority manifest
 
 Observed:
-- present at `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+- present at `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 
 Result:
 - pass

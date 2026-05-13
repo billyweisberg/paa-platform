@@ -18,10 +18,10 @@ This runbook uses the existing repo-local PAA runtime and the new TechLead packe
 ## Repos
 
 Producer repo:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `<producer_repo_root>`
 
 Consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ## Preconditions
 
@@ -40,8 +40,8 @@ For examples below, substitute the real issue/package/brief values.
 Example:
 
 ```bash
-/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer authority materialize-techlead-assignment-packet \
-  --manifest /Users/billyweisberg/Repos/Individual-Centricity/appdev/docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json \
+<producer_repo_root>/.codex/paa/bin/paa-producer authority materialize-techlead-assignment-packet \
+  --manifest <producer_repo_root>/docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json \
   --project-slug fractal-core-python \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
@@ -72,7 +72,7 @@ Checks:
 ### 2. Validate TechLead assignment packet
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-validate-packet \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-validate-packet \
   --message-file <assignment_packet.json>
 ```
 
@@ -84,8 +84,8 @@ Checks:
 ### 3. Send TechLead assignment packet
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-send-packet \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-send-packet \
+  --repo-root <consumer_repo_root> \
   --message-file <assignment_packet.json>
 ```
 
@@ -118,8 +118,8 @@ Checks:
 Example: route to QA
 
 ```bash
-/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer authority materialize-techlead-decision-packet \
-  --manifest /Users/billyweisberg/Repos/Individual-Centricity/appdev/docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json \
+<producer_repo_root>/.codex/paa/bin/paa-producer authority materialize-techlead-decision-packet \
+  --manifest <producer_repo_root>/docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json \
   --project-slug fractal-core-python \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
@@ -150,7 +150,7 @@ Checks:
 ### 6. Validate TechLead decision packet
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-validate-packet \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-validate-packet \
   --message-file <decision_packet.json>
 ```
 
@@ -162,8 +162,8 @@ Checks:
 ### 7. Send TechLead decision packet
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-send-packet \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-send-packet \
+  --repo-root <consumer_repo_root> \
   --message-file <decision_packet.json>
 ```
 

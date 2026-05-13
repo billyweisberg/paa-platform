@@ -13,11 +13,11 @@ This validation focused on:
 ## Inputs
 
 - platform repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - producer repo:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - Team Worker Role proving lane:
   - `Docs Dev`
 - consumer issue fixture:
@@ -28,8 +28,8 @@ This validation focused on:
 ## Validation Steps
 
 1. compiled the updated Team Worker Roles runtime modules with `py_compile`
-2. refreshed the installed consumer runtime in `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
-3. refreshed the installed producer runtime in `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+2. refreshed the installed consumer runtime in `<consumer_repo_root>`
+3. refreshed the installed producer runtime in `<producer_repo_root>`
 4. validated a synthetic `techlead_assignment_packet` targeting `docs-dev`
 5. validated a synthetic `worker_result_packet` returning from `docs-dev`
 6. confirmed `.codex/paa/team-worker-roles.json` exists in both consumer and producer installs
@@ -55,8 +55,8 @@ This validation focused on:
 ### Registry installation
 
 Observed in:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/team-worker-roles.json`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/team-worker-roles.json`
+- `<consumer_repo_root>/.codex/paa/team-worker-roles.json`
+- `<producer_repo_root>/.codex/paa/team-worker-roles.json`
 
 Observed active role keys:
 - `python-team`
@@ -112,5 +112,5 @@ Synthetic worker result packet:
 
 ## Next Step
 
-1. execute Stage W5 from `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+1. execute Stage W5 from `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
 2. then execute Stage W6 with a full `Docs Dev` proving lane

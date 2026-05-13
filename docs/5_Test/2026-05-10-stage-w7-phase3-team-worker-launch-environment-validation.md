@@ -15,7 +15,7 @@ Validate one app-launched Team Worker automation against the real runtime and en
 ## Inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - Team Worker automation under test:
   - `Docs Dev Automation`
 - assignment packet emitted on May 9, 2026 to:
@@ -23,7 +23,7 @@ Validate one app-launched Team Worker automation against the real runtime and en
 - prepared role branch:
   - `issue-106-docs`
 - prepared role worktree:
-  - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-docs`
+  - `<codex_home>/worktrees/paa/fractal-core-python/issue-106-docs`
 - package id external:
   - `fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics`
 - brief id external:
@@ -34,7 +34,7 @@ Validate one app-launched Team Worker automation against the real runtime and en
 ### 1. App-launched preflight woke only because work existed
 
 Latest Docs Dev app-launched run:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/docs-dev-automation/2026-05-10T13-39-19Z-46312`
+- `<consumer_repo_root>/.project/data/paa/logs/automations/docs-dev-automation/2026-05-10T13-39-19Z-46312`
 
 Observed in `summary.json` and `preflight.json`:
 - `should_invoke_model = true`
@@ -84,7 +84,7 @@ Observed pending on `fractal-core-architecture`:
 - `payload.result_type = blocked`
 
 Packet file:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/worker-result.issue106.docs-dev.json`
+- `<consumer_repo_root>/.project/data/paa/reports/worker-result.issue106.docs-dev.json`
 
 The payload documents a stale assignment condition:
 - issue `#106` is already closed

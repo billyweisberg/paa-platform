@@ -35,14 +35,14 @@ The QA leg passed using the corrected Team Worker pilot brief and the repo-local
 Observed from the QA automation result:
 
 - QA prepared deterministic worktree:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/issue-108-qa`
+  - `<consumer_repo_root>/.codex-work/worktrees/paa/issue-108-qa`
 - QA validated the actual docs-only slice against PR `109`
 - verified file:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+  - `<consumer_repo_root>/docs/paa-team-worker-automation-pilot.md`
 - returned:
   - `verification_status = pass`
 - returned packet:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/qa-verification.issue108.qa.json`
+  - `<consumer_repo_root>/.project/data/paa/reports/qa-verification.issue108.qa.json`
 
 Validation reported by the QA run:
 

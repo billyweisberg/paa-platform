@@ -7,12 +7,12 @@ Recover the best historically-developed prompt intent for the `Fractal Core QA A
 ## Recovery Sources Reviewed
 
 ### Current authoritative sources
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
 
 ### Installed consumer copies
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-qa-review/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-qa-review/SKILL.md`
 
 ### Historical committed prompt surfaces
 - commit `0f1ddcb`
@@ -23,7 +23,7 @@ Recover the best historically-developed prompt intent for the `Fractal Core QA A
 - pre-hub richer QA skill text from commit `e7f0426`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-qa-automation/automation.toml`
 
 ## Earliest Durable Wrapper Intent
 

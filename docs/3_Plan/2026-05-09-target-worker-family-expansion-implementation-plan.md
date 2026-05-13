@@ -1,7 +1,7 @@
 # Target Worker-Family Expansion Implementation Plan
 
 Superseded as the top-level design authority by:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+- `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 
 This note remains useful as the implementation sequencing plan for the expansion work, but the term `Team Worker Roles` is now the authoritative design vocabulary.
 
@@ -33,16 +33,16 @@ Use the design spec as the authority for:
 Use this document as the implementation sequencing plan layered beneath that authority.
 
 Use this plan together with:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-05-phase-g-worker-result-and-delivery-review-contracts.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-05-techlead-hub-master-execution-map.md`
+- `docs/2_Design/2026-05-05-phase-g-worker-result-and-delivery-review-contracts.md`
+- `docs/3_Plan/2026-05-05-techlead-hub-master-execution-map.md`
 
 ## Work Area Checklist
 
 - [x] dynamic role registry
   - status: complete
   - authority:
-    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/config/team-worker-roles.json`
-    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+    - `project-packs/fractal-core/config/team-worker-roles.json`
+    - `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 
 - [ ] runtime role derivation
   - status: in progress, substantial
@@ -79,9 +79,9 @@ Use this plan together with:
     - deterministic no-work preflight exists
     - installed consumer vendor/runtime path is healthy again
     - explicit Team Worker automation contract now exists:
-      - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+      - `docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
     - pilot-only authority overlay/install step now exists for disposable fixtures:
-      - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-10-pilot-authority-overlay-install.md`
+      - `docs/6_Deploy/2026-05-10-pilot-authority-overlay-install.md`
     - Stage W7 supervised Team Worker pilot slice passed through:
       - `Delivery Architect`
       - `Python Dev`
@@ -97,8 +97,8 @@ Use this plan together with:
 - [ ] migration plan
   - status: complete as authority, in progress as rollout
   - authority:
-    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
-    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+    - `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+    - `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
   - rollout proof already complete:
     - `TechLead -> Docs Dev -> TechLead -> QA`
     - Stage W7 supervised full pilot on disposable issue `108` completed through Delivery Architect, Python Dev, QA, and TechLead closeout
@@ -203,7 +203,7 @@ Target branch naming should be deterministic and role-explicit:
 ### Deterministic worktree model
 
 Target worktree root remains:
-- `/Users/billyweisberg/.codex/worktrees/paa/<repo_name>/<role_branch>`
+- `<codex_home>/worktrees/paa/<repo_name>/<role_branch>`
 
 Role automations are responsible for:
 - create-or-reuse of their own deterministic worktree
@@ -346,11 +346,11 @@ Success:
 
 The primary fixed proving inputs remain:
 - consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - producer repo:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - current canonical proving fixture:
   - issue `106`
   - PR `107`
@@ -451,7 +451,7 @@ This plan is complete when:
 ## Messaging Simplification Follow-Up
 
 A separate target-state design note now captures why the current queue lifecycle is carrying too much workflow meaning and why PAA should move toward state-authoritative orchestration with queue-as-wakeup semantics:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+- `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
 
 This is a target-state architecture direction, not a directive to replace the current runtime before ongoing Team Worker hardening and rerun validation complete.
 

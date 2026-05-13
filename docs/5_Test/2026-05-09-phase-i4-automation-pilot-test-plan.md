@@ -1,5 +1,5 @@
 Superseded by:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+- `docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
 # Phase I4 Automation Pilot Test Plan
 
@@ -76,21 +76,21 @@ This is a human-in-the-loop pilot.
 
 ### Fixed inputs for the current plan
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - producer repo root:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - canonical consumer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 - canonical producer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 - canonical authority manifest path:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 - queue state root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/queue-state/fractal-core-handoff`
+  - `<consumer_repo_root>/.project/data/paa/queue-state/fractal-core-handoff`
 - home-level automation registration root:
-  - `/Users/billyweisberg/.codex/automations`
+  - `<codex_home>/automations`
 - canonical issue branch pattern:
   - `issue-<issue_number>`
 - deterministic role branch patterns:
@@ -172,7 +172,7 @@ Prove that the current proven role set actually appears in the app UI as launcha
 
 ### Inputs
 - app UI
-- home-level UI registrations under `/Users/billyweisberg/.codex/automations`
+- home-level UI registrations under `<codex_home>/automations`
 - current automation display names
 
 ### Steps

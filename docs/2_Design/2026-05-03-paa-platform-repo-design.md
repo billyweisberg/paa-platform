@@ -25,7 +25,7 @@ Role:
 
 Consumers:
 - authority producer repos such as:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - project consumer repos such as:
   - `billyweisberg/fractal-core-python`
 - unified producer-consumer repos for greenfield or tightly coupled projects

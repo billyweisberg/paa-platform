@@ -38,22 +38,22 @@ It is not responsible for:
 ## Authoritative source surfaces
 
 ### Project-pack source of truth
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
 
 ### Installed consumer copy
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-delivery-review/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-delivery-review/SKILL.md`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-delivery-architect-automation/automation.toml`
 
 ## Launch model
 
 ### Current launch surface
 - `execution_environment = "local"`
 - launch cwd:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 
 ### Intended meaning of `local`
 The Delivery Architect automation should:
@@ -70,8 +70,8 @@ It should not:
 
 ### Required pre-run gate
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer automation-preflight \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer automation-preflight \
+  --repo-root <consumer_repo_root> \
   --target-role delivery-architect
 ```
 
@@ -83,8 +83,8 @@ If `should_invoke_model = false`:
 
 ### Inspect prepared worktree
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   --target-role delivery-architect
@@ -92,8 +92,8 @@ If `should_invoke_model = false`:
 
 ### Resolve role entry
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-entry \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-entry \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   --target-role delivery-architect
@@ -101,8 +101,8 @@ If `should_invoke_model = false`:
 
 ### Prepare return context
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-result-assist \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-result-assist \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   --target-role delivery-architect
@@ -110,8 +110,8 @@ If `should_invoke_model = false`:
 
 ### Return result to TechLead
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-return \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-return \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   --target-role delivery-architect \

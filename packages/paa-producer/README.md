@@ -2,7 +2,7 @@
 
 `paa-producer` is the producer-side install bundle for source-authority repos such as:
 
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `appdev`
 
 ## Responsibilities
 

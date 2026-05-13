@@ -16,10 +16,10 @@ It is intentionally incremental.
 The goal is to move the existing mesh workflow into the hub model without breaking the current control spine.
 
 Related design notes:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
+- `docs/2_Design/2026-05-04-current-mesh-vs-techlead-hub-spoke.md`
+- `docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
+- `docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
+- `docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
 
 ## Executive summary
 
@@ -42,7 +42,7 @@ The least risky migration sequence is:
 ### Queue runtime
 
 Current central queue runtime:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/handoff_runtime.py`
+- `packages/paa-core/src/paa_core/handoff_runtime.py`
 
 Important current assumptions:
 - `SUPPORTED_SCHEMA_TYPES = {"architect_cycle_packet", "qa_verification_packet", "slice_result_packet"}`
@@ -59,7 +59,7 @@ Important current assumptions:
 ### Packet compilers
 
 Current compiler entrypoints:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-producer/src/paa_producer/authority_runtime.py`
 
 Current compiled packet assumptions:
 - `materialize-architect-packet`
@@ -78,10 +78,10 @@ Current compiled packet assumptions:
 ### Consumer runtime
 
 Current consumer queue wrapper:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/delivery_runtime.py`
+- `packages/paa-consumer/src/paa_consumer/delivery_runtime.py`
 
 Current TechLead runtime/reporting:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 Important current assumptions:
 - queue names are still modeled as:
@@ -93,8 +93,8 @@ Important current assumptions:
 ### Prompt and skill layer
 
 Current automation and skill sources:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/`
+- `project-packs/fractal-core/automations/`
+- `project-packs/fractal-core/skills/`
 
 Important current prompt mismatch:
 - prompts and skills still teach:
@@ -137,7 +137,7 @@ Long-term:
 ### `paa_core.handoff_runtime`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/handoff_runtime.py`
+- `packages/paa-core/src/paa_core/handoff_runtime.py`
 
 Changes:
 - extend supported schema route validation to include new TechLead packet families
@@ -150,7 +150,7 @@ Changes:
 ### `paa_consumer.delivery_runtime`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/delivery_runtime.py`
+- `packages/paa-consumer/src/paa_consumer/delivery_runtime.py`
 
 Changes:
 - add helpers for TechLead-issued sends rather than generic queue-only sends
@@ -159,7 +159,7 @@ Changes:
 ### `paa_consumer.techlead`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 Changes:
 - stop treating TechLead as mostly observational
@@ -211,7 +211,7 @@ Current compiler payloads bake the mesh into the envelope:
 ### `materialize-architect-packet`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-producer/src/paa_producer/authority_runtime.py`
 
 Changes:
 - treat as temporary bridge only
@@ -222,7 +222,7 @@ Changes:
 ### `materialize-slice-result-packet`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-producer/src/paa_producer/authority_runtime.py`
 
 Changes:
 - default `to_role` should become `techlead`
@@ -237,7 +237,7 @@ Changes:
 ### `materialize-qa-verification-packet`
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-producer/src/paa_producer/authority_runtime.py`
 
 Changes:
 - default `to_role` should become `techlead`
@@ -248,7 +248,7 @@ Changes:
 ### New packet compilers to add
 
 Files to add later:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead_packets.py`
+- `packages/paa-consumer/src/paa_consumer/techlead_packets.py`
 - or similar producer/consumer split once the final ownership is decided
 
 Needed compiler commands:
@@ -281,8 +281,8 @@ Purpose:
 - one generic assignment envelope for Delivery Architect, worker roles, and QA
 
 Where to add:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/techlead_assignment_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/techlead_assignment_packet.example.json`
+- `schemas/handoff-packets/techlead_assignment_packet.schema.json`
+- `templates/packet-examples/techlead_assignment_packet.example.json`
 
 Key fields:
 - `assignment_type`
@@ -297,8 +297,8 @@ Key fields:
 ### `techlead_decision_packet`
 
 Where to add:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/techlead_decision_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/techlead_decision_packet.example.json`
+- `schemas/handoff-packets/techlead_decision_packet.schema.json`
+- `templates/packet-examples/techlead_decision_packet.example.json`
 
 Key fields:
 - `decision_type`
@@ -314,19 +314,19 @@ Key fields:
 ### `worker_result_packet` later
 
 Where to add later:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/worker_result_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/worker_result_packet.example.json`
+- `schemas/handoff-packets/worker_result_packet.schema.json`
+- `templates/packet-examples/worker_result_packet.example.json`
 
 ### `delivery_review_packet` later
 
 Where to add later:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/delivery_review_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/delivery_review_packet.example.json`
+- `schemas/handoff-packets/delivery_review_packet.schema.json`
+- `templates/packet-examples/delivery_review_packet.example.json`
 
 ## Runtime validator delta
 
 File:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/handoff_runtime.py`
+- `packages/paa-core/src/paa_core/handoff_runtime.py`
 
 Changes:
 - extend `SUPPORTED_SCHEMA_TYPES`
@@ -367,13 +367,13 @@ Add to packet payload or metadata:
 ## Current code touchpoints
 
 ### Packet compiler payloads
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-producer/src/paa_producer/authority_runtime.py`
 
 ### Queue persistence metadata
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/handoff_runtime.py`
+- `packages/paa-core/src/paa_core/handoff_runtime.py`
 
 ### TechLead reporting
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 ## Short-term implementation approach
 
@@ -422,16 +422,16 @@ Current prompts still teach:
 - consumer roles operating without explicit TechLead hub ownership
 
 Files needing prompt updates:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-authority-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-authority/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-inbox/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-authority-architect-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
+- `project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
+- `project-packs/fractal-core/automations/python-team-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-authority/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-inbox/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
 
 ## Role-specific prompt deltas
 
@@ -490,7 +490,7 @@ Prompt changes:
 Because the UI currently discovers global registrations, prompt deployment needs to stay consistent between:
 - template/example content in `paa-platform`
 - rendered deployed copies in project repos
-- global UI registration entries under `/Users/billyweisberg/.codex/automations/`
+- global UI registration entries under `<codex_home>/automations/`
 
 The prompt changes above must therefore be reflected in:
 - template source

@@ -7,16 +7,16 @@ Record that the current proven consumer role set now has role-facing execution s
 ## Skills validated
 
 Project-pack source skills:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-authority/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-delivery-review/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
+- `project-packs/fractal-core/skills/fractal-core-authority/SKILL.md`
 
 Installed consumer copies:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-delivery-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-dev-result/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-qa-review/SKILL.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-authority/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-delivery-review/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-dev-result/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-qa-review/SKILL.md`
+- `<consumer_repo_root>/.codex/skills/fractal-core-authority/SKILL.md`
 
 ## What changed
 

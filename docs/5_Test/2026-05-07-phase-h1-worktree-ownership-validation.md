@@ -10,13 +10,13 @@ Validate the first narrow worktree ownership metadata/reporting slice:
 ## Commands used
 
 Consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ### 1. Refresh installed consumer runtime
 
 ```bash
 ./.codex/paa/bin/paa-consumer update-consumer-runtime \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+  --repo-root <consumer_repo_root>
 ```
 
 Observed result:
@@ -26,7 +26,7 @@ Observed result:
 
 ```bash
 ./.codex/paa/bin/paa-consumer techlead-worktree-ownership \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role python-team
@@ -40,7 +40,7 @@ Observed result:
 - `worktree_ownership.runtime_owner_role = Python Dev`
 - `worktree_ownership.runtime_owner_role_cli = python-team`
 - `worktree_ownership.role_branch = issue-106-dev`
-- `worktree_ownership.worktree_path = /Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-dev`
+- `worktree_ownership.worktree_path = <codex_home>/worktrees/paa/fractal-core-python/issue-106-dev`
 - `worktree_ownership.registered = false`
 
 This is the correct result for a deterministic ownership query when no role worktree is currently prepared.

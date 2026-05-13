@@ -15,14 +15,14 @@ Prepared a fresh disposable Team Worker pilot fixture for a full-chain rerun und
 - brief id: `fcore-coder-2026-05-10-issue110-team-worker-automation-runtime-note`
 - task id: `py-pilot-team-worker-automation-runtime-note`
 - fixture summary:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/pilot-fixtures/issue-110/fixture-summary.json`
+  - `<consumer_repo_root>/.codex-work/pilot-fixtures/issue-110/fixture-summary.json`
 
 ## Overlay install
 
 Installed the pilot-only authority overlay for issue `110` into the consumer repo current authority surface.
 
 Verified overlay root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-110`
+- `<consumer_repo_root>/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-110`
 
 ## Runtime correction applied during preparation
 
@@ -33,10 +33,10 @@ This was a parser mismatch, not a routing limitation.
 The runtime logic already supported explicit Delivery Architect emission, but the CLI `choices` list excluded it.
 
 Corrected in source:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 Installed consumer runtime refreshed afterward in:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ## Current staged state
 

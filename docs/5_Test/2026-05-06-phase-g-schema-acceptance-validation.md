@@ -17,20 +17,20 @@ It did not include:
 
 ## Validated artifacts
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/worker_result_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/schemas/handoff-packets/delivery_review_packet.schema.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/worker_result_packet.example.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/delivery_review_packet.example.json`
+- `schemas/handoff-packets/worker_result_packet.schema.json`
+- `schemas/handoff-packets/delivery_review_packet.schema.json`
+- `templates/packet-examples/worker_result_packet.example.json`
+- `templates/packet-examples/delivery_review_packet.example.json`
 
 ## Runtime acceptance result
 
 Using the real installed consumer runtime in:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Validated successfully:
 
 ```bash
-./.codex/paa/bin/paa-consumer queue-validate --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python --message-file /Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/worker_result_packet.example.json
+./.codex/paa/bin/paa-consumer queue-validate --repo-root <consumer_repo_root> --message-file templates/packet-examples/worker_result_packet.example.json
 ```
 
 Result:
@@ -40,7 +40,7 @@ Result:
 Validated successfully:
 
 ```bash
-./.codex/paa/bin/paa-consumer queue-validate --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python --message-file /Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/delivery_review_packet.example.json
+./.codex/paa/bin/paa-consumer queue-validate --repo-root <consumer_repo_root> --message-file templates/packet-examples/delivery_review_packet.example.json
 ```
 
 Result:

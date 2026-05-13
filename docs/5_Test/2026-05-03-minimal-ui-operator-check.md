@@ -10,13 +10,13 @@ The operator should not act as the full test harness.
 In the producer or consumer repo, confirm whether repo-local automations appear in the UI.
 
 Producer expected automation on disk:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations/fractal-core-authority-architect-automation/automation.toml`
+- `<producer_repo_root>/.codex/automations/fractal-core-authority-architect-automation/automation.toml`
 
 Consumer expected automations on disk:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
 
 Record only:
 - visible or not visible
@@ -37,8 +37,8 @@ Record only:
 ## Step 3: Hand Off Back to Runtime Checks
 
 After the UI check, use the repo-local smoke tests for the rest:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer smoke-test`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer smoke-test --expected-branch codex/paa-consumer-consolidation`
+- `<producer_repo_root>/.codex/paa/bin/paa-producer smoke-test`
+- `<consumer_repo_root>/.codex/paa/bin/paa-consumer smoke-test --expected-branch codex/paa-consumer-consolidation`
 
 That is enough human validation for this stage.
 
@@ -47,10 +47,10 @@ That is enough human validation for this stage.
 Platform-owned validator:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
+cd <paa_platform_repo_root>
 uv run --python 3.12 --no-project python scripts/runtime/validate_automation_toml.py \
-  /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations \
-  /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations
+  <producer_repo_root>/.codex/automations \
+  <consumer_repo_root>/.codex/automations
 ```
 
 Current known result on 2026-05-03:

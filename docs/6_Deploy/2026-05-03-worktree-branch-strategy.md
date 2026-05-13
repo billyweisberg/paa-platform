@@ -75,9 +75,9 @@ This strategy prevents:
 ## Current Operational Note
 
 At the time of writing, Codex UI automation visibility appears to prefer global automation registration under:
-- `/Users/billyweisberg/.codex/automations/`
+- `<codex_home>/automations/`
 
 and worktree execution creates runtime worktrees under:
-- `/Users/billyweisberg/.codex/worktrees/`
+- `<codex_home>/worktrees/`
 
 So this branch strategy should be treated as part of the automation execution contract, not only a Git convention.

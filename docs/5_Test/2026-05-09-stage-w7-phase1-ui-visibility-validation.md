@@ -3,7 +3,7 @@
 ## Purpose
 
 Record `Stage W7 Phase 1` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+- `docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
 This phase validates visible app/UI presence for the Team Worker-aware automation launch surfaces.
 

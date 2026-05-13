@@ -32,10 +32,10 @@ Examples:
 ## Canonical Repos
 
 Producer:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `<producer_repo_root>`
 
 Consumer:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ## Why This Policy Exists
 

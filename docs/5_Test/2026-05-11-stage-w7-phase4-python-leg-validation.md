@@ -18,9 +18,9 @@ The app-launched `Python Team Automation` successfully:
 
 1. claimed the Team Worker assignment for issue `108`
 2. used the repo-local deterministic role worktree:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/issue-108-dev`
+   - `<consumer_repo_root>/.codex-work/worktrees/paa/issue-108-dev`
 3. replaced the seeded placeholder in:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+   - `<consumer_repo_root>/docs/paa-team-worker-automation-pilot.md`
 4. kept the slice docs-only
 5. committed and pushed the change:
    - `7e2b98e` `Document Team Worker automation runtime states`
@@ -49,10 +49,10 @@ Reported successful by the Python run:
 
 Artifacts:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/worker-result.issue108.python-dev.json`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/worker-result.issue108.python-dev.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/techlead-assignment.issue108.python-dev.json`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/issue-108-dev/docs/paa-team-worker-automation-pilot.md`
+- `<consumer_repo_root>/.project/data/paa/reports/worker-result.issue108.python-dev.json`
+- `<consumer_repo_root>/.project/data/paa/reports/worker-result.issue108.python-dev.md`
+- `<consumer_repo_root>/.project/data/paa/reports/techlead-assignment.issue108.python-dev.json`
+- `<consumer_repo_root>/.codex-work/worktrees/paa/issue-108-dev/docs/paa-team-worker-automation-pilot.md`
 
 ## Residual note
 

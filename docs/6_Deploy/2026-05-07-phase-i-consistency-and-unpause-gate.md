@@ -93,4 +93,4 @@ Operational note:
 1. raw broker `messages_ready` may lag briefly after cleanup, but reconciled queue state and follow-up broker checks returned to zero across all three queues
 
 Reference validation note:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`
+- `docs/5_Test/2026-05-07-phase-i-canonical-e2e-validation.md`

@@ -37,22 +37,22 @@ It is not responsible for:
 ## Authoritative source surfaces
 
 ### Project-pack source of truth
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-qa-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-qa-review/SKILL.md`
 
 ### Installed consumer copy
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-qa-review/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-qa-review/SKILL.md`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-qa-automation/automation.toml`
 
 ## Launch model
 
 ### Current launch surface
 - `execution_environment = "local"`
 - launch cwd:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 
 ### Intended meaning of `local`
 The QA automation should:
@@ -66,8 +66,8 @@ The QA automation should:
 
 ### Required pre-run gate
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer automation-preflight \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer automation-preflight \
+  --repo-root <consumer_repo_root> \
   --target-role qa
 ```
 
@@ -82,22 +82,22 @@ When repo execution is needed, QA should prefer `uv run` from the prepared QA wo
 
 ### Inspect prepared worktree
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree ... --target-role qa
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-inspect-role-worktree ... --target-role qa
 ```
 
 ### Resolve role entry
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-entry ... --target-role qa
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-entry ... --target-role qa
 ```
 
 ### Prepare return context
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-result-assist ... --target-role qa
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-result-assist ... --target-role qa
 ```
 
 ### Return result to TechLead
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-role-return ... --target-role qa --send
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-role-return ... --target-role qa --send
 ```
 
 ## Branch and worktree model

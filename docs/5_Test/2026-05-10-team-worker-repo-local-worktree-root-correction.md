@@ -11,10 +11,10 @@ The Python Team automation could:
 - prepare, inspect, and enter the role worktree
 
 But it could not write there because the prepared worktree lived under:
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-108-dev`
+- `<codex_home>/worktrees/paa/fractal-core-python/issue-108-dev`
 
 The app-launched sandbox for the automation allowed writes only under the consumer repo root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ## Root cause
 
@@ -31,21 +31,21 @@ Updated runtime default:
   - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 
 Updated source runtime:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-consumer/src/paa_consumer/techlead.py`
 
 Updated installed consumer runtime:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/lib/paa_consumer/techlead.py`
+- `<consumer_repo_root>/.codex/paa/lib/paa_consumer/techlead.py`
 
 Updated active docs:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+- `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+- `docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+- `docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
 
 ## Live pilot cleanup
 
 To keep the active issue `108` slice coherent:
 - removed the obsolete home-folder worktree:
-  - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-108-dev`
+  - `<codex_home>/worktrees/paa/fractal-core-python/issue-108-dev`
 - cleared the obsolete blocked Python result packet
 - re-sent the Python assignment packet to `fractal-core-python`
 

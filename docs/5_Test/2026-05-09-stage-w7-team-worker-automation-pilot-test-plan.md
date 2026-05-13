@@ -1,7 +1,7 @@
 # Stage W7 Team Worker Automation Pilot Test Plan
 
 Supersedes:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md`
+- `docs/5_Test/2026-05-09-phase-i4-automation-pilot-test-plan.md`
 
 ## Purpose
 
@@ -48,23 +48,23 @@ without widening immediately into every possible worker lane at once.
 ## Fixed inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - producer repo root:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - consumer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 - producer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 - authority manifest:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 - Team Worker role registry:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/team-worker-roles.json`
+  - `<consumer_repo_root>/.codex/paa/team-worker-roles.json`
 - home-level UI registration root:
-  - `/Users/billyweisberg/.codex/automations`
+  - `<codex_home>/automations`
 - automation logging contract:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
+  - `docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 Default proving fixture:
 - issue: `106`
@@ -80,7 +80,7 @@ Active disposable Phase 4 pilot fixture:
 - canonical branch:
   - `issue-108`
 - target doc:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+  - `<consumer_repo_root>/docs/paa-team-worker-automation-pilot.md`
 - package id external:
   - `fcore-stagew7-2026-05-10-issue108-team-worker-automation-runtime-note`
 - brief id external:
@@ -88,9 +88,9 @@ Active disposable Phase 4 pilot fixture:
 - task id:
   - `py-pilot-team-worker-automation-runtime-note`
 - pilot authority overlay helper:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py`
+  - `scripts/runtime/install_pilot_authority_overlay.py`
 - pilot overlay install root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-108`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-108`
 - phase 4 starting handoff:
   - `TechLead -> Delivery Architect`
 
@@ -201,7 +201,7 @@ Confirm that Team Worker-aware automations still honor the deterministic no-work
 - runtime preflight checks
 - queue checks
 - run-log inspection under:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/logs/automations/`
+  - `<consumer_repo_root>/.project/data/paa/logs/automations/`
 
 ### Knobs
 - which role to test first
@@ -242,7 +242,7 @@ Validate one app-launched Team Worker automation against the real runtime/enviro
 Status:
 - `pass`
 - recorded in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-10-stage-w7-phase3-team-worker-launch-environment-validation.md`
+  - `docs/5_Test/2026-05-10-stage-w7-phase3-team-worker-launch-environment-validation.md`
 
 ## Phase 4: Supervised Team Worker Live Pilot Slice
 
@@ -254,7 +254,7 @@ Prove one full supervised Team Worker pilot slice across the real app-launched s
 - PR `109`
 - canonical branch `issue-108`
 - docs target:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/docs/paa-team-worker-automation-pilot.md`
+  - `<consumer_repo_root>/docs/paa-team-worker-automation-pilot.md`
 
 ### Success
 - Delivery Architect, Python Dev, and QA each execute from the app boundary
@@ -271,8 +271,8 @@ Prove one full supervised Team Worker pilot slice across the real app-launched s
 Status:
 - `pass`
 - recorded in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-11-stage-w7-phase4-python-leg-validation.md`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-stage-w7-phase4-qa-leg-validation.md`
+  - `docs/5_Test/2026-05-11-stage-w7-phase4-python-leg-validation.md`
+  - `docs/5_Test/2026-05-12-stage-w7-phase4-qa-leg-validation.md`
 
 ## Phase 5: Final Deliberate Unpause Decision
 
@@ -292,7 +292,7 @@ Decide whether the pilot is a successful Team Worker proof and identify any rema
 Status:
 - `pilot pass / closeout pending`
 - recorded in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-12-stage-w7-phase5-pilot-closeout-decision.md`
+  - `docs/5_Test/2026-05-12-stage-w7-phase5-pilot-closeout-decision.md`
 - whether to use disposable issue fixture or historical issue fixture
 
 ## Phase 4: Supervised Team Worker live pilot slice

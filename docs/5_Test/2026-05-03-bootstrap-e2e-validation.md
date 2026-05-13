@@ -9,11 +9,11 @@ Validate the producer-to-consumer flow under the new repo bootstrap model:
 
 ## Preconditions
 - canonical producer repo:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - canonical consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - repo-local producer and consumer installs refreshed from platform revision:
   - `b91dad4a7664b9309bec3058a5b93a4f21f13fa3`
 
@@ -23,7 +23,7 @@ Validate the producer-to-consumer flow under the new repo bootstrap model:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer authority summary
 ```
 
@@ -36,10 +36,10 @@ Result:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer load-issue-into-paa \
-  --repo-root /Users/billyweisberg/Repos/Individual-Centricity/appdev \
-  --project-config /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/project-config.json \
+  --repo-root <producer_repo_root> \
+  --project-config <producer_repo_root>/.codex/paa/project-config.json \
   --issue-number 106 \
   --verification-key-prefix retirement-diagnostics \
   --scope-authority-label 'retirement-boundary diagnostics'
@@ -60,25 +60,25 @@ Result:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer publish-authority-package \
-  --repo-root /Users/billyweisberg/Repos/Individual-Centricity/appdev \
-  --project-config /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/project-config.json
+  --repo-root <producer_repo_root> \
+  --project-config <producer_repo_root>/.codex/paa/project-config.json
 ```
 
 Result:
 - publish succeeded
 - package root:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1`
+  - `<producer_repo_root>/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1`
 
 ### 4. Consumer authority package install
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-consumer install-authority-package \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
-  --package-root /Users/billyweisberg/Repos/Individual-Centricity/appdev/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1
+  --repo-root <consumer_repo_root> \
+  --package-root <producer_repo_root>/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1
 ```
 
 Result:
@@ -92,8 +92,8 @@ Result:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
-./.codex/paa/bin/paa-consumer validate-runtime --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
+./.codex/paa/bin/paa-consumer validate-runtime --repo-root <consumer_repo_root>
 ```
 
 Result:
@@ -108,9 +108,9 @@ Result:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-consumer queue-check \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --queue fractal-core-python
 ```
 
@@ -123,10 +123,10 @@ Result:
 Command:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-consumer techlead-status \
   --validate-schema \
-  --output /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/techlead-status-report.json
+  --output <consumer_repo_root>/.project/data/paa/reports/techlead-status-report.json
 ```
 
 Result:

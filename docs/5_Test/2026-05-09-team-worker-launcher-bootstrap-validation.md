@@ -12,13 +12,13 @@ This note closes the gap between:
 ## Inputs
 
 - Team Worker Roles spec:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+  - `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
 - Team Worker implementation plan:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
+  - `docs/3_Plan/2026-05-09-target-worker-family-expansion-implementation-plan.md`
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - home-level UI registration root:
-  - `/Users/billyweisberg/.codex/automations`
+  - `<codex_home>/automations`
 
 ## Scope
 
@@ -50,9 +50,9 @@ Expanded Team Worker automations:
 
 1. validated the patched consumer install vendoring path by refreshing the consumer runtime and then reinstalling the vendor tree through the same source-backed install helper
 2. verified the installed consumer runtime now carries a Python 3.12-compatible `rpds` binary under:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/vendor/rpds/rpds.cpython-312-darwin.so`
+   - `<consumer_repo_root>/.codex/paa/vendor/rpds/rpds.cpython-312-darwin.so`
 3. ran:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-status --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python --validate-schema`
+   - `<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-status --repo-root <consumer_repo_root> --validate-schema`
 4. synchronized the home-level UI registration layer from the installed repo-local automation definitions for all eight automations in scope
 5. parsed all eight home-level `automation.toml` files successfully with `tomllib`
 6. spot-checked the synchronized launcher prompts to confirm:
@@ -82,14 +82,14 @@ Expanded Team Worker automations:
 ### Home-level UI registration result
 
 The following home-level UI registration files are now present and parseable:
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/frontend-dev-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/backend-dev-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/infra-dev-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/docs-dev-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-techlead-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<codex_home>/automations/python-team-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-qa-automation/automation.toml`
+- `<codex_home>/automations/frontend-dev-automation/automation.toml`
+- `<codex_home>/automations/backend-dev-automation/automation.toml`
+- `<codex_home>/automations/infra-dev-automation/automation.toml`
+- `<codex_home>/automations/docs-dev-automation/automation.toml`
 
 ### Launcher contract note
 

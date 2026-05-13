@@ -35,12 +35,12 @@ It does not redefine producer-side authority publication.
 ## Related Notes
 
 This note consolidates and should be read alongside:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-paa-service-contracts.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-paa-sequence-diagrams.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+- `docs/2_Design/2026-05-04-techlead-hub-packet-and-decision-vocabulary.md`
+- `docs/2_Design/2026-05-04-techlead-hub-state-and-routing-contract.md`
+- `docs/2_Design/2026-05-09-paa-service-contracts.md`
+- `docs/2_Design/2026-05-09-paa-sequence-diagrams.md`
+- `docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
+- `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
 
 ## Core Model
 
@@ -212,10 +212,10 @@ These are real control-plane sources:
 - reporting views such as `paa.v_work_item_full_chain_traceability`
 
 Key DB anchors:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/001-step1-control-plane.sql:117`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/001-step1-control-plane.sql:206`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/001-step1-control-plane.sql:230`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/sql/full_chain_reporting_view.sql:15`
+- `migrations/postgres/001-step1-control-plane.sql:117`
+- `migrations/postgres/001-step1-control-plane.sql:206`
+- `migrations/postgres/001-step1-control-plane.sql:230`
+- `packages/paa-core/src/paa_core/sql/full_chain_reporting_view.sql:15`
 
 ### Still file-backed today
 
@@ -271,7 +271,7 @@ That means:
 - a lingering queue packet should be an operational residue problem, not a truth problem
 
 This aligns with:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+- `docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
 
 ## Current Known Weaknesses
 

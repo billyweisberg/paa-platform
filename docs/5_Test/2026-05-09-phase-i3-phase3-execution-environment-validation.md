@@ -3,7 +3,7 @@
 ## Scope
 
 Execute `Phase 3: Execution Environment Contract Adherence` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
+- `docs/5_Test/2026-05-08-phase-i3-current-role-set-test-plan.md`
 
 Current proven role set:
 - `TechLead`
@@ -14,12 +14,12 @@ Current proven role set:
 ## Inputs
 
 - execution environment contract:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+  - `docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
 - canonical consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - wrapper paths:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 - queue state info:
   - `paa-consumer queue-state-info`
 - worktree ownership query:
@@ -47,7 +47,7 @@ Current proven role set:
 ### 1. Home-level UI registration execution environment
 
 Observed mismatch:
-- home-level UI registrations under `/Users/billyweisberg/.codex/automations/` used:
+- home-level UI registrations under `<codex_home>/automations/` used:
   - `execution_environment = "worktree"`
 
 Contract expectation:
@@ -84,9 +84,9 @@ Observed:
 - project-pack automations use:
   - `cwds = ["{{REPO_ROOT}}"]`
 - installed consumer automations use:
-  - `cwds = ["/Users/billyweisberg/Repos/billyweisberg/fractal-core-python"]`
+  - `cwds = ["<consumer_repo_root>"]`
 - corrected home-level UI registrations use:
-  - `cwds = ["/Users/billyweisberg/Repos/billyweisberg/fractal-core-python"]`
+  - `cwds = ["<consumer_repo_root>"]`
 
 Result:
 - pass
@@ -103,7 +103,7 @@ Result:
 ### Queue state root
 
 Observed from `queue-state-info`:
-- `active_state_dir = /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/queue-state/fractal-core-handoff`
+- `active_state_dir = <consumer_repo_root>/.project/data/paa/queue-state/fractal-core-handoff`
 - `active_state_source = env:FRACTAL_CORE_HANDOFF_STATE_DIR`
 - candidate path is writable
 
@@ -141,20 +141,20 @@ Observed from runtime ownership queries:
   - role branch:
     - `issue-106-delivery`
   - worktree path:
-    - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-delivery`
+    - `<codex_home>/worktrees/paa/fractal-core-python/issue-106-delivery`
 - `python-team`
   - role branch:
     - `issue-106-dev`
   - worktree path:
-    - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-dev`
+    - `<codex_home>/worktrees/paa/fractal-core-python/issue-106-dev`
 - `qa`
   - role branch:
     - `issue-106-qa`
   - worktree path:
-    - `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-qa`
+    - `<codex_home>/worktrees/paa/fractal-core-python/issue-106-qa`
 
 All three resolved under the deterministic worktree root:
-- `/Users/billyweisberg/.codex/worktrees/paa/fractal-core-python`
+- `<codex_home>/worktrees/paa/fractal-core-python`
 
 Result:
 - pass
@@ -174,7 +174,7 @@ Phase 3 verdict:
 ## Notes
 
 - The shell environment itself does not need `FRACTAL_CORE_HANDOFF_STATE_DIR` exported globally as long as the repo-local wrapper layer sets and uses the correct repo-local durable queue state root during runtime execution.
-- The home-level UI registration corrections were applied on disk under `/Users/billyweisberg/.codex/automations/` and are not versioned in the `paa-platform` repository.
+- The home-level UI registration corrections were applied on disk under `<codex_home>/automations/` and are not versioned in the `paa-platform` repository.
 
 ## Next Step
 

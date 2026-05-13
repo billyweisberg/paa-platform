@@ -10,13 +10,13 @@ It covers:
 
 ## Scope Reviewed
 Reviewed surfaces:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/`
-- relevant platform docs under `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/`
+- `<producer_repo_root>/.codex/`
+- `<consumer_repo_root>/.codex/`
+- `project-packs/`
+- relevant platform docs under `docs/`
 
 Legacy path classes checked:
-- `/Users/billyweisberg/.codex`
+- `<codex_home>`
 - `appdev-authority-source`
 - `appdev-authority-source-clean`
 - `appdev-arch`
@@ -41,13 +41,13 @@ The skills are now aligned with repo-local installs and repo-local runtime expec
 
 ### 2. Repo-local readme/runbook surfaces are also clean
 These repo-local readme surfaces do not encode old topology assumptions:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations/README.md`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/README.md`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/skills/README.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/README.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/README.md`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/README.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/README.md`
+- `<producer_repo_root>/.codex/automations/README.md`
+- `<producer_repo_root>/.codex/paa/README.md`
+- `<producer_repo_root>/.codex/skills/README.md`
+- `<consumer_repo_root>/.codex/automations/README.md`
+- `<consumer_repo_root>/.codex/paa/README.md`
+- `<consumer_repo_root>/.codex/skills/README.md`
+- `project-packs/README.md`
 
 These are safe to keep as current runbook surfaces.
 
@@ -64,13 +64,13 @@ That was not a topology bug.
 It was the environment/bootstrap problem and has since been addressed in the first-pass `uv` wrapper update.
 
 Affected launch helpers include:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+- `<producer_repo_root>/.codex/paa/bin/paa-producer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 
 ### 4. One platform build doc still had obsolete source-lane examples
 This file still contained historical example commands pointing at `appdev-authority-source`:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md`
+- `docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md`
 
 That residue has now been cleaned.
 The examples now use:

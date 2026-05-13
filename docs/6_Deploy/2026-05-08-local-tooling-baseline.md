@@ -70,7 +70,7 @@ For that case:
 Use:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_local_tooling_baseline.sh
+scripts/runtime/bootstrap_local_tooling_baseline.sh
 ```
 
 What it does:

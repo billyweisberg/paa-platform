@@ -13,9 +13,9 @@ This validation focused on:
 ## Inputs
 
 - platform repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - Team Worker automation ids:
   - `python-team-automation`
   - `frontend-dev-automation`
@@ -27,7 +27,7 @@ This validation focused on:
 
 1. parsed every project-pack automation TOML under `project-packs/fractal-core/automations/`
 2. verified Team Worker automation ids in `project-packs/fractal-core/config/team-worker-roles.json`
-3. refreshed the consumer runtime install in `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+3. refreshed the consumer runtime install in `<consumer_repo_root>`
 4. confirmed installed consumer automation TOMLs exist for all Team Worker automation ids
 5. confirmed the shared Team Worker execution skill now uses role-identity placeholders instead of hard-coded `python-team` commands only
 
@@ -61,11 +61,11 @@ Observed Team Worker automation ids from the registry:
 ### Installed consumer automation presence
 
 Observed installed consumer automation TOMLs:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/backend-dev-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/docs-dev-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/frontend-dev-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/infra-dev-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/backend-dev-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/docs-dev-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/frontend-dev-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/infra-dev-automation/automation.toml`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
 
 ### Skill contract
 

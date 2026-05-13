@@ -4,19 +4,33 @@ from __future__ import annotations
 import copy
 import importlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-PLATFORM_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform').resolve()
-CONSUMER_REPO = Path('/Users/billyweisberg/Repos/billyweisberg/fractal-core-python').resolve()
+PLATFORM_ROOT = Path(__file__).resolve().parents[2]
+
+
+def resolve_consumer_repo() -> Path:
+    configured = os.environ.get('PAA_CONSUMER_REPO')
+    if configured:
+        return Path(configured).expanduser().resolve()
+    sibling_repo = PLATFORM_ROOT.parent / 'fractal-core-python'
+    if sibling_repo.exists():
+        return sibling_repo.resolve()
+    raise RuntimeError('Set PAA_CONSUMER_REPO to the Fractal Core consumer repo root.')
+
+
+CONSUMER_REPO = resolve_consumer_repo()
 PACKAGE_ID = 'fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics'
 BRIEF_ID = 'fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics'
 ISSUE_NUMBER = 106
 PR_NUMBER = 107
 ROLE_BRANCH = 'issue-106-dev'
-WORKTREE_PATH = Path.home() / '.codex' / 'worktrees' / 'paa' / CONSUMER_REPO.name / ROLE_BRANCH
+WORKTREE_ROOT = Path(os.environ.get('PAA_ROLE_WORKTREE_ROOT', CONSUMER_REPO / '.codex-work' / 'worktrees' / 'paa'))
+WORKTREE_PATH = WORKTREE_ROOT / ROLE_BRANCH
 CREATED_ROLE_BRANCH = False
 
 sys.path.insert(0, str(PLATFORM_ROOT / 'packages' / 'paa-core' / 'src'))

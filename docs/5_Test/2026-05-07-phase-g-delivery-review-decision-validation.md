@@ -19,10 +19,10 @@ All other Delivery Architect result outcomes remain fail-closed in this slice.
 ## Validation steps
 
 Consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Disposable packet:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/delivery_review_packet.example.json`
+- `templates/packet-examples/delivery_review_packet.example.json`
 
 ### 1. Sent a real `delivery_review_packet` to the architecture queue
 
@@ -30,9 +30,9 @@ Command:
 
 ```bash
 ./.codex/paa/bin/paa-consumer queue-send \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --queue fractal-core-architecture \
-  --message-file /Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/delivery_review_packet.example.json
+  --message-file templates/packet-examples/delivery_review_packet.example.json
 ```
 
 Observed result:
@@ -46,7 +46,7 @@ Command:
 
 ```bash
 ./.codex/paa/bin/paa-consumer queue-check \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --queue fractal-core-architecture
 ```
 
@@ -63,7 +63,7 @@ Command:
 
 ```bash
 ./.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics
 ```

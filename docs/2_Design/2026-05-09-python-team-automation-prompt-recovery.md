@@ -7,12 +7,12 @@ Recover the best historically-developed prompt intent for the `Python Team Autom
 ## Recovery Sources Reviewed
 
 ### Current authoritative sources
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
+- `project-packs/fractal-core/automations/python-team-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-dev-result/SKILL.md`
 
 ### Installed consumer copies
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-dev-result/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/python-team-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-dev-result/SKILL.md`
 
 ### Historical committed prompt surfaces
 - commit `0f1ddcb`
@@ -23,7 +23,7 @@ Recover the best historically-developed prompt intent for the `Python Team Autom
 - earlier skill history for `fractal-core-dev-result`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml`
+- `<codex_home>/automations/python-team-automation/automation.toml`
 
 ## Earliest Durable Wrapper Intent
 

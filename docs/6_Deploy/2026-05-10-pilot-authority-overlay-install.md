@@ -6,7 +6,7 @@ Disposable pilot fixtures are valid DB-backed and GitHub-backed test slices, but
 
 Team Worker automations correctly fail closed unless the installed current authority under:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/`
+- `<consumer_repo_root>/.project/data/paa/authority/current/`
 
 contains:
 
@@ -22,7 +22,7 @@ This note defines the pilot-only overlay/install step that makes a disposable fi
 
 Disposable pilot fixtures are created under:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/pilot-fixtures/issue-<issue_number>/`
+- `<consumer_repo_root>/.codex-work/pilot-fixtures/issue-<issue_number>/`
 
 Expected inputs:
 
@@ -34,11 +34,11 @@ Expected inputs:
 
 Overlay installs patch the consumer repo-local current authority under:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/`
+- `<consumer_repo_root>/.project/data/paa/authority/current/`
 
 Overlay-owned state is stored under:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-<issue_number>/`
+- `<consumer_repo_root>/.project/data/paa/authority/current/overlays/pilot-fixtures/issue-<issue_number>/`
 
 ### Installed effects
 
@@ -88,17 +88,17 @@ Remove mode must:
 
 Source helper:
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py`
+- `scripts/runtime/install_pilot_authority_overlay.py`
 
 Installed helper:
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/scripts/runtime/install_pilot_authority_overlay.py`
+- `<consumer_repo_root>/.codex/paa/scripts/runtime/install_pilot_authority_overlay.py`
 
 Example install:
 
 ```bash
-python3 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+python3 scripts/runtime/install_pilot_authority_overlay.py \
+  --repo-root <consumer_repo_root> \
   --issue-number 108 \
   install
 ```
@@ -106,8 +106,8 @@ python3 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/in
 Example status:
 
 ```bash
-python3 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+python3 scripts/runtime/install_pilot_authority_overlay.py \
+  --repo-root <consumer_repo_root> \
   --issue-number 108 \
   status
 ```
@@ -115,8 +115,8 @@ python3 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/in
 Example remove:
 
 ```bash
-python3 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/install_pilot_authority_overlay.py \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+python3 scripts/runtime/install_pilot_authority_overlay.py \
+  --repo-root <consumer_repo_root> \
   --issue-number 108 \
   remove
 ```

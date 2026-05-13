@@ -14,8 +14,8 @@ This hardening was added because the QA pilot leg had to manually fast-forward a
 Command:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-prepare-role-branch \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-prepare-role-branch \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stagew7-2026-05-10-issue108-team-worker-automation-runtime-note \
   --brief-id-external fcore-coder-2026-05-10-issue108-team-worker-automation-runtime-note \
   --target-role qa \

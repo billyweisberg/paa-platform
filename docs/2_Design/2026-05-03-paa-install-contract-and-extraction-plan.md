@@ -10,7 +10,7 @@ This document defines:
 - how PAA supports unified producer-consumer repos
 - what a published authority package must contain
 - the first extraction moves out of:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
   - `$HOME/.codex`
 
 ## Install contract
@@ -328,7 +328,7 @@ Target:
 - repo-local project automation definitions
 
 Producer repo target:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations/`
+- `<producer_repo_root>/.codex/automations/`
 
 Consumer repo target:
 - project repo `.codex/automations/`
@@ -357,7 +357,7 @@ Extract publication and runtime tooling into that repo without changing behavior
 ### Step 3
 
 Install producer-mode PAA into:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `<producer_repo_root>`
 
 ### Step 4
 

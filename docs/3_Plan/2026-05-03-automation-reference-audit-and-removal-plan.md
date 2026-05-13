@@ -8,15 +8,15 @@ This note completes the next hardening slice:
 
 ## Audit Scope
 Audited surfaces:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/automations/`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/`
+- `<producer_repo_root>/.codex/automations/`
+- `<consumer_repo_root>/.codex/automations/`
+- `project-packs/fractal-core/automations/`
+- `project-packs/fractal-core/skills/`
 - repo-local installed skill surfaces under producer and consumer `.codex/skills/`
 - platform packet example templates that could still communicate obsolete paths
 
 Legacy path classes checked:
-- `/Users/billyweisberg/.codex`
+- `<codex_home>`
 - `appdev-authority-source`
 - `appdev-authority-source-clean`
 - `appdev-arch`
@@ -53,9 +53,9 @@ They do not encode old repo/worktree paths.
 ### 3. Packet example templates still had legacy absolute paths
 This was the main actionable residue found in platform-owned template assets.
 Before cleanup, these files still embedded obsolete absolute paths:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/architect_cycle_packet.example.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/qa_verification_packet.example.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/templates/packet-examples/slice_result_packet.example.json`
+- `templates/packet-examples/architect_cycle_packet.example.json`
+- `templates/packet-examples/qa_verification_packet.example.json`
+- `templates/packet-examples/slice_result_packet.example.json`
 
 Those references pointed at:
 - `appdev-authority-source`
@@ -68,7 +68,7 @@ That residue has now been cleaned up and replaced with placeholders:
 
 ### 4. Some platform docs still contain historical command examples with old paths
 The automation/runtime prompt audit found one clear documentation residue area:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md`
+- `docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md`
 
 That doc still includes example commands referencing:
 - `appdev-authority-source`
@@ -91,9 +91,9 @@ This is not an active automation/config problem, but it is a documentation clean
 
 ### Phase A: Immediate safe removals are still blocked by prompt/reference cleanup
 Do not remove these yet:
-- `/Users/billyweisberg/.codex/skills/fractal-core-*`
-- `/Users/billyweisberg/.codex/automations/*fractal-core*`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/tools/codex-skills/...`
+- `<codex_home>/skills/fractal-core-*`
+- `<codex_home>/automations/*fractal-core*`
+- `<producer_repo_root>/tools/codex-skills/...`
 
 Reason:
 - the active automations are clean, but we have not yet completed the broader automation prompt audit and operational runbook audit
@@ -102,8 +102,8 @@ Reason:
 
 ### Phase B: Remove home-folder deprecated runtime first
 Removal order should start with the deprecated home-folder project-specific runtime surfaces:
-- `/Users/billyweisberg/.codex/skills/fractal-core-*`
-- `/Users/billyweisberg/.codex/automations/*fractal-core*`
+- `<codex_home>/skills/fractal-core-*`
+- `<codex_home>/automations/*fractal-core*`
 
 Why first:
 - they are the highest confusion risk
@@ -117,10 +117,10 @@ Prerequisite before removal:
 
 ### Phase C: Remove duplicate producer-repo legacy skill/tool copies next
 After home-folder removal is validated, remove:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/tools/codex-skills/fractal-core-authority/...`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/tools/codex-skills/fractal-core-handoff/...`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/tools/codex-skills/install_fractal_core_skills.py`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/tools/codex-skills/fractal-core-handoff/install_to_codex_skills.py`
+- `<producer_repo_root>/tools/codex-skills/fractal-core-authority/...`
+- `<producer_repo_root>/tools/codex-skills/fractal-core-handoff/...`
+- `<producer_repo_root>/tools/codex-skills/install_fractal_core_skills.py`
+- `<producer_repo_root>/tools/codex-skills/fractal-core-handoff/install_to_codex_skills.py`
 
 Why second:
 - they still live inside the canonical producer repo, so they can easily be mistaken for active producer tooling
@@ -132,8 +132,8 @@ Prerequisite before removal:
 
 ### Phase D: Leave transitional authority-source lanes as archives until final archival step
 Keep these as historical/reference lanes for now:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source/...`
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev-authority-source-clean/...`
+- `<producer_repo_root>-authority-source/...`
+- `<producer_repo_root>-authority-source-clean/...`
 
 Why last:
 - they are already classified as historical/archive surfaces

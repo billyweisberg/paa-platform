@@ -16,10 +16,10 @@ The goal is to make Team Worker automation behavior derive from project role dat
 ## Authority
 
 Use this contract together with:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/config/team-worker-roles.json`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
+- `docs/2_Design/2026-05-09-team-worker-roles-design-spec.md`
+- `project-packs/fractal-core/config/team-worker-roles.json`
+- `docs/6_Deploy/2026-05-07-phase-i2-automation-execution-environment-contract.md`
+- `docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 This document supersedes any earlier Python-only automation interpretation when the target role is a Team Worker Role.
 
@@ -66,7 +66,7 @@ These are the authoritative runtime launcher definitions for a Team Worker Role.
 ### 3. Home-level UI registration layer
 
 App/UI registration surface:
-- `/Users/billyweisberg/.codex/automations/<automation_id>/automation.toml`
+- `<codex_home>/automations/<automation_id>/automation.toml`
 
 These are machine-local registration copies.
 They must mirror the repo-local installed Team Worker automation definitions closely enough that the app is launching the same logical role contract.
@@ -99,7 +99,7 @@ No Team Worker automation prompt should hard-code a future worker role that cont
 ### Launch root
 
 All Team Worker automations launch from the canonical consumer repo root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ### Execution environment
 
@@ -146,13 +146,13 @@ Success for this layer means Team Worker polling is cheap when no work exists.
 ## Logging contract
 
 Before live pilot execution resumes, Team Worker automations should bootstrap repo-local automation logging through:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/bootstrap_automation_logging.sh`
+- `scripts/runtime/bootstrap_automation_logging.sh`
 
 They should append structured lifecycle events through:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/log_automation_event.py`
+- `scripts/runtime/log_automation_event.py`
 
 The detailed logging authority is:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-automation-logging-contract.md`
+- `docs/6_Deploy/2026-05-09-automation-logging-contract.md`
 
 Minimum expectation for no-work polling:
 - create a run envelope
@@ -171,7 +171,7 @@ Why:
 
 Required behavior:
 - read and write the repo-local memory file directly
-- do not treat `/Users/billyweisberg/.codex/automations/<automation_id>/memory.md` as the authoritative memory surface
+- do not treat `<codex_home>/automations/<automation_id>/memory.md` as the authoritative memory surface
 - do not require `CODEX_HOME` to resolve the active memory path
 
 Current Fractal Core examples:
@@ -195,7 +195,7 @@ Deterministic role branch form:
 
 Deterministic worktree path form:
 - default repo-local root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex-work/worktrees/paa/<role_branch>`
+  - `<consumer_repo_root>/.codex-work/worktrees/paa/<role_branch>`
 - optional override root:
   - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 

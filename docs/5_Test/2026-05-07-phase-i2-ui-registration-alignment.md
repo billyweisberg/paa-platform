@@ -7,21 +7,21 @@ Record the current home-level Codex automation registration state for the curren
 ## Global UI registration surface
 
 The Codex UI currently discovers automation registrations from:
-- `/Users/billyweisberg/.codex/automations/`
+- `<codex_home>/automations/`
 
 This is distinct from the repo-local installed automation surfaces under:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/`
+- `<consumer_repo_root>/.codex/automations/`
 
 ## Changes applied
 
 The following home-level UI registration entries are now present and current:
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/fractal-core-delivery-architect-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/fractal-core-qa-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-techlead-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-delivery-architect-automation/automation.toml`
+- `<codex_home>/automations/python-team-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-qa-automation/automation.toml`
 
 The following legacy state was corrected:
-- `/Users/billyweisberg/.codex/automations/python-team-automation/automation.toml`
+- `<codex_home>/automations/python-team-automation/automation.toml`
   - previously a deprecated placeholder
   - now replaced with a current runnable registration surface
 

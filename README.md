@@ -46,6 +46,15 @@ The platform must also support a greenfield or tightly-coupled variant:
 4. unified producer-consumer repo
    - source authority + implementation + installed PAA runtime in one repo
 
+## Path placeholders
+
+To keep the docs public-repo safe, path examples use these placeholders:
+
+- `<paa_platform_repo_root>`: the local checkout root of this repo
+- `<producer_repo_root>`: a source-authority repo that publishes PAA packages
+- `<consumer_repo_root>`: an implementation repo that installs and runs the consumer-side PAA runtime
+- `<codex_home>`: the local Codex home directory for machine-level registrations and worktrees
+
 ## Current documentation map
 
 ### Design

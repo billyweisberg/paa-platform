@@ -5,18 +5,18 @@
 Record the Team Worker-aware pilot readiness snapshot after the automation contract and launcher/bootstrap reconciliation work.
 
 This validation executes `Phase 0` from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
+- `docs/5_Test/2026-05-09-stage-w7-team-worker-automation-pilot-test-plan.md`
 
 ## Inputs
 
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - Team Worker registry:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/team-worker-roles.json`
+  - `<consumer_repo_root>/.codex/paa/team-worker-roles.json`
 - Team Worker automation contract:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
+  - `docs/6_Deploy/2026-05-09-team-worker-automation-contract.md`
 - Team Worker launcher/bootstrap validation:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-09-team-worker-launcher-bootstrap-validation.md`
+  - `docs/5_Test/2026-05-09-team-worker-launcher-bootstrap-validation.md`
 
 ## Checks performed
 
@@ -25,7 +25,7 @@ This validation executes `Phase 0` from:
    - `fractal-core-qa`
    - `fractal-core-architecture`
 2. ran:
-   - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-status --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python --validate-schema`
+   - `<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-status --repo-root <consumer_repo_root> --validate-schema`
 3. verified the installed Team Worker registry file exists
 4. verified home-level UI registration files exist for:
    - `fractal-core-techlead-automation`
@@ -57,8 +57,8 @@ All three queues returned:
 
 ### Repo state
 
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`: clean
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform`: not clean during this snapshot because the Team Worker automation contract and checklist updates were still being authored in this same slice
+- `<consumer_repo_root>`: clean
+- `<paa_platform_repo_root>`: not clean during this snapshot because the Team Worker automation contract and checklist updates were still being authored in this same slice
 
 That platform-doc dirt does not block pilot readiness on the installed consumer/runtime surface.
 

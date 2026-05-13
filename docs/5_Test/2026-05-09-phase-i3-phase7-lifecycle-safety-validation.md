@@ -18,7 +18,7 @@ Validated surfaces:
 
 Live fixture used:
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - package id external:
   - `fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics`
 - brief id external:
@@ -57,7 +57,7 @@ Observed live workflow state:
 ### H3 reset-required mutation fixture
 
 Command:
-- `uv run --python 3.12 --no-project python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h3_reset_required_fixture.py`
+- `uv run --python 3.12 --no-project python scripts/runtime/validate_phase_h3_reset_required_fixture.py`
 
 Observed result:
 - `ok = true`
@@ -70,7 +70,7 @@ Observed result:
 ### H4 reset cleanup fixture
 
 Command:
-- `uv run --python 3.12 --no-project python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h4_reset_cleanup_fixture.py`
+- `uv run --python 3.12 --no-project python scripts/runtime/validate_phase_h4_reset_cleanup_fixture.py`
 
 Observed result:
 - `ok = true`
@@ -83,7 +83,7 @@ Observed result:
 ### H5 superseded cleanup fixture
 
 Command:
-- `uv run --python 3.12 --no-project python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h5_superseded_cleanup_fixture.py`
+- `uv run --python 3.12 --no-project python scripts/runtime/validate_phase_h5_superseded_cleanup_fixture.py`
 
 Observed result:
 - `ok = true`
@@ -96,7 +96,7 @@ Observed result:
 ### H6 closed cleanup fixture
 
 Command:
-- `uv run --python 3.12 --no-project python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py`
+- `uv run --python 3.12 --no-project python scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py`
 
 Observed result:
 - `ok = true`
@@ -114,9 +114,9 @@ A real test-harness defect appeared during Phase 7:
 - that branch name can collide with live runtime branch state
 
 Correction applied:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h5_superseded_cleanup_fixture.py`
+- `scripts/runtime/validate_phase_h5_superseded_cleanup_fixture.py`
   - now uses `issue-106-dev-h5-fixture`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py`
+- `scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py`
   - now uses `issue-106-dev-h6-fixture`
 
 This was a fixture-isolation problem, not a lifecycle-runtime failure.

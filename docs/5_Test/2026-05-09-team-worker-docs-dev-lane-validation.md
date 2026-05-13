@@ -11,9 +11,9 @@ This validation targeted the Stage W6 proving goal:
 ## Inputs
 
 - consumer repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - issue fixture:
   - `106`
 - PR fixture:
@@ -54,7 +54,7 @@ This validation targeted the Stage W6 proving goal:
 - `target_role = Docs Dev`
 - `resolved_queue = fractal-core-python`
 - `role_branch = issue-106-docs`
-- `worktree_path = /Users/billyweisberg/.codex/worktrees/paa/fractal-core-python/issue-106-docs`
+- `worktree_path = <codex_home>/worktrees/paa/fractal-core-python/issue-106-docs`
 - `branch_aligned = true`
 
 ### Role result return

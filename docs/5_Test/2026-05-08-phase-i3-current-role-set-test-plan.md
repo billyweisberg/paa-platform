@@ -58,19 +58,19 @@ This prevents us from spending live queue/worktree effort before the local contr
 
 ### Fixed inputs for the current plan
 - consumer repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 - platform repo root:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+  - `<paa_platform_repo_root>`
 - producer repo root:
-  - `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+  - `<producer_repo_root>`
 - canonical consumer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
 - canonical producer wrapper:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+  - `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 - canonical authority manifest path:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+  - `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 - queue state root:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/queue-state/fractal-core-handoff`
+  - `<consumer_repo_root>/.project/data/paa/queue-state/fractal-core-handoff`
 - canonical issue branch pattern:
   - `issue-<issue_number>`
 - deterministic role branch patterns:
@@ -103,7 +103,7 @@ Prove that the installed runtime, installed authority, installed skills, install
 ### Inputs
 - current installed runtime in consumer repo
 - project-pack automation and skill sources in `paa-platform`
-- home-level UI registration entries under `/Users/billyweisberg/.codex/automations/`
+- home-level UI registration entries under `<codex_home>/automations/`
 
 ### Steps
 1. verify consumer wrapper help surfaces

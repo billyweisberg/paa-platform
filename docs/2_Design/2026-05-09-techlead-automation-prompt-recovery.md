@@ -7,12 +7,12 @@ Recover the best historically-developed prompt intent for the `Fractal Core Tech
 ## Recovery Sources Reviewed
 
 ### Current authoritative sources
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
 
 ### Installed consumer copies
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-techlead/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-techlead/SKILL.md`
 
 ### Historical committed prompt surfaces
 - commit `0f1ddcb`
@@ -23,8 +23,8 @@ Recover the best historically-developed prompt intent for the `Fractal Core Tech
 - commit `e7f0426` for the earlier richer TechLead skill text
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation-probe/automation.toml`
+- `<codex_home>/automations/fractal-core-techlead-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-techlead-automation-probe/automation.toml`
 
 ## What Was Recovered
 

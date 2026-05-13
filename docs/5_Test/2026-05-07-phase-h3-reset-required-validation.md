@@ -10,13 +10,13 @@ Validate the first cleanup-safe lifecycle mutation surface:
 ## Commands used
 
 Consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ### 1. Refresh installed consumer runtime
 
 ```bash
 ./.codex/paa/bin/paa-consumer update-consumer-runtime \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+  --repo-root <consumer_repo_root>
 ```
 
 Observed result:
@@ -37,7 +37,7 @@ Command:
 
 ```bash
 ./.codex/paa/bin/paa-consumer techlead-reset-required \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics
 ```

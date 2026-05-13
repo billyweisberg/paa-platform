@@ -7,7 +7,7 @@ Validate the deterministic pre-run no-work gate for the current proven consumer 
 ## Command surface
 
 Top-level consumer wrapper:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer automation-preflight`
+- `<consumer_repo_root>/.codex/paa/bin/paa-consumer automation-preflight`
 
 Supported roles in this slice:
 - `techlead`

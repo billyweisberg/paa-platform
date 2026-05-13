@@ -42,22 +42,22 @@ It is not responsible for:
 ## Authoritative source surfaces
 
 ### Project-pack source of truth
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
+- `project-packs/fractal-core/automations/fractal-core-techlead-automation/automation.toml`
+- `project-packs/fractal-core/skills/fractal-core-techlead/SKILL.md`
 
 ### Installed consumer copy
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/automations/fractal-core-techlead-automation/automation.toml`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/skills/fractal-core-techlead/SKILL.md`
+- `<consumer_repo_root>/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<consumer_repo_root>/.codex/skills/fractal-core-techlead/SKILL.md`
 
 ### Home-level UI registration surface
-- `/Users/billyweisberg/.codex/automations/fractal-core-techlead-automation/automation.toml`
+- `<codex_home>/automations/fractal-core-techlead-automation/automation.toml`
 
 ## Launch model
 
 ### Current launch surface
 - `execution_environment = "local"`
 - launch cwd:
-  - `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+  - `<consumer_repo_root>`
 
 ### Intended meaning of `local`
 
@@ -75,24 +75,24 @@ It is not intended to mean:
 ## Runtime contract
 
 ### Canonical consumer repo root
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 ### Required wrapper surfaces
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer`
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-producer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-consumer`
+- `<consumer_repo_root>/.codex/paa/bin/paa-producer`
 
 ### Required authority surface
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
+- `<consumer_repo_root>/.project/data/paa/authority/current/authority/fractal-core-python-authority.json`
 
 ### Required queue/runtime state root
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/queue-state/fractal-core-handoff`
+- `<consumer_repo_root>/.project/data/paa/queue-state/fractal-core-handoff`
 
 ### Required pre-run behavior
 Before model invocation, the automation should use:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer automation-preflight \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer automation-preflight \
+  --repo-root <consumer_repo_root> \
   --target-role techlead
 ```
 
@@ -104,15 +104,15 @@ If no work is present:
 
 ### Status/reporting
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-status \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-status \
+  --repo-root <consumer_repo_root> \
   --validate-schema
 ```
 
 ### Assignment emission
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-emit-next-assignment \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   [--send]
@@ -120,8 +120,8 @@ If no work is present:
 
 ### Lifecycle decisions
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-emit-decision \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-emit-decision \
+  --repo-root <consumer_repo_root> \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
   --decision-type <reset_required|superseded|closed> \
@@ -130,9 +130,9 @@ If no work is present:
 
 ### Lineage and worktree inspection
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-lineage ...
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-worktree-ownership ...
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer techlead-worktree-stale ...
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-lineage ...
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-worktree-ownership ...
+<consumer_repo_root>/.codex/paa/bin/paa-consumer techlead-worktree-stale ...
 ```
 
 ## Branch and worktree model

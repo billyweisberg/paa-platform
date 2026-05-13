@@ -8,16 +8,16 @@ Validated surfaces:
 Commands used:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
+cd <paa_platform_repo_root>
 PYTHONPATH=packages/paa-consumer/src:packages/paa-core/src \
 uv run --python 3.12 --no-project python -m paa_consumer.techlead closed-cleanup --help
 ```
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
+cd <paa_platform_repo_root>
 PYTHONPATH=packages/paa-consumer/src:packages/paa-core/src \
 uv run --python 3.12 --no-project python -m paa_consumer.techlead closed-cleanup \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo-root <consumer_repo_root> \
   --package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics \
   --brief-id-external fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics \
   --target-role python-team
@@ -32,10 +32,10 @@ Observed fail-closed result on the live fixture:
 Positive-path validation used:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
+cd <paa_platform_repo_root>
 PYTHONPATH=packages/paa-consumer/src:packages/paa-core/src \
 uv run --python 3.12 --no-project python \
-  /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py
+  scripts/runtime/validate_phase_h6_closed_cleanup_fixture.py
 ```
 
 Observed positive result:

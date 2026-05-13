@@ -8,13 +8,13 @@ This plan assumes repo-local installs, uv-first wrappers, the canonical producer
 ## Preconditions
 
 Producer repo:
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev`
+- `<producer_repo_root>`
 
 Consumer repo:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python`
+- `<consumer_repo_root>`
 
 Authority package install root:
-- `/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/authority/current`
+- `<consumer_repo_root>/.project/data/paa/authority/current`
 
 Expected branch policy:
 - one branch per issue: `issue-<issue_number>`
@@ -29,7 +29,7 @@ This plan is therefore written so each step can be triggered manually and valida
 ### Validate producer runtime
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer authority summary
 ```
 
@@ -41,8 +41,8 @@ Validate:
 ### Validate consumer runtime
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
-./.codex/paa/bin/paa-consumer validate-runtime --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
+./.codex/paa/bin/paa-consumer validate-runtime --repo-root <consumer_repo_root>
 ```
 
 Validate:
@@ -59,10 +59,10 @@ Use the Authority Architect automation intent manually from the producer repo.
 For a target issue such as `106`, source-to-PAA sync should happen before packet resolution.
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer load-issue-into-paa \
-  --repo-root /Users/billyweisberg/Repos/Individual-Centricity/appdev \
-  --project-config /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/project-config.json \
+  --repo-root <producer_repo_root> \
+  --project-config <producer_repo_root>/.codex/paa/project-config.json \
   --issue-number 106 \
   --verification-key-prefix retirement-diagnostics \
   --scope-authority-label "retirement-boundary diagnostics"
@@ -78,7 +78,7 @@ Validate:
 Suggested checks:
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer authority task --issue-number 106
 ./.codex/paa/bin/paa-producer materialize-readiness --db-package-id-external fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics --db-write
 ```
@@ -88,10 +88,10 @@ cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
 ### Trigger
 
 ```bash
-cd /Users/billyweisberg/Repos/Individual-Centricity/appdev
+cd <producer_repo_root>
 ./.codex/paa/bin/paa-producer publish-authority-package \
-  --repo-root /Users/billyweisberg/Repos/Individual-Centricity/appdev \
-  --project-config /Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/project-config.json
+  --repo-root <producer_repo_root> \
+  --project-config <producer_repo_root>/.codex/paa/project-config.json
 ```
 
 Validate:
@@ -105,10 +105,10 @@ Validate:
 ### Trigger
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-consumer install-authority-package \
-  --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
-  --package-root /Users/billyweisberg/Repos/Individual-Centricity/appdev/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1
+  --repo-root <consumer_repo_root> \
+  --package-root <producer_repo_root>/.project/data/paa/publish/fractal-core-python-authority-2026-05-03.1
 ```
 
 Validate:
@@ -126,7 +126,7 @@ In the canonical consumer repo, create or switch to the issue branch for the tar
 Example:
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 git switch -c issue-106 || git switch issue-106
 ```
 
@@ -142,8 +142,8 @@ Use the Delivery Architect automation intent manually.
 At minimum, inspect queue/runtime state and the installed authority package.
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
-./.codex/paa/bin/paa-consumer queue-check --repo-root /Users/billyweisberg/Repos/billyweisberg/fractal-core-python --queue fractal-core-python
+cd <consumer_repo_root>
+./.codex/paa/bin/paa-consumer queue-check --repo-root <consumer_repo_root> --queue fractal-core-python
 ./.codex/paa/bin/paa-consumer techlead-status --validate-schema
 ```
 
@@ -160,11 +160,11 @@ Validate:
 Run the Dev result path using the same issue branch.
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-producer authority materialize-slice-result-packet \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --repo /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo <consumer_repo_root> \
   --issue-number 106 \
   --issue-url <issue_url> \
   --pr-number <pr_number> \
@@ -186,11 +186,11 @@ Validate:
 Run the QA verification path using the same issue branch.
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-producer authority materialize-qa-verification-packet \
   --package-id-external <package_id_external> \
   --brief-id-external <brief_id_external> \
-  --repo /Users/billyweisberg/Repos/billyweisberg/fractal-core-python \
+  --repo <consumer_repo_root> \
   --issue-number 106 \
   --issue-url <issue_url> \
   --pr-number <pr_number> \
@@ -210,10 +210,10 @@ Validate:
 ### Trigger
 
 ```bash
-cd /Users/billyweisberg/Repos/billyweisberg/fractal-core-python
+cd <consumer_repo_root>
 ./.codex/paa/bin/paa-consumer techlead-status \
   --validate-schema \
-  --output /Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.project/data/paa/reports/techlead-status-report.json
+  --output <consumer_repo_root>/.project/data/paa/reports/techlead-status-report.json
 ```
 
 Validate:

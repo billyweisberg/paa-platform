@@ -12,14 +12,14 @@ It does **not** migrate the existing Python transition lane off `slice_result_pa
 Producer repo:
 
 ```bash
-/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer authority materialize-worker-result-packet ...
-/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex/paa/bin/paa-producer authority materialize-delivery-review-packet ...
+<producer_repo_root>/.codex/paa/bin/paa-producer authority materialize-worker-result-packet ...
+<producer_repo_root>/.codex/paa/bin/paa-producer authority materialize-delivery-review-packet ...
 ```
 
 Consumer repo:
 
 ```bash
-/Users/billyweisberg/Repos/billyweisberg/fractal-core-python/.codex/paa/bin/paa-consumer queue-validate --message-file <compiled-packet>
+<consumer_repo_root>/.codex/paa/bin/paa-consumer queue-validate --message-file <compiled-packet>
 ```
 
 ## Fixture used
@@ -35,7 +35,7 @@ Consumer repo:
 
 Staging files were written under:
 
-- `/Users/billyweisberg/Repos/Individual-Centricity/appdev/.codex-work/phase-g/`
+- `<producer_repo_root>/.codex-work/phase-g/`
 
 ## Results
 
