@@ -10,36 +10,62 @@ This glossary defines the standardized vocabulary and process phases used by the
 
 All terminology is clean, positive, and forward-looking. We derive behavior from data wherever possible through registries and policy services.
 
+## Visualization Artifacts
+
+### Component Node Diagram
+- **Nodes** = Components
+- **Arrows** = Dependencies (injected services, event flows, data contracts)
+- Primary use: System Design & dependency discovery (static architecture view)
+
+### Build Arrow Diagram
+- **Nodes** = Milestones (discrete, verifiable state points)
+- **Arrows** = Build Activities (time-boxed work performed by Worker Agents)
+- Primary use: Project Design Phase – sequencing the development schedule, parallel streams, and critical path
+
+**Standard Node Types (Milestones)**
+- Design Approved
+- Service Contract Implemented
+- Data Contracts Complete
+- Dependencies Wired
+- Internal Tests Passing
+- Integration & Sequence Validation Complete
+- Role Delivery Packet Ready
+- PR Merged & Deployed
+- Post-Delivery Monitoring Complete
+
+**Arrow Types (Build Activities)**
+Drawn directly from Phases of Component Development (e.g., "Implement Service Contract & Core Logic", "Wire Dependencies & Replace Hard-coded Logic", etc.)
+
 ## Phases of System Design
 
 **System Design** is the architectural phase responsible for transforming a desired **Outcome Behavior** into a coherent, evolvable set of **Components** with explicit contracts, relationships, and lifecycle semantics.
 
-1. **Decompose Outcome Behavior into System Components**  
-   Break a high-level desired outcome into a set of named, bounded components, each owning a distinct **Role**.  
+1. **Decompose Outcome Behavior into System Components**
+   Break a high-level desired outcome into a set of named, bounded components, each owning a distinct **Role**.
    Output: Candidate component list with one-sentence Role statements.
 
-2. **Define the Logical Relationships between Components**  
+2. **Define the Logical Relationships between Components**
    Identify control-plane, data-plane, and event-plane relationships, ownership, and visibility rules.
 
-3. **Define the Dependencies between Components**  
+3. **Define the Dependencies between Components**
    Enumerate Injected Services, Required Interfaces, and Runtime Dependencies.
 
-4. **Generate a Node Diagram of Component Dependencies**  
+4. **Generate a Node Diagram of Component Dependencies**
    Produce a Mermaid flowchart visualizing components and directed dependency/relationship edges.
 
-5. **Define the Call Sequences and Component Interactions**  
+5. **Define the Call Sequences and Component Interactions**
    Specify temporal ordering and message flows for key use cases.
 
-6. **Generate Sequence Diagrams for the System**  
+6. **Generate Sequence Diagrams for the System**
    Create Mermaid sequence diagrams for critical flows, including happy path and error paths.
 
-7. **Design Data Model**  
+7. **Design Data Model**
    Define persistent and transient data contracts, entities, and schemas.
 
-8. **Specify System Configuration**  
+8. **Specify System Configuration**
    Define runtime-configurable knobs, feature flags, and project-scoped overrides.
 
-9. **Specify System Lifecycle**  
+9. **Specify System Lifecycle**
    Map component and system behavior across Vision → Design → Plan → Build → Test → Deploy → Monitor.
 
 ## Phases of Component Design
@@ -145,7 +171,7 @@ All terminology is clean, positive, and forward-looking. We derive behavior from
    Create PR and pass CI.
 
 10. **Merge & Post-Delivery Monitoring**  
-    Merge and monitor initial behavior.
+   Merge and monitor initial behavior.
 
 ## Usage Rules
 
