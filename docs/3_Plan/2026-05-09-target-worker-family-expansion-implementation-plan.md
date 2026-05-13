@@ -448,6 +448,13 @@ This plan is complete when:
   - passing QA closeout now auto-acknowledges the self-addressed terminal closeout decision packet after persistence/send
   - pilot overlay install now synchronizes DB-backed traceability rows so issue `108` resolves to `TeamWorkerAutomationPilotNote` in `paa.v_work_item_full_chain_traceability`
 
+## Messaging Simplification Follow-Up
+
+A separate target-state design note now captures why the current queue lifecycle is carrying too much workflow meaning and why PAA should move toward state-authoritative orchestration with queue-as-wakeup semantics:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-12-paa-messaging-simplification-note.md`
+
+This is a target-state architecture direction, not a directive to replace the current runtime before ongoing Team Worker hardening and rerun validation complete.
+
 ## Immediate Next Slice
 
 1. harden the Team Worker `local` launcher contract around the intended PAA-managed role worktree model
