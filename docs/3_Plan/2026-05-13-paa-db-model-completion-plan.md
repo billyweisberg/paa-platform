@@ -70,8 +70,8 @@ Each current or proposed data surface falls into one of these plan actions:
     - `paa.workflow_transitions`
     - `paa.queue_claims` or equivalent lease model
 
-- [ ] execution-package registration layer
-  - status: not started
+- [ ] execution-package registration DB entity layer
+  - status: entity design complete, migration design not started
   - action: `add`
   - target entities:
     - `paa.execution_package_installs`
@@ -304,7 +304,7 @@ Completed entity-design artifacts:
 Exit criteria:
 - current owner, current stage, transition history, and claim state can be answered from DB without depending on repo-local files
 
-## Phase 3: Complete Execution-Package Registration State
+## Phase 3: Complete Execution-Package Registration DB Entity Design
 
 Goal:
 - make installed execution-package truth queryable in DB
@@ -313,6 +313,9 @@ Deliverables:
 - schema contract for `execution_package_installs`
 - schema contract for `execution_package_overlays`
 - provenance and activation rules
+
+Completed entity-design artifact:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-final-execution-package-registration-entity-design.md`
 
 Exit criteria:
 - active installed package and active overlays can be determined from DB without relying only on local metadata files
@@ -385,7 +388,7 @@ This plan is complete when all of the following are true:
 
 1. every currently important data surface is classified as `keep`, `extend`, `add`, or `demote`
 2. the workflow-state layer has a final target schema decision
-3. the execution-package registration layer has a final target schema decision
+3. the execution-package registration DB entity layer has a final target schema decision
 4. the runtime-event layer is separated cleanly from workflow state
 5. the stable component foundation is separated cleanly from derivative slice artifacts
 6. file-primary operational truth is eliminated from the target model
@@ -395,7 +398,7 @@ This plan is complete when all of the following are true:
 
 After this plan is accepted, execute in this order:
 1. finalize the workflow-state entity design
-2. finalize execution-package install and overlay entity design
+2. finalize execution-package install and overlay DB entity design
 3. finalize component-design alignment rules
 4. finalize projection boundary
 5. only then resume detailed Data Access Layer design and implementation
