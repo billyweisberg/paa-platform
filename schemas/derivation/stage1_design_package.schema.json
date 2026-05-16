@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://individual-centricity.local/fractal-core/stage1_design_package.schema.json",
+  "title": "Stage 1 Design Package",
+  "type": "object",
+  "required": [
+    "package_id",
+    "schema_type",
+    "schema_version",
+    "status",
+    "authority_context",
+    "product_and_source_basis",
+    "requirement_set",
+    "design_decision_set",
+    "spec_fragment",
+    "implementation_target",
+    "architectural_authority_constraints",
+    "component_model_slice",
+    "component_surfaces",
+    "dependency_graph_slice",
+    "verification_contract_basis",
+    "failure_and_recovery_context",
+    "signoff"
+  ],
+  "properties": {
+    "package_id": {"type": "string", "minLength": 1},
+    "schema_type": {"const": "stage1_design_package"},
+    "schema_version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["draft", "under_review", "approved_for_derivation", "superseded", "rejected"]},
+    "authority_context": {
+      "type": "object",
+      "required": ["project_id", "project_slug", "authority_version", "milestone_id", "phase_id", "task_id", "task_title"],
+      "properties": {
+        "project_id": {"type": "string", "minLength": 1},
+        "project_slug": {"type": "string", "minLength": 1},
+        "authority_version": {"type": "string", "minLength": 1},
+        "milestone_id": {"type": "string", "minLength": 1},
+        "phase_id": {"type": "string", "minLength": 1},
+        "task_id": {"type": "string", "minLength": 1},
+        "task_title": {"type": "string", "minLength": 1},
+        "predecessor_tasks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "allowed_successors": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "issue_number": {"type": ["integer", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "product_and_source_basis": {
+      "type": "object",
+      "required": ["source_artifacts", "source_statements", "product_outcome_statement", "protected_product_truths", "roadmap_context"],
+      "properties": {
+        "source_artifacts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "source_statements": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "product_outcome_statement": {"type": "string", "minLength": 1},
+        "protected_product_truths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "roadmap_context": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "requirement_set": {
+      "type": "object",
+      "required": ["requirements", "requirement_sources", "requirement_status"],
+      "properties": {
+        "requirements": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "requirement_sources": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "requirement_status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "design_decision_set": {
+      "type": "object",
+      "required": ["design_decisions", "decision_requirements", "decision_rationale", "decision_status"],
+      "properties": {
+        "design_decisions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "decision_requirements": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "decision_rationale": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "decision_status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "spec_fragment": {
+      "type": "object",
+      "required": ["spec_fragment_id", "spec_fragment_title", "canonical_statement", "fragment_kind", "authorized_delta_family", "out_of_scope_delta_families", "fragment_status"],
+      "properties": {
+        "spec_fragment_id": {"type": "string", "minLength": 1},
+        "spec_fragment_title": {"type": "string", "minLength": 1},
+        "canonical_statement": {"type": "string", "minLength": 1},
+        "fragment_kind": {"type": "string", "minLength": 1},
+        "authorized_delta_family": {"type": "string", "minLength": 1},
+        "out_of_scope_delta_families": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "fragment_status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "implementation_target": {
+      "type": "object",
+      "required": ["implementation_target_id", "current_gap", "desired_state", "protected_baseline", "expected_touch_surfaces", "pre_handoff_scope_checks", "out_of_scope_items", "risk_level", "target_status"],
+      "properties": {
+        "implementation_target_id": {"type": "string", "minLength": 1},
+        "current_gap": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "desired_state": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "protected_baseline": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "expected_touch_surfaces": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "pre_handoff_scope_checks": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "out_of_scope_items": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "risk_level": {"type": "string", "minLength": 1},
+        "target_status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "architectural_authority_constraints": {
+      "type": "object",
+      "required": ["required_architecture_seams", "target_module_boundaries", "max_responsibility_expansion", "forbidden_module_growth_patterns", "forbidden_dependency_shortcuts", "architectural_anti_goals"],
+      "properties": {
+        "required_architecture_seams": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "target_module_boundaries": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "max_responsibility_expansion": {"type": "string", "minLength": 1},
+        "forbidden_module_growth_patterns": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "forbidden_dependency_shortcuts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "architectural_anti_goals": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "component_model_slice": {
+      "type": "object",
+      "required": ["primary_component", "supporting_components", "component_roles", "system_layers", "component_status"],
+      "properties": {
+        "primary_component": {"type": "string", "minLength": 1},
+        "supporting_components": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "component_roles": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "system_layers": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "tiers": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "component_status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "component_surfaces": {
+      "type": "object",
+      "required": ["surfaces", "surface_responsibilities", "primary_surfaces"],
+      "properties": {
+        "surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["surface_type", "path"],
+            "properties": {
+              "surface_type": {"type": "string", "minLength": 1},
+              "path": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "surface_responsibilities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "primary_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "dependency_graph_slice": {
+      "type": "object",
+      "required": ["graph_id", "primary_component_id", "nodes", "edges", "blocking_dependencies", "parallelizable_dependencies", "sequencing_constraints"],
+      "properties": {
+        "graph_id": {"type": "string", "minLength": 1},
+        "primary_component_id": {"type": "string", "minLength": 1},
+        "nodes": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        "edges": {"type": "array", "items": {"type": "object"}},
+        "blocking_dependencies": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "parallelizable_dependencies": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "sequencing_constraints": {"type": "array", "minItems": 1, "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "verification_contract_basis": {
+      "type": "object",
+      "required": ["verification_obligations", "obligation_types", "pass_criteria", "expected_artifacts", "protected_baseline_checks"],
+      "properties": {
+        "verification_obligations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "obligation_types": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "pass_criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "expected_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "protected_baseline_checks": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "failure_and_recovery_context": {
+      "type": "object",
+      "required": ["known_failure_modes", "contamination_risks", "recovery_hints", "loop_stop_conditions"],
+      "properties": {
+        "known_failure_modes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "contamination_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "recovery_hints": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "loop_stop_conditions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "signoff": {
+      "type": "object",
+      "required": ["architect", "product_owner", "project_designer"],
+      "properties": {
+        "architect": {"type": "string", "minLength": 1},
+        "product_owner": {"type": ["string", "null"]},
+        "project_designer": {"type": "string", "minLength": 1},
+        "techlead": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,367 @@
+{
+  "package_id": "paa-stage1-2026-05-16-component-design-planning-service",
+  "schema_type": "stage1_design_package",
+  "schema_version": "1.0.0",
+  "status": "approved_for_derivation",
+  "authority_context": {
+    "project_id": "paa-platform",
+    "project_slug": "paa-platform",
+    "authority_version": "2026-05-16.1",
+    "milestone_id": "m-authority-package-1-0",
+    "phase_id": "p-proof-slice-derivation-remediation",
+    "task_id": "paa-p0-component-design-planning-service-slice-package",
+    "task_title": "Materialize the proof-slice design package for Component Design Planning Service",
+    "predecessor_tasks": [
+      "paa-phase7-derivation-method-refinement",
+      "paa-proof-slice-dry-run"
+    ],
+    "allowed_successors": [
+      "paa-p0-service-target-taxonomy-extension",
+      "paa-p0-brief-lifecycle-governance"
+    ],
+    "issue_number": null
+  },
+  "product_and_source_basis": {
+    "source_artifacts": [
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-layered-architecture-proposal.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-component-spec.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-derivation-dry-run.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-16-paa-derivation-remediation-backlog.md"
+    ],
+    "source_statements": [
+      "Component Design Planning Service is the first Stratum 2 domain service with enough upstream maturity to act as the proof slice for the refined PAA derivation process.",
+      "The dry run proved that PAA can derive a strong draft brief body for this service, but cannot yet produce fully governed execution authority without a real slice package, service-oriented target taxonomy, and explicit brief lifecycle governance.",
+      "The producer-side derivation subsystem must move from reviewed System Design to DesignPackage, CoderBrief, BriefTarget, and packet-ready authority without manual architectural invention."
+    ],
+    "product_outcome_statement": "Materialize a real Stage 1 authority package for Component Design Planning Service so the refined PAA derivation path can be proven against a service-oriented slice instead of a documentation-only dry run.",
+    "protected_product_truths": [
+      "The preferred layered architecture remains the semantic backbone for the proof slice.",
+      "Component Design Planning Service remains a narrow Domain Service and does not absorb brief assembly, workflow, or runtime orchestration responsibilities.",
+      "Repository access stays behind ComponentDesignRepository and no direct SQL or host-surface behavior is introduced into the service slice."
+    ],
+    "roadmap_context": [
+      "This remediation run is the first item in Priority 0 of the derivation remediation backlog.",
+      "The slice package must exist before the service-oriented target taxonomy and execution-authority lifecycle can be proven cleanly.",
+      "This package is the upstream authority artifact for the next multi-run derivation remediation sequence."
+    ]
+  },
+  "requirement_set": {
+    "requirements": [
+      "The proof slice must be represented by one task-bound Stage 1 DesignPackage with explicit authority context, slice scope, component assignment, dependency shape, and verification basis.",
+      "The package must authorize only the Component Design Planning Service implementation slice and keep adjacent service, workflow, and producer orchestration work out of scope.",
+      "The package must be concrete enough that later coder-brief derivation can proceed without reconstructing the slice from prose notes alone."
+    ],
+    "requirement_sources": [
+      "coder-brief derivation method validation findings",
+      "Priority 0 remediation backlog",
+      "Component Design Planning Service component spec"
+    ],
+    "requirement_status": "reviewed"
+  },
+  "design_decision_set": {
+    "design_decisions": [
+      "Treat this package as a real Stage 1 authority artifact rather than another dry-run note.",
+      "Bind the slice to a PAA-internal task identity even though no external GitHub issue exists for this proof run.",
+      "Approve the package for derivation while explicitly carrying the remaining service-target-taxonomy and brief-lifecycle blockers as downstream remediation, not hidden assumptions."
+    ],
+    "decision_requirements": [
+      "normalize the proof slice into the real derivation pipeline",
+      "keep the proof slice narrowly service-oriented",
+      "surface downstream blockers without hiding them in informal thread context"
+    ],
+    "decision_rationale": [
+      "The main failure in Phase 6 was not missing service design quality; it was the lack of a normalized, task-bound DesignPackage and execution-authority lifecycle around the slice.",
+      "Binding the slice to explicit task identity lets the PAA system teach the derivation process to coder agents using the same structures it expects other projects to use."
+    ],
+    "decision_status": "approved"
+  },
+  "spec_fragment": {
+    "spec_fragment_id": "spec-component-design-planning-service-implementation",
+    "spec_fragment_title": "Component Design Planning Service initial implementation slice",
+    "canonical_statement": "Implement Component Design Planning Service as a narrow Domain Service that interprets structured component-design records into planning-friendly outputs for brief derivation and producer-side authoring, without absorbing workflow, orchestration, or persistence ownership.",
+    "fragment_kind": "service-implementation",
+    "authorized_delta_family": "component-design-planning-service-implementation",
+    "out_of_scope_delta_families": [
+      "workflow-lifecycle-implementation",
+      "execution-package-resolution-implementation",
+      "brief-assembly-implementation",
+      "producer-derivation-orchestration",
+      "runtime-adoption",
+      "repository-sql-expansion"
+    ],
+    "fragment_status": "approved"
+  },
+  "implementation_target": {
+    "implementation_target_id": "impl-component-design-planning-service-implementation",
+    "current_gap": [
+      "The service has a reviewed component spec but no materialized Stage 1 package and no authoritative task binding.",
+      "The current code-artifact target taxonomy is repository-shaped and does not yet encode service-oriented artifact targets needed for this slice.",
+      "The current derivation lifecycle does not yet govern the transition from draft brief to approved brief to packet-ready execution authority cleanly."
+    ],
+    "desired_state": [
+      "The proof slice is represented by a real DesignPackage bound to a concrete PAA task.",
+      "The slice can later derive a governed coder brief using explicit service-oriented code-artifact targets.",
+      "The resulting implementation run remains narrowly scoped to the Component Design Planning Service package and dedicated tests."
+    ],
+    "protected_baseline": [
+      "No implementation code is written during this package-materialization run.",
+      "The existing layered architecture, producer derivation subsystem model, and component spec remain the authority basis for the slice.",
+      "No workflow, runtime-event, or repository-schema ownership is redefined by this slice package."
+    ],
+    "expected_touch_surfaces": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py",
+      "tests/unit/test_component_design_planning_service.py"
+    ],
+    "pre_handoff_scope_checks": [
+      "The service-oriented code-artifact target taxonomy has been extended before execution-authoritative derivation resumes.",
+      "The draft -> approved -> packet-ready lifecycle is explicit enough to govern this slice cleanly.",
+      "No repository SQL, workflow semantics, or host-surface wiring is pulled into the service slice."
+    ],
+    "out_of_scope_items": [
+      "Brief Assembly Service implementation",
+      "Derivation Orchestration Service implementation",
+      "producer CLI/UI host work",
+      "workflow lifecycle implementation",
+      "execution package resolution implementation",
+      "schema migration work beyond derivation-governance support"
+    ],
+    "risk_level": "medium",
+    "target_status": "approved"
+  },
+  "architectural_authority_constraints": {
+    "required_architecture_seams": [
+      "Keep Component Design Planning Service in the Domain Services layer.",
+      "Keep component-design persistence access behind ComponentDesignRepository.",
+      "Keep target sequencing, producer orchestration, and packet preparation outside this service."
+    ],
+    "target_module_boundaries": [
+      "Service implementation stays inside packages/paa-core/src/paa_core/services/component_design_planning/.",
+      "Dedicated unit tests stay in tests/unit/test_component_design_planning_service.py.",
+      "The service may assemble planning DTOs but may not own packet assembly or workflow-state decisions."
+    ],
+    "max_responsibility_expansion": "This slice may implement only the Component Design Planning Service package and its dedicated tests; it may not grow into adjacent producer-side orchestration or runtime-lifecycle work.",
+    "forbidden_module_growth_patterns": [
+      "Do not turn the service into a producer-side orchestration blob.",
+      "Do not introduce raw SQL or direct DB process management into the service package.",
+      "Do not silently extend the code-artifact taxonomy from inside service implementation code."
+    ],
+    "forbidden_dependency_shortcuts": [
+      "Do not bypass ComponentDesignRepository with direct database calls.",
+      "Do not depend on GitHub issue state, runtime queue state, or installed execution-package file reads.",
+      "Do not import workflow-lifecycle or execution-package-resolution services into this slice."
+    ],
+    "architectural_anti_goals": [
+      "Avoid recreating a mixed-responsibility god service.",
+      "Avoid letting derivation-governance gaps force architectural invention inside the implementation slice."
+    ]
+  },
+  "component_model_slice": {
+    "primary_component": "Component Design Planning Service",
+    "supporting_components": [
+      "ComponentDesignRepository",
+      "StructuredLogger",
+      "Brief Assembly Service",
+      "Derivation Orchestration Service"
+    ],
+    "component_roles": [
+      "interpret stable component-design records into planning-ready structures",
+      "provide repository-backed planning inputs",
+      "consume planning outputs during brief derivation",
+      "coordinate derivation flow around planning outputs"
+    ],
+    "system_layers": [
+      "domain-services",
+      "infrastructure-ports",
+      "application-orchestration"
+    ],
+    "tiers": [
+      "authoring",
+      "runtime"
+    ],
+    "component_status": "defined_for_test"
+  },
+  "component_surfaces": {
+    "surfaces": [
+      {
+        "surface_type": "module",
+        "path": "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py"
+      },
+      {
+        "surface_type": "module",
+        "path": "packages/paa-core/src/paa_core/services/component_design_planning/models.py"
+      },
+      {
+        "surface_type": "module",
+        "path": "packages/paa-core/src/paa_core/services/component_design_planning/default.py"
+      },
+      {
+        "surface_type": "module",
+        "path": "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py"
+      },
+      {
+        "surface_type": "test",
+        "path": "tests/unit/test_component_design_planning_service.py"
+      },
+      {
+        "surface_type": "doc",
+        "path": "docs/2_Design/2026-05-16-component-design-planning-service-component-spec.md"
+      }
+    ],
+    "surface_responsibilities": [
+      "service package defines the interface, planning DTOs, and default implementation",
+      "dedicated unit tests prove service behavior without piggybacking on repository tests",
+      "the component spec remains the reviewed authority source for service boundaries and invariants"
+    ],
+    "primary_surfaces": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+      "tests/unit/test_component_design_planning_service.py"
+    ]
+  },
+  "dependency_graph_slice": {
+    "graph_id": "paa-graph-2026-05-16-component-design-planning-service",
+    "primary_component_id": "component-component-design-planning-service",
+    "nodes": [
+      {
+        "component_id": "component-component-design-planning-service",
+        "component_name": "Component Design Planning Service",
+        "component_role": "interpret structured component design into planning-ready outputs",
+        "system_layer": "domain-services",
+        "tier": "runtime",
+        "status": "execution_ready",
+        "surface_set": [
+          "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+          "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+          "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+          "tests/unit/test_component_design_planning_service.py"
+        ]
+      },
+      {
+        "component_id": "component-component-design-repository",
+        "component_name": "ComponentDesignRepository",
+        "component_role": "provide structured component-design persistence access",
+        "system_layer": "infrastructure-ports",
+        "tier": "runtime",
+        "status": "implementation_ready",
+        "surface_set": [
+          "packages/paa-core/src/paa_core/repositories/component_design/"
+        ]
+      },
+      {
+        "component_id": "component-structured-logger",
+        "component_name": "StructuredLogger",
+        "component_role": "capture service-level diagnostic output without changing service ownership",
+        "system_layer": "infrastructure-ports",
+        "tier": "runtime",
+        "status": "contract_ready",
+        "surface_set": [
+          "packages/paa-core/src/paa_core/"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "edge_id": "cdps-depends-on-component-design-repository",
+        "from_component_id": "component-component-design-planning-service",
+        "to_component_id": "component-component-design-repository",
+        "dependency_type": "depends_on_injection",
+        "dependency_strength": "hard",
+        "sequencing_requirement": "must_follow_contract_only",
+        "blocking_scope": "execution",
+        "dependency_status": "implementation_ready",
+        "shared_surface_conflict": false,
+        "notes": "The service consumes repository interfaces and the first read/write slice is already implemented."
+      },
+      {
+        "edge_id": "cdps-depends-on-structured-logger",
+        "from_component_id": "component-component-design-planning-service",
+        "to_component_id": "component-structured-logger",
+        "dependency_type": "depends_on_injection",
+        "dependency_strength": "soft",
+        "sequencing_requirement": "must_follow_contract_only",
+        "blocking_scope": "execution",
+        "dependency_status": "contract_ready",
+        "shared_surface_conflict": false,
+        "notes": "Logging is required by the component spec but should remain a thin injected collaborator."
+      }
+    ],
+    "blocking_dependencies": [
+      "cdps-depends-on-component-design-repository"
+    ],
+    "parallelizable_dependencies": [],
+    "sequencing_constraints": [
+      {
+        "constraint_id": "cdps-service-target-taxonomy-before-brief-approval",
+        "constraint_type": "governance",
+        "statement": "Service-oriented code-artifact target taxonomy must be extended before the slice may progress from draft brief to approved execution authority."
+      },
+      {
+        "constraint_id": "cdps-brief-lifecycle-before-packet-ready",
+        "constraint_type": "governance",
+        "statement": "Draft, approved, and packet-ready states must be explicitly governed before this slice is treated as execution-ready authority."
+      }
+    ]
+  },
+  "verification_contract_basis": {
+    "verification_obligations": [
+      "The service resolves one component by stable identity and produces structured planning outputs.",
+      "The service surfaces planning gaps explicitly instead of inventing missing realization targets.",
+      "The service remains stateless and does not mutate component-design persistence by default.",
+      "Dedicated unit tests prove service behavior independently of repository SQL tests."
+    ],
+    "obligation_types": [
+      "unit-test",
+      "boundary-check",
+      "architecture-conformance"
+    ],
+    "pass_criteria": [
+      "A service-level test module can exercise the planning flows using repository doubles or fakes.",
+      "No raw SQL is introduced in the service package.",
+      "No producer or consumer host entrypoints are changed in the implementation slice."
+    ],
+    "expected_artifacts": [
+      "service interface contract",
+      "planning models",
+      "default service implementation",
+      "unit test module"
+    ],
+    "protected_baseline_checks": [
+      "Existing ComponentDesignRepository tests continue to pass.",
+      "The service package remains the only code surface changed by the future implementation run.",
+      "The component spec remains consistent with the implemented service boundary."
+    ]
+  },
+  "failure_and_recovery_context": {
+    "known_failure_modes": [
+      "The service grows into producer-side orchestration instead of staying a narrow domain service.",
+      "Repository or taxonomy gaps cause the implementation to invent target shapes outside controlled vocabulary.",
+      "The slice is treated as execution-authoritative before lifecycle governance is explicit."
+    ],
+    "contamination_risks": [
+      "Raw SQL or host wiring leaks into the service package.",
+      "Workflow or packet-preparation concerns are smuggled into service methods.",
+      "Taxonomy expansion is performed ad hoc inside implementation code instead of through authority updates."
+    ],
+    "recovery_hints": [
+      "Fail closed when required component-design structures are missing and emit planning gaps instead of guessing.",
+      "Return the slice to draft authority if approved targets or lifecycle governance are still unresolved.",
+      "Use the package, spec, and remediation backlog as the authority basis for re-derivation rather than reconstructing scope from memory."
+    ],
+    "loop_stop_conditions": [
+      "Stop if the implementation requires out-of-scope producer orchestration or workflow semantics.",
+      "Stop if the target taxonomy still cannot express the required service-oriented artifact set.",
+      "Stop if the future brief cannot progress from draft to approved to packet-ready without manual thread memory."
+    ]
+  },
+  "signoff": {
+    "architect": "Billy Weisberg - Architect",
+    "product_owner": "Billy Weisberg - Product Owner",
+    "project_designer": "Billy Weisberg - Project Designer",
+    "techlead": "Billy Weisberg - TechLead"
+  }
+}

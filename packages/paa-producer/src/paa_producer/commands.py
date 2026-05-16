@@ -7,6 +7,7 @@ PRODUCER_COMMANDS = (
     'smoke-test',
     'authority',
     'derive-artifacts',
+    'derive-design-package',
     'materialize-readiness',
     'materialize-verification-obligations',
     'load-issue-into-paa',

@@ -65,12 +65,16 @@ Reference taxonomy for concrete realization kinds.
 
 Examples:
 - `repository_interface`
+- `service_interface`
 - `concrete_repository_class`
+- `service_implementation`
 - `dto`
 - `mapper`
 - `query_object`
 - `event_handler`
+- `test_module`
 - `policy_adapter`
+- `package_export`
 - `projection_view`
 - `schema_definition`
 

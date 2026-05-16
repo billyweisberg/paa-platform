@@ -67,6 +67,11 @@ It is the absence of a few stronger explicit structures and population paths aro
 - brief approval and packet-readiness state
 - service-oriented code-artifact target coverage
 
+Follow-on normalization that was also required:
+- the persisted `system_layer` enum had to be extended so layered-architecture components such as `domain-services` could be represented directly
+- completion record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-system-layer-taxonomy-normalization.md`
+
 ## 4. The tooling model is viable but incomplete
 
 Producer-side tooling is good enough to support the shell of derivation.
@@ -152,6 +157,11 @@ At minimum, the system likely needs service-oriented target kinds such as:
 - `test_module`
 - `package_export`
 
+Status update:
+- completed on `2026-05-16`
+- completion record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-service-oriented-code-artifact-target-taxonomy-extension.md`
+
 ### Gap 3. Explicit brief approval and packet-readiness lifecycle handling
 
 The system can persist briefs.
@@ -208,6 +218,19 @@ Implementation should resume after these are addressed:
 1. materialize a real slice design package and authority/task binding for the `Component Design Planning Service` implementation run
 2. extend the code-artifact target taxonomy so the intended service implementation artifacts can be expressed cleanly
 3. make the draft -> approved -> packet-ready lifecycle explicit enough that the run can move through execution authority intentionally rather than informally
+
+Status update:
+- item 1 completed on `2026-05-16`
+- completion record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-slice-package-materialization.md`
+- item 2 completed on `2026-05-16`
+- completion record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-service-oriented-code-artifact-target-taxonomy-extension.md`
+- item 3 completed on `2026-05-16`
+- completion record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-coder-brief-authority-lifecycle-governance.md`
+- the original Priority 0 stop-blockers are now closed
+- implementation still should not resume yet; the next gate is Priority 1 execution of the refined derivation path and a second proof-slice run
 
 ## Final Verdict
 

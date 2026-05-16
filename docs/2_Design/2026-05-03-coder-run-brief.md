@@ -170,6 +170,32 @@ If a coding agent still has to infer:
 
 then the brief is still under-specified.
 
+## Authority Lifecycle Governance
+
+The existence of a brief row or JSON artifact is not enough to treat it as execution authority.
+
+PAA now distinguishes:
+- `draft_brief`
+- `approved_brief`
+- `packet_ready_execution_authority`
+
+Meaning:
+- `draft_brief` is useful derivation output, but not launch-ready authority
+- `approved_brief` has passed review, but may still be blocked on packet-preparation checks
+- `packet_ready_execution_authority` is the first state a coding lane may treat as transport-ready implementation authority
+
+DB support:
+- `paa.coder_run_briefs.authority_state`
+- `paa.coder_run_briefs.authority_state_updated_at`
+- `paa.coder_run_briefs.approved_at`
+- `paa.coder_run_briefs.packet_ready_at`
+- `paa.coder_run_briefs.approval_json`
+- `paa.coder_run_briefs.packet_preparation_json`
+- `paa.coder_brief_authority_events`
+
+Rule:
+- do not treat a draft brief as execution authority just because the brief body exists
+
 ## Next use
 The first useful concrete example should be:
 - issue `#73`

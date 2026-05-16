@@ -61,6 +61,20 @@ The reference is used for:
 
 The coding agent should not be forced to reconstruct the run from the reference if the packet already contains the brief.
 
+## Packet-Readiness Rule
+
+Only a brief that has reached:
+- `packet_ready_execution_authority`
+
+should be embedded and treated as launch-ready execution authority for a coding lane.
+
+Important distinction:
+- `draft_brief` may exist in DB and in review artifacts
+- `approved_brief` may be content-approved
+- only `packet_ready_execution_authority` is the transport-ready state
+
+The packet is the transport surface for that authority state, not the thing that invents it.
+
 ## Python automation consumption rules
 When a Python run starts from an `architect_cycle_packet`:
 
@@ -99,6 +113,9 @@ or explicitly part of an approved:
 set,
 
 the coding lane should stop and report a blocker instead of beginning execution.
+
+Additional governance rule:
+- if the persisted brief authority state is not `packet_ready_execution_authority`, the packet must not be treated as valid execution authority even if a draft brief body is present
 
 ## Migration note
 During transition, Python may still run without a `coder_run_brief`.

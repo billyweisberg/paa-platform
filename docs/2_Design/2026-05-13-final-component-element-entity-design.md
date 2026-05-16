@@ -146,9 +146,9 @@ This is the correct first stable Component Element model.
 
 If some element families later prove stable enough for stronger normalization, PAA can add child tables later without discarding this foundation.
 
-## Seeded Canonical Element Types
+## Current Canonical Element Types
 
-The reference taxonomy is seeded with the full glossary vocabulary:
+The reference taxonomy is seeded with the current canonical vocabulary:
 - `role`
 - `component_state_model`
 - `service_contract`
@@ -163,9 +163,15 @@ The reference taxonomy is seeded with the full glossary vocabulary:
 - `events_published`
 - `event_data_contracts`
 - `component_lifecycle`
+- `verification_surfaces`
 - `component_configuration`
 
 This gives briefs and reports a stable vocabulary immediately.
+
+Important rule:
+- this list is controlled, but not frozen forever
+- the proof-slice remediation work extended it when service-oriented derivation exposed a real gap:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-service-oriented-code-artifact-target-taxonomy-extension.md`
 
 ## Briefing Implication
 

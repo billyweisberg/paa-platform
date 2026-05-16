@@ -343,6 +343,19 @@ Do this after decomposition and domain analysis, not before.
 
 ## Step 14. Materialize The Active Slice Design Package And Derivation Readiness State
 
+This step is not complete when the slice exists only in prose notes.
+
+Minimum completion standard:
+- one schema-valid Stage 1 `DesignPackage` artifact exists for the slice
+- one task/work-item binding exists for the slice
+- the package and binding are persisted in the DB as primary derivation truth
+- the package has explicit signoff state
+- the derivation-readiness blockers that still remain are recorded explicitly rather than hidden in thread context
+
+Important lesson from the PAA proof slice:
+- a draft coder brief is not a substitute for a real slice package
+- if the package is only implied by notes, the derivation path is still partly improvised
+
 Before brief derivation begins, bind the implementation run to one explicit slice package.
 
 Outputs:

@@ -346,17 +346,32 @@ The following backlog is ordered by dependency and risk reduction, not convenien
 
 These are the blockers that must be addressed before authoritative implementation resumes.
 
-1. [ ] materialize a real slice `DesignPackage` and task binding for `Component Design Planning Service`
-2. [ ] extend the code-artifact target taxonomy for service-oriented slices
-3. [ ] make the draft -> approved -> packet-ready lifecycle explicit enough to govern execution authority cleanly
+1. [x] materialize a real slice `DesignPackage` and task binding for `Component Design Planning Service`
+2. [x] extend the code-artifact target taxonomy for service-oriented slices
+3. [x] make the draft -> approved -> packet-ready lifecycle explicit enough to govern execution authority cleanly
 
 These three items are the hard stop reasons behind the current `NO-GO` decision.
+
+Current status:
+- `2026-05-16`: item 1 completed
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-slice-package-materialization.md`
+- `2026-05-16`: item 2 completed
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-service-oriented-code-artifact-target-taxonomy-extension.md`
+- `2026-05-16`: item 3 completed
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-coder-brief-authority-lifecycle-governance.md`
+
+Priority 0 result:
+- all original hard resume blockers are now closed
+- the next work moves into Priority 1 and the second proof-slice run
 
 ## Priority 1. Immediate Follow-On Remediation
 
 These are the next highest-value follow-ons once Priority 0 is underway.
 
-4. [ ] define and implement the producer-side `derive-design-package` flow or equivalent service path
+4. [x] define and implement the producer-side `derive-design-package` flow or equivalent service path
 5. [ ] define and implement `evaluate-derivation-readiness` against the active slice package and current target model
 6. [ ] define and implement `assemble-coder-brief` as an explicit producer-side derivation step
 7. [ ] define and implement `author-brief-targets` using the validated code-artifact target taxonomy
@@ -402,6 +417,11 @@ The next effort should run in this order:
 - assemble-coder-brief
 - author-brief-targets
 - review-coder-brief
+
+Current status:
+- `2026-05-16`: `derive-design-package` completed and validated against the `Component Design Planning Service` proof slice
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-16-derive-design-package-flow.md`
 
 ### Run Group 3. Strengthen governance and persistence
 - primary derivation-state lifecycle support

@@ -12,6 +12,7 @@ from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
 from paa_producer.commands import PRODUCER_COMMANDS
+from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.derive_artifacts import derive_inventory
 from paa_producer.issue_loader import load_issue_into_paa
 from paa_producer.obligation_loader import materialize_verification_obligations
@@ -76,6 +77,45 @@ def main() -> int:
     if args.command == 'derive-artifacts':
         repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
         print(json.dumps(derive_inventory(repo_root), indent=2))
+        return 0
+
+    if args.command == 'derive-design-package':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer derive-design-package',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', default=args.repo_root)
+        argp.add_argument('--design-package', required=True)
+        argp.add_argument('--schema-path')
+        argp.add_argument('--project-slug')
+        argp.add_argument('--project-name')
+        argp.add_argument('--dry-run', action='store_true')
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
+        result = derive_design_package(
+            package_path=Path(subargs.design_package).resolve(),
+            schema_path=Path(subargs.schema_path).resolve() if subargs.schema_path else None,
+            project_slug=subargs.project_slug,
+            project_name=subargs.project_name,
+            repo_root=repo_root,
+            dry_run=subargs.dry_run,
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'package_id': result.package_id,
+            'package_path': result.package_path,
+            'schema_path': result.schema_path,
+            'authority_version': result.authority_version,
+            'project_id': result.project_id,
+            'authority_version_id': result.authority_version_id,
+            'spec_fragment_id': result.spec_fragment_id,
+            'implementation_target_id': result.implementation_target_id,
+            'component_id': result.component_id,
+            'work_item_id': result.work_item_id,
+            'design_package_id': result.design_package_id,
+            'dry_run': result.dry_run,
+        }, indent=2))
         return 0
 
     if args.command == 'materialize-readiness':
