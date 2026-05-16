@@ -11,6 +11,7 @@ PRODUCER_COMMANDS = (
     'evaluate-derivation-readiness',
     'assemble-coder-brief',
     'author-brief-targets',
+    'review-coder-brief',
     'materialize-readiness',
     'materialize-verification-obligations',
     'load-issue-into-paa',

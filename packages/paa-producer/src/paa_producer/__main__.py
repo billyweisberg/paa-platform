@@ -13,6 +13,7 @@ from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
 from paa_producer.brief_target_author import author_brief_targets
 from paa_producer.coder_brief_assembler import assemble_coder_brief
+from paa_producer.brief_reviewer import review_coder_brief
 from paa_producer.commands import PRODUCER_COMMANDS
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
@@ -230,6 +231,44 @@ def main() -> int:
             'target_ids': result.target_ids,
             'target_count': result.target_count,
             'persisted': result.persisted,
+        }, indent=2))
+        return 0
+
+    if args.command == 'review-coder-brief':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer review-coder-brief',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--coder-run-brief-id')
+        argp.add_argument('--design-package')
+        argp.add_argument('--decision', required=True, choices=('approve', 'reject', 'reopen-draft'))
+        argp.add_argument('--notes')
+        argp.add_argument('--review-summary')
+        argp.add_argument('--output')
+        subargs = argp.parse_args(remainder)
+        if not subargs.coder_run_brief_id and not subargs.design_package:
+            argp.error('review-coder-brief requires --coder-run-brief-id or --design-package')
+        result = review_coder_brief(
+            coder_run_brief_id=subargs.coder_run_brief_id,
+            design_package_path=Path(subargs.design_package).resolve() if subargs.design_package else None,
+            decision=subargs.decision,
+            notes=subargs.notes,
+            review_summary=subargs.review_summary,
+            output_path=Path(subargs.output).resolve() if subargs.output else None,
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'coder_run_brief_id': result.coder_run_brief_id,
+            'brief_id': result.brief_id,
+            'authority_state': result.authority_state,
+            'status': result.status,
+            'decision': result.decision,
+            'transition_applied': result.transition_applied,
+            'target_count': result.target_count,
+            'approval_json': result.approval_json,
+            'output_path': result.output_path,
+            'checks': result.checks,
         }, indent=2))
         return 0
 

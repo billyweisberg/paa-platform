@@ -1,0 +1,61 @@
+{
+  "project_slug": "paa-platform",
+  "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+  "brief_id": "paa-coder-2026-05-16-component-design-planning-service-governed-draft",
+  "authority_state": "approved_brief",
+  "status": "approved",
+  "decision": "approve",
+  "transition_applied": true,
+  "target_count": 5,
+  "approval_json": {
+    "decision": "approve",
+    "review_notes": "Approved through producer-side governed review flow.",
+    "target_count": 5,
+    "current_state": "approved_brief",
+    "review_summary": "Proof slice approved after target authoring validation.",
+    "reviewed_by_role": "Architect",
+    "approval_required": true
+  },
+  "output_path": "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-brief-review-approval.json",
+  "checks": [
+    {
+      "check_id": "decision_supported",
+      "status": "pass",
+      "severity": "blocker",
+      "message": "Requested review decision is supported.",
+      "evidence": {
+        "decision": "approve"
+      }
+    },
+    {
+      "check_id": "state_transition_allowed",
+      "status": "pass",
+      "severity": "blocker",
+      "message": "Current authority state may transition under this decision.",
+      "evidence": {
+        "current_state": "draft_brief",
+        "allowed_from_states": [
+          "draft_brief"
+        ]
+      }
+    },
+    {
+      "check_id": "readiness_class_derivation_ready",
+      "status": "pass",
+      "severity": "blocker",
+      "message": "Brief readiness class is derivation_ready.",
+      "evidence": {
+        "readiness_class": "derivation_ready"
+      }
+    },
+    {
+      "check_id": "targets_materialized",
+      "status": "pass",
+      "severity": "blocker",
+      "message": "Brief realization targets are materialized.",
+      "evidence": {
+        "target_count": 5
+      }
+    }
+  ]
+}

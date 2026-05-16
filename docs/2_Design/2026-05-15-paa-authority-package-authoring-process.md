@@ -411,6 +411,9 @@ Important rule:
 A draft brief proves the derivation method is working.
 It is not yet execution authority.
 
+Current implementation surfaces:
+- `paa-producer review-coder-brief`
+
 ## Step 17. Publish Or Packetize The Approved Execution Authority
 
 Compile and publish the resulting authority package so it can be installed and executed by consumer runtime, or embed the approved brief into a transport packet when execution is being launched.

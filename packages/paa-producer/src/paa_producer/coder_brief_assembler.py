@@ -111,9 +111,9 @@ def _architect_role_id(project_slug: str) -> str | None:
     return _query_scalar(sql)
 
 
-def _existing_brief_for_design_package(design_package_id: str) -> tuple[str, str] | None:
+def _existing_brief_for_design_package(design_package_id: str) -> tuple[str, str, str] | None:
     sql = f"""
-    SELECT coder_run_brief_id::text, coalesce(brief_id_external, '')
+    SELECT coder_run_brief_id::text, coalesce(brief_id_external, ''), authority_state::text
     FROM paa.coder_run_briefs
     WHERE generated_from_json->>'design_package_id' = {sql_literal(design_package_id)}
     ORDER BY created_at DESC
@@ -122,7 +122,7 @@ def _existing_brief_for_design_package(design_package_id: str) -> tuple[str, str
     row = _query_single_row(sql)
     if row is None:
         return None
-    return row[0], row[1]
+    return row[0], row[1], row[2]
 
 
 def _derive_component_aspects(component_assignment: dict[str, Any], target_mappings: set[tuple[str, str]]) -> list[str]:
@@ -532,6 +532,11 @@ def assemble_coder_brief(
 
     package = _load_design_package_json(readiness['design_package_id'])
     existing = _existing_brief_for_design_package(readiness['design_package_id'])
+    if existing and existing[2] != 'draft_brief':
+        raise RuntimeError(
+            f"coder brief for design package {readiness['design_package_id']} is already {existing[2]}; "
+            'draft derivation may not overwrite governed authority state'
+        )
     brief = _build_brief(package=package, readiness=readiness, existing_brief_id=existing[1] if existing else None)
     resolved_brief_schema = _resolve_coder_brief_schema_path(brief_schema_path)
     _validate_brief(brief, resolved_brief_schema)
