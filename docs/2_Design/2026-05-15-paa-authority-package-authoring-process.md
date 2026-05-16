@@ -73,10 +73,11 @@ The current reusable process is:
 8. define data model and primary-truth boundaries
 9. define repository and infrastructure port boundaries
 10. derive the component dependency graph and dependency strata
-11. define component elements and code artifact target taxonomy
-12. define component specs
-13. derive coder-agent brief targets and sequence
-14. publish the authority package
+11. scaffold the solution / project structure from the dependency strata
+12. define component elements and code artifact target taxonomy
+13. define component specs
+14. derive coder-agent brief targets and sequence
+15. publish the authority package
 
 This note expands those steps.
 
@@ -261,7 +262,44 @@ Outputs:
 Important rule:
 This is the point where “what gets built first” stops being a subjective choice and becomes a graph-derived answer.
 
-## Step 11. Define Component Element And Code Artifact Taxonomy
+## Step 11. Scaffold The Solution / Project Structure
+
+Create the concrete solution and package/module scaffolding that matches the chosen architecture and dependency strata.
+
+Outputs:
+- package layout
+- module layout
+- composition roots
+- host entrypoint layout
+- port and adapter folders
+- service and policy package placement
+- test package placement
+
+Questions:
+- what package boundaries are needed now?
+- which components need their own package/module roots?
+- where do contracts, models, implementations, and composition wiring live?
+- what should be scaffolded first because it is an upstream dependency for later implementation?
+
+Important rule:
+Scaffolding is not arbitrary file creation.
+It should be derived from the architecture and dependency graph.
+
+Process lesson from the current PAA cycle:
+- we already have partial scaffolding in place:
+  - `paa-core`
+  - `paa-producer`
+  - `paa-consumer`
+  - repository package layout in `paa-core`
+- but we do not yet have the full service-layer scaffolding pattern established for:
+  - domain services
+  - policy components
+  - application/orchestration services
+  - composition roots across hosts
+
+That means future runs should treat solution/project scaffolding as an explicit design-to-build transition step.
+
+## Step 12. Define Component Element And Code Artifact Taxonomy
 
 Define the controlled vocabularies used to drive coder-agent assignments.
 
@@ -275,7 +313,7 @@ Outputs:
 Primary purpose:
 Provide structured, sequenced near-pseudocode assignments to coder agents.
 
-## Step 12. Define Component Specs
+## Step 13. Define Component Specs
 
 Create the detailed `Component Spec` for each concrete component.
 
@@ -293,7 +331,7 @@ A component spec should cover the relevant design elements such as:
 Important rule:
 Do this after decomposition and domain analysis, not before.
 
-## Step 13. Derive Coder-Agent Brief Targets And Sequence
+## Step 14. Derive Coder-Agent Brief Targets And Sequence
 
 Translate component specs into implementation runs.
 
@@ -308,7 +346,7 @@ Questions:
 - what exact code artifact form is expected?
 - what dependencies must already exist?
 
-## Step 14. Publish The Authority Package
+## Step 15. Publish The Authority Package
 
 Compile and publish the resulting authority package so it can be installed and executed by consumer runtime.
 
