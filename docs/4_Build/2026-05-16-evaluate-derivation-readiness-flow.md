@@ -1,0 +1,133 @@
+# Evaluate Derivation Readiness Flow
+
+Date: 2026-05-16
+
+## Purpose
+
+Define and record the first producer-side implementation of:
+- `evaluate-derivation-readiness`
+
+This flow closes Priority 1 item 5 by turning the derivation-entry gate into a real producer command instead of leaving it spread across notes, ad hoc inspection, and execution-readiness tooling that was aimed at later stages.
+
+## Related Notes
+
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-16-paa-derivation-remediation-backlog.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-03-stage1-design-package-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/derivation_readiness.py`
+
+## Problem
+
+Before this run, PAA had:
+- a clear Stage 1 package contract
+- validated proof-slice package materialization
+- readiness materialization for coder-brief execution sequencing
+- DB support for dependency edges, signoffs, and service-oriented target taxonomy
+
+What it did **not** have was a first-class producer command that could:
+- validate whether a slice is ready to move from Stage 1 package authority into Stage 2 derivation
+- evaluate package, signoff, persisted binding, lifecycle-support, and target-model coverage together
+- return a clean derivation-entry decision that can gate later producer-side steps
+
+That left the derivation-entry gate partly conceptual.
+
+## First Implementation Scope
+
+The first implementation intentionally evaluates structural derivation readiness, not downstream execution readiness.
+
+Input:
+- one Stage 1 design package JSON artifact
+
+Output:
+- readiness decision for the active slice package against:
+  - package completeness
+  - package approval status
+  - required signoff coverage
+  - persisted DB bindings
+  - target-model support for the slice kind
+  - coder-brief authority lifecycle support
+
+This is enough to determine whether the slice may proceed to:
+- `assemble-coder-brief`
+- `author-brief-targets`
+- review and approval steps
+
+## Command Surface
+
+Producer command:
+- `paa-producer evaluate-derivation-readiness`
+
+Arguments:
+- `--design-package <path>`
+- `--schema-path <path>` optional
+- `--project-slug <slug>` optional override
+
+## What This Evaluator Checks
+
+The first implementation checks:
+- package `status = approved_for_derivation`
+- primary component assignment exists
+- expected touch surfaces are named
+- out-of-scope delta families are named
+- component surfaces are mapped
+- architecture seams are explicit
+- protected baseline checks are named
+- required signoff roles are declared in the artifact
+- the package is materialized in DB
+- persisted package status matches the artifact
+- required persisted bindings exist:
+  - work item
+  - authority version
+  - spec fragment
+  - implementation target
+  - primary component
+- persisted primary component matches the artifact
+- persisted work item is `authorized`
+- required signoffs are approved in DB
+- service-oriented realization types and mappings exist for service slices
+- coder-brief authority lifecycle support exists in DB
+
+## Proof-Slice Validation
+
+Validated against:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
+
+Validated result:
+- `readiness_class = derivation_ready`
+- `ready = true`
+
+Key bound records:
+- `design_package_id = 4200cd4b-29b8-4853-8df6-e89da71456ad`
+- `work_item_id = 9e4509a5-5738-476b-a417-28e0012278f1`
+- `authority_version_id = 92a29332-a851-491e-af35-e0a73e91b239`
+- `spec_fragment_id = 27b1e296-882e-42b1-bb7a-0b367efb9cfd`
+- `implementation_target_id = 346ddbaa-5c69-4ee2-8401-cf3cb0629af6`
+- `component_id = b757c784-b5bc-4621-bd5e-417ec00c4a92`
+
+## Important Limitation
+
+This command is intentionally:
+- `evaluation_only`
+
+It does **not** attempt to create a new primary derivation-state owner in the DB.
+
+That limitation is intentional because the validation work already established that:
+- primary derivation-state lifecycle ownership is still a separate design/data-model concern
+- we should not fake that ownership by stuffing authoritative state into the wrong place
+
+So this command:
+- computes the gate honestly
+- returns explicit blockers and recommendations
+- leaves primary derivation-state persistence to later remediation work
+
+## Decision
+
+Decision:
+- `Priority 1 item 5 complete`
+
+Meaning:
+- the producer-side derivation-entry gate now exists as a real implementation path
+- the next work should move into:
+  - `assemble-coder-brief`
+  - `author-brief-targets`

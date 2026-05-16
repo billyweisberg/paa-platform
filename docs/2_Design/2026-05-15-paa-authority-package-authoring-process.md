@@ -364,6 +364,10 @@ Outputs:
 - derivation-readiness result
 - explicit blockers if the slice is not ready
 
+Current implementation surfaces:
+- `paa-producer derive-design-package`
+- `paa-producer evaluate-derivation-readiness`
+
 Important rule:
 A note bundle may be enough for dry-run validation.
 Execution-authoritative derivation should begin from a materialized slice package.

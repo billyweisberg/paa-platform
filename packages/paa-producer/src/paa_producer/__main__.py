@@ -12,6 +12,7 @@ from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
 from paa_producer.commands import PRODUCER_COMMANDS
+from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.derive_artifacts import derive_inventory
 from paa_producer.issue_loader import load_issue_into_paa
@@ -115,6 +116,43 @@ def main() -> int:
             'work_item_id': result.work_item_id,
             'design_package_id': result.design_package_id,
             'dry_run': result.dry_run,
+        }, indent=2))
+        return 0
+
+    if args.command == 'evaluate-derivation-readiness':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer evaluate-derivation-readiness',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--design-package', required=True)
+        argp.add_argument('--schema-path')
+        argp.add_argument('--project-slug')
+        subargs = argp.parse_args(remainder)
+        result = evaluate_derivation_readiness(
+            package_path=Path(subargs.design_package).resolve(),
+            schema_path=Path(subargs.schema_path).resolve() if subargs.schema_path else None,
+            project_slug=subargs.project_slug,
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'package_id': result.package_id,
+            'package_path': result.package_path,
+            'schema_path': result.schema_path,
+            'design_package_id': result.design_package_id,
+            'work_item_id': result.work_item_id,
+            'authority_version_id': result.authority_version_id,
+            'spec_fragment_id': result.spec_fragment_id,
+            'implementation_target_id': result.implementation_target_id,
+            'component_id': result.component_id,
+            'primary_component_name': result.primary_component_name,
+            'readiness_class': result.readiness_class,
+            'ready': result.ready,
+            'blockers': result.blockers,
+            'warnings': result.warnings,
+            'checks': result.checks,
+            'recommendations': result.recommendations,
+            'evaluation_mode': result.evaluation_mode,
         }, indent=2))
         return 0
 

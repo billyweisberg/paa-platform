@@ -8,6 +8,7 @@ PRODUCER_COMMANDS = (
     'authority',
     'derive-artifacts',
     'derive-design-package',
+    'evaluate-derivation-readiness',
     'materialize-readiness',
     'materialize-verification-obligations',
     'load-issue-into-paa',

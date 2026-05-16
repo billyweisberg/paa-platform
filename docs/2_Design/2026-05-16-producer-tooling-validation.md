@@ -504,6 +504,12 @@ Purpose:
 Priority:
 - `high`
 
+Status update:
+- `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
+- current implementation surface:
+  - `paa-producer evaluate-derivation-readiness`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/derivation_readiness.py`
+
 ## 3. `assemble-coder-brief`
 
 Purpose:

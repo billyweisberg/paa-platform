@@ -372,7 +372,7 @@ Priority 0 result:
 These are the next highest-value follow-ons once Priority 0 is underway.
 
 4. [x] define and implement the producer-side `derive-design-package` flow or equivalent service path
-5. [ ] define and implement `evaluate-derivation-readiness` against the active slice package and current target model
+5. [x] define and implement `evaluate-derivation-readiness` against the active slice package and current target model
 6. [ ] define and implement `assemble-coder-brief` as an explicit producer-side derivation step
 7. [ ] define and implement `author-brief-targets` using the validated code-artifact target taxonomy
 8. [ ] define and implement `review-coder-brief` so brief approval is a governed producer-side action rather than a partly implicit transition
@@ -422,6 +422,9 @@ Current status:
 - `2026-05-16`: `derive-design-package` completed and validated against the `Component Design Planning Service` proof slice
 - recorded in:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-16-derive-design-package-flow.md`
+- `2026-05-16`: `evaluate-derivation-readiness` completed and validated against the `Component Design Planning Service` proof slice
+- recorded in:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-16-evaluate-derivation-readiness-flow.md`
 
 ### Run Group 3. Strengthen governance and persistence
 - primary derivation-state lifecycle support
