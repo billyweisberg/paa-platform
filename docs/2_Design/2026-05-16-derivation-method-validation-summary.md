@@ -241,3 +241,29 @@ The architecture is validated enough to continue.
 The correct next move is not service implementation yet.
 
 The correct next move is to close the now-explicit derivation gaps so that the next implementation run is genuinely produced by the PAA process rather than only partially supported by it.
+
+## Status Update After Priority 0 + Priority 1 Rerun
+
+Follow-on validation completed on `2026-05-16`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-end-to-end-derivation-rerun.md`
+
+What changed:
+- the proof slice has now been rerun through the completed Priority 0 and Priority 1 path
+- the slice successfully moved from reviewed System Design to:
+  - materialized package
+  - derivation-ready state
+  - draft brief
+  - authored brief targets
+  - `approved_brief`
+
+Updated decision boundary:
+- `GO` for:
+  - `System Design -> Producer Derivation -> Governed Brief Authority`
+- still not yet proven in this cycle:
+  - `packet_ready_execution_authority`
+  - packet embedding / lane launch
+  - full `System Design -> Agent Team -> Functioning Software System`
+
+Important follow-on correction discovered and fixed during the rerun:
+- `assemble-coder-brief` now fails closed if an existing brief is already beyond `draft_brief`
+- this prevents draft derivation from silently demoting approved authority

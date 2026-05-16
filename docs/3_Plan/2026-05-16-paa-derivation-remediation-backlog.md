@@ -445,8 +445,16 @@ Current status:
 - confirm that the service-oriented target taxonomy now expresses the slice cleanly
 - confirm that the slice can move from materialized package to approved execution authority without manual bridging
 
+Status update:
+- `2026-05-16`: Run Group 4 completed successfully through `approved_brief`
+- validation record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-end-to-end-derivation-rerun.md`
+
 ### Run Group 5. Resume authoritative implementation
 - only after the proof slice passes the refined derivation path cleanly
+- current boundary note:
+  - the proof slice now validates `System Design -> Producer Derivation -> Governed Brief Authority`
+  - packet-ready execution authority is still a separate next gate
 
 ## Stop / Continue Rule
 
@@ -459,12 +467,17 @@ Resume authoritative implementation only when those three are resolved for the p
 
 ## Final Decision
 
-Current decision remains:
-- `NO-GO` for authoritative implementation continuation
+Current decision is now split:
+- `GO` for the validated producer-side path:
+  - `System Design -> Producer Derivation -> Governed Brief Authority`
+- `NO-GO` for claiming full launch-ready execution authority from this cycle alone
+
+Current validated result:
+- `Component Design Planning Service` has now been used successfully as the proof slice after Priority 0 and Priority 1 completion
 
 Correct next move:
-- execute the remediation backlog above as a multi-run effort
-- use `Component Design Planning Service` as the proof slice again after Priority 0 and Priority 1 work are complete
+- either extend the proof through packet-ready execution authority
+- or deliberately choose whether governed producer-side authority is enough to resume the next implementation step
 
 This keeps the next implementation run honest.
 It should be produced by the refined PAA process, not only supported by it after the fact.
