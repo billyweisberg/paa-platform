@@ -20,6 +20,7 @@ Primary phase inputs:
 
 Primary architecture authority:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-layered-architecture-proposal.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-layered-component-dependency-graph.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-domain-object-model-and-oo-component-decomposition.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-authority-package-authoring-process.md`
@@ -39,6 +40,9 @@ That is the key Phase 4 result.
 
 The architecture is no longer the blocker it used to be.
 The remaining architectural work is about making the producer-side derivation path explicit and complete.
+
+This is now addressed directly by:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
 
 ## The current layered architecture is directionally correct
 

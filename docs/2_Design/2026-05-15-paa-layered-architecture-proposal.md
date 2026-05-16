@@ -30,6 +30,7 @@ This note synthesizes:
 
 Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-authority-package-authoring-process.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/terminology/paa-engineering-terminology-glossary.md`
@@ -225,18 +226,48 @@ Coordinate use-case execution across domain services, policies, and infrastructu
 
 ### Proposed services
 - `Authority Publication Application Service`
+- `Derivation Orchestration Service`
+- `Brief Review And Approval Service`
+- `Packet Preparation Service`
 - `TechLead Application Service`
 - `Role Return Application Service`
 - `Projection Refresh Application Service`
 - `Execution Surface Preparation Application Service`
 
 ### Responsibilities
+- coordinate the producer-side derivation flow from design package to approved coder brief
+- coordinate review and approval transitions for derived briefs
+- coordinate preparation of execution-ready architect packets
 - execute user- or automation-triggered use cases
 - orchestrate calls across repositories, policies, and domain services
 - remain host-agnostic so they can be called by CLI, API, or background workers
 
 ### Important rule
 These services coordinate use cases but should not absorb domain semantics that belong in domain services.
+
+## Producer Derivation Subsystem
+
+One producer-side subsystem is important enough to call out explicitly:
+- `Producer Derivation Subsystem`
+
+This subsystem is the architecture path that transforms:
+- reviewed System Design
+
+into:
+- `DesignPackage`
+- `CoderBrief`
+- `BriefTarget`
+- transport-ready architect packets
+
+It spans:
+- `Domain Core`
+- `Domain Services`
+- `Policy Layer`
+- `Application / Orchestration Services`
+- producer `Host Surfaces`
+
+It is defined explicitly in:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
 
 ## Layer 5. Infrastructure Ports
 
