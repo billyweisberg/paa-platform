@@ -19,6 +19,7 @@ SIGNOFF_KEY_TO_ROLE = {
 }
 
 SERVICE_SLICE_REQUIRED_REALIZATION_TYPES = (
+    'dto',
     'service_interface',
     'service_implementation',
     'test_module',
@@ -26,6 +27,7 @@ SERVICE_SLICE_REQUIRED_REALIZATION_TYPES = (
 )
 
 SERVICE_SLICE_REQUIRED_ELEMENT_MAPPINGS = (
+    ('data_contract', 'dto'),
     ('interfaces', 'service_interface'),
     ('functions', 'service_implementation'),
     ('verification_surfaces', 'test_module'),

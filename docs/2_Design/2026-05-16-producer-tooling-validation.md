@@ -538,6 +538,12 @@ Purpose:
 Priority:
 - `high`
 
+Status update:
+- `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
+- current implementation surface:
+  - `paa-producer author-brief-targets`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_target_author.py`
+
 ## 5. `review-coder-brief`
 
 Purpose:

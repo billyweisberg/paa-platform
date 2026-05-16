@@ -10,6 +10,7 @@ PRODUCER_COMMANDS = (
     'derive-design-package',
     'evaluate-derivation-readiness',
     'assemble-coder-brief',
+    'author-brief-targets',
     'materialize-readiness',
     'materialize-verification-obligations',
     'load-issue-into-paa',

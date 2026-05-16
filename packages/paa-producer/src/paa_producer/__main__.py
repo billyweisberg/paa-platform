@@ -11,6 +11,7 @@ from paa_core.install import install_producer_runtime
 from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
+from paa_producer.brief_target_author import author_brief_targets
 from paa_producer.coder_brief_assembler import assemble_coder_brief
 from paa_producer.commands import PRODUCER_COMMANDS
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
@@ -190,6 +191,44 @@ def main() -> int:
             'work_item_id': result.work_item_id,
             'authority_state': result.authority_state,
             'readiness_class': result.readiness_class,
+            'persisted': result.persisted,
+        }, indent=2))
+        return 0
+
+    if args.command == 'author-brief-targets':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer author-brief-targets',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--design-package', required=True)
+        argp.add_argument('--package-schema-path')
+        argp.add_argument('--brief-schema-path')
+        argp.add_argument('--project-slug')
+        argp.add_argument('--output')
+        subargs = argp.parse_args(remainder)
+        result = author_brief_targets(
+            package_path=Path(subargs.design_package).resolve(),
+            package_schema_path=Path(subargs.package_schema_path).resolve() if subargs.package_schema_path else None,
+            brief_schema_path=Path(subargs.brief_schema_path).resolve() if subargs.brief_schema_path else None,
+            project_slug=subargs.project_slug,
+            output_path=Path(subargs.output).resolve() if subargs.output else None,
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'package_id': result.package_id,
+            'package_path': result.package_path,
+            'design_package_id': result.design_package_id,
+            'coder_run_brief_id': result.coder_run_brief_id,
+            'brief_id': result.brief_id,
+            'component_id': result.component_id,
+            'work_item_id': result.work_item_id,
+            'readiness_class': result.readiness_class,
+            'output_path': result.output_path,
+            'component_element_keys': result.component_element_keys,
+            'realization_keys': result.realization_keys,
+            'target_ids': result.target_ids,
+            'target_count': result.target_count,
             'persisted': result.persisted,
         }, indent=2))
         return 0

@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'paa-c
 
 from paa_core.repositories.component_design import (
     BriefRealizationTargetUpsertSpec,
+    ComponentElementUpsertSpec,
     ComponentElementRealizationUpsertSpec,
     ElementTypeRealizationLinkSpec,
     PostgresComponentDesignRepository,
@@ -113,6 +114,25 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
         self.assertIn('postgres_workflow_state_repository', sql)
         self.assertIn("WHERE cert.realization_key = 'concrete_repository_class'", sql)
         self.assertIn('ON CONFLICT (component_element_id, component_element_realization_type_id, realization_key) DO UPDATE', sql)
+
+    def test_upsert_component_element_emits_upsert_sql(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ComponentElementUpsertSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            component_id='22222222-2222-2222-2222-222222222222',
+            element_type_key='interfaces',
+            element_key='interfaces',
+            title='Service Interfaces',
+            status='active',
+            definition={'modules': ['contracts.py']},
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+            repo.upsert_component_element(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.component_elements', sql)
+        self.assertIn("WHERE cet.element_key = 'interfaces'", sql)
+        self.assertIn('ON CONFLICT (component_id, component_element_type_id, element_key) DO UPDATE', sql)
 
     def test_upsert_brief_realization_target_emits_upsert_sql(self) -> None:
         repo = PostgresComponentDesignRepository()

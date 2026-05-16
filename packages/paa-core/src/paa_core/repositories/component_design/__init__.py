@@ -3,6 +3,7 @@
 from .contracts import ComponentDesignRepository
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
     ComponentElementRealizationTypeRecord,
@@ -17,6 +18,7 @@ from .postgres import PostgresComponentDesignRepository
 
 __all__ = [
     'BriefRealizationTargetUpsertSpec',
+    'ComponentElementUpsertSpec',
     'CoderBriefRealizationTargetRecord',
     'ComponentDesignRepository',
     'ComponentElementRealizationRecord',

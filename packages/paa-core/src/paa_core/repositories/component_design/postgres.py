@@ -9,6 +9,7 @@ from paa_core.db import DBSettings, run_psql, sql_literal
 
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
     ComponentElementRealizationTypeRecord,
@@ -94,6 +95,45 @@ FROM (
 ) AS t;
 """
         return [self._element_from_row(row) for row in self._query_json_rows(sql)]
+
+    def upsert_component_element(self, spec: ComponentElementUpsertSpec) -> None:
+        sql = f"""
+INSERT INTO paa.component_elements (
+  project_id,
+  component_id,
+  component_element_type_id,
+  element_key,
+  title,
+  status,
+  definition_json,
+  provenance_json,
+  metadata_json,
+  created_by_role_id,
+  created_by_agent_id
+)
+SELECT
+  {sql_literal(spec.project_id)}::uuid,
+  {sql_literal(spec.component_id)}::uuid,
+  cet.component_element_type_id,
+  {sql_literal(spec.element_key)},
+  {sql_literal(spec.title)},
+  {sql_literal(spec.status)}::paa.component_element_status,
+  {self._json_sql(spec.definition)}::jsonb,
+  {self._json_sql(spec.provenance)}::jsonb,
+  {self._json_sql(spec.metadata)}::jsonb,
+  {self._uuid_or_null(spec.created_by_role_id)},
+  {self._uuid_or_null(spec.created_by_agent_id)}
+FROM paa.component_element_types cet
+WHERE cet.element_key = {sql_literal(spec.element_type_key)}
+ON CONFLICT (component_id, component_element_type_id, element_key) DO UPDATE SET
+  title = EXCLUDED.title,
+  status = EXCLUDED.status,
+  definition_json = EXCLUDED.definition_json,
+  provenance_json = EXCLUDED.provenance_json,
+  metadata_json = EXCLUDED.metadata_json,
+  updated_at = now();
+"""
+        run_psql(sql, settings=self._settings)
 
     def list_realization_types_for_element_type(
         self, element_type_key: str

@@ -47,6 +47,21 @@ class ComponentElementRecord:
 
 
 @dataclass(frozen=True)
+class ComponentElementUpsertSpec:
+    project_id: str
+    component_id: str
+    element_type_key: str
+    element_key: str
+    title: str | None = None
+    status: str = 'active'
+    definition: dict[str, Any] | None = None
+    provenance: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
+    created_by_role_id: str | None = None
+    created_by_agent_id: str | None = None
+
+
+@dataclass(frozen=True)
 class ComponentElementRealizationTypeRecord:
     component_element_realization_type_id: str
     realization_key: str

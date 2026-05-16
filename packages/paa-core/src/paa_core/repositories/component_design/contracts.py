@@ -6,6 +6,7 @@ from typing import Protocol
 
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
     ComponentElementRealizationTypeRecord,
@@ -27,6 +28,9 @@ class ComponentDesignRepository(Protocol):
 
     def list_component_elements_for_component(self, component_id: str) -> list[ComponentElementRecord]:
         """Return component element instances for one component."""
+
+    def upsert_component_element(self, spec: ComponentElementUpsertSpec) -> None:
+        """Create or update one component element instance."""
 
     def list_realization_types_for_element_type(
         self, element_type_key: str

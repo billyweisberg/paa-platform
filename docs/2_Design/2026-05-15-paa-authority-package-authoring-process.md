@@ -385,6 +385,7 @@ Outputs:
 
 Current implementation surfaces:
 - `paa-producer assemble-coder-brief`
+- `paa-producer author-brief-targets`
 
 Questions:
 - what should the agent implement first?

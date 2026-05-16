@@ -1,0 +1,169 @@
+{
+  "project_slug": "paa-platform",
+  "package_id": "paa-stage1-2026-05-16-component-design-planning-service",
+  "package_path": "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json",
+  "design_package_id": "4200cd4b-29b8-4853-8df6-e89da71456ad",
+  "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+  "brief_id": "paa-coder-2026-05-16-component-design-planning-service-governed-draft",
+  "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+  "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+  "readiness_class": "derivation_ready",
+  "output_path": "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-authored-brief-targets.json",
+  "component_element_keys": [
+    "data_contract",
+    "functions",
+    "interfaces",
+    "verification_surfaces"
+  ],
+  "realization_keys": [
+    "component_design_planning_service_service_interface",
+    "component_design_planning_service_planning_dto",
+    "component_design_planning_service_service_implementation",
+    "component_design_planning_service_service_tests",
+    "component_design_planning_service_package_export"
+  ],
+  "target_ids": [
+    "efd35f00-221c-4078-8c5f-7965908fd54d",
+    "5acc9cb1-72b4-4ba0-b9bd-be04d4b9fec0",
+    "9f4abb76-5c1a-45a4-a3b6-2607f1ed65cd",
+    "de57f54d-a7e3-44ae-88c6-cad19c967a35",
+    "4bc620c7-7069-4796-b9df-0f660ea57dd5"
+  ],
+  "target_count": 5,
+  "persisted": true,
+  "targets": [
+    {
+      "coder_brief_realization_target_id": "efd35f00-221c-4078-8c5f-7965908fd54d",
+      "project_id": "5bb5c93c-c3f8-4212-adfe-0e3f9472eeb4",
+      "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+      "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+      "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+      "component_element_id": "f59d6418-e8a4-48e2-9e36-686e3b777d68",
+      "component_element_realization_id": "456d6eda-97ff-4322-9e03-5a879f7434af",
+      "depends_on_target_id": null,
+      "target_intent": "implement",
+      "sequence_order": 10,
+      "is_required": true,
+      "target_notes": "Define the public service contract first so later targets implement against a stable seam.",
+      "target_contract": {
+        "module_path": "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+        "artifact_kind": "service_interface",
+        "required_outputs": [
+          "service protocol",
+          "public method signatures"
+        ]
+      },
+      "metadata": {
+        "proof_slice": "component_design_planning_service",
+        "realization_key": "component_design_planning_service_service_interface"
+      }
+    },
+    {
+      "coder_brief_realization_target_id": "5acc9cb1-72b4-4ba0-b9bd-be04d4b9fec0",
+      "project_id": "5bb5c93c-c3f8-4212-adfe-0e3f9472eeb4",
+      "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+      "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+      "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+      "component_element_id": "df7c91e6-1c23-441a-8618-43cd4ac6a1dc",
+      "component_element_realization_id": "81dd0fb8-31e0-4067-af4d-f03ea675f2ee",
+      "depends_on_target_id": "efd35f00-221c-4078-8c5f-7965908fd54d",
+      "target_intent": "implement",
+      "sequence_order": 20,
+      "is_required": true,
+      "target_notes": "Define planning data contracts before the service implementation binds behavior to them.",
+      "target_contract": {
+        "module_path": "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+        "artifact_kind": "dto",
+        "required_outputs": [
+          "input dataclasses",
+          "result dataclasses"
+        ]
+      },
+      "metadata": {
+        "proof_slice": "component_design_planning_service",
+        "realization_key": "component_design_planning_service_planning_dto"
+      }
+    },
+    {
+      "coder_brief_realization_target_id": "9f4abb76-5c1a-45a4-a3b6-2607f1ed65cd",
+      "project_id": "5bb5c93c-c3f8-4212-adfe-0e3f9472eeb4",
+      "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+      "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+      "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+      "component_element_id": "8079858e-8c25-49e1-86e0-a5e6da4a851e",
+      "component_element_realization_id": "eaf46317-a315-45e5-a3cc-d3d84ef3da4d",
+      "depends_on_target_id": "5acc9cb1-72b4-4ba0-b9bd-be04d4b9fec0",
+      "target_intent": "implement",
+      "sequence_order": 30,
+      "is_required": true,
+      "target_notes": "Implement the service after interface and DTO targets are settled.",
+      "target_contract": {
+        "module_path": "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+        "artifact_kind": "service_implementation",
+        "required_outputs": [
+          "default service class",
+          "planning methods"
+        ],
+        "forbidden_dependencies": [
+          "direct SQL",
+          "workflow lifecycle imports",
+          "execution package resolution imports"
+        ]
+      },
+      "metadata": {
+        "proof_slice": "component_design_planning_service",
+        "realization_key": "component_design_planning_service_service_implementation"
+      }
+    },
+    {
+      "coder_brief_realization_target_id": "de57f54d-a7e3-44ae-88c6-cad19c967a35",
+      "project_id": "5bb5c93c-c3f8-4212-adfe-0e3f9472eeb4",
+      "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+      "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+      "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+      "component_element_id": "20c9bd72-0134-4d64-ae54-122ed3b36db1",
+      "component_element_realization_id": "561c42b5-da1f-4832-9ab7-268dbab0b4c6",
+      "depends_on_target_id": "9f4abb76-5c1a-45a4-a3b6-2607f1ed65cd",
+      "target_intent": "implement",
+      "sequence_order": 40,
+      "is_required": true,
+      "target_notes": "Add focused unit tests after the service implementation target exists.",
+      "target_contract": {
+        "module_path": "tests/unit/test_component_design_planning_service.py",
+        "artifact_kind": "test_module",
+        "required_outputs": [
+          "unit tests covering planning scenarios"
+        ]
+      },
+      "metadata": {
+        "proof_slice": "component_design_planning_service",
+        "realization_key": "component_design_planning_service_service_tests"
+      }
+    },
+    {
+      "coder_brief_realization_target_id": "4bc620c7-7069-4796-b9df-0f660ea57dd5",
+      "project_id": "5bb5c93c-c3f8-4212-adfe-0e3f9472eeb4",
+      "work_item_id": "9e4509a5-5738-476b-a417-28e0012278f1",
+      "coder_run_brief_id": "fceab499-60f4-4a11-851d-b1059d8dbde9",
+      "component_id": "b757c784-b5bc-4621-bd5e-417ec00c4a92",
+      "component_element_id": "f59d6418-e8a4-48e2-9e36-686e3b777d68",
+      "component_element_realization_id": "77b8f550-364c-4d9d-84bb-ed6c7a66f870",
+      "depends_on_target_id": "9f4abb76-5c1a-45a4-a3b6-2607f1ed65cd",
+      "target_intent": "implement",
+      "sequence_order": 50,
+      "is_required": true,
+      "target_notes": "Export the finalized service surface after implementation details exist.",
+      "target_contract": {
+        "module_path": "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py",
+        "artifact_kind": "package_export",
+        "required_outputs": [
+          "package exports for contract and default implementation"
+        ]
+      },
+      "metadata": {
+        "proof_slice": "component_design_planning_service",
+        "realization_key": "component_design_planning_service_package_export"
+      }
+    }
+  ]
+}
