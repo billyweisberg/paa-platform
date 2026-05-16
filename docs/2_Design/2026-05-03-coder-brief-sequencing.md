@@ -5,6 +5,7 @@ This document defines how coder-brief sequencing is computed from:
 - authority task order
 - Stage 1 design package readiness
 - component dependency graph constraints
+- validated brief-target sets and intra-brief target dependency order
 
 The output is not just one next brief.
 It can also produce:
@@ -28,6 +29,8 @@ Sequencing computation consumes:
 - component dependency edges
 - package signoff state
 - dependency statuses
+- validated code-artifact target coverage
+- persisted or derivable `coder_brief_realization_targets`
 - shared-surface conflict metadata
 - existing active coder briefs
 - existing active execution records
@@ -35,6 +38,7 @@ Sequencing computation consumes:
 ## Output classes
 For each candidate brief, sequencing should classify it as one of:
 - `not_derivation_ready`
+- `blocked_on_target_model`
 - `derivation_ready`
 - `blocked_on_dependency`
 - `blocked_on_contract`
@@ -61,6 +65,18 @@ For each authority-eligible task, require:
 
 If not, classify:
 - `not_derivation_ready`
+
+### Step 2a: Require expressible brief-target model
+For each authority-eligible and package-approved slice, require:
+- target taxonomy coverage for the component family
+- a derivable or persisted `coder_brief_realization_target` set
+- explicit intra-brief target dependency order where multiple targets exist
+
+If those cannot be established, classify:
+- `blocked_on_target_model`
+
+Reason:
+A brief whose intended implementation artifacts cannot be expressed cleanly is not derivation-ready in a trustworthy way.
 
 ### Step 3: Resolve hard dependency blockers
 For each primary component, inspect incoming dependency edges.
@@ -135,6 +151,7 @@ Parallelism requires:
 ## Recommended sequence outputs
 The scheduler should eventually emit records like:
 - `ready_now`
+- `blocked_by_target_model`
 - `blocked_by_component`
 - `blocked_by_contract`
 - `blocked_by_shared_surface`
@@ -157,6 +174,7 @@ For each derived `coder_run_brief`, attach:
 - current readiness class
 - dependency-readiness snapshot
 - blocking causes
+- a validated linked brief-target set or explicit target-model blocker
 
 This turns sequencing from a separate planning artifact into execution-facing authority that a coding lane can obey directly.
 
@@ -173,12 +191,14 @@ That is simple enough to build incrementally and strong enough to be useful.
 PAA should eventually compute, persist, or materialize:
 - dependency readiness
 - execution readiness
+- target-model readiness
 - parallel-safe brief sets
 - blocking causes
 
 This is better than relying on humans to mentally reconcile graph structure every cycle.
 
 ## Next step
-The next useful build step is:
-- add the DB layer for design packages and dedicated dependency edges
-- then we can persist the graph and compute readiness from live records
+The next useful build steps are:
+- compute and persist target-model readiness alongside dependency readiness
+- attach packet-readiness and approval state to the derived brief lifecycle
+- derive execution sequencing entirely from live slice-package, target, and conflict records

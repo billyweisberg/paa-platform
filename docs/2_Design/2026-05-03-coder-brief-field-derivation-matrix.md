@@ -32,11 +32,24 @@ The goal is to answer, for every section of the brief:
 | `component_assignment` | component model, component surfaces, implementation target | authored plus inferred plus validated | Architect + Project Designer | Architect selects the primary component; system layer and role come from component model; aspects and target modules are derived from implementation target + component surfaces, then reviewed. |
 | `architecture_constraints` | spec fragment boundary fields, implementation target boundary fields, component model | authored plus inferred plus validated | Architect | Required seams, target module boundaries, growth constraints are authored; allowed/forbidden surfaces are inferred from surfaces and constraints, then reviewed. |
 | `collaboration_context` | component relationships, sequence/activity diagrams, pattern notes | inferred then validated | Project Designer | Derive pattern name and local collaborators from the component graph and design diagrams; validate that the context is local and sufficient for coding. |
+| `execution_prerequisites` | component dependency graph, brief-target sequencing, shared-surface conflict state | inferred then validated | TechLead + Project Designer | Derive prerequisite briefs, blocking edges, parallel-safe peers, and sequencing notes from dependency and target-order records; validate that execution constraints are explicit enough for a coding lane. |
+| `execution_readiness` | design-package signoff state, sequencing computation, derivation readiness state | inferred then validated | TechLead | Compute readiness class, blocking causes, dependency-readiness snapshot, and recommended next owner from the approved slice package and sequencing state. |
 | `dependency_contract` | component relationships, constructor/setup model, config contracts | inferred then validated | Project Designer + TechLead | Derive injectables, runtime inputs, and config inputs from the component graph and existing setup contracts; validate that hidden dependencies are explicitly forbidden. |
 | `behavioral_contract` | spec fragment, implementation target, requirements, design decisions | validated | Architect | Convert upstream design intent into concrete implementation behavior, invariants, edge cases, and error conditions. |
 | `test_contract` | verification obligations, implementation target, artifact expectations | inferred then validated | TechLead + Architect | Derive tests-to-run from obligations and baseline checks; validate added/updated tests and expected artifacts against the slice. |
 | `change_budget` | implementation target, boundary fields, prior failure history | authored plus validated | Architect + TechLead | Author max responsibility expansion and expected touch surfaces; derive or validate pre-handoff scope checks so they can be executed mechanically. |
 | `anti_goals` | architectural constraints, prior rejection history, known failure patterns | authored plus enriched plus validated | Architect + TechLead | Architect authors the anti-goals that preserve design intent; TechLead may enrich with recurrence and recovery warnings; review before approval. |
+
+## Companion derivation records outside `coder_run_brief`
+
+A complete execution-authoritative derivation is not just the brief JSON body.
+It also depends on companion records that should be treated as first-class derivation outputs.
+
+| Companion record | Primary sources | Derivation status | Primary signoff | Role in execution authority |
+| --- | --- | --- | --- | --- |
+| active `DesignPackage` | reviewed upstream authority, task binding, component package inputs | authored plus validated | Architect + Project Designer | Binds the brief to one authorized slice package rather than an ad hoc note bundle. |
+| `coder_brief_realization_targets` | component elements, realization types, component spec, sequencing policy | inferred then validated | Architect + Project Designer + TechLead | Expresses the exact code-artifact targets and their order for the run. |
+| brief approval / packet-readiness state | review workflow, signoffs, packet-preparation checks | validated | Architect + TechLead | Distinguishes draft derivation output from approved and packet-ready execution authority. |
 
 ## Field-level breakdown
 
@@ -319,6 +332,36 @@ The goal is to answer, for every section of the brief:
 - Rule:
   - Derive from known interaction edges; omit noise.
 
+## `execution_prerequisites`
+
+### `prerequisite_briefs`, `blocking_dependency_edges`, `parallel_safe_with`, `shared_surface_conflicts`, `sequencing_notes`
+- Sources:
+  - component dependency graph
+  - `coder_brief_realization_targets`
+  - shared-surface conflict records
+  - derivation readiness computation
+- Status:
+  - `inferred` then `validated`
+- Signoff:
+  - TechLead + Project Designer
+- Rule:
+  - These fields convert sequencing into execution-facing authority. They should be derived from structured dependency and target-order records, not hand-waved in prose.
+
+## `execution_readiness`
+
+### `readiness_class`, `dependency_readiness`, `blocking_causes`, `parallel_group_id`, `recommended_next_owner`, `readiness_snapshot_source`
+- Sources:
+  - design-package signoff state
+  - dependency readiness computation
+  - brief-target sequencing state
+  - current derivation and approval state
+- Status:
+  - `inferred` then `validated`
+- Signoff:
+  - TechLead
+- Rule:
+  - Execution readiness should be computed from structured derivation and sequencing state. A draft brief may be derivation-ready without being execution-ready or packet-ready.
+
 ## `dependency_contract`
 
 ### `dependencies_to_inject`
@@ -515,30 +558,35 @@ The goal is to answer, for every section of the brief:
 ## Practical derivation order
 Use this order when building tooling:
 
-1. Resolve top-level identity and authority context.
-2. Resolve slice scope from task + fragment + target.
-3. Resolve primary component assignment.
-4. Resolve target modules and edit surfaces.
-5. Resolve collaboration and dependency context.
-6. Draft behavioral and test contracts.
-7. Draft change budget and anti-goals.
-8. Run review and signoff by role.
-9. Persist approved brief in PAA.
-10. Embed approved brief into `architect_cycle_packet`.
+1. Materialize the active slice package and derivation-readiness state.
+2. Resolve top-level identity and authority context.
+3. Resolve slice scope from task + fragment + target.
+4. Resolve primary component assignment.
+5. Resolve target modules and edit surfaces.
+6. Resolve code-artifact targets and validate taxonomy coverage.
+7. Resolve collaboration, dependency, and sequencing context.
+8. Draft behavioral and test contracts.
+9. Draft change budget, anti-goals, and readiness state.
+10. Run review and signoff by role.
+11. Persist approved brief and linked target set in PAA.
+12. Embed approved brief into `architect_cycle_packet`.
 
 ## Tooling implication
 The derivation engine should preserve provenance.
-For each field or section, it should eventually record:
+For each field, section, or companion derivation record, it should eventually record:
 - source records used
 - derivation status
 - generated timestamp
 - last reviewer
 - signoff status
+- whether the output is draft, approved, or packet-ready
 
 That provenance should ultimately live in PAA, not only in a generated JSON artifact.
 
 ## Immediate next step
-The next iteration should define the missing layer between method and tooling:
+The next iteration should strengthen the remaining bridge between method and execution authority:
 - the exact Stage 1 design package shape that must exist before derivation starts
+- the code-artifact target taxonomy extensions required for non-repository component families
+- the explicit review and packet-readiness lifecycle for derived briefs
 
-That package is what lets derivation become repeatable instead of bespoke.
+Those are the pieces that let derivation become fully repeatable instead of partly bespoke.

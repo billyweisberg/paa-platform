@@ -80,8 +80,10 @@ The current reusable process is:
 11. scaffold the solution / project structure from the dependency strata
 12. define component elements and code artifact target taxonomy
 13. define component specs
-14. derive coder-agent brief targets and sequence
-15. publish the authority package
+14. materialize the active slice design package and derivation readiness state
+15. derive the draft coder-agent brief body, brief targets, and target sequence
+16. review and approve execution authority
+17. publish or packetize the approved execution authority
 
 This note expands those steps.
 
@@ -317,6 +319,10 @@ Outputs:
 Primary purpose:
 Provide structured, sequenced near-pseudocode assignments to coder agents.
 
+Important rule:
+The taxonomy must be validated against the component families the system actually needs to build.
+A repository-only target vocabulary is not sufficient for a general authority-authoring system.
+
 ## Step 13. Define Component Specs
 
 Create the detailed `Component Spec` for each concrete component.
@@ -335,31 +341,67 @@ A component spec should cover the relevant design elements such as:
 Important rule:
 Do this after decomposition and domain analysis, not before.
 
-## Step 14. Derive Coder-Agent Brief Targets And Sequence
+## Step 14. Materialize The Active Slice Design Package And Derivation Readiness State
+
+Before brief derivation begins, bind the implementation run to one explicit slice package.
+
+Outputs:
+- active `DesignPackage`
+- signoff state
+- derivation-readiness result
+- explicit blockers if the slice is not ready
+
+Important rule:
+A note bundle may be enough for dry-run validation.
+Execution-authoritative derivation should begin from a materialized slice package.
+
+## Step 15. Derive The Draft Coder-Agent Brief Body, Brief Targets, And Target Sequence
 
 Translate component specs into implementation runs.
 
 Outputs:
-- coder briefs
+- draft coder brief
 - brief targets
 - ordering and dependency rules
 - validation targets
+- taxonomy coverage result
 
 Questions:
 - what should the agent implement first?
 - what exact code artifact form is expected?
+- can the current target taxonomy express that form cleanly?
 - what dependencies must already exist?
 
-## Step 15. Publish The Authority Package
+Important rule:
+If the code-artifact target taxonomy cannot express the intended implementation artifacts cleanly, derivation should stop and report a blocker rather than overloading the wrong labels.
 
-Compile and publish the resulting authority package so it can be installed and executed by consumer runtime.
+## Step 16. Review And Approve Execution Authority
+
+Move the derivation output through explicit review and approval.
+
+Outputs:
+- reviewed draft brief
+- approved brief
+- approved brief-target set
+- explicit state transition from draft to execution authority
+- packet-readiness result
+
+Important rule:
+A draft brief proves the derivation method is working.
+It is not yet execution authority.
+
+## Step 17. Publish Or Packetize The Approved Execution Authority
+
+Compile and publish the resulting authority package so it can be installed and executed by consumer runtime, or embed the approved brief into a transport packet when execution is being launched.
 
 Outputs:
 - published authority manifest
 - design packages
-- coder briefs
+- approved coder briefs
+- linked brief-target sets
 - overlays if needed
 - installable execution package inputs
+- packet-ready execution authority when transport is needed
 
 ## Producer-Side Tooling Opportunities
 
@@ -374,9 +416,11 @@ This process suggests explicit producer-side tools and services for:
 7. component element authoring
 8. code artifact target authoring
 9. component spec authoring
-10. brief target sequencing
-11. policy selection and validation
-12. authority package publication
+10. slice-package materialization and derivation-readiness evaluation
+11. brief target sequencing and target-taxonomy validation
+12. brief review and approval governance
+13. policy selection and validation
+14. authority package publication
 
 ## Process Governance Rules
 
@@ -388,7 +432,8 @@ This process suggests explicit producer-side tools and services for:
 6. Build order should be dependency-graph-derived, not preference-driven.
 7. Component specs should derive from the chosen decomposition, not from current scripts.
 8. Coder-agent assignments should use controlled vocabularies and sequenced code artifact targets.
-9. Authority packages should be the output of a derivation process, not a loose bundle of notes.
+9. A derivation may produce a useful draft before it produces approved execution authority; those states must remain distinct.
+10. Authority packages should be the output of a derivation process, not a loose bundle of notes.
 
 ## Current Status In This Repo
 

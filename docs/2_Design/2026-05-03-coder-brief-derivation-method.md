@@ -23,11 +23,12 @@ That means `coder_run_brief` is not handwritten from scratch, and it is not gues
 It is derived from a staged design model.
 
 ## Upstream inputs
-A `coder_run_brief` is derived from four primary sources:
+A `coder_run_brief` is derived from five primary sources:
 - Product / Architect / Designer authority
 - spec fragments
 - implementation targets
 - component model
+- component element and code-artifact target model
 
 These are not equal peers. They play different roles in derivation.
 
@@ -65,6 +66,14 @@ It defines:
 - which surfaces belong to which components
 - what seams must remain intact
 
+### 5. Component element and code-artifact target model
+This is the coder-assignment layer.
+It defines:
+- which component elements are in scope
+- which concrete code artifact forms are valid for those elements
+- which target kinds are brief-targetable
+- whether the target taxonomy can express the intended implementation run cleanly
+
 ## Design decision
 The `coder_run_brief` should be assembled from authored upstream records using a deterministic derivation pass.
 
@@ -98,6 +107,20 @@ The value is derived or drafted, then explicitly reviewed for correctness before
 The value is not core authority, but helpful operational context added by TechLead or tooling.
 It must never override authored authority.
 
+## Derivation lifecycle states
+Derivation should distinguish three authority states clearly:
+- `draft_brief`
+- `approved_brief`
+- `packet_ready_execution_authority`
+
+Rule:
+A dry-run or draft brief can prove that the method is working.
+It must not be treated as execution authority until:
+- the slice package is materialized
+- target taxonomy coverage is complete for the run
+- review and approval are complete
+- packet-readiness is confirmed
+
 ## Stage 1 output package
 Before Stage 2 derivation begins, Stage 1 must produce a complete design package for the slice.
 
@@ -130,7 +153,19 @@ If any of these are missing, the slice is not ready for coder derivation.
 ## Stage 2 derivation process
 The derivation process should run as a staged pipeline.
 
-### Step 1: Resolve active slice package
+### Step 0: Confirm reviewed upstream authority
+Input:
+- reviewed System Design authority
+- reviewed component decomposition
+- reviewed component spec or equivalent
+
+Output:
+- approved upstream authority baseline for derivation
+
+Rule:
+Derivation should not begin from speculative or half-reviewed component design.
+
+### Step 1: Resolve and materialize active slice package
 Input:
 - authority version
 - task id
@@ -146,7 +181,42 @@ The active slice package is the bundle containing:
 - linked design decisions
 - linked component entries
 
-### Step 2: Resolve primary component assignment
+Rule:
+A note bundle may be enough for a dry run.
+A normal execution-authoritative derivation should begin from a materialized slice package.
+
+### Step 2: Confirm derivation readiness
+Input:
+- active slice package
+- signoff state
+- dependency graph slice
+- package status
+
+Output:
+- derivation-ready or blocked slice
+- explicit blocking reasons if not ready
+
+Rule:
+If the slice package is not approved for derivation, the process should stop before drafting a brief.
+
+### Step 3: Resolve top-level identity and authority context
+Input:
+- project identity
+- authority version
+- milestone / phase / task binding
+- work item identity
+- issue or PR context if already materialized
+
+Output:
+- top-level brief identity
+- authority context
+- slice scope identity
+
+Rule:
+Component identity alone is not enough.
+Derivation requires slice identity.
+
+### Step 4: Resolve primary component assignment
 Input:
 - spec fragment
 - implementation target
@@ -162,7 +232,7 @@ Output:
 Rule:
 Every coder brief must have exactly one primary implementation component, even if multiple supporting components participate.
 
-### Step 3: Resolve component aspects
+### Step 5: Resolve component aspects
 Input:
 - implementation target desired state
 - expected touch surfaces
@@ -184,7 +254,7 @@ Examples:
 Rule:
 Component aspects must be explicit. The coder should not infer whether they are changing state, interface, tests, or documentation by reading the codebase blindly.
 
-### Step 4: Resolve placement and edit boundaries
+### Step 6: Resolve placement and edit boundaries
 Input:
 - component surfaces
 - target module boundaries
@@ -201,7 +271,7 @@ Output:
 Rule:
 This is where we prevent god-file growth. If module placement is not explicit here, the brief is under-specified.
 
-### Step 5: Resolve collaboration context
+### Step 7: Resolve collaboration context
 Input:
 - component relationships
 - sequence/activity diagrams
@@ -217,7 +287,7 @@ Output:
 Rule:
 A coder brief should describe the local construction pattern, not the whole system.
 
-### Step 6: Resolve dependency contract
+### Step 8: Resolve dependency contract
 Input:
 - component relationships
 - constructor/setup model
@@ -232,41 +302,47 @@ Output:
 Rule:
 If the implementation depends on a service or policy, the brief must say whether that dependency is injected, configured, or looked up through an existing contract.
 
-### Step 7: Resolve behavioral contract
+### Step 9: Resolve code-artifact targets and validate taxonomy coverage
+Input:
+- component element model
+- component element realization model
+- component spec
+- implementation target
+
+Output:
+- candidate code-artifact target set
+- allowed target kinds for the slice
+- explicit taxonomy coverage result
+- draft brief-target dependency order
+
+Rule:
+If the current target taxonomy cannot express the intended implementation artifacts cleanly, derivation must stop and report a blocker.
+Do not overload unrelated target labels just to force a slice through.
+
+### Step 10: Resolve behavioral and proving contracts
 Input:
 - spec fragment
 - implementation target
 - requirements
 - design decisions
+- verification obligations
 
 Output:
 - behavior to add or change
 - invariants to preserve
 - edge cases
 - error conditions
-
-Rule:
-This section should be implementation-operational, not philosophical.
-It should tell the coder what code behavior must result, not why the product exists.
-
-### Step 8: Resolve test contract
-Input:
-- verification obligations
-- implementation target protected baseline
-- authority artifact expectations
-
-Output:
 - tests to run
 - tests to add or update
 - protected baseline checks
 - expected artifacts
 
 Rule:
-The test contract must separate:
+The proving contract must separate:
 - baseline proving checks that must remain green
 - slice-specific tests that must be added or updated
 
-### Step 9: Resolve change budget and anti-goals
+### Step 11: Resolve change budget and anti-goals
 Input:
 - implementation target
 - architectural constraints
@@ -282,9 +358,28 @@ Output:
 Rule:
 This is where repeated contamination patterns are prevented from recurring by design.
 
-### Step 10: Assemble and validate brief
+### Step 12: Compute brief-target sequencing and execution readiness
 Input:
-- outputs of steps 1 through 9
+- approved slice package
+- code-artifact target set
+- target dependencies
+- component dependency graph constraints
+- shared-surface conflicts
+
+Output:
+- ordered brief target set
+- execution prerequisites
+- execution readiness classification
+- blocking causes
+
+Rule:
+Sequencing is not optional planning commentary.
+It is execution authority.
+If target sequencing or readiness cannot be stated clearly, the brief is not ready for execution.
+
+### Step 13: Assemble and validate draft brief
+Input:
+- outputs of steps 0 through 12
 
 Output:
 - draft `coder_run_brief`
@@ -293,13 +388,34 @@ Then validate the draft against:
 - schema validation
 - architecture review
 - scope review
+- target-taxonomy coverage review
 - test-contract review
 - packet-readiness review
 
-Only after these pass can the brief move to:
-- `approved`
-- then embedded in `architect_cycle_packet`
+### Step 14: Persist reviewed and approved brief with provenance
+Input:
+- reviewed draft brief
+- approved target set
+- signoff state
 
+Output:
+- approved `coder_run_brief`
+- linked brief targets
+- provenance and approval state
+
+Rule:
+Execution authority should be persisted as reviewed state, not left as an ephemeral draft artifact.
+
+### Step 15: Embed approved brief into `architect_cycle_packet`
+Input:
+- approved brief
+- packet preparation context
+
+Output:
+- packet-ready execution authority
+
+Rule:
+Only an approved brief that is packet-ready should be treated as execution authority for a coding lane.
 ## Derivation ownership
 Not every part of derivation belongs to the same role.
 
@@ -376,25 +492,31 @@ These may be added later without redefining architecture:
 ## Recommended data flow
 The derivation engine should work roughly like this:
 
-1. resolve task from authority version
-2. load spec fragment and implementation target
-3. load linked components, surfaces, and relationships
-4. load verification obligations
-5. synthesize draft coder brief sections
-6. require human review on authored and validated fields
-7. persist approved brief in PAA
-8. embed approved brief into `architect_cycle_packet`
+1. confirm reviewed upstream authority
+2. resolve and materialize slice package
+3. load spec fragment, implementation target, and linked component records
+4. load component elements, realization options, and candidate target kinds
+5. validate code-artifact target taxonomy coverage for the slice
+6. load verification obligations and dependency constraints
+7. synthesize draft coder brief sections and draft brief-target set
+8. require human review on authored and validated fields
+9. persist approved brief and linked target set in PAA
+10. embed approved brief into `architect_cycle_packet`
 
 ## Suggested tool support
 The system should eventually support derivation with small tools, not manual copy-paste.
 
 ### Useful simple tools
 - `resolve-slice-package`
+- `evaluate-derivation-readiness`
 - `suggest-primary-component`
 - `derive-edit-surfaces`
 - `derive-collaboration-context`
+- `derive-brief-targets`
+- `validate-target-taxonomy-coverage`
 - `derive-test-contract`
 - `derive-change-budget-checks`
+- `review-coder-brief`
 - `validate-coder-brief`
 - `embed-coder-brief-into-packet`
 
@@ -404,11 +526,13 @@ They should not replace review authority.
 ## Review gates before execution
 A coder brief is ready for Stage 3 only when all of the following are true:
 - schema-valid
-- tied to current authority version
+- tied to current authority version and a materialized slice package
 - primary component explicitly assigned
 - edit boundaries explicit
 - collaboration pattern explicit
 - dependency contract explicit
+- code-artifact target set explicit and taxonomy-valid
+- execution prerequisites and readiness explicit
 - test contract explicit
 - pre-handoff scope checks explicit
 - anti-goals explicit
@@ -432,10 +556,11 @@ PAA should treat `coder_run_brief` as:
 This means the database and packet model are serving the right purpose:
 - project authority stays upstream
 - coder authority is derived downstream
-- execution consumes the derived brief, not raw design intent
+- draft derivation output is distinct from approved execution authority
+- execution consumes the approved derived brief, not raw design intent
 
 ## Next step
-The next design decision should define the exact field-level derivation rules for every section of `coder_run_brief`, including:
-- which source record populates each field
-- whether the field is authored, inferred, validated, or enriched
-- which role must sign off on it before the brief becomes active
+The next derivation refinements should make the remaining execution-authority bridge explicit:
+- the exact Stage 1 slice-package shape required before derivation starts
+- the code-artifact target taxonomy extensions needed for non-repository component families
+- the explicit draft -> approved -> packet-ready lifecycle for derived briefs and linked target sets
