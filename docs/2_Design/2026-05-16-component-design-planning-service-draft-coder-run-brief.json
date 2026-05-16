@@ -1,0 +1,225 @@
+{
+  "project": "paa-platform",
+  "brief_id": "paa-coder-2026-05-16-component-design-planning-service-dry-run",
+  "schema_type": "coder_run_brief",
+  "schema_version": "1.1.0",
+  "authority_context": {
+    "authority_version": "2026-05-16-dry-run",
+    "milestone_id": "m-stratum2-domain-services",
+    "phase_id": "p-component-derivation-validation",
+    "task_id": "paa-stratum2-component-design-planning-service",
+    "issue_number": null,
+    "pr_number": null
+  },
+  "slice_scope_ref": {
+    "slice_name": "component design planning service initial implementation",
+    "authorized_delta_family": "component-design-planning-service-implementation",
+    "out_of_scope_delta_families": [
+      "workflow-lifecycle-implementation",
+      "execution-package-resolution-implementation",
+      "brief-assembly-implementation",
+      "producer-derivation-orchestration",
+      "runtime-adoption"
+    ]
+  },
+  "component_assignment": {
+    "component_name": "Component Design Planning Service",
+    "component_role": "domain service that interprets structured component design into planning-ready outputs for brief derivation and producer-side authoring flows",
+    "system_layer": "domain-services",
+    "tier": "runtime",
+    "component_aspects": [
+      "interfaces",
+      "functions",
+      "data_contract",
+      "tests"
+    ],
+    "target_modules": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py",
+      "tests/unit/test_component_design_planning_service.py"
+    ]
+  },
+  "architecture_constraints": {
+    "required_architecture_seams": [
+      "Keep Component Design Planning Service in the Domain Services layer.",
+      "Keep repository access behind ComponentDesignRepository.",
+      "Keep brief assembly, sequencing, and producer orchestration outside this service."
+    ],
+    "target_module_boundaries": [
+      "Implement service logic inside the component_design_planning service package.",
+      "Do not move raw SQL, packet assembly, or workflow semantics into this service.",
+      "Add unit tests through a dedicated service test module rather than piggybacking on repository tests."
+    ],
+    "allowed_edit_surfaces": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py",
+      "tests/unit/test_component_design_planning_service.py"
+    ],
+    "forbidden_edit_surfaces": [
+      "packages/paa-producer/src/paa_producer/authority_runtime.py",
+      "packages/paa-core/src/paa_core/repositories/component_design/postgres.py",
+      "packages/paa-core/src/paa_core/services/workflow_lifecycle/",
+      "packages/paa-core/src/paa_core/services/execution_package_resolution/",
+      "migrations/postgres/"
+    ],
+    "forbidden_module_growth_patterns": [
+      "Do not turn this service into a producer-side orchestrator.",
+      "Do not add raw SQL or direct DB configuration handling.",
+      "Do not silently extend the realization taxonomy from inside service implementation code."
+    ]
+  },
+  "collaboration_context": {
+    "pattern_name": "repository-backed domain planning service",
+    "collaborating_components": [
+      "ComponentDesignRepository",
+      "StructuredLogger",
+      "Brief Assembly Service",
+      "Derivation Orchestration Service"
+    ],
+    "callers": [
+      "Brief Assembly Service",
+      "Derivation Orchestration Service",
+      "future producer-side authoring hosts"
+    ],
+    "callees": [
+      "ComponentDesignRepository.get_component_by_name",
+      "ComponentDesignRepository.list_component_elements_for_component",
+      "ComponentDesignRepository.list_realization_types_for_element_type",
+      "ComponentDesignRepository.list_realizations_for_component_element",
+      "ComponentDesignRepository.list_brief_realization_targets"
+    ],
+    "event_emitters": [],
+    "event_consumers": []
+  },
+  "execution_prerequisites": {
+    "prerequisite_briefs": [],
+    "blocking_dependency_edges": [],
+    "parallel_safe_with": [],
+    "shared_surface_conflicts": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/"
+    ],
+    "sequencing_notes": [
+      "Derive service code-artifact targets before implementation begins.",
+      "Keep this service slice isolated from producer orchestration and runtime-adoption work.",
+      "Treat this brief as draft-only until slice package, review, and approval state are materialized."
+    ]
+  },
+  "dependency_contract": {
+    "dependencies_to_inject": [
+      "ComponentDesignRepository",
+      "StructuredLogger"
+    ],
+    "runtime_inputs": [
+      "component identity",
+      "component element records",
+      "allowed realization type mappings",
+      "current realization instances",
+      "optional coder brief realization target context"
+    ],
+    "configuration_inputs": [
+      "repository wiring",
+      "logging wiring"
+    ],
+    "forbidden_hidden_dependencies": [
+      "Do not depend on direct SQL execution.",
+      "Do not depend on GitHub issue or PR state.",
+      "Do not depend on workflow-state or runtime-event repositories.",
+      "Do not depend on installed execution package file reads."
+    ]
+  },
+  "behavioral_contract": {
+    "behavior_to_add_or_change": [
+      "Resolve one component by stable identity.",
+      "Load and normalize component element planning data.",
+      "Load allowed realization-type options for relevant component elements.",
+      "Load current realization instances for relevant component elements.",
+      "Build structured planning views and planning gaps for downstream brief assembly."
+    ],
+    "invariants_to_preserve": [
+      "The service remains stateless between calls.",
+      "The service does not mutate component-design persistence by default.",
+      "The service does not invent realization targets outside the known taxonomy.",
+      "The service returns structured planning outputs rather than prose-only summaries."
+    ],
+    "edge_cases": [
+      "Requested component does not exist.",
+      "Component exists but has no component elements.",
+      "Component element exists but has no allowed realization types.",
+      "Partial realization instances exist and planning output must still remain coherent."
+    ],
+    "error_conditions": [
+      "Repository lookup fails or returns ambiguous component identity.",
+      "Controlled taxonomy needed for planning is missing.",
+      "Requested planning payload cannot be built without required component-design records."
+    ]
+  },
+  "test_contract": {
+    "tests_to_run": [
+      "PYTHONPATH=packages/paa-core/src python -m unittest discover -s tests/unit -p 'test_component_design_planning_service*.py'"
+    ],
+    "tests_to_add_or_update": [
+      "tests/unit/test_component_design_planning_service.py"
+    ],
+    "protected_baseline_checks": [
+      "Existing ComponentDesignRepository tests continue to pass.",
+      "No raw SQL is added to the service package.",
+      "No producer or consumer runtime entrypoints change in this slice."
+    ],
+    "artifacts_expected": [
+      "service interface contract",
+      "service planning models",
+      "default service implementation",
+      "unit tests"
+    ]
+  },
+  "execution_readiness": {
+    "readiness_class": "derivation_ready",
+    "dependency_readiness": [
+      "service scaffold present",
+      "component spec approved",
+      "component design repository read slice implemented"
+    ],
+    "blocking_causes": [
+      "No task-bound DesignPackage has been materialized for this slice.",
+      "No approved coder brief record exists for this slice.",
+      "Current realization taxonomy does not yet encode service-oriented artifact targets such as service_interface, service_implementation, test_module, and package_export."
+    ],
+    "parallel_group_id": null,
+    "recommended_next_owner": "Authority Architect",
+    "readiness_snapshot_source": "phase6-dry-run-2026-05-16"
+  },
+  "change_budget": {
+    "max_responsibility_expansion": "Implement Component Design Planning Service only; do not absorb brief assembly, orchestration, workflow, or persistence ownership.",
+    "expected_touch_surfaces": [
+      "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/default.py",
+      "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py",
+      "tests/unit/test_component_design_planning_service.py"
+    ],
+    "pre_handoff_scope_checks": [
+      "Only the component_design_planning service package and its dedicated tests changed.",
+      "No DB migrations were added.",
+      "No repository SQL changed.",
+      "No producer or consumer host wiring changed in this slice."
+    ]
+  },
+  "anti_goals": {
+    "anti_goals": [
+      "Do not implement Brief Assembly Service here.",
+      "Do not implement producer-side orchestration or packet preparation here.",
+      "Do not mutate component-design persistence by default.",
+      "Do not smuggle taxonomy extensions into service implementation code."
+    ],
+    "common_failure_modes": [
+      "The service becomes a producer-side workflow blob instead of a narrow domain service.",
+      "Repository access and raw SQL leak into the service.",
+      "The implementation invents service artifact targets that the current taxonomy cannot represent or govern.",
+      "Unit tests are skipped and repository tests are treated as sufficient proof."
+    ]
+  }
+}
