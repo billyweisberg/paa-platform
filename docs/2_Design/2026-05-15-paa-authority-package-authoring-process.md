@@ -383,6 +383,9 @@ Outputs:
 - validation targets
 - taxonomy coverage result
 
+Current implementation surfaces:
+- `paa-producer assemble-coder-brief`
+
 Questions:
 - what should the agent implement first?
 - what exact code artifact form is expected?

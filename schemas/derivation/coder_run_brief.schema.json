@@ -1,0 +1,605 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://individual-centricity.local/fractal-core/coder_run_brief.schema.json",
+  "title": "Coder Run Brief",
+  "type": "object",
+  "required": [
+    "brief_id",
+    "schema_type",
+    "schema_version",
+    "project",
+    "authority_context",
+    "slice_scope_ref",
+    "component_assignment",
+    "architecture_constraints",
+    "collaboration_context",
+    "execution_prerequisites",
+    "dependency_contract",
+    "behavioral_contract",
+    "test_contract",
+    "execution_readiness",
+    "change_budget",
+    "anti_goals"
+  ],
+  "properties": {
+    "brief_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_type": {
+      "const": "coder_run_brief"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_context": {
+      "type": "object",
+      "required": [
+        "authority_version",
+        "milestone_id",
+        "phase_id",
+        "task_id"
+      ],
+      "properties": {
+        "authority_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "milestone_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pr_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "slice_scope_ref": {
+      "type": "object",
+      "required": [
+        "slice_name",
+        "authorized_delta_family",
+        "out_of_scope_delta_families"
+      ],
+      "properties": {
+        "slice_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorized_delta_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "out_of_scope_delta_families": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "component_assignment": {
+      "type": "object",
+      "required": [
+        "component_name",
+        "component_role",
+        "system_layer",
+        "component_aspects",
+        "target_modules"
+      ],
+      "properties": {
+        "component_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "component_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "system_layer": {
+          "enum": [
+            "host-adapter",
+            "model-core",
+            "policy",
+            "hierarchy",
+            "diagnostics",
+            "contract",
+            "integration",
+            "test",
+            "docs",
+            "domain-core",
+            "domain-services",
+            "application-orchestration",
+            "infrastructure-ports",
+            "infrastructure-adapters",
+            "host-surfaces"
+          ]
+        },
+        "tier": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "data",
+            "compute",
+            "ui",
+            "framework",
+            "runtime",
+            null
+          ]
+        },
+        "component_aspects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "state",
+              "interface",
+              "functions",
+              "configuration",
+              "events",
+              "hosting",
+              "tests",
+              "docs",
+              "role",
+              "component_state_model",
+              "service_contract",
+              "data_contract",
+              "injected_services",
+              "interfaces",
+              "messages_received",
+              "messages_published",
+              "message_data_contracts",
+              "event_subscriptions",
+              "events_published",
+              "event_data_contracts",
+              "component_lifecycle",
+              "verification_surfaces",
+              "component_configuration"
+            ]
+          }
+        },
+        "target_modules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "architecture_constraints": {
+      "type": "object",
+      "required": [
+        "required_architecture_seams",
+        "target_module_boundaries",
+        "allowed_edit_surfaces",
+        "forbidden_edit_surfaces",
+        "forbidden_module_growth_patterns"
+      ],
+      "properties": {
+        "required_architecture_seams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "target_module_boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowed_edit_surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_edit_surfaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_module_growth_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "collaboration_context": {
+      "type": "object",
+      "required": [
+        "pattern_name",
+        "collaborating_components"
+      ],
+      "properties": {
+        "pattern_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "collaborating_components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "callers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "callees": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "event_emitters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "event_consumers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution_prerequisites": {
+      "type": "object",
+      "required": [
+        "prerequisite_briefs",
+        "blocking_dependency_edges",
+        "parallel_safe_with",
+        "shared_surface_conflicts"
+      ],
+      "properties": {
+        "prerequisite_briefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocking_dependency_edges": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "parallel_safe_with": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "shared_surface_conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sequencing_notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependency_contract": {
+      "type": "object",
+      "required": [
+        "dependencies_to_inject",
+        "runtime_inputs",
+        "configuration_inputs",
+        "forbidden_hidden_dependencies"
+      ],
+      "properties": {
+        "dependencies_to_inject": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "runtime_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "configuration_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_hidden_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "behavioral_contract": {
+      "type": "object",
+      "required": [
+        "behavior_to_add_or_change",
+        "invariants_to_preserve"
+      ],
+      "properties": {
+        "behavior_to_add_or_change": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "invariants_to_preserve": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "edge_cases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "error_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution_readiness": {
+      "type": "object",
+      "required": [
+        "readiness_class",
+        "dependency_readiness",
+        "blocking_causes",
+        "recommended_next_owner"
+      ],
+      "properties": {
+        "readiness_class": {
+          "enum": [
+            "not_derivation_ready",
+            "derivation_ready",
+            "blocked_on_dependency",
+            "blocked_on_contract",
+            "execution_ready",
+            "parallel_ready",
+            "active",
+            "completed"
+          ]
+        },
+        "dependency_readiness": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "dependency_edge_id",
+              "status"
+            ],
+            "properties": {
+              "dependency_edge_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "undefined",
+                  "defined",
+                  "contract_ready",
+                  "implementation_ready",
+                  "blocked",
+                  "conflict"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "blocking_causes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "parallel_group_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recommended_next_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "readiness_snapshot_source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "test_contract": {
+      "type": "object",
+      "required": [
+        "tests_to_run",
+        "protected_baseline_checks"
+      ],
+      "properties": {
+        "tests_to_run": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tests_to_add_or_update": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "protected_baseline_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "artifacts_expected": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "change_budget": {
+      "type": "object",
+      "required": [
+        "max_responsibility_expansion",
+        "expected_touch_surfaces",
+        "pre_handoff_scope_checks"
+      ],
+      "properties": {
+        "max_responsibility_expansion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_touch_surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pre_handoff_scope_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "anti_goals": {
+      "type": "object",
+      "required": [
+        "anti_goals",
+        "common_failure_modes"
+      ],
+      "properties": {
+        "anti_goals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "common_failure_modes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
