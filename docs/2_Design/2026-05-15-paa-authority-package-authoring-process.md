@@ -72,10 +72,11 @@ The current reusable process is:
 7. define stable components and relationships
 8. define data model and primary-truth boundaries
 9. define repository and infrastructure port boundaries
-10. define component elements and code artifact target taxonomy
-11. define component specs
-12. derive coder-agent brief targets and sequence
-13. publish the authority package
+10. derive the component dependency graph and dependency strata
+11. define component elements and code artifact target taxonomy
+12. define component specs
+13. derive coder-agent brief targets and sequence
+14. publish the authority package
 
 This note expands those steps.
 
@@ -238,7 +239,29 @@ Outputs:
 - repository contracts
 - port interfaces
 
-## Step 10. Define Component Element And Code Artifact Taxonomy
+Important sequencing rule:
+Repository and port boundaries are often among the earliest buildable implementation surfaces because they are upstream dependencies for domain services and application services.
+
+Process lesson from the current PAA cycle:
+- the DAL / repository layer was implemented before the fully formal dependency-strata note was written
+- in future runs, that should be understood as dependency-graph-driven behavior, not as arbitrary early implementation choice
+- if repository contracts are the earliest satisfiable hard dependencies, they should surface first in the build sequence explicitly
+
+## Step 10. Derive The Component Dependency Graph And Dependency Strata
+
+Derive the dependency graph from the chosen architecture so implementation order is determined by dependency structure instead of preference.
+
+Outputs:
+- typed component dependency graph
+- dependency strata
+- contract-before-implementation sequencing
+- parallelization-safe groups
+- first buildable component set
+
+Important rule:
+This is the point where “what gets built first” stops being a subjective choice and becomes a graph-derived answer.
+
+## Step 11. Define Component Element And Code Artifact Taxonomy
 
 Define the controlled vocabularies used to drive coder-agent assignments.
 
@@ -252,7 +275,7 @@ Outputs:
 Primary purpose:
 Provide structured, sequenced near-pseudocode assignments to coder agents.
 
-## Step 11. Define Component Specs
+## Step 12. Define Component Specs
 
 Create the detailed `Component Spec` for each concrete component.
 
@@ -270,7 +293,7 @@ A component spec should cover the relevant design elements such as:
 Important rule:
 Do this after decomposition and domain analysis, not before.
 
-## Step 12. Derive Coder-Agent Brief Targets And Sequence
+## Step 13. Derive Coder-Agent Brief Targets And Sequence
 
 Translate component specs into implementation runs.
 
@@ -285,7 +308,7 @@ Questions:
 - what exact code artifact form is expected?
 - what dependencies must already exist?
 
-## Step 13. Publish The Authority Package
+## Step 14. Publish The Authority Package
 
 Compile and publish the resulting authority package so it can be installed and executed by consumer runtime.
 
@@ -319,9 +342,11 @@ This process suggests explicit producer-side tools and services for:
 2. Domain objects should be modeled before detailed logic-component specs.
 3. Volatility and deployment analysis should shape the architecture, not be bolted on later.
 4. Primary truth boundaries must be explicit before repository and runtime implementation.
-5. Component specs should derive from the chosen decomposition, not from current scripts.
-6. Coder-agent assignments should use controlled vocabularies and sequenced code artifact targets.
-7. Authority packages should be the output of a derivation process, not a loose bundle of notes.
+5. Repository and infrastructure port work should be allowed to surface early when the dependency graph shows they are first hard dependencies.
+6. Build order should be dependency-graph-derived, not preference-driven.
+7. Component specs should derive from the chosen decomposition, not from current scripts.
+8. Coder-agent assignments should use controlled vocabularies and sequenced code artifact targets.
+9. Authority packages should be the output of a derivation process, not a loose bundle of notes.
 
 ## Current Status In This Repo
 
