@@ -46,6 +46,7 @@ Important rule:
 
 The target V2 system components that may own table semantics are:
 - `Authority Publication And Derivation`
+- `Project Design And Delivery Planning`
 - `Installed Execution Package Manager`
 - `Component Design Derivation Engine`
 - `Runtime Lifecycle Engine`
@@ -78,6 +79,10 @@ Ownership here means semantic ownership, not merely "writes some rows sometimes.
 | `paa.component_relationships` | `stable_authority` | `Component Design Derivation Engine` | `extend` | Stable structural relationships, not runtime sequencing. |
 | `paa.work_items` | `stable_authority` | `Authority Publication And Derivation` | `keep` | Work-item identity and scope anchor. |
 | `paa.design_packages` | `derivative_slice` | `Component Design Derivation Engine` | `extend` | Reviewed Stage 1 slice packages. |
+| `paa.implementation_plans` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Primary project-design truth for one consumer-specific build plan derived from slice authority. |
+| `paa.implementation_plan_artifacts` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Concrete artifact set selected by one implementation plan. |
+| `paa.implementation_plan_dependencies` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Internal implementation-plan dependency graph and critical-path truth. |
+| `paa.implementation_plan_verification_surfaces` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Proving and verification surfaces bound to one implementation plan. |
 | `paa.design_package_signoffs` | `derivative_slice` | `Component Design Derivation Engine` | `keep` | Signoff history over derivative packages. |
 | `paa.coder_run_briefs` | `derivative_slice` | `Component Design Derivation Engine` | `extend` | Execution-facing slice briefs derived from packages. |
 | `paa.component_dependency_edges` | `derivative_slice` | `Component Design Derivation Engine` | `extend` | Package-scoped dependency/sequencing edges; not stable structure yet. |
@@ -102,6 +107,7 @@ Ownership here means semantic ownership, not merely "writes some rows sometimes.
 | `paa.execution_package_overlays` | `stable_authority` | `Installed Execution Package Manager` | Active overlay state must be queryable in DB. |
 | `paa.transition_inputs` | `runtime_event` | `Runtime Lifecycle Engine` | Structured transition inputs need canonical rows when operationally significant. |
 | `paa.automation_run_events` | `runtime_event` | `Runtime Lifecycle Engine` | Structured run milestones must move out of file-only logs. |
+| `paa.project_delivery_projections` | `projection` | `Reporting And Traceability Projection` | Operator-facing “the Project” view derived from implementation plans, workflow, and execution evidence. |
 | `paa.workflow_status_projections` | `projection` | `Reporting And Traceability Projection` | Optional explicit projection family for operator status. |
 | `paa.lineage_projections` | `projection` | `Reporting And Traceability Projection` | Optional explicit lineage read model. |
 | `paa.accepted_chain_projections` | `projection` | `Reporting And Traceability Projection` | Optional explicit accepted-chain read model. |
@@ -132,7 +138,21 @@ Does not own:
 - workflow state
 - runtime handoff lifecycle
 
-### 3. `Component Design Derivation Engine`
+### 3. `Project Design And Delivery Planning`
+Owns semantics for:
+- implementation-plan derivation
+- consumer-specific build planning
+- selected artifact sets
+- plan-internal sequencing and proving surfaces
+- the bridge from approved slice authority into coder-brief inputs
+
+Does not own:
+- upstream authority publication
+- current workflow truth
+- runtime transport lifecycle
+- operator-facing projection truth
+
+### 4. `Component Design Derivation Engine`
 Owns semantics for:
 - stable component catalog
 - stable component surfaces and structural relationships
@@ -145,7 +165,7 @@ Does not own:
 - queue transport state
 - reporting projections as primary truth
 
-### 4. `Runtime Lifecycle Engine`
+### 5. `Runtime Lifecycle Engine`
 Owns semantics for:
 - handoff execution
 - queue message persistence
@@ -159,7 +179,7 @@ Does not own:
 - stable component design structure
 - projection truth
 
-### 5. `Workflow State Machine`
+### 6. `Workflow State Machine`
 Owns semantics for:
 - current owner
 - current workflow stage
@@ -177,8 +197,9 @@ Consumes but does not own:
 - coder briefs
 - GitHub state
 
-### 6. `Reporting And Traceability Projection`
+### 7. `Reporting And Traceability Projection`
 Owns semantics for:
+- project delivery views
 - lineage views
 - accepted-chain views
 - operator status views

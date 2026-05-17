@@ -381,26 +381,29 @@ These are the next highest-value follow-ons once Priority 0 is underway.
 
 These are important but should follow the direct resume blockers.
 
-9. [ ] add or formalize a primary derivation-state lifecycle owner in the DB/process model
-10. [ ] add or formalize durable brief review / approval history
-11. [ ] strengthen normalized slice-scope / delta-family handling inside derivation state
-12. [ ] decide whether packet-embedding state requires its own primary record or can remain a derived governance state
+9. [ ] add a DB-primary `ImplementationPlan` model for `Project Design`, including consumer-specific artifact selection, plan dependencies, and verification surfaces
+10. [ ] add or formalize a primary derivation-state lifecycle owner in the DB/process model
+11. [ ] add or formalize durable brief review / approval history
+12. [ ] strengthen normalized slice-scope / delta-family handling inside derivation state
+13. [ ] decide whether packet-embedding state requires its own primary record or can remain a derived governance state
 
 ## Priority 3. Model and Queryability Strengthening
 
 These improve rigor, tooling, and later scale, but are not the first restart blockers.
 
-13. [ ] strengthen brief-time boundary modeling for allowed/forbidden edit surfaces and target modules where higher queryability is needed
-14. [ ] strengthen explicit run-level proving-contract linkage between verification obligations and one derived brief
-15. [ ] extend provenance capture so field, target, approval, and packet-readiness transitions are queryable as lifecycle history rather than only embedded JSON
+14. [ ] add project-delivery projection design over `ImplementationPlan`, workflow, and execution evidence so the operator-facing “Project” view is derived from primary planning truth
+15. [ ] strengthen brief-time boundary modeling for allowed/forbidden edit surfaces and target modules where higher queryability is needed
+16. [ ] strengthen explicit run-level proving-contract linkage between verification obligations and one derived brief
+17. [ ] extend provenance capture so field, target, approval, and packet-readiness transitions are queryable as lifecycle history rather than only embedded JSON
 
 ## Priority 4. Producer-Side Tooling Expansion
 
 These are important for making the process truly operational and repeatable across future runs.
 
-16. [ ] add first-class producer-side authoring for component catalog, component elements, and code-artifact targets
-17. [ ] add first-class producer-side derivation subsystem tooling for volatility annotation, deployment annotation, and policy selection
-18. [ ] align producer CLI/API/UI host surfaces to the explicit producer derivation subsystem responsibilities
+18. [ ] add first-class producer-side authoring for component catalog, component elements, and code-artifact targets
+19. [ ] add first-class producer-side derivation subsystem tooling for volatility annotation, deployment annotation, and policy selection
+20. [ ] add assisted `Delivery Architect` tooling for implementation-plan derivation across consumer stacks
+21. [ ] align producer CLI/API/UI host surfaces to the explicit producer derivation subsystem responsibilities
 
 ## Recommended Multi-Run Execution Order
 

@@ -341,7 +341,61 @@ A slice-scoped design artifact bundle describing what work is authorized and how
 - derivation state
 - signoff state
 
-## 20. CoderBrief
+## 20. ImplementationPlan
+
+### Meaning
+A consumer-specific, slice-scoped build plan derived from approved component design and active slice authority.
+
+### Owns
+- implementation-plan identity
+- design-package binding
+- implementation-target binding
+- consumer target context
+- selected code-artifact set
+- touch-surface plan
+- dependency-aware build sequence
+- proving and verification plan
+
+### Important rule
+This is the primary truth object for `Project Design`.
+It is not just another expression of `ImplementationTarget`, and it is not a projection.
+
+## 21. ImplementationPlanArtifact
+
+### Meaning
+One concrete code or build artifact selected by an `ImplementationPlan`.
+
+### Owns
+- artifact type
+- target path or module
+- sequence order
+- realization binding where applicable
+
+## 22. ImplementationPlanDependency
+
+### Meaning
+One directed dependency edge inside an implementation plan.
+
+### Owns
+- predecessor/successor relationship
+- dependency kind
+- critical-path implications
+
+### Important rule
+This is project-design sequencing truth, not workflow truth.
+
+## 23. ImplementationPlanVerificationSurface
+
+### Meaning
+One proving or validation surface attached to an implementation plan.
+
+### Owns
+- surface kind
+- target test or check reference
+- sequence expectation
+- required/optional status
+
+## 24. CoderBrief
 
 ### Meaning
 A coder-agent execution brief derived from a design package and shaped for a specific implementation run.
@@ -356,7 +410,7 @@ A coder-agent execution brief derived from a design package and shaped for a spe
 ### Important rule
 The `CoderBrief` is the direct assignment surface for a coder agent.
 
-## 21. BriefTarget
+## 25. BriefTarget
 
 ### Meaning
 A concrete, sequenced implementation assignment within a `CoderBrief`.
@@ -374,7 +428,7 @@ A concrete, sequenced implementation assignment within a `CoderBrief`.
 ### Important rule
 This is one of the key objects for autonomous implementation control.
 
-## 22. VerificationObligation
+## 26. VerificationObligation
 
 ### Meaning
 A required proof or validation expectation that must be satisfied before acceptance.
@@ -385,7 +439,7 @@ A required proof or validation expectation that must be satisfied before accepta
 - status
 - required-for-acceptance marker
 
-## 23. EvidenceRecord
+## 27. EvidenceRecord
 
 ### Meaning
 A durable record or reference to supporting evidence collected during execution or verification.
@@ -395,7 +449,7 @@ A durable record or reference to supporting evidence collected during execution 
 - CI result linkage
 - artifact proof reference
 
-## 24. Projection
+## 28. Projection
 
 ### Meaning
 A derived read model or reporting view built from primary truth records.
@@ -440,10 +494,15 @@ classDiagram
   CodeArtifactTarget "many" --> "1" CodeArtifactType
 
   Project "1" --> "many" DesignPackage
-  DesignPackage "1" --> "many" CoderBrief
+  DesignPackage "1" --> "many" ImplementationPlan
+  ImplementationPlan "1" --> "many" ImplementationPlanArtifact
+  ImplementationPlanArtifact "many" --> "0..1" CodeArtifactTarget
+  ImplementationPlan "1" --> "many" ImplementationPlanVerificationSurface
+  ImplementationPlan "1" --> "many" CoderBrief
   CoderBrief "1" --> "many" BriefTarget
 
   DesignPackage "many" --> "0..many" Component
+  ImplementationPlan "many" --> "0..many" ComponentElement
   CoderBrief "many" --> "0..many" ComponentElement
   BriefTarget "many" --> "0..1" CodeArtifactTarget
 ```
@@ -471,6 +530,7 @@ classDiagram
 - `PublishedExecutionPackage`
 - `InstalledExecutionPackage`
 - `DesignPackage`
+- `ImplementationPlan`
 - `CoderBrief`
 
 ### Supporting entities
@@ -481,6 +541,9 @@ classDiagram
 - `AutomationRun`
 - `AcceptanceEvent`
 - `ExecutionOverlay`
+- `ImplementationPlanArtifact`
+- `ImplementationPlanDependency`
+- `ImplementationPlanVerificationSurface`
 - `ComponentElement`
 - `CodeArtifactTarget`
 - `BriefTarget`
@@ -505,13 +568,16 @@ Packets matter operationally, but they are not the final record of system truth.
 ### Rule 4. `InstalledExecutionPackage` owns execution-time authority context
 Runtime logic must act within the bounds of the installed package.
 
-### Rule 5. `CoderBrief` and `BriefTarget` are coder-agent assignment objects
+### Rule 5. `ImplementationPlan` is the project-design bridge to coding
+`ImplementationPlan` is the primary truth object that converts approved slice authority into a consumer-specific build plan.
+
+### Rule 6. `CoderBrief` and `BriefTarget` are coder-agent assignment objects
 These objects are the direct bridge from system design into implementation runs.
 
-### Rule 6. `ComponentElementType` and `CodeArtifactType` are taxonomies
+### Rule 7. `ComponentElementType` and `CodeArtifactType` are taxonomies
 They are controlled vocabularies used to reduce implementation drift.
 
-### Rule 7. `Projection` is not a source of truth
+### Rule 8. `Projection` is not a source of truth
 It is a view derived from owned truth objects.
 
 ## Part 3. OO Component Decomposition Derived From The Model

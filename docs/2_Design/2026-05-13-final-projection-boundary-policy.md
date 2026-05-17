@@ -33,9 +33,11 @@ This note locks the following decisions:
 2. runtime-event history is projection input, never projection output.
 3. stable Component Design records are projection input, never projection output.
 4. derivative slice-artifact records are projection input, never projection output.
-5. report JSON, markdown reports, status summaries, readiness summaries, and lineage summaries are projections only.
-6. file-backed projections may remain for inspection and portability, but they may not again become primary operational truth.
-7. the Data Access Layer may expose projection repositories, but those repositories remain read-only over derived state.
+5. implementation-plan records are project-design truth, not projections.
+6. operator-facing project/delivery views are projections only.
+7. report JSON, markdown reports, status summaries, readiness summaries, and lineage summaries are projections only.
+8. file-backed projections may remain for inspection and portability, but they may not again become primary operational truth.
+9. the Data Access Layer may expose projection repositories, but those repositories remain read-only over derived state.
 
 ## Primary Truth Surfaces
 
@@ -65,6 +67,10 @@ The following surfaces are primary truth after normalization.
 ### Derivative slice truth
 - `paa.design_packages`
 - `paa.design_package_signoffs`
+- `paa.implementation_plans`
+- `paa.implementation_plan_artifacts`
+- `paa.implementation_plan_dependencies`
+- `paa.implementation_plan_verification_surfaces`
 - `paa.coder_run_briefs`
 - `paa.component_dependency_edges`
 
@@ -95,6 +101,8 @@ The following surfaces are projections only.
 ### DB-backed projections
 - `paa.coder_brief_sequence_states`
 - `paa.v_work_item_full_chain_traceability`
+- any future:
+  - `paa.project_delivery_projections`
 - any future:
   - `paa.workflow_status_projections`
   - `paa.lineage_projections`
@@ -239,7 +247,20 @@ Primary source:
 ### Readiness and sequence summary
 Primary source:
 - stable and derivative component-design truth
+- implementation-plan truth
 - derived through projection surfaces such as `paa.coder_brief_sequence_states`
+
+### Project / delivery summary
+Primary source:
+- `paa.implementation_plans`
+- `paa.implementation_plan_artifacts`
+- `paa.workflow_states`
+- `paa.workflow_transitions`
+- `paa.coder_run_briefs`
+- runtime execution evidence
+
+Derived through projection surfaces such as:
+- future `paa.project_delivery_projections`
 
 ### Installed package and overlay summary
 Primary source:

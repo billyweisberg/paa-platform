@@ -258,7 +258,6 @@ Without these tables:
 
 ### Missing entity
 - `paa.queue_claims`
-  - or equivalent queue lease records extending `paa.queue_messages` and `paa.handoffs`
 
 ### Why this matters
 
@@ -270,6 +269,36 @@ That is incompatible with a DB-primary workflow model.
 Without a claim/lease table:
 - transport lifecycle is split across DB and local claim JSON
 - the future `Workflow State Repository` cannot rely only on DB truth
+
+## Gap 2A: No DB-primary implementation-plan model
+
+### Missing entities
+- `paa.implementation_plans`
+- `paa.implementation_plan_artifacts`
+- `paa.implementation_plan_dependencies`
+- `paa.implementation_plan_verification_surfaces`
+
+### Why this matters
+
+Today the model has:
+- stable authority
+- design packages
+- implementation targets
+- coder briefs
+
+But it still lacks the primary project-design object that converts approved slice authority into a consumer-specific executable build plan.
+
+Without these entities:
+- `ImplementationTarget` is forced to carry both authority intent and concrete build planning
+- `CoderBrief` is forced to absorb planning details that should already exist
+- the operator-facing “Project” view has no primary planning truth to project from
+
+### Relationship impact
+
+Without this family:
+- `Project Design` remains under-modeled
+- consumer-specific planning differences such as Python vs .NET remain implicit
+- “the Project” is forced to emerge from weaker surrogate records and reports
 
 ## Gap 3: No explicit execution-package install/activation records
 
