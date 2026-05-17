@@ -1,3 +1,32 @@
+-- Step 12: Proof-only closeout support
+--
+-- Adds an explicit proof-only acceptance decision and updates full-chain
+-- reporting so proof-only terminal slices remain visibly distinct from
+-- live accepted / merged slices.
+
+BEGIN;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_enum e
+    JOIN pg_type t ON t.oid = e.enumtypid
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'paa'
+      AND t.typname = 'acceptance_decision'
+      AND e.enumlabel = 'proof_only_closed'
+  ) THEN
+    ALTER TYPE paa.acceptance_decision ADD VALUE 'proof_only_closed';
+  END IF;
+END
+$$;
+
+COMMIT;
+
+-- Recreate reporting view so proof-only closeout remains distinct from
+-- accepted live-delivery closeout in projections.
+
 -- PAA full-chain reporting view
 --
 -- Reusable reporting surface for one-row work-item traceability across:

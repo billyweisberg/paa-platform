@@ -353,3 +353,33 @@ Important follow-on corrections discovered and fixed during self-hosted validati
 - proof-only packet context now provides fallback GitHub issue/PR records when live GitHub linkage is intentionally absent
 - proof-slice `DesignPackage -> WorkItem` materialization now allows issue binding to be added later without forking work-item identity
 - packet-ready promotion now persists `brief_json.execution_readiness.readiness_class = execution_ready` instead of advancing `authority_state` alone
+
+## Status Update After Proof-Only Closeout Validation
+
+Follow-on validation completed on `2026-05-17`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-proof-only-closeout-validation.md`
+
+What changed:
+- formal proof-only closeout is now implemented as a first-class runtime path
+- the proof slice now validates:
+  - `QA Pass -> Proof-Only Closeout`
+  - `Proof-Only Closeout -> Durable Acceptance Event`
+  - `Proof-Only Closeout -> Queue Hygiene`
+  - `Proof-Only Closeout -> Terminal Lineage View`
+
+Updated decision boundary:
+- `GO` for:
+  - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
+  - `Packet -> Consumer Bootstrap`
+  - `Packet -> Full Consumer Lane Execution`
+  - `Packet -> Worker Result`
+  - `Worker Result -> QA Assignment`
+  - `QA Assignment -> QA Pass Packet`
+  - `QA Pass -> Proof-Only Closeout`
+- live closeout remains separate and optional:
+  - live GitHub-backed merge / issue-close validation was not required to complete this proof slice
+
+Important follow-on clarification:
+- the operator-facing runtime lineage now shows `workflow_stage = proof_only_closed`
+- the broad DB full-chain rollup still reports `acceptance_decision = proof_only_closed` without yet promoting this slice to a richer terminal `full_chain_state`
+- that is now a projection refinement opportunity, not a blocker to proof-only closeout governance

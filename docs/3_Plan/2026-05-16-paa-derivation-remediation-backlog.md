@@ -473,6 +473,14 @@ Status update:
   - policy decision:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-proof-only-closeout-policy.md`
     - proof-only closeout should be modeled as a distinct governed path before a live-closeout proof is attempted
+  - `2026-05-17`: proof-only closeout path is now implemented and validated through:
+    - `QA Pass -> Proof-Only Closeout`
+    - durable `proof_only_closed` acceptance event persistence
+    - queue hygiene
+    - terminal lineage visibility
+  - validation record:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-proof-only-closeout-validation.md`
+  - live GitHub-backed closeout remains optional and separate
 
 ## Stop / Continue Rule
 
@@ -497,19 +505,19 @@ Current decision is now split:
   - `Packet -> Worker Result`
   - `Worker Result -> QA Assignment`
   - `QA Assignment -> QA Pass Packet`
-- `NO-GO` for proof-only closeout:
-  - `QA Pass -> Closeout`
+- `GO` for the validated proof-only terminal path:
+  - `QA Pass -> Proof-Only Closeout`
 - `NO-GO` for claiming full `System Design -> Agent Team -> Functioning Software System` from this cycle alone
 
 Current validated result:
 - `Component Design Planning Service` has now been used successfully as the proof slice after Priority 0 and Priority 1 completion
 - packet-ready proof completed on `2026-05-17`
 - self-hosted consumer bootstrap, worker lane, and QA pass proof completed on `2026-05-17`
+- proof-only closeout proof completed on `2026-05-17`
 
 Correct next move:
 - either extend the proof through:
-  - formal proof-only closeout implementation and rerun
-  - then, if still useful, live GitHub-backed closeout
+  - optional live GitHub-backed closeout
 - or deliberately choose whether packet-ready producer-side authority is enough to resume the next implementation step
 
 This keeps the next implementation run honest.

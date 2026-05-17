@@ -9,6 +9,7 @@
     "authority_version": "2026-05-16.1",
     "milestone_id": "m-authority-package-1-0",
     "phase_id": "p-proof-slice-derivation-remediation",
+    "execution_mode": "proof_only",
     "task_id": "paa-p0-component-design-planning-service-slice-package",
     "task_title": "Materialize the proof-slice design package for Component Design Planning Service",
     "predecessor_tasks": [

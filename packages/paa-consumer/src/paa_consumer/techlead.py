@@ -948,6 +948,17 @@ def active_workflow_context(repo_root: Path, project_slug: str):
             qa_packet,
             queues,
         )
+        local_decision_packet = latest_techlead_decision_packet(current_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
+        workflow_stage, owner_role, recommended_actions, _unattended_safe = apply_terminal_lineage_override(
+            local_decision_packet=local_decision_packet,
+            queues=queues,
+            issue=issue,
+            pr=pr,
+            workflow_stage=workflow_stage,
+            owner_role=owner_role,
+            recommended=recommended_actions,
+            unattended_safe=_unattended_safe,
+        )
     return {
         'authority': current,
         'manifest': manifest,
@@ -961,6 +972,32 @@ def active_workflow_context(repo_root: Path, project_slug: str):
         'recommended_actions': recommended_actions,
         'project_slug': project_slug,
     }
+
+
+def apply_terminal_lineage_override(
+    *,
+    local_decision_packet: dict | None,
+    queues: dict,
+    issue: dict | None,
+    pr: dict | None,
+    workflow_stage: str,
+    owner_role: str,
+    recommended: list,
+    unattended_safe: bool,
+) -> tuple[str, str, list, bool]:
+    if not local_decision_packet:
+        return workflow_stage, owner_role, recommended, unattended_safe
+    payload = local_decision_packet.get('payload') or {}
+    if payload.get('lineage_state') != 'closed':
+        return workflow_stage, owner_role, recommended, unattended_safe
+    if any((queue_data.get('preview') or []) for queue_data in queues.values()):
+        return workflow_stage, owner_role, recommended, unattended_safe
+    latest_lineage_action = payload.get('lineage_action')
+    if latest_lineage_action == 'proof_only_closed':
+        return 'proof_only_closed', 'TechLead', [], True
+    if pr and pr.get('mergedAt') and (issue and (issue.get('state') or '').upper() == 'CLOSED'):
+        return 'techlead_decision_recorded', 'TechLead', [], True
+    return workflow_stage, owner_role, recommended, unattended_safe
 
 
 def automation_preflight(args):
@@ -1127,16 +1164,16 @@ def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: 
     )
     workflow_stage, owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
     lineage = derive_lineage_section(current_task, pr, queues, escalations, reports_dir=repo_reports_dir(repo_root))
-    if (
-        local_decision_packet
-        and (local_decision_packet.get('payload') or {}).get('lineage_state') == 'closed'
-        and not any((queue_data.get('preview') or []) for queue_data in queues.values())
-        and pr
-        and pr.get('mergedAt')
-        and (issue.get('state') or '').upper() == 'CLOSED'
-    ):
-        workflow_stage = 'techlead_decision_recorded'
-        owner_role = 'TechLead'
+    workflow_stage, owner_role, recommended, unattended_safe = apply_terminal_lineage_override(
+        local_decision_packet=local_decision_packet,
+        queues=queues,
+        issue=issue,
+        pr=pr,
+        workflow_stage=workflow_stage,
+        owner_role=owner_role,
+        recommended=recommended,
+        unattended_safe=unattended_safe,
+    )
     ambiguity_reasons = []
     if lineage['current_packet_type'] is None and lineage['canonical_branch'] is None and not pr:
         ambiguity_reasons.append('no_lineage_packet_or_pr_context')
@@ -1848,6 +1885,7 @@ def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJEC
         qa_packet = latest_qa_packet(report_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
         fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
         fallback_packet = latest_packet_preview(queues, report_task['issue_number']) or inferred_packet
+        local_decision_packet = latest_techlead_decision_packet(report_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
         issue, pr = github_state(
             report_task['issue_number'],
             github_repo_for_root(repo_root),
@@ -1860,6 +1898,16 @@ def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJEC
         recommended.extend(wf_recommended)
         unattended_safe = unattended_safe and wf_safe
         lineage = derive_lineage_section(report_task, pr, queues, escalations)
+        workflow_stage, owner_role, recommended, unattended_safe = apply_terminal_lineage_override(
+            local_decision_packet=local_decision_packet,
+            queues=queues,
+            issue=issue,
+            pr=pr,
+            workflow_stage=workflow_stage,
+            owner_role=owner_role,
+            recommended=recommended,
+            unattended_safe=unattended_safe,
+        )
 
         last_qa_verdict = qa_packet.get('verification_status') if qa_packet else 'unknown'
         superseded = any(e.get('event_type') == 'qa_escalation_superseded' for e in escalations)
@@ -2017,6 +2065,14 @@ def resolve_work_item_id(db_container, db_name, db_user, project_slug, issue_num
     return output or None
 
 
+def package_execution_mode(package: dict | None) -> str:
+    authority_context = (package or {}).get('authority_context') or {}
+    mode = authority_context.get('execution_mode')
+    if not mode:
+        return 'live_delivery'
+    return str(mode)
+
+
 def persist_techlead_acceptance_event(
     db_container,
     db_name,
@@ -2025,13 +2081,17 @@ def persist_techlead_acceptance_event(
     issue_number,
     qa_packet,
     pr_state,
+    *,
+    decision='accepted',
+    decision_notes=None,
+    metadata_extra=None,
 ):
     issue_number = int(issue_number)
-    decision_notes = (
+    resolved_notes = decision_notes or (
         f"TechLead accepted issue #{issue_number} after QA pass from packet "
         f"{qa_packet.get('message_id')} and merged PR #{pr_state.get('number')}."
     )
-    metadata_json = json.dumps({
+    metadata = {
         'qa_packet_id': qa_packet.get('message_id'),
         'qa_verification_status': qa_packet.get('verification_status'),
         'merge_recommendation': ((qa_packet.get('recommended_action') or {}).get('merge_recommendation')),
@@ -2039,7 +2099,10 @@ def persist_techlead_acceptance_event(
         'pr_url': pr_state.get('url'),
         'merge_state_status': pr_state.get('mergeStateStatus'),
         'merged_at': pr_state.get('mergedAt'),
-    })
+    }
+    if metadata_extra:
+        metadata.update(metadata_extra)
+    metadata_json = json.dumps(metadata)
     sql = f"""
     WITH project AS (
       SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
@@ -2078,17 +2141,20 @@ def persist_techlead_acceptance_event(
       work_item.work_item_id,
       techlead_agent.agent_id,
       techlead_role.role_id,
-      'accepted'::paa.acceptance_decision,
-      {sql_literal(decision_notes)},
+      {sql_literal(decision)}::paa.acceptance_decision,
+      {sql_literal(resolved_notes)},
       {sql_literal(pr_state.get('mergeCommit', {}).get('oid'))},
       {sql_literal(metadata_json)}::jsonb,
       {sql_literal(pr_state.get('mergedAt') or qa_packet.get('created_at'))}::timestamptz
-    FROM project, work_item, techlead_agent, techlead_role
+    FROM project
+    JOIN work_item ON TRUE
+    LEFT JOIN techlead_agent ON TRUE
+    LEFT JOIN techlead_role ON TRUE
     WHERE NOT EXISTS (
       SELECT 1
       FROM paa.acceptance_events ae
       WHERE ae.work_item_id = work_item.work_item_id
-        AND ae.decision = 'accepted'::paa.acceptance_decision
+        AND ae.decision = {sql_literal(decision)}::paa.acceptance_decision
         AND ae.metadata_json->>'qa_packet_id' = {sql_literal(qa_packet.get('message_id'))}
     );
     """
@@ -2813,7 +2879,7 @@ def derive_decision_context(args) -> dict:
             'unattended_safe': unattended_safe,
         }
 
-    if args.decision_type == 'closed':
+    if args.decision_type in {'closed', 'proof_only_closed'}:
         if pr_number is None and issue_url is None:
             return {
                 'ok': False,
@@ -2828,6 +2894,7 @@ def derive_decision_context(args) -> dict:
                 'reason': 'closed_missing_source_packet',
                 'details': 'closed decision emission requires an explicit source packet path or a resolved QA packet path.',
             }
+        is_proof_only = args.decision_type == 'proof_only_closed'
         return {
             'ok': True,
             'workflow_stage': workflow_stage,
@@ -2838,15 +2905,19 @@ def derive_decision_context(args) -> dict:
             'branch': branch_name,
             'to_role': 'techlead',
             'target_role_cli': None,
-            'decision_type': 'close_slice',
-            'decision_rationale': 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.',
+            'decision_type': 'proof_only_close_slice' if is_proof_only else 'close_slice',
+            'decision_rationale': (
+                'TechLead is recording the proof slice as proof-only closed after QA pass without requiring live merge or issue closure.'
+                if is_proof_only
+                else 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.'
+            ),
             'next_assignment_type': None,
-            'work_item_status_update_intent': 'accepted',
+            'work_item_status_update_intent': 'proof_only_closed' if is_proof_only else 'accepted',
             'canonical_branch': canonical_branch,
             'role_branch': role_branch,
             'branch_owner_role': 'TechLead',
             'lineage_state': 'closed',
-            'lineage_action': 'closed',
+            'lineage_action': 'proof_only_closed' if is_proof_only else 'closed',
             'source_branch': canonical_branch,
             'superseded_branch': args.superseded_branch,
             'worktree_hint': args.worktree_hint,
@@ -2977,6 +3048,9 @@ def emit_decision(args):
 
 def closeout_qa_pass(args):
     repo_root = args.repo_root.resolve()
+    package = load_design_package(args.project_slug, args.package_id_external)
+    execution_mode = package_execution_mode(package)
+    proof_only = execution_mode == 'proof_only'
     qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
     if qa_packet is None:
         return {
@@ -3002,7 +3076,7 @@ def closeout_qa_pass(args):
     )
     pr_merged = bool(pr_full and pr_full.get('mergedAt'))
     issue_closed = (issue_full.get('state') or '').upper() == 'CLOSED'
-    if not pr_merged and not issue_closed:
+    if not pr_merged and not issue_closed and not proof_only:
         return {
             'ok': False,
             'reason': 'slice_not_merged_or_closed',
@@ -3023,6 +3097,19 @@ def closeout_qa_pass(args):
         args.issue_number,
         qa_packet,
         pr_full or {},
+        decision='proof_only_closed' if proof_only else 'accepted',
+        decision_notes=(
+            f"TechLead recorded proof-only closeout for issue #{args.issue_number} after QA pass from packet "
+            f"{qa_packet.get('message_id')} without requiring live merge or issue closure."
+            if proof_only
+            else None
+        ),
+        metadata_extra={
+            'closeout_mode': 'proof_only' if proof_only else 'live_delivery',
+            'proof_only_closeout': proof_only,
+            'issue_closed_at_closeout': issue_closed,
+            'pr_merged_at_closeout': pr_merged,
+        },
     )
 
     emit_args = SimpleNamespace(
@@ -3030,7 +3117,7 @@ def closeout_qa_pass(args):
         package_id_external=args.package_id_external,
         brief_id_external=args.brief_id_external,
         project_slug=args.project_slug,
-        decision_type='closed',
+        decision_type='proof_only_closed' if proof_only else 'closed',
         send=args.send_decision,
         source_packet_path=Path(qa_packet['path']),
         canonical_branch=args.canonical_branch,
@@ -3133,6 +3220,8 @@ def closeout_qa_pass(args):
     return {
         'ok': True,
         'issue_number': args.issue_number,
+        'execution_mode': execution_mode,
+        'closeout_mode': 'proof_only' if proof_only else 'live_delivery',
         'qa_packet': qa_packet,
         'github_state': {
             'issue_state': issue_full.get('state'),

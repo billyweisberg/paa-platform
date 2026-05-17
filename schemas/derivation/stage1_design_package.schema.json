@@ -36,6 +36,7 @@
         "authority_version": {"type": "string", "minLength": 1},
         "milestone_id": {"type": "string", "minLength": 1},
         "phase_id": {"type": "string", "minLength": 1},
+        "execution_mode": {"enum": ["live_delivery", "proof_only"]},
         "task_id": {"type": "string", "minLength": 1},
         "task_title": {"type": "string", "minLength": 1},
         "predecessor_tasks": {"type": "array", "items": {"type": "string", "minLength": 1}},

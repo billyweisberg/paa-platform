@@ -437,7 +437,11 @@ def _ensure_design_package(
     metadata = {
         'task_id': package['authority_context'].get('task_id'),
         'issue_number': package['authority_context'].get('issue_number'),
-        'proof_slice': package['authority_context'].get('issue_number') is None,
+        'execution_mode': package['authority_context'].get('execution_mode') or 'live_delivery',
+        'proof_slice': (
+            (package['authority_context'].get('execution_mode') == 'proof_only')
+            or package['authority_context'].get('issue_number') is None
+        ),
     }
     sql = f"""
     INSERT INTO paa.design_packages (
