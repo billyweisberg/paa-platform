@@ -68,8 +68,9 @@ The following surfaces are primary truth after normalization.
 - `paa.design_packages`
 - `paa.design_package_signoffs`
 - `paa.implementation_plans`
+- `paa.implementation_plan_activities`
 - `paa.implementation_plan_artifacts`
-- `paa.implementation_plan_dependencies`
+- `paa.implementation_plan_activity_dependencies`
 - `paa.implementation_plan_verification_surfaces`
 - `paa.coder_run_briefs`
 - `paa.component_dependency_edges`
@@ -253,6 +254,7 @@ Primary source:
 ### Project / delivery summary
 Primary source:
 - `paa.implementation_plans`
+- `paa.implementation_plan_activities`
 - `paa.implementation_plan_artifacts`
 - `paa.workflow_states`
 - `paa.workflow_transitions`

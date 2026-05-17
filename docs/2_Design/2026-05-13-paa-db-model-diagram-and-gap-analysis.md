@@ -274,8 +274,9 @@ Without a claim/lease table:
 
 ### Missing entities
 - `paa.implementation_plans`
+- `paa.implementation_plan_activities`
 - `paa.implementation_plan_artifacts`
-- `paa.implementation_plan_dependencies`
+- `paa.implementation_plan_activity_dependencies`
 - `paa.implementation_plan_verification_surfaces`
 
 ### Why this matters

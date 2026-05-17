@@ -80,8 +80,9 @@ Ownership here means semantic ownership, not merely "writes some rows sometimes.
 | `paa.work_items` | `stable_authority` | `Authority Publication And Derivation` | `keep` | Work-item identity and scope anchor. |
 | `paa.design_packages` | `derivative_slice` | `Component Design Derivation Engine` | `extend` | Reviewed Stage 1 slice packages. |
 | `paa.implementation_plans` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Primary project-design truth for one consumer-specific build plan derived from slice authority. |
-| `paa.implementation_plan_artifacts` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Concrete artifact set selected by one implementation plan. |
-| `paa.implementation_plan_dependencies` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Internal implementation-plan dependency graph and critical-path truth. |
+| `paa.implementation_plan_activities` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Authoritative project-activity list for one implementation plan. |
+| `paa.implementation_plan_artifacts` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Concrete artifact set produced or modified by one implementation-plan activity. |
+| `paa.implementation_plan_activity_dependencies` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Internal implementation-plan activity dependency graph and critical-path truth. |
 | `paa.implementation_plan_verification_surfaces` | `derivative_slice` | `Project Design And Delivery Planning` | `add` | Proving and verification surfaces bound to one implementation plan. |
 | `paa.design_package_signoffs` | `derivative_slice` | `Component Design Derivation Engine` | `keep` | Signoff history over derivative packages. |
 | `paa.coder_run_briefs` | `derivative_slice` | `Component Design Derivation Engine` | `extend` | Execution-facing slice briefs derived from packages. |

@@ -149,7 +149,7 @@ A consumer-specific, slice-scoped build plan derived from approved design author
 - design-package binding
 - implementation-target binding
 - consumer target context
-- selected artifact set
+- authoritative activity list
 - build sequence
 - proving contract
 - plan status and approval state
@@ -168,18 +168,31 @@ This is a primary truth object for planning, not merely a rendered report.
 
 ## Proposed Supporting Objects
 
-### `ImplementationPlanArtifact`
-Represents one concrete code or build artifact in the plan.
+### `ImplementationPlanActivity`
+Represents one build activity in the plan.
 
 Examples:
-- service interface
-- DTO module
-- service implementation
-- test module
-- package export
+- implement service interface
+- implement DTO module
+- implement service implementation
+- add test module
+- prepare package export
 
-### `ImplementationPlanDependency`
-Represents one directed dependency edge inside the plan.
+Important rule:
+This is the authoritative project-activity list for the slice.
+
+### `ImplementationPlanArtifact`
+Represents one concrete code or build artifact produced or modified by one implementation-plan activity.
+
+Examples:
+- service interface module
+- DTO module
+- service implementation module
+- test module
+- package export surface
+
+### `ImplementationPlanActivityDependency`
+Represents one directed dependency edge between implementation-plan activities.
 
 Examples:
 - DTO before service implementation
@@ -238,13 +251,42 @@ Important note:
 - some of these JSON surfaces should probably normalize further over time
 - but one primary root row is needed immediately
 
-## 2. `paa.implementation_plan_artifacts`
+## 2. `paa.implementation_plan_activities`
+
+One row per authoritative build activity in the plan.
+
+Suggested fields:
+- `implementation_plan_activity_id UUID PRIMARY KEY`
+- `implementation_plan_id UUID NOT NULL`
+- `component_element_id UUID`
+- `component_element_realization_id UUID`
+- `activity_key TEXT NOT NULL`
+- `activity_title TEXT NOT NULL`
+- `activity_kind TEXT NOT NULL`
+- `sequence_order INTEGER`
+- `activity_state TEXT NOT NULL`
+- `target_path TEXT`
+- `target_module TEXT`
+- `blocking_reason TEXT`
+- `started_at TIMESTAMPTZ`
+- `completed_at TIMESTAMPTZ`
+- `metadata_json JSONB`
+
+Important note:
+- this table is the primary answer to:
+  - what are the project activities?
+  - which one is current?
+  - what comes next?
+  - what is blocked?
+
+## 3. `paa.implementation_plan_artifacts`
 
 One row per selected artifact in the plan.
 
 Suggested fields:
 - `implementation_plan_artifact_id UUID PRIMARY KEY`
 - `implementation_plan_id UUID NOT NULL`
+- `implementation_plan_activity_id UUID`
 - `component_element_id UUID`
 - `component_element_realization_id UUID`
 - `artifact_type_key TEXT NOT NULL`
@@ -254,28 +296,32 @@ Suggested fields:
 - `status TEXT`
 - `metadata_json JSONB`
 
-## 3. `paa.implementation_plan_dependencies`
+## 4. `paa.implementation_plan_activity_dependencies`
 
 Directed internal plan graph.
 
 Suggested fields:
+- `implementation_plan_activity_dependency_id UUID PRIMARY KEY`
 - `implementation_plan_id UUID NOT NULL`
-- `predecessor_artifact_id UUID NOT NULL`
-- `successor_artifact_id UUID NOT NULL`
+- `predecessor_activity_id UUID NOT NULL`
+- `successor_activity_id UUID NOT NULL`
 - `dependency_kind TEXT`
+- `dependency_strength TEXT`
 - `metadata_json JSONB`
 
-## 4. `paa.implementation_plan_verification_surfaces`
+## 5. `paa.implementation_plan_verification_surfaces`
 
 Proving and validation surfaces for the plan.
 
 Suggested fields:
 - `implementation_plan_verification_surface_id UUID PRIMARY KEY`
 - `implementation_plan_id UUID NOT NULL`
+- `implementation_plan_activity_id UUID`
 - `surface_kind TEXT NOT NULL`
 - `surface_ref TEXT`
 - `required BOOLEAN`
 - `sequence_order INTEGER`
+- `status TEXT`
 - `metadata_json JSONB`
 
 ## Classification And Ownership
@@ -319,6 +365,20 @@ Important rule:
 - this family should sit between producer-side derivation and coder-brief execution authority
 - it should not be collapsed into generic producer tooling
 
+## Activity-Centric Truth Rule
+
+The authoritative project activity list should live in:
+- `paa.implementation_plan_activities`
+
+The system should not infer the activity list only from:
+- `CoderBrief`
+- runtime queue packets
+- report JSON
+- freeform implementation-plan notes
+
+Those can support execution and display.
+They should not replace the primary activity list.
+
 ## Relationship To Projection
 
 This is the key distinction:
@@ -351,6 +411,10 @@ Future projection family:
 
 Possible projection outputs:
 - current slice plan state
+- current activity
+- next activity
+- completed activity set
+- blocked activity set
 - critical path
 - blocked artifact count
 - approved vs executing vs complete plans

@@ -351,7 +351,7 @@ A consumer-specific, slice-scoped build plan derived from approved component des
 - design-package binding
 - implementation-target binding
 - consumer target context
-- selected code-artifact set
+- authoritative activity list
 - touch-surface plan
 - dependency-aware build sequence
 - proving and verification plan
@@ -360,10 +360,26 @@ A consumer-specific, slice-scoped build plan derived from approved component des
 This is the primary truth object for `Project Design`.
 It is not just another expression of `ImplementationTarget`, and it is not a projection.
 
-## 21. ImplementationPlanArtifact
+## 21. ImplementationPlanActivity
 
 ### Meaning
-One concrete code or build artifact selected by an `ImplementationPlan`.
+One build activity inside an `ImplementationPlan`.
+
+### Owns
+- activity identity
+- activity title / kind
+- sequence order
+- activity state
+- target path or module where applicable
+- blocking reason when not executable
+
+### Important rule
+This is the authoritative project-activity list for the slice.
+
+## 22. ImplementationPlanArtifact
+
+### Meaning
+One concrete code or build artifact produced or modified by an `ImplementationPlanActivity`.
 
 ### Owns
 - artifact type
@@ -371,10 +387,10 @@ One concrete code or build artifact selected by an `ImplementationPlan`.
 - sequence order
 - realization binding where applicable
 
-## 22. ImplementationPlanDependency
+## 23. ImplementationPlanActivityDependency
 
 ### Meaning
-One directed dependency edge inside an implementation plan.
+One directed dependency edge between implementation-plan activities.
 
 ### Owns
 - predecessor/successor relationship
@@ -384,7 +400,7 @@ One directed dependency edge inside an implementation plan.
 ### Important rule
 This is project-design sequencing truth, not workflow truth.
 
-## 23. ImplementationPlanVerificationSurface
+## 24. ImplementationPlanVerificationSurface
 
 ### Meaning
 One proving or validation surface attached to an implementation plan.
@@ -395,7 +411,7 @@ One proving or validation surface attached to an implementation plan.
 - sequence expectation
 - required/optional status
 
-## 24. CoderBrief
+## 25. CoderBrief
 
 ### Meaning
 A coder-agent execution brief derived from a design package and shaped for a specific implementation run.
@@ -410,7 +426,7 @@ A coder-agent execution brief derived from a design package and shaped for a spe
 ### Important rule
 The `CoderBrief` is the direct assignment surface for a coder agent.
 
-## 25. BriefTarget
+## 26. BriefTarget
 
 ### Meaning
 A concrete, sequenced implementation assignment within a `CoderBrief`.
@@ -428,7 +444,7 @@ A concrete, sequenced implementation assignment within a `CoderBrief`.
 ### Important rule
 This is one of the key objects for autonomous implementation control.
 
-## 26. VerificationObligation
+## 27. VerificationObligation
 
 ### Meaning
 A required proof or validation expectation that must be satisfied before acceptance.
@@ -439,7 +455,7 @@ A required proof or validation expectation that must be satisfied before accepta
 - status
 - required-for-acceptance marker
 
-## 27. EvidenceRecord
+## 28. EvidenceRecord
 
 ### Meaning
 A durable record or reference to supporting evidence collected during execution or verification.
@@ -449,7 +465,7 @@ A durable record or reference to supporting evidence collected during execution 
 - CI result linkage
 - artifact proof reference
 
-## 28. Projection
+## 29. Projection
 
 ### Meaning
 A derived read model or reporting view built from primary truth records.
@@ -495,7 +511,9 @@ classDiagram
 
   Project "1" --> "many" DesignPackage
   DesignPackage "1" --> "many" ImplementationPlan
+  ImplementationPlan "1" --> "many" ImplementationPlanActivity
   ImplementationPlan "1" --> "many" ImplementationPlanArtifact
+  ImplementationPlanActivity "1" --> "many" ImplementationPlanArtifact
   ImplementationPlanArtifact "many" --> "0..1" CodeArtifactTarget
   ImplementationPlan "1" --> "many" ImplementationPlanVerificationSurface
   ImplementationPlan "1" --> "many" CoderBrief
@@ -541,8 +559,9 @@ classDiagram
 - `AutomationRun`
 - `AcceptanceEvent`
 - `ExecutionOverlay`
+- `ImplementationPlanActivity`
 - `ImplementationPlanArtifact`
-- `ImplementationPlanDependency`
+- `ImplementationPlanActivityDependency`
 - `ImplementationPlanVerificationSurface`
 - `ComponentElement`
 - `CodeArtifactTarget`
@@ -571,13 +590,16 @@ Runtime logic must act within the bounds of the installed package.
 ### Rule 5. `ImplementationPlan` is the project-design bridge to coding
 `ImplementationPlan` is the primary truth object that converts approved slice authority into a consumer-specific build plan.
 
-### Rule 6. `CoderBrief` and `BriefTarget` are coder-agent assignment objects
+### Rule 6. `ImplementationPlanActivity` is the authoritative activity list
+Current, next, completed, and blocked project activities should derive from implementation-plan activity truth plus workflow/runtime state.
+
+### Rule 7. `CoderBrief` and `BriefTarget` are coder-agent assignment objects
 These objects are the direct bridge from system design into implementation runs.
 
-### Rule 7. `ComponentElementType` and `CodeArtifactType` are taxonomies
+### Rule 8. `ComponentElementType` and `CodeArtifactType` are taxonomies
 They are controlled vocabularies used to reduce implementation drift.
 
-### Rule 8. `Projection` is not a source of truth
+### Rule 9. `Projection` is not a source of truth
 It is a view derived from owned truth objects.
 
 ## Part 3. OO Component Decomposition Derived From The Model
