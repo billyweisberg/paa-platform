@@ -101,7 +101,7 @@ class PacketPreparationOptions:
     review_output_path: Path | None = None
     schema_path: Path | None = None
     project_slug: str | None = None
-    packet_project: str = 'paa'
+    packet_project: str | None = None
     remaining_gap: str | None = None
     next_move: tuple[str, ...] = ()
     focus: tuple[str, ...] = ()
@@ -347,7 +347,7 @@ def _build_packet(*, context: PacketBriefContext, package: dict[str, Any], optio
         'message_id': options.message_id or f"paa-arch-{datetime.now(timezone.utc).date().isoformat()}-issue{options.next_issue_number}-{package['authority_context']['task_id']}",
         'schema_type': 'architect_cycle_packet',
         'schema_version': '1.0.0',
-        'project': options.packet_project,
+        'project': options.packet_project or context.project_slug,
         'from_role': 'architect',
         'to_role': 'python-team',
         'created_at': created_at,

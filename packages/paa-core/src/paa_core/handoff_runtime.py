@@ -281,11 +281,56 @@ def issue_number_from_message(message: dict) -> Optional[int]:
         return None
 
 
+def resolve_work_item_id_from_message(message: dict) -> Optional[str]:
+    project_slug = project_slug_from_message(message)
+    issue_number = issue_number_from_message(message)
+    payload = message.get("payload") or {}
+    coder_brief_resolution = payload.get("coder_brief_resolution") or {}
+    package_id_external = coder_brief_resolution.get("package_id_external")
+    brief_id_external = coder_brief_resolution.get("brief_id_external")
+    sql = f"""
+    WITH project AS (
+      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1
+    ), issue_match AS (
+      SELECT wi.work_item_id
+      FROM paa.work_items wi
+      JOIN project p ON p.project_id = wi.project_id
+      WHERE wi.issue_number = {sql_literal(issue_number)}
+      LIMIT 1
+    ), package_match AS (
+      SELECT dp.work_item_id
+      FROM paa.design_packages dp
+      JOIN project p ON p.project_id = dp.project_id
+      WHERE dp.package_id_external = {sql_literal(package_id_external)}
+        AND dp.work_item_id IS NOT NULL
+      LIMIT 1
+    ), brief_match AS (
+      SELECT cb.work_item_id
+      FROM paa.coder_run_briefs cb
+      JOIN project p ON p.project_id = cb.project_id
+      WHERE cb.brief_id_external = {sql_literal(brief_id_external)}
+        AND cb.work_item_id IS NOT NULL
+      LIMIT 1
+    )
+    SELECT coalesce(
+      (SELECT work_item_id::text FROM issue_match),
+      (SELECT work_item_id::text FROM package_match),
+      (SELECT work_item_id::text FROM brief_match)
+    );
+    """
+    try:
+        out = run_psql(sql).strip()
+    except Exception as exc:
+        print(json.dumps({"warning": f"failed to resolve work item for handoff send: {str(exc)}"}), file=sys.stderr)
+        return None
+    return out or None
+
+
 def persist_send_event(message: dict, queue_name: str, publish_result: Optional[dict] = None):
     project_slug = project_slug_from_message(message)
     from_role = role_name_for_db(message.get("from_role"))
     to_role = role_name_for_db(message.get("to_role"))
-    issue_number = issue_number_from_message(message)
+    resolved_work_item_id = resolve_work_item_id_from_message(message)
     payload_json = json.dumps(message)
     packet_compilation = lookup_packet_compilation_run(message)
     metadata = {
@@ -309,12 +354,6 @@ def persist_send_event(message: dict, queue_name: str, publish_result: Optional[
     ), to_role AS (
       SELECT role_id FROM paa.roles r JOIN project p ON p.project_id = r.project_id
       WHERE r.name = {sql_literal(to_role)}
-    ), work_item AS (
-      SELECT wi.work_item_id
-      FROM paa.work_items wi
-      JOIN project p ON p.project_id = wi.project_id
-      WHERE wi.issue_number = {sql_literal(issue_number)}
-      LIMIT 1
     ), existing AS (
       SELECT qm.queue_message_id
       FROM paa.queue_messages qm
@@ -335,7 +374,7 @@ def persist_send_event(message: dict, queue_name: str, publish_result: Optional[
       )
       SELECT
         project.project_id,
-        (SELECT work_item_id FROM work_item),
+        {sql_literal(resolved_work_item_id)}::uuid,
         (SELECT role_id FROM from_role),
         (SELECT role_id FROM to_role),
         {sql_literal(message.get("schema_type"))},

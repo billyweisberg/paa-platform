@@ -294,7 +294,7 @@ def main() -> int:
         argp.add_argument('--review-output')
         argp.add_argument('--schema-path')
         argp.add_argument('--project-slug')
-        argp.add_argument('--packet-project', default='paa')
+        argp.add_argument('--packet-project')
         argp.add_argument('--remaining-gap')
         argp.add_argument('--next-move', action='append')
         argp.add_argument('--focus', action='append')

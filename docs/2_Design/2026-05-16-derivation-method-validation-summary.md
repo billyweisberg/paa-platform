@@ -285,10 +285,34 @@ Updated decision boundary:
 - `GO` for:
   - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
 - still not yet proven in this cycle:
-  - queue dispatch and consumer-lane execution
+  - full consumer-lane startup
   - QA / merge completion
   - full `System Design -> Agent Team -> Functioning Software System`
 
 Important follow-on correction discovered and fixed during packet preparation:
 - packet preparation now emits a packet-ready brief artifact rather than copying the approved draft blindly
 - `coder_run_brief_ref.schema_path` now points to the coder-brief schema instead of the packet schema
+
+## Status Update After Handoff / Consumer Claim Validation
+
+Follow-on validation completed on `2026-05-17`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md`
+
+What changed:
+- the proof slice now validates the next transport boundary:
+  - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
+- the proof slice also validates queue-side consumer claimability and embedded brief consumption:
+  - `Packet -> Consumer Queue Claim / Envelope Consumption`
+
+Updated decision boundary:
+- `GO` for:
+  - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
+  - `Packet -> Consumer Queue Claim / Envelope Consumption`
+- still not yet fully proven in this cycle:
+  - installed self-hosted consumer-lane startup
+  - role-entry / worktree execution from the proof packet
+  - QA / merge completion
+  - full `System Design -> Agent Team -> Functioning Software System`
+
+Important follow-on correction discovered and fixed during handoff validation:
+- handoff persistence now resolves proof-slice `work_item_id` from package/brief authority when no issue-number anchor exists

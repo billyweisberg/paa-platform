@@ -456,7 +456,12 @@ Status update:
   - `2026-05-17`: the proof slice now validates `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
   - validation record:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-component-design-planning-service-packet-ready-validation.md`
-  - queue dispatch, consumer execution, QA, and merge are still separate next gates
+  - `2026-05-17`: follow-on transport validation now also covers:
+    - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
+    - `Packet -> Consumer Queue Claim / Envelope Consumption`
+  - validation record:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md`
+  - installed self-hosted consumer execution, QA, and merge are still separate next gates
 
 ## Stop / Continue Rule
 
@@ -472,6 +477,9 @@ Resume authoritative implementation only when those three are resolved for the p
 Current decision is now split:
 - `GO` for the validated producer-side path:
   - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
+- `GO` for the validated transport-consumption extension:
+  - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
+  - `Packet -> Consumer Queue Claim / Envelope Consumption`
 - `NO-GO` for claiming full `System Design -> Agent Team -> Functioning Software System` from this cycle alone
 
 Current validated result:
@@ -480,8 +488,7 @@ Current validated result:
 
 Correct next move:
 - either extend the proof through:
-  - queue dispatch
-  - consumer execution
+  - installed self-hosted consumer execution
   - QA / merge closeout
 - or deliberately choose whether packet-ready producer-side authority is enough to resume the next implementation step
 

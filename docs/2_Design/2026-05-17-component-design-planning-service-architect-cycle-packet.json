@@ -2,10 +2,10 @@
   "message_id": "paa-arch-2026-05-17-issue9002-paa-p0-component-design-planning-service-slice-package",
   "schema_type": "architect_cycle_packet",
   "schema_version": "1.0.0",
-  "project": "paa",
+  "project": "paa-platform",
   "from_role": "architect",
   "to_role": "python-team",
-  "created_at": "2026-05-17T14:24:24Z",
+  "created_at": "2026-05-17T14:35:58Z",
   "correlation_id": "issue-9002",
   "github_context": {
     "repo": "billyweisberg/paa-platform",
