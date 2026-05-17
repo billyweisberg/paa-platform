@@ -342,6 +342,11 @@ Updated decision boundary:
   - `QA Pass -> Closeout`
   - full `System Design -> Agent Team -> Functioning Software System`
 
+Policy decision taken after this validation:
+- proof-only closeout should become a first-class governed terminal path rather than borrowing live merge / issue-close semantics
+- policy record:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-proof-only-closeout-policy.md`
+
 Important follow-on corrections discovered and fixed during self-hosted validation:
 - self-hosted consumer runtime now resolves its installed authority manifest dynamically instead of assuming `fractal-core-python-authority.json`
 - self-hosted consumer runtime now resolves GitHub repo identity from installed authority rather than hardcoding `billyweisberg/fractal-core-python`

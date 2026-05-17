@@ -470,6 +470,9 @@ Status update:
   - validation record:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md`
   - closeout remains a separate gate because proof-only GitHub linkage correctly blocks `QA Pass -> Closeout`
+  - policy decision:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-proof-only-closeout-policy.md`
+    - proof-only closeout should be modeled as a distinct governed path before a live-closeout proof is attempted
 
 ## Stop / Continue Rule
 
@@ -505,7 +508,8 @@ Current validated result:
 
 Correct next move:
 - either extend the proof through:
-  - live GitHub-backed closeout
+  - formal proof-only closeout implementation and rerun
+  - then, if still useful, live GitHub-backed closeout
 - or deliberately choose whether packet-ready producer-side authority is enough to resume the next implementation step
 
 This keeps the next implementation run honest.

@@ -147,10 +147,12 @@ Reason:
 - this proof slice intentionally used proof-only GitHub linkage rather than live issue/PR records
 
 ## Recommended next move
-Choose one of these two paths explicitly:
-1. live-closeout proof
+Decision taken on `2026-05-17`:
+1. formal proof-only closeout policy first
+   - policy record:
+     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-proof-only-closeout-policy.md`
+   - rationale:
+     - define whether proof slices have a distinct governed terminal state before creating live GitHub side effects
+2. live-closeout proof later, if still useful
    - create a real proof issue and PR in `billyweisberg/paa-platform`
    - re-run the proof slice from packet-ready authority through closeout against live GitHub state
-2. formal proof-only closeout policy
-   - define whether PAA should support a governed proof-only closeout mode that does not require live GitHub merge/issue closure
-   - if yes, model it explicitly instead of smuggling it through the normal acceptance path
