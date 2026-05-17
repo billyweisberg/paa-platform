@@ -1,0 +1,22 @@
+services:
+  paa-postgres:
+    image: postgres:16-alpine
+    container_name: paa-postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PAA_LOCAL_DB_NAME:-paa_dev}
+      POSTGRES_USER: ${PAA_LOCAL_DB_USER:-paa}
+      POSTGRES_PASSWORD: ${PAA_LOCAL_DB_PASSWORD:-paadevpass}
+    ports:
+      - "${PAA_LOCAL_DB_PORT:-55433}:5432"
+    volumes:
+      - paa-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PAA_LOCAL_DB_USER:-paa} -d ${PAA_LOCAL_DB_NAME:-paa_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  paa-postgres-data:
