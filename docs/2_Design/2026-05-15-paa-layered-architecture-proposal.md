@@ -31,6 +31,7 @@ This note synthesizes:
 Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-authority-package-authoring-process.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-paa-project-design-and-delivery-architect-bridge.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-v2-component-relationships.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/terminology/paa-engineering-terminology-glossary.md`
@@ -258,6 +259,11 @@ into:
 - `CoderBrief`
 - `BriefTarget`
 - transport-ready architect packets
+
+Important refinement:
+- producer-side derivation is not the whole bridge to coding
+- the architecture also needs a consumer-aware `Project Design` bridge owned primarily by `Delivery Architect`
+- that bridge derives implementation plans from approved component specs and slice packages before final coder briefing
 
 It spans:
 - `Domain Core`

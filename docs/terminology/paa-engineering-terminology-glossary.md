@@ -119,7 +119,13 @@ Drawn directly from Phases of Component Development (e.g., "Implement Service Co
 
 ## Phases of Project Design
 
-**Project Design** is the planning phase that converts Component Designs into an executable development plan.
+**Project Design** is the planning phase that converts Component Designs into an executable, consumer-aware development plan.
+
+Important refinement:
+- `Project Design` includes `implementation-plan derivation`
+- this step is primarily owned by `Delivery Architect`
+- it translates approved component slices into stack-specific implementation plans before coder briefing
+- the same authority package may therefore yield different implementation plans for Python, .NET, or other consumer contexts
 
 1. **Review Component Diagrams**  
    Validate all Node Diagrams.
@@ -133,10 +139,13 @@ Drawn directly from Phases of Component Development (e.g., "Implement Service Co
 4. **Sequence Components into Build Sequence**  
    Topological sort into layered build order with parallel streams.
 
-5. **Plan Development Schedule of the System**  
+5. **Derive Implementation Plans**  
+   Convert approved component slices into consumer-specific implementation plans, code-artifact sets, touch surfaces, and proving plans.
+
+6. **Plan Development Schedule of the System**  
    Assign to agents, add estimates, milestones, and test gates.
 
-6. **Save the Build Schedule**  
+7. **Save the Build Schedule**  
    Persist as living repository artifact.
 
 ## Phases of Component Development

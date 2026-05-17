@@ -39,6 +39,12 @@ The core PAA transformation is:
 
 The architectural subsystem that performs that transformation should therefore be visible, named, and decomposed.
 
+Important refinement after the `Component Design Planning Service` proof slice:
+- the producer-side derivation subsystem is necessary but not sufficient by itself
+- a separate consumer-aware `Project Design` bridge also exists
+- that bridge is primarily owned by `Delivery Architect`
+- it derives implementation plans from approved component specs and active slice packages before final coder-agent briefing
+
 ## Subsystem Responsibility
 
 The `Producer Derivation Subsystem` owns the producer-side path that:
@@ -53,6 +59,7 @@ The `Producer Derivation Subsystem` owns the producer-side path that:
 
 It does not own:
 - consumer runtime orchestration
+- consumer-specific implementation-plan derivation for Python, .NET, or other target stacks
 - workflow execution truth
 - queue-claim transport behavior
 - code execution itself
@@ -214,6 +221,29 @@ So its lifecycle role is:
 
 This makes it one of the central architectural engines of PAA.
 
+## Boundary Against Project Design
+
+The producer derivation subsystem should not be overloaded with all consumer-specific implementation planning.
+
+It owns:
+- producer-side authority derivation
+- slice package materialization
+- derivation readiness
+- draft / approved / packet-ready authority progression
+
+It does not fully own:
+- consumer-specific implementation-plan derivation
+- stack-specific artifact shaping for Python vs .NET or other consumers
+
+That bridge belongs to:
+- `Project Design`
+- primarily owned by `Delivery Architect`
+
+Important rule:
+- producer derivation creates governed execution-authority inputs
+- `Delivery Architect` project design turns those inputs into a concrete implementation plan for the target consumer context
+- coder briefing should be downstream from both
+
 ## Subsystem boundary diagram
 
 ```mermaid
@@ -249,6 +279,15 @@ This gives us a proper standard for validating whether tooling is sufficient.
 
 ### 3. Future implementation should follow subsystem decomposition
 New tools and services should be built as explicit realizations of this subsystem rather than as more authority-runtime accretion.
+
+### 4. Producer derivation must connect cleanly to consumer-side project design
+The system should explicitly model the bridge from:
+- approved slice authority
+
+to:
+- consumer-specific implementation plans
+
+That bridge should not remain implicit in manual Architect behavior.
 
 ## Immediate impact on the next phase
 

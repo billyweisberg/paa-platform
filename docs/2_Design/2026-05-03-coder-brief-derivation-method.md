@@ -5,7 +5,8 @@ This document defines the repeatable method for deriving a `coder_run_brief` fro
 
 It is the bridge between:
 - Stage 1: Design / Authoring
-- Stage 2: Derivation
+- Stage 2: Project Design / Implementation-Plan Derivation
+- Stage 3: Coder Brief Derivation
 
 The goal is to make coder-facing implementation packets:
 - deliberate
@@ -19,16 +20,19 @@ A coder agent should not derive system design.
 
 A coder agent should receive a prepared construction brief that is itself derived from reviewed upstream design authority.
 
+A coder agent should also not be forced to invent the implementation plan that sits between an approved component spec and a concrete coding run.
+
 That means `coder_run_brief` is not handwritten from scratch, and it is not guessed from issue text.
-It is derived from a staged design model.
+It is derived from a staged design model plus an implementation-plan derivation step.
 
 ## Upstream inputs
-A `coder_run_brief` is derived from five primary sources:
+A `coder_run_brief` is derived from six primary sources:
 - Product / Architect / Designer authority
 - spec fragments
 - implementation targets
 - component model
 - component element and code-artifact target model
+- implementation plan
 
 These are not equal peers. They play different roles in derivation.
 
@@ -73,6 +77,23 @@ It defines:
 - which concrete code artifact forms are valid for those elements
 - which target kinds are brief-targetable
 - whether the target taxonomy can express the intended implementation run cleanly
+
+### 6. Implementation plan
+This is the consumer-specific construction-planning layer.
+It defines:
+- the concrete code-artifact set for the target stack
+- the file/module touch plan
+- the dependency-aware build sequence for the slice
+- the proving and verification plan
+- the stack-specific execution particulars that should not be improvised by the coder agent
+
+Important rule:
+The same upstream authority package may yield different implementation plans for:
+- Python
+- .NET
+- other consumer stacks
+
+So coder briefing must not skip this layer.
 
 ## Design decision
 The `coder_run_brief` should be assembled from authored upstream records using a deterministic derivation pass.
@@ -185,9 +206,28 @@ Rule:
 A note bundle may be enough for a dry run.
 A normal execution-authoritative derivation should begin from a materialized slice package.
 
-### Step 2: Confirm derivation readiness
+### Step 2: Derive implementation plan
 Input:
 - active slice package
+- approved component spec
+- implementation target
+- consumer execution context
+- language / stack specifics
+
+Output:
+- implementation plan
+- stack-specific code-artifact plan
+- file/module touch plan
+- proving and verification plan
+
+Rule:
+This is the `Project Design` bridge.
+Coder briefing should not proceed until the implementation plan exists, even if the component spec is already approved.
+
+### Step 3: Confirm derivation readiness
+Input:
+- active slice package
+- implementation plan
 - signoff state
 - dependency graph slice
 - package status
@@ -199,7 +239,7 @@ Output:
 Rule:
 If the slice package is not approved for derivation, the process should stop before drafting a brief.
 
-### Step 3: Resolve top-level identity and authority context
+### Step 4: Resolve top-level identity and authority context
 Input:
 - project identity
 - authority version
@@ -216,7 +256,7 @@ Rule:
 Component identity alone is not enough.
 Derivation requires slice identity.
 
-### Step 4: Resolve primary component assignment
+### Step 5: Resolve primary component assignment
 Input:
 - spec fragment
 - implementation target
@@ -232,7 +272,7 @@ Output:
 Rule:
 Every coder brief must have exactly one primary implementation component, even if multiple supporting components participate.
 
-### Step 5: Resolve component aspects
+### Step 6: Resolve component aspects
 Input:
 - implementation target desired state
 - expected touch surfaces
@@ -254,7 +294,7 @@ Examples:
 Rule:
 Component aspects must be explicit. The coder should not infer whether they are changing state, interface, tests, or documentation by reading the codebase blindly.
 
-### Step 6: Resolve placement and edit boundaries
+### Step 7: Resolve placement and edit boundaries
 Input:
 - component surfaces
 - target module boundaries
@@ -271,7 +311,7 @@ Output:
 Rule:
 This is where we prevent god-file growth. If module placement is not explicit here, the brief is under-specified.
 
-### Step 7: Resolve collaboration context
+### Step 8: Resolve collaboration context
 Input:
 - component relationships
 - sequence/activity diagrams
@@ -287,7 +327,7 @@ Output:
 Rule:
 A coder brief should describe the local construction pattern, not the whole system.
 
-### Step 8: Resolve dependency contract
+### Step 9: Resolve dependency contract
 Input:
 - component relationships
 - constructor/setup model
@@ -302,7 +342,7 @@ Output:
 Rule:
 If the implementation depends on a service or policy, the brief must say whether that dependency is injected, configured, or looked up through an existing contract.
 
-### Step 9: Resolve code-artifact targets and validate taxonomy coverage
+### Step 10: Resolve code-artifact targets and validate taxonomy coverage
 Input:
 - component element model
 - component element realization model
@@ -319,7 +359,7 @@ Rule:
 If the current target taxonomy cannot express the intended implementation artifacts cleanly, derivation must stop and report a blocker.
 Do not overload unrelated target labels just to force a slice through.
 
-### Step 10: Resolve behavioral and proving contracts
+### Step 11: Resolve behavioral and proving contracts
 Input:
 - spec fragment
 - implementation target
@@ -342,7 +382,7 @@ The proving contract must separate:
 - baseline proving checks that must remain green
 - slice-specific tests that must be added or updated
 
-### Step 11: Resolve change budget and anti-goals
+### Step 12: Resolve change budget and anti-goals
 Input:
 - implementation target
 - architectural constraints
@@ -358,7 +398,7 @@ Output:
 Rule:
 This is where repeated contamination patterns are prevented from recurring by design.
 
-### Step 12: Compute brief-target sequencing and execution readiness
+### Step 13: Compute brief-target sequencing and execution readiness
 Input:
 - approved slice package
 - code-artifact target set
@@ -377,7 +417,7 @@ Sequencing is not optional planning commentary.
 It is execution authority.
 If target sequencing or readiness cannot be stated clearly, the brief is not ready for execution.
 
-### Step 13: Assemble and validate draft brief
+### Step 14: Assemble and validate draft brief
 Input:
 - outputs of steps 0 through 12
 
@@ -392,7 +432,7 @@ Then validate the draft against:
 - test-contract review
 - packet-readiness review
 
-### Step 14: Persist reviewed and approved brief with provenance
+### Step 15: Persist reviewed and approved brief with provenance
 Input:
 - reviewed draft brief
 - approved target set
@@ -406,7 +446,7 @@ Output:
 Rule:
 Execution authority should be persisted as reviewed state, not left as an ephemeral draft artifact.
 
-### Step 15: Embed approved brief into `architect_cycle_packet`
+### Step 16: Embed approved brief into `architect_cycle_packet`
 Input:
 - approved brief
 - packet preparation context

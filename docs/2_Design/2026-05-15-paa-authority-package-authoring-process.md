@@ -39,6 +39,7 @@ Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-domain-object-model-and-oo-component-decomposition.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-system-decomposition-options.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-paa-project-design-and-delivery-architect-bridge.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-system-component-diagram-v2.md`
 
 ## Core Principle
@@ -56,6 +57,7 @@ into:
 - domain model
 - component catalog
 - component specs
+- implementation plans
 - implementation targets
 - coder-agent briefs
 - installed execution package inputs
@@ -84,6 +86,16 @@ The current reusable process is:
 15. derive the draft coder-agent brief body, brief targets, and target sequence
 16. review and approve execution authority
 17. publish or packetize the approved execution authority
+
+This list should now be read with one important role-boundary clarification:
+- Steps 1 through 13 are primarily producer-side authority authoring
+- Steps 14 through 17 now include a consumer-aware `Project Design` bridge
+- the most important new bridge is `implementation-plan derivation`, primarily owned by `Delivery Architect`
+
+Important variation rule:
+- one authority package may drive different implementation plans for different consumer stacks
+- for example, a Python consumer and a .NET consumer may consume the same upstream authority but derive different concrete code-artifact plans
+- coder briefing must therefore not skip the implementation-plan step
 
 This note expands those steps.
 
@@ -341,7 +353,43 @@ A component spec should cover the relevant design elements such as:
 Important rule:
 Do this after decomposition and domain analysis, not before.
 
-## Step 14. Materialize The Active Slice Design Package And Derivation Readiness State
+## Step 14. Derive Implementation Plans
+
+Convert approved component specs plus active slice authority into a concrete, consumer-specific implementation plan.
+
+Primary owner:
+- `Delivery Architect`
+
+This is the `Project Design` step that converts:
+- approved design authority
+
+into:
+- executable construction planning for the target consumer stack
+
+Inputs:
+- approved component spec
+- active or candidate `DesignPackage`
+- implementation target
+- code-artifact target taxonomy
+- consumer-side execution context
+- language / stack specifics
+- project structure and testing conventions
+
+Outputs:
+- implementation plan
+- consumer-specific code-artifact set
+- allowed touch surfaces
+- protected seams and anti-goals restated for the implementation run
+- dependency-aware build sequence for the slice
+- proving and verification plan
+- coder-brief assembly inputs
+
+Important rule:
+- this step is the software-engineering bridge between Component Design and coder briefing
+- do not ask coder agents to invent this layer from component specs alone
+- the same authority package may yield different implementation plans in Python vs .NET or other consumer contexts
+
+## Step 15. Materialize The Active Slice Design Package And Derivation Readiness State
 
 This step is not complete when the slice exists only in prose notes.
 
@@ -372,9 +420,9 @@ Important rule:
 A note bundle may be enough for dry-run validation.
 Execution-authoritative derivation should begin from a materialized slice package.
 
-## Step 15. Derive The Draft Coder-Agent Brief Body, Brief Targets, And Target Sequence
+## Step 16. Derive The Draft Coder-Agent Brief Body, Brief Targets, And Target Sequence
 
-Translate component specs into implementation runs.
+Translate approved slice authority plus implementation-plan outputs into implementation runs.
 
 Outputs:
 - draft coder brief
@@ -396,7 +444,7 @@ Questions:
 Important rule:
 If the code-artifact target taxonomy cannot express the intended implementation artifacts cleanly, derivation should stop and report a blocker rather than overloading the wrong labels.
 
-## Step 16. Review And Approve Execution Authority
+## Step 17. Review And Approve Execution Authority
 
 Move the derivation output through explicit review and approval.
 
@@ -414,7 +462,7 @@ It is not yet execution authority.
 Current implementation surfaces:
 - `paa-producer review-coder-brief`
 
-## Step 17. Publish Or Packetize The Approved Execution Authority
+## Step 18. Publish Or Packetize The Approved Execution Authority
 
 Compile and publish the resulting authority package so it can be installed and executed by consumer runtime, or embed the approved brief into a transport packet when execution is being launched.
 
@@ -440,12 +488,13 @@ This process suggests explicit producer-side tools and services for:
 7. component element authoring
 8. code artifact target authoring
 9. component spec authoring
-10. slice-package materialization and derivation-readiness evaluation
-11. brief target sequencing and target-taxonomy validation
-12. brief review and approval governance
-13. packet-readiness and architect-packet preparation
-14. policy selection and validation
-15. authority package publication
+10. implementation-plan derivation assistance for consumer-specific Project Design
+11. slice-package materialization and derivation-readiness evaluation
+12. brief target sequencing and target-taxonomy validation
+13. brief review and approval governance
+14. packet-readiness and architect-packet preparation
+15. policy selection and validation
+16. authority package publication
 
 ## Process Governance Rules
 
@@ -457,8 +506,9 @@ This process suggests explicit producer-side tools and services for:
 6. Build order should be dependency-graph-derived, not preference-driven.
 7. Component specs should derive from the chosen decomposition, not from current scripts.
 8. Coder-agent assignments should use controlled vocabularies and sequenced code artifact targets.
-9. A derivation may produce a useful draft before it produces approved execution authority; those states must remain distinct.
-10. Authority packages should be the output of a derivation process, not a loose bundle of notes.
+9. `Implementation-plan derivation` is a first-class Project Design step between approved component specs and coder briefing.
+10. A derivation may produce a useful draft before it produces approved execution authority; those states must remain distinct.
+11. Authority packages should be the output of a derivation process, not a loose bundle of notes.
 
 ## Current Status In This Repo
 
