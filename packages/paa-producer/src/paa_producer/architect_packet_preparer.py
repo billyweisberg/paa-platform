@@ -403,7 +403,7 @@ def _build_packet(*, context: PacketBriefContext, package: dict[str, Any], optio
     return payload
 
 
-def _persist_packet_ready_transition(*, context: PacketBriefContext, actor_role_id: str, actor_name: str, packet_output_path: Path, review_output_path: Path | None, brief_output_path: Path, message_id: str, evidence: dict[str, Any]) -> None:
+def _persist_packet_ready_transition(*, context: PacketBriefContext, packet_ready_brief_json: dict[str, Any], actor_role_id: str, actor_name: str, packet_output_path: Path, review_output_path: Path | None, brief_output_path: Path, message_id: str, evidence: dict[str, Any]) -> None:
     packet_prep = {
         'current_state': 'packet_ready_execution_authority',
         'packet_ready': True,
@@ -422,6 +422,8 @@ def _persist_packet_ready_transition(*, context: PacketBriefContext, actor_role_
       authority_state_updated_at = now(),
       status = 'active'::paa.coder_brief_status,
       packet_ready_at = now(),
+      brief_json = {sql_literal(json.dumps(packet_ready_brief_json, sort_keys=True))}::jsonb,
+      generated_from_json = coalesce(generated_from_json, '{{}}'::jsonb) || '{{"readiness_class":"execution_ready"}}'::jsonb,
       packet_preparation_json = {sql_literal(json.dumps(packet_prep, sort_keys=True))}::jsonb,
       updated_at = now()
     WHERE coder_run_brief_id = {sql_literal(context.coder_run_brief_id)}::uuid;
@@ -456,7 +458,7 @@ def _persist_packet_ready_transition(*, context: PacketBriefContext, actor_role_
     run_psql(sql)
 
 
-def _refresh_packet_ready_metadata(*, coder_run_brief_id: str, packet_output_path: Path, review_output_path: Path | None, brief_output_path: Path, message_id: str) -> None:
+def _refresh_packet_ready_metadata(*, coder_run_brief_id: str, packet_ready_brief_json: dict[str, Any], packet_output_path: Path, review_output_path: Path | None, brief_output_path: Path, message_id: str) -> None:
     packet_prep = {
         'current_state': 'packet_ready_execution_authority',
         'packet_ready': True,
@@ -468,6 +470,8 @@ def _refresh_packet_ready_metadata(*, coder_run_brief_id: str, packet_output_pat
     sql = f"""
     UPDATE paa.coder_run_briefs
     SET
+      brief_json = {sql_literal(json.dumps(packet_ready_brief_json, sort_keys=True))}::jsonb,
+      generated_from_json = coalesce(generated_from_json, '{{}}'::jsonb) || '{{"readiness_class":"execution_ready"}}'::jsonb,
       packet_preparation_json = {sql_literal(json.dumps(packet_prep, sort_keys=True))}::jsonb,
       updated_at = now()
     WHERE coder_run_brief_id = {sql_literal(coder_run_brief_id)}::uuid;
@@ -538,6 +542,7 @@ def prepare_architect_packet(*, options: PacketPreparationOptions) -> PreparedAr
         }
         _persist_packet_ready_transition(
             context=context,
+            packet_ready_brief_json=packet_ready_brief_json,
             actor_role_id=actor_role_id,
             actor_name=actor_name,
             packet_output_path=packet_output_path,
@@ -551,6 +556,7 @@ def prepare_architect_packet(*, options: PacketPreparationOptions) -> PreparedAr
     elif options.persist_db:
         _refresh_packet_ready_metadata(
             coder_run_brief_id=context.coder_run_brief_id,
+            packet_ready_brief_json=packet_ready_brief_json,
             packet_output_path=packet_output_path,
             review_output_path=review_output_path,
             brief_output_path=brief_output_path,

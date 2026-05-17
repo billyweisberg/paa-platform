@@ -356,8 +356,11 @@ def _ensure_work_item(*, project_id: str, authority_version_id: str, spec_fragme
     ctx = package['authority_context']
     issue_number = ctx.get('issue_number')
     task_key = ctx.get('task_id') or (package['spec_fragment'].get('spec_fragment_id'))
+    spec_fragment_ref = package['spec_fragment'].get('spec_fragment_id')
     existing_predicate = (
-        f"wi.issue_number = {int(issue_number)}" if issue_number is not None else f"wi.spec_fragment_ref = {sql_literal(package['spec_fragment'].get('spec_fragment_id'))}"
+        f"(wi.issue_number = {int(issue_number)} OR wi.spec_fragment_ref = {sql_literal(spec_fragment_ref)})"
+        if issue_number is not None
+        else f"wi.spec_fragment_ref = {sql_literal(spec_fragment_ref)}"
     )
     sql = f"""
     WITH existing AS (
@@ -366,6 +369,23 @@ def _ensure_work_item(*, project_id: str, authority_version_id: str, spec_fragme
       WHERE wi.project_id = {sql_literal(project_id)}::uuid
         AND {existing_predicate}
       LIMIT 1
+    ), updated AS (
+      UPDATE paa.work_items wi
+      SET
+        authority_version_id = {sql_literal(authority_version_id)}::uuid,
+        title = {sql_literal(ctx.get('task_title'))},
+        status = 'authorized'::paa.work_item_status,
+        merge_policy = 'architect_review_required',
+        requires_qa = false,
+        issue_number = COALESCE({sql_literal(issue_number)}, wi.issue_number),
+        implementation_target_ref = {sql_literal(package['implementation_target'].get('implementation_target_id'))},
+        spec_fragment_ref = {sql_literal(spec_fragment_ref)},
+        domain_ref = {_json_literal({'task_id': task_key, 'task_title': ctx.get('task_title'), 'milestone_id': ctx.get('milestone_id'), 'phase_id': ctx.get('phase_id'), 'proof_slice': issue_number is None})},
+        spec_fragment_id = {sql_literal(spec_fragment_id)}::uuid,
+        implementation_target_id = {sql_literal(implementation_target_id)}::uuid,
+        updated_at = now()
+      WHERE wi.work_item_id IN (SELECT work_item_id FROM existing)
+      RETURNING wi.work_item_id
     ), upserted AS (
       INSERT INTO paa.work_items (
         project_id, authority_version_id, title, status, merge_policy, requires_qa, issue_number,
@@ -380,14 +400,14 @@ def _ensure_work_item(*, project_id: str, authority_version_id: str, spec_fragme
         false,
         {sql_literal(issue_number)},
         {sql_literal(package['implementation_target'].get('implementation_target_id'))},
-        {sql_literal(package['spec_fragment'].get('spec_fragment_id'))},
+        {sql_literal(spec_fragment_ref)},
         {_json_literal({'task_id': task_key, 'task_title': ctx.get('task_title'), 'milestone_id': ctx.get('milestone_id'), 'phase_id': ctx.get('phase_id'), 'proof_slice': issue_number is None})},
         {sql_literal(spec_fragment_id)}::uuid,
         {sql_literal(implementation_target_id)}::uuid
       WHERE NOT EXISTS (SELECT 1 FROM existing)
       RETURNING work_item_id
     )
-    SELECT work_item_id FROM existing
+    SELECT work_item_id FROM updated
     UNION ALL
     SELECT work_item_id FROM upserted
     LIMIT 1;

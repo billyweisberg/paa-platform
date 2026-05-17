@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from paa_core import handoff_runtime
+from paa_core.runtime_paths import repo_authority_manifest_path
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_display_name,
@@ -114,7 +115,7 @@ def repo_automations_dir(repo_root: Path) -> Path:
 
 
 def repo_auth_current(repo_root: Path) -> Path:
-    return repo_root / '.project' / 'data' / 'paa' / 'authority' / 'current' / 'authority' / 'fractal-core-python-authority.json'
+    return repo_authority_manifest_path(repo_root)
 
 
 def repo_default_schema(repo_root: Path) -> Path:
@@ -355,22 +356,100 @@ def automation_state(repo_root: Path = REPO_ROOT):
     return roles, architect_missing
 
 
-def fetch_pr(pr_number):
+def github_repo_for_root(repo_root: Path) -> str:
+    manifest_path = repo_auth_current(repo_root)
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text())
+        except Exception:
+            manifest = {}
+        repo = (manifest.get('project') or {}).get('repo')
+        if repo:
+            return str(repo)
+    return 'billyweisberg/fractal-core-python'
+
+
+def _select_issue_url_from_packet(packet: dict | None, issue_number: int) -> str | None:
+    packet = packet or {}
+    payload = packet.get('payload') or {}
+    for candidate in [payload.get('next_issue'), payload.get('closed_issue')]:
+        if isinstance(candidate, dict) and candidate.get('number') == issue_number:
+            return candidate.get('url')
+    for link in ((packet.get('github_context') or {}).get('links') or []):
+        if f'/issues/{issue_number}' in str(link):
+            return str(link)
+    return None
+
+
+def _select_pr_url_from_packet(packet: dict | None, pr_number: int) -> str | None:
+    packet = packet or {}
+    payload = packet.get('payload') or {}
+    accepted_pr = payload.get('accepted_pr') or {}
+    if isinstance(accepted_pr, dict) and accepted_pr.get('number') == pr_number:
+        return accepted_pr.get('url')
+    for link in ((packet.get('github_context') or {}).get('links') or []):
+        if f'/pull/{pr_number}' in str(link):
+            return str(link)
+    return None
+
+
+def _fallback_issue_record(issue_number: int, fallback_task: dict | None = None, fallback_packet: dict | None = None) -> dict:
+    return {
+        'number': issue_number,
+        'state': 'OPEN',
+        'title': (fallback_task or {}).get('title') or f'Issue #{issue_number}',
+        'url': _select_issue_url_from_packet(fallback_packet, issue_number),
+        'comments': [],
+    }
+
+
+def _fallback_pr_record(
+    fallback_pr_number: int | None,
+    fallback_packet: dict | None = None,
+) -> dict | None:
+    packet = fallback_packet or {}
+    github_context = packet.get('github_context') or {}
+    pr_number = fallback_pr_number or github_context.get('pr_number')
+    branch = github_context.get('branch')
+    if pr_number is None and branch is None:
+        return None
+    return {
+        'number': pr_number,
+        'title': f'Proof PR #{pr_number}' if pr_number is not None else 'Proof PR',
+        'state': 'OPEN',
+        'isDraft': False,
+        'headRefName': branch,
+        'baseRefName': 'main',
+        'url': _select_pr_url_from_packet(packet, pr_number) if pr_number is not None else None,
+        'statusCheckRollup': [],
+        'mergedAt': None,
+        'body': '',
+        'comments': [],
+    }
+
+
+def fetch_pr(pr_number, github_repo):
     return run_json([
-        'gh', 'pr', 'view', str(pr_number), '--repo', 'billyweisberg/fractal-core-python',
+        'gh', 'pr', 'view', str(pr_number), '--repo', github_repo,
         '--json', 'number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,mergedAt,body,comments'
     ])
 
 
-def github_state(issue_number, fallback_pr_number=None):
-    issue = run_json([
-        'gh', 'issue', 'view', str(issue_number), '--repo', 'billyweisberg/fractal-core-python',
-        '--json', 'number,state,title,url,comments'
-    ])
-    prs = run_json([
-        'gh', 'pr', 'list', '--repo', 'billyweisberg/fractal-core-python', '--search', f'{issue_number} in:title',
-        '--state', 'all', '--json', 'number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,mergedAt,body'
-    ])
+def github_state(issue_number, github_repo, fallback_pr_number=None, fallback_task=None, fallback_packet=None):
+    try:
+        issue = run_json([
+            'gh', 'issue', 'view', str(issue_number), '--repo', github_repo,
+            '--json', 'number,state,title,url,comments'
+        ])
+    except Exception:
+        issue = _fallback_issue_record(issue_number, fallback_task=fallback_task, fallback_packet=fallback_packet)
+    try:
+        prs = run_json([
+            'gh', 'pr', 'list', '--repo', github_repo, '--search', f'{issue_number} in:title',
+            '--state', 'all', '--json', 'number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,mergedAt,body'
+        ])
+    except Exception:
+        prs = []
     active_pr = None
     for pr in prs:
         if pr['state'] == 'OPEN':
@@ -380,13 +459,13 @@ def github_state(issue_number, fallback_pr_number=None):
         active_pr = prs[0]
     if active_pr is None and fallback_pr_number is not None:
         try:
-            active_pr = fetch_pr(fallback_pr_number)
+            active_pr = fetch_pr(fallback_pr_number, github_repo)
         except Exception:
             active_pr = None
     if active_pr is None:
         try:
             all_prs = run_json([
-                'gh', 'pr', 'list', '--repo', 'billyweisberg/fractal-core-python',
+                'gh', 'pr', 'list', '--repo', github_repo,
                 '--state', 'all', '--json', 'number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,mergedAt,body'
             ])
         except Exception:
@@ -403,9 +482,11 @@ def github_state(issue_number, fallback_pr_number=None):
                 break
         if active_pr is None and fallback_matches:
             active_pr = fallback_matches[0]
+    if active_pr is None:
+        active_pr = _fallback_pr_record(fallback_pr_number, fallback_packet=fallback_packet)
     if active_pr is not None and 'comments' not in active_pr:
         try:
-            active_pr = fetch_pr(active_pr['number'])
+            active_pr = fetch_pr(active_pr['number'], github_repo)
         except Exception:
             pass
     return issue, active_pr
@@ -852,7 +933,14 @@ def active_workflow_context(repo_root: Path, project_slug: str):
     if current_task:
         qa_packet = latest_qa_packet(current_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
         fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
-        issue, pr = github_state(current_task['issue_number'], fallback_pr_number=fallback_pr_number)
+        fallback_packet = latest_packet_preview(queues, current_task['issue_number'])
+        issue, pr = github_state(
+            current_task['issue_number'],
+            github_repo_for_root(repo_root),
+            fallback_pr_number=fallback_pr_number,
+            fallback_task=current_task,
+            fallback_packet=fallback_packet,
+        )
         workflow_stage, owner_role, _escalations, recommended_actions, _unattended_safe = derive_workflow(
             current_task,
             issue,
@@ -1024,12 +1112,19 @@ def derive_lineage_section(current_task, pr, queues, escalations, reports_dir: P
 def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: str, brief_id_external: str) -> dict:
     _current, manifest = load_authority(repo_root)
     package = load_design_package(project_slug, package_id_external)
-    issue_number = resolve_issue_number_from_package(package, package_id_external)
+    issue_number = resolve_issue_number_from_package(package, package_id_external, project_slug)
     current_task = resolve_task_summary(manifest, package, issue_number)
     queues = queue_state(repo_root)
     local_decision_packet = latest_techlead_decision_packet(issue_number, reports_dir=repo_reports_dir(repo_root))
     qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+    fallback_packet = latest_packet_preview(queues, issue_number)
+    issue, pr = github_state(
+        issue_number,
+        github_repo_for_root(repo_root),
+        fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
+        fallback_task=current_task,
+        fallback_packet=fallback_packet,
+    )
     workflow_stage, owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
     lineage = derive_lineage_section(current_task, pr, queues, escalations, reports_dir=repo_reports_dir(repo_root))
     if (
@@ -1752,7 +1847,14 @@ def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJEC
     if report_task:
         qa_packet = latest_qa_packet(report_task['issue_number'], reports_dir=repo_reports_dir(repo_root))
         fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
-        issue, pr = github_state(report_task['issue_number'], fallback_pr_number=fallback_pr_number)
+        fallback_packet = latest_packet_preview(queues, report_task['issue_number']) or inferred_packet
+        issue, pr = github_state(
+            report_task['issue_number'],
+            github_repo_for_root(repo_root),
+            fallback_pr_number=fallback_pr_number,
+            fallback_task=report_task,
+            fallback_packet=fallback_packet,
+        )
         workflow_stage, owner_role, wf_escalations, wf_recommended, wf_safe = derive_workflow(report_task, issue, pr, qa_packet, queues)
         escalations.extend(wf_escalations)
         recommended.extend(wf_recommended)
@@ -2070,7 +2172,7 @@ def load_traceability_section(db_container, db_name, db_user, project_slug, acti
     return section
 
 
-def resolve_issue_number_from_package(package: dict, package_id_external: str) -> int:
+def resolve_issue_number_from_package(package: dict, package_id_external: str, project_slug: str | None = None) -> int:
     authority_context = package.get('authority_context') or {}
     issue_number = authority_context.get('issue_number')
     if issue_number is not None:
@@ -2078,6 +2180,20 @@ def resolve_issue_number_from_package(package: dict, package_id_external: str) -
     task_issue_number = authority_context.get('task_issue_number')
     if task_issue_number is not None:
         return int(task_issue_number)
+    resolved_project_slug = project_slug or authority_context.get('project_slug')
+    if resolved_project_slug:
+        sql = f"""
+        SELECT wi.issue_number
+        FROM paa.design_packages dp
+        JOIN paa.projects p ON p.project_id = dp.project_id
+        JOIN paa.work_items wi ON wi.work_item_id = dp.work_item_id
+        WHERE p.slug = {sql_literal(resolved_project_slug)}
+          AND dp.package_id_external = {sql_literal(package_id_external)}
+        LIMIT 1;
+        """
+        out = run_psql(DEFAULT_DB_CONTAINER, DEFAULT_DB_NAME, DEFAULT_DB_USER, sql).strip()
+        if out:
+            return int(out)
     match = re.search(r'issue(\\d+)', package_id_external)
     if match:
         return int(match.group(1))
@@ -2141,12 +2257,20 @@ def default_result_packet_paths(repo_root: Path, issue_number: int, target_role:
 def derive_next_assignment_context(args) -> dict:
     repo_root = args.repo_root.resolve()
     current, manifest = load_authority(repo_root)
+    github_repo = github_repo_for_root(repo_root)
     package = load_design_package(args.project_slug, args.package_id_external)
-    issue_number = resolve_issue_number_from_package(package, args.package_id_external)
+    issue_number = resolve_issue_number_from_package(package, args.package_id_external, args.project_slug)
     current_task = resolve_task_summary(manifest, package, issue_number)
     queues = queue_state(repo_root)
     qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-    issue, pr = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+    fallback_packet = latest_packet_preview(queues, issue_number)
+    issue, pr = github_state(
+        issue_number,
+        github_repo,
+        fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
+        fallback_task=current_task,
+        fallback_packet=fallback_packet,
+    )
     workflow_stage, owner_role, _escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
     pending_dev_packet = latest_packet_preview(
         queues,
@@ -2430,7 +2554,7 @@ def emit_next_assignment(args):
         '--project-slug', args.project_slug,
         '--package-id-external', args.package_id_external,
         '--brief-id-external', args.brief_id_external,
-        '--repo', 'billyweisberg/fractal-core-python',
+        '--repo', github_repo_for_root(repo_root),
         '--issue-number', str(context['issue_number']),
         '--issue-url', str(context['issue_url']),
         '--pr-number', str(context['pr_number']),
@@ -2569,11 +2693,19 @@ def derive_decision_context(args) -> dict:
 
     if args.decision_type == 'reset_required':
         _current, manifest = load_authority(repo_root)
+        github_repo = github_repo_for_root(repo_root)
         package = load_design_package(args.project_slug, args.package_id_external)
         current_task = resolve_task_summary(manifest, package, issue_number)
         queues = queue_state(repo_root)
         qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-        issue_full, pr_full = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+        fallback_packet = latest_packet_preview(queues, issue_number)
+        issue_full, pr_full = github_state(
+            issue_number,
+            github_repo,
+            fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
+            fallback_task=current_task,
+            fallback_packet=fallback_packet,
+        )
         _workflow_stage, _owner_role, escalations, _recommended, _unattended = derive_workflow(current_task, issue_full, pr_full, qa_packet, queues)
         reset_escalation = latest_escalation_of_type(escalations, 'reset_branch_required') or latest_escalation_of_type(escalations, 'reset_branch_recommended')
         if workflow_stage != 'dev_reset_required' and not reset_escalation:
@@ -2622,11 +2754,19 @@ def derive_decision_context(args) -> dict:
 
     if args.decision_type == 'superseded':
         _current, manifest = load_authority(repo_root)
+        github_repo = github_repo_for_root(repo_root)
         package = load_design_package(args.project_slug, args.package_id_external)
         current_task = resolve_task_summary(manifest, package, issue_number)
         queues = queue_state(repo_root)
         qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-        issue_full, pr_full = github_state(issue_number, fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None)
+        fallback_packet = latest_packet_preview(queues, issue_number)
+        issue_full, pr_full = github_state(
+            issue_number,
+            github_repo,
+            fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
+            fallback_task=current_task,
+            fallback_packet=fallback_packet,
+        )
         _workflow_stage, _owner_role, escalations, _recommended, _unattended = derive_workflow(current_task, issue_full, pr_full, qa_packet, queues)
         superseded_escalation = latest_escalation_of_type(escalations, 'qa_escalation_superseded')
         if superseded_escalation is None:
@@ -2748,7 +2888,7 @@ def emit_decision(args):
         '--project-slug', args.project_slug,
         '--package-id-external', args.package_id_external,
         '--brief-id-external', args.brief_id_external,
-        '--repo', 'billyweisberg/fractal-core-python',
+        '--repo', github_repo_for_root(repo_root),
         '--issue-number', str(context['issue_number']),
         '--issue-url', str(context['issue_url']),
         '--pr-number', str(context['pr_number']),
@@ -2852,7 +2992,14 @@ def closeout_qa_pass(args):
             'qa_packet': qa_packet,
         }
 
-    issue_full, pr_full = github_state(args.issue_number, fallback_pr_number=qa_packet.get('pr_number'))
+    fallback_packet = latest_packet_preview(queue_state(repo_root), args.issue_number)
+    issue_full, pr_full = github_state(
+        args.issue_number,
+        github_repo_for_root(repo_root),
+        fallback_pr_number=qa_packet.get('pr_number'),
+        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
+        fallback_packet=fallback_packet,
+    )
     pr_merged = bool(pr_full and pr_full.get('mergedAt'))
     issue_closed = (issue_full.get('state') or '').upper() == 'CLOSED'
     if not pr_merged and not issue_closed:
@@ -3031,7 +3178,15 @@ def accept_and_merge_qa_pass(args):
             'qa_packet': qa_packet,
         }
 
-    issue_full, pr_full = github_state(args.issue_number, fallback_pr_number=qa_packet.get('pr_number'))
+    fallback_packet = latest_packet_preview(queue_state(repo_root), args.issue_number)
+    github_repo = github_repo_for_root(repo_root)
+    issue_full, pr_full = github_state(
+        args.issue_number,
+        github_repo,
+        fallback_pr_number=qa_packet.get('pr_number'),
+        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
+        fallback_packet=fallback_packet,
+    )
     if pr_full is None:
         return {
             'ok': False,
@@ -3043,7 +3198,7 @@ def accept_and_merge_qa_pass(args):
 
     merge_state = run_json([
         'gh', 'pr', 'view', str(pr_full['number']),
-        '--repo', 'billyweisberg/fractal-core-python',
+        '--repo', github_repo,
         '--json', 'number,state,isDraft,mergeStateStatus,mergedAt,statusCheckRollup,url',
     ])
     ci_status = derive_ci_status(merge_state)
@@ -3097,7 +3252,7 @@ def accept_and_merge_qa_pass(args):
     if not pr_merged:
         merge_cmd = [
             'gh', 'pr', 'merge', str(pr_full['number']),
-            '--repo', 'billyweisberg/fractal-core-python',
+            '--repo', github_repo,
             f'--{args.merge_method}',
         ]
         merge_code, merge_stdout, merge_error = run_text_with_errors(merge_cmd)
@@ -3116,12 +3271,18 @@ def accept_and_merge_qa_pass(args):
                 'merge': merge_result,
             }
 
-    issue_after_merge, pr_after_merge = github_state(args.issue_number, fallback_pr_number=pr_full.get('number'))
+    issue_after_merge, pr_after_merge = github_state(
+        args.issue_number,
+        github_repo,
+        fallback_pr_number=pr_full.get('number'),
+        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
+        fallback_packet=fallback_packet,
+    )
     issue_close = {'ok': True, 'already_closed': (issue_after_merge.get('state') or '').upper() == 'CLOSED'}
     if not issue_close['already_closed']:
         close_cmd = [
             'gh', 'issue', 'close', str(args.issue_number),
-            '--repo', 'billyweisberg/fractal-core-python',
+            '--repo', github_repo,
             '--reason', 'completed',
             '--comment', args.issue_close_comment or f'Closed by TechLead after QA pass and merge of PR #{pr_full["number"]}.',
         ]
@@ -3141,7 +3302,13 @@ def accept_and_merge_qa_pass(args):
                 'issue_close': issue_close,
             }
 
-    final_issue_state, final_pr_state = github_state(args.issue_number, fallback_pr_number=pr_full.get('number'))
+    final_issue_state, final_pr_state = github_state(
+        args.issue_number,
+        github_repo,
+        fallback_pr_number=pr_full.get('number'),
+        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
+        fallback_packet=fallback_packet,
+    )
 
     closeout_args = SimpleNamespace(
         repo_root=repo_root,
@@ -4380,6 +4547,7 @@ def role_entry_helper(args):
             str(producer_wrapper),
             'authority',
             'materialize-delivery-review-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--repo', str(worktree_path),
@@ -4399,6 +4567,7 @@ def role_entry_helper(args):
             str(producer_wrapper),
             'authority',
             'materialize-worker-result-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--worker-role', team_worker.key,
@@ -4420,6 +4589,7 @@ def role_entry_helper(args):
             str(producer_wrapper),
             'authority',
             'materialize-qa-verification-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--repo', str(worktree_path),
@@ -4584,6 +4754,7 @@ def role_result_assist(args):
             str(producer_wrapper),
             'authority',
             'materialize-delivery-review-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--repo', str(worktree_path),
@@ -4603,6 +4774,7 @@ def role_result_assist(args):
             str(producer_wrapper),
             'authority',
             'materialize-worker-result-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--worker-role', team_worker.key,
@@ -4624,6 +4796,7 @@ def role_result_assist(args):
             str(producer_wrapper),
             'authority',
             'materialize-qa-verification-packet',
+            '--project-slug', args.project_slug,
             '--package-id-external', args.package_id_external,
             '--brief-id-external', args.brief_id_external,
             '--repo', str(worktree_path),

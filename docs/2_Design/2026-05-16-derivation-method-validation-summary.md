@@ -316,3 +316,35 @@ Updated decision boundary:
 
 Important follow-on correction discovered and fixed during handoff validation:
 - handoff persistence now resolves proof-slice `work_item_id` from package/brief authority when no issue-number anchor exists
+
+## Status Update After Self-Hosted Consumer Runtime Validation
+
+Follow-on validation completed on `2026-05-17`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md`
+
+What changed:
+- the proof slice now validates self-hosted consumer bootstrap inside `paa-platform`
+- the proof slice now validates:
+  - `Packet -> Full Consumer Lane Execution`
+  - `Packet -> Worker Result`
+  - `Worker Result -> QA Assignment`
+  - `QA Assignment -> QA Pass Packet`
+- closeout was also exercised and correctly failed closed against proof-only GitHub linkage
+
+Updated decision boundary:
+- `GO` for:
+  - `Packet-Ready Execution Authority -> Consumer Bootstrap`
+  - `Packet -> Full Consumer Lane Execution`
+  - `Packet -> Worker Result`
+  - `Worker Result -> QA Assignment`
+  - `QA Assignment -> QA Pass Packet`
+- `NO-GO` for:
+  - `QA Pass -> Closeout`
+  - full `System Design -> Agent Team -> Functioning Software System`
+
+Important follow-on corrections discovered and fixed during self-hosted validation:
+- self-hosted consumer runtime now resolves its installed authority manifest dynamically instead of assuming `fractal-core-python-authority.json`
+- self-hosted consumer runtime now resolves GitHub repo identity from installed authority rather than hardcoding `billyweisberg/fractal-core-python`
+- proof-only packet context now provides fallback GitHub issue/PR records when live GitHub linkage is intentionally absent
+- proof-slice `DesignPackage -> WorkItem` materialization now allows issue binding to be added later without forking work-item identity
+- packet-ready promotion now persists `brief_json.execution_readiness.readiness_class = execution_ready` instead of advancing `authority_state` alone

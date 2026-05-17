@@ -5,7 +5,7 @@
   "project": "paa-platform",
   "from_role": "architect",
   "to_role": "python-team",
-  "created_at": "2026-05-17T14:35:58Z",
+  "created_at": "2026-05-17T15:05:04Z",
   "correlation_id": "issue-9002",
   "github_context": {
     "repo": "billyweisberg/paa-platform",
@@ -50,18 +50,14 @@
       "remaining_gap": "Validate packet-ready authority and architect-packet preparation without reintroducing implicit execution governance.",
       "prepared_for": "packet-ready execution authority validation"
     },
-    "remaining_gap": "Validate packet-ready authority and architect-packet preparation for the proof slice.",
+    "remaining_gap": "The service has a reviewed component spec but no materialized Stage 1 package and no authoritative task binding. The current code-artifact target taxonomy is repository-shaped and does not yet encode service-oriented artifact targets needed for this slice.",
     "next_move": [
-      "promote approved brief to packet-ready authority",
-      "compile architect_cycle_packet with embedded packet-ready brief",
       "create branch from main",
       "implement the Component Design Planning Service brief",
       "run the required validation and protected baseline checks",
       "keep PR linkage and issue commentary current for issue #9002"
     ],
     "focus": [
-      "Component Design Planning Service packet-ready authority",
-      "producer-side architect packet preparation",
       "Component Design Planning Service (interpret structured component design into planning-ready outputs)",
       "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py",
       "packages/paa-core/src/paa_core/services/component_design_planning/models.py",
@@ -75,7 +71,6 @@
       "benchmark"
     ],
     "governance_reminder": [
-      "Proof-only GitHub linkage is used for packet-governance validation in this run.",
       "Dev owns implementation, validation, and keeping the PR current",
       "Architect / Spec Owner owns acceptance and merge",
       "do not merge your own slice"
@@ -334,7 +329,7 @@
     "milestone_id": "m-authority-package-1-0",
     "phase_id": "p-proof-slice-derivation-remediation",
     "task_id": "paa-p0-component-design-planning-service-slice-package",
-    "issue_number": null,
+    "issue_number": 9002,
     "task_title": "Materialize the proof-slice design package for Component Design Planning Service"
   }
 }

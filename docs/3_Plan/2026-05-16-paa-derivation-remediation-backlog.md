@@ -461,7 +461,15 @@ Status update:
     - `Packet -> Consumer Queue Claim / Envelope Consumption`
   - validation record:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md`
-  - installed self-hosted consumer execution, QA, and merge are still separate next gates
+  - `2026-05-17`: self-hosted consumer runtime validation now also covers:
+    - `Packet-Ready Execution Authority -> Consumer Bootstrap`
+    - `Packet -> Full Consumer Lane Execution`
+    - `Packet -> Worker Result`
+    - `Worker Result -> QA Assignment`
+    - `QA Assignment -> QA Pass Packet`
+  - validation record:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md`
+  - closeout remains a separate gate because proof-only GitHub linkage correctly blocks `QA Pass -> Closeout`
 
 ## Stop / Continue Rule
 
@@ -480,16 +488,24 @@ Current decision is now split:
 - `GO` for the validated transport-consumption extension:
   - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
   - `Packet -> Consumer Queue Claim / Envelope Consumption`
+- `GO` for the validated self-hosted consumer execution path:
+  - `Packet-Ready Execution Authority -> Consumer Bootstrap`
+  - `Packet -> Full Consumer Lane Execution`
+  - `Packet -> Worker Result`
+  - `Worker Result -> QA Assignment`
+  - `QA Assignment -> QA Pass Packet`
+- `NO-GO` for proof-only closeout:
+  - `QA Pass -> Closeout`
 - `NO-GO` for claiming full `System Design -> Agent Team -> Functioning Software System` from this cycle alone
 
 Current validated result:
 - `Component Design Planning Service` has now been used successfully as the proof slice after Priority 0 and Priority 1 completion
 - packet-ready proof completed on `2026-05-17`
+- self-hosted consumer bootstrap, worker lane, and QA pass proof completed on `2026-05-17`
 
 Correct next move:
 - either extend the proof through:
-  - installed self-hosted consumer execution
-  - QA / merge closeout
+  - live GitHub-backed closeout
 - or deliberately choose whether packet-ready producer-side authority is enough to resume the next implementation step
 
 This keeps the next implementation run honest.

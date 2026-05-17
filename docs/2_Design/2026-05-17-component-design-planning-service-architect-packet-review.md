@@ -11,16 +11,12 @@
 - next issue: `#9002`
 
 ## Next move
-- promote approved brief to packet-ready authority
-- compile architect_cycle_packet with embedded packet-ready brief
 - create branch from main
 - implement the Component Design Planning Service brief
 - run the required validation and protected baseline checks
 - keep PR linkage and issue commentary current for issue #9002
 
 ## Focus
-- Component Design Planning Service packet-ready authority
-- producer-side architect packet preparation
 - Component Design Planning Service (interpret structured component design into planning-ready outputs)
 - packages/paa-core/src/paa_core/services/component_design_planning/contracts.py
 - packages/paa-core/src/paa_core/services/component_design_planning/models.py
