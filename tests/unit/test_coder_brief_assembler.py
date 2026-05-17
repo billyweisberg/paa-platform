@@ -14,7 +14,7 @@ from paa_producer.design_package_deriver import _resolve_stage1_schema_path, val
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')
 PACKAGE_PATH = REPO_ROOT / 'docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json'
-OUTPUT_PATH = REPO_ROOT / 'docs/2_Design/2026-05-16-component-design-planning-service-assembled-draft-coder-run-brief.json'
+OUTPUT_PATH = REPO_ROOT / '.codex-work' / 'coder-brief-assembler-tests' / 'assembled-draft-coder-run-brief.json'
 
 
 class CoderBriefAssemblerTests(unittest.TestCase):
@@ -30,13 +30,18 @@ class CoderBriefAssemblerTests(unittest.TestCase):
         self.assertIn('migrations/postgres/', forbidden)
 
     def test_assemble_coder_brief_for_proof_slice_without_db_persist(self):
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
         if OUTPUT_PATH.exists():
             OUTPUT_PATH.unlink()
-        result = assemble_coder_brief(
-            package_path=PACKAGE_PATH,
-            output_path=OUTPUT_PATH,
-            persist_db=False,
-        )
+        with patch(
+            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            return_value=None,
+        ):
+            result = assemble_coder_brief(
+                package_path=PACKAGE_PATH,
+                output_path=OUTPUT_PATH,
+                persist_db=False,
+            )
         self.assertEqual(result.project_slug, 'paa-platform')
         self.assertEqual(result.readiness_class, 'derivation_ready')
         self.assertTrue(OUTPUT_PATH.exists())

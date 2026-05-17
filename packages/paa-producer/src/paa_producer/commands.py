@@ -12,6 +12,7 @@ PRODUCER_COMMANDS = (
     'assemble-coder-brief',
     'author-brief-targets',
     'review-coder-brief',
+    'prepare-architect-packet',
     'materialize-readiness',
     'materialize-verification-obligations',
     'load-issue-into-paa',

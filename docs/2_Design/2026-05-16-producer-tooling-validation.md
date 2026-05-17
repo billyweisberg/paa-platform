@@ -102,12 +102,14 @@ Current subcommands include:
 - `record-decision`
 - `materialize-coder-brief`
 - `materialize-architect-packet`
+- `prepare-architect-packet`
 - multiple result-packet materialization commands
 
 Assessment:
 - this is the strongest current producer-side derivation runtime
 - it already supports real authority and packet workflows
 - but it is still heavily centered on manifest/task/issue/packet operations rather than the newer structured component/realization/brief-target model
+- `prepare-architect-packet` now provides the explicit producer-side bridge from approved brief authority to packet-ready execution authority for the proof slice
 
 ## 3. Publication tooling
 

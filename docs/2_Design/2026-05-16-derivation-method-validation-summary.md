@@ -267,3 +267,28 @@ Updated decision boundary:
 Important follow-on correction discovered and fixed during the rerun:
 - `assemble-coder-brief` now fails closed if an existing brief is already beyond `draft_brief`
 - this prevents draft derivation from silently demoting approved authority
+
+## Status Update After Packet-Ready Validation
+
+Follow-on validation completed on `2026-05-17`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-component-design-planning-service-packet-ready-validation.md`
+
+What changed:
+- the proof slice has now been promoted from `approved_brief` to:
+  - `packet_ready_execution_authority`
+- the producer-side packet-preparation flow now emits:
+  - packet-ready brief artifact
+  - `architect_cycle_packet`
+  - architect packet review artifact
+
+Updated decision boundary:
+- `GO` for:
+  - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
+- still not yet proven in this cycle:
+  - queue dispatch and consumer-lane execution
+  - QA / merge completion
+  - full `System Design -> Agent Team -> Functioning Software System`
+
+Important follow-on correction discovered and fixed during packet preparation:
+- packet preparation now emits a packet-ready brief artifact rather than copying the approved draft blindly
+- `coder_run_brief_ref.schema_path` now points to the coder-brief schema instead of the packet schema

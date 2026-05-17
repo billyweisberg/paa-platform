@@ -1,0 +1,18 @@
+{
+  "schema_type": "proof_authority_manifest",
+  "schema_version": "1.0.0",
+  "project": {
+    "project_id": "paa-platform",
+    "project_slug": "paa-platform",
+    "authority_version": "2026-05-16.1"
+  },
+  "proof_context": {
+    "purpose": "Proof-only manifest used to validate packet-ready architect-packet preparation for the Component Design Planning Service slice.",
+    "task_id": "paa-p0-component-design-planning-service-slice-package",
+    "task_title": "Component Design Planning Service proof-slice packet-readiness validation",
+    "notes": [
+      "This artifact is a producer-side validation input, not a published authority package manifest.",
+      "GitHub linkage in the paired architect packet is explicit proof-only linkage for packet-governance validation."
+    ]
+  }
+}

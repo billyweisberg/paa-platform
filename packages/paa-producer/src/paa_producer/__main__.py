@@ -11,6 +11,7 @@ from paa_core.install import install_producer_runtime
 from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
+from paa_producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
 from paa_producer.brief_target_author import author_brief_targets
 from paa_producer.coder_brief_assembler import assemble_coder_brief
 from paa_producer.brief_reviewer import review_coder_brief
@@ -268,6 +269,93 @@ def main() -> int:
             'target_count': result.target_count,
             'approval_json': result.approval_json,
             'output_path': result.output_path,
+            'checks': result.checks,
+        }, indent=2))
+        return 0
+
+    if args.command == 'prepare-architect-packet':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer prepare-architect-packet',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--manifest-path', required=True)
+        argp.add_argument('--design-package', required=True)
+        argp.add_argument('--packet-output', required=True)
+        argp.add_argument('--brief-output', required=True)
+        argp.add_argument('--repo', required=True)
+        argp.add_argument('--branch', default='main')
+        argp.add_argument('--accepted-pr-number', type=int, required=True)
+        argp.add_argument('--accepted-pr-url', required=True)
+        argp.add_argument('--closed-issue-number', type=int, required=True)
+        argp.add_argument('--closed-issue-url', required=True)
+        argp.add_argument('--next-issue-number', type=int, required=True)
+        argp.add_argument('--next-issue-url', required=True)
+        argp.add_argument('--baseline-file', required=True)
+        argp.add_argument('--review-output')
+        argp.add_argument('--schema-path')
+        argp.add_argument('--project-slug')
+        argp.add_argument('--packet-project', default='paa')
+        argp.add_argument('--remaining-gap')
+        argp.add_argument('--next-move', action='append')
+        argp.add_argument('--focus', action='append')
+        argp.add_argument('--keep-stable', action='append')
+        argp.add_argument('--governance-reminder', action='append')
+        argp.add_argument('--pr-starter-branch')
+        argp.add_argument('--pr-starter-title')
+        argp.add_argument('--pr-starter-body-linkage')
+        argp.add_argument('--message-id')
+        argp.add_argument('--correlation-id')
+        argp.add_argument('--created-at')
+        subargs = argp.parse_args(remainder)
+        result = prepare_architect_packet(
+            options=PacketPreparationOptions(
+                manifest_path=Path(subargs.manifest_path).resolve(),
+                package_path=Path(subargs.design_package).resolve(),
+                packet_output_path=Path(subargs.packet_output).resolve(),
+                brief_output_path=Path(subargs.brief_output).resolve(),
+                repo=subargs.repo,
+                branch=subargs.branch,
+                accepted_pr_number=subargs.accepted_pr_number,
+                accepted_pr_url=subargs.accepted_pr_url,
+                closed_issue_number=subargs.closed_issue_number,
+                closed_issue_url=subargs.closed_issue_url,
+                next_issue_number=subargs.next_issue_number,
+                next_issue_url=subargs.next_issue_url,
+                baseline_file=Path(subargs.baseline_file).resolve(),
+                review_output_path=Path(subargs.review_output).resolve() if subargs.review_output else None,
+                schema_path=Path(subargs.schema_path).resolve() if subargs.schema_path else None,
+                project_slug=subargs.project_slug,
+                packet_project=subargs.packet_project,
+                remaining_gap=subargs.remaining_gap,
+                next_move=tuple(subargs.next_move or ()),
+                focus=tuple(subargs.focus or ()),
+                keep_stable=tuple(subargs.keep_stable or ()),
+                governance_reminder=tuple(subargs.governance_reminder or ()),
+                pr_starter_branch=subargs.pr_starter_branch,
+                pr_starter_title=subargs.pr_starter_title,
+                pr_starter_body_linkage=subargs.pr_starter_body_linkage,
+                message_id=subargs.message_id,
+                correlation_id=subargs.correlation_id,
+                created_at=subargs.created_at,
+            )
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'package_id_external': result.package_id_external,
+            'coder_run_brief_id': result.coder_run_brief_id,
+            'brief_id_external': result.brief_id_external,
+            'authority_state': result.authority_state,
+            'status': result.status,
+            'transition_applied': result.transition_applied,
+            'packet_output_path': result.packet_output_path,
+            'brief_output_path': result.brief_output_path,
+            'review_output_path': result.review_output_path,
+            'packet_schema_path': result.packet_schema_path,
+            'brief_schema_path': result.brief_schema_path,
+            'message_id': result.message_id,
+            'target_count': result.target_count,
+            'packet_preparation_json': result.packet_preparation_json,
             'checks': result.checks,
         }, indent=2))
         return 0

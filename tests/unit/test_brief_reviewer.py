@@ -7,7 +7,7 @@ from paa_producer.brief_reviewer import _review_checks, review_coder_brief, Brie
 
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')
-OUTPUT_PATH = REPO_ROOT / 'docs/2_Design/2026-05-16-component-design-planning-service-brief-review-approval.json'
+OUTPUT_PATH = REPO_ROOT / '.codex-work' / 'brief-reviewer-tests' / 'brief-review-approval.json'
 
 
 class BriefReviewerTests(unittest.TestCase):
@@ -49,6 +49,7 @@ class BriefReviewerTests(unittest.TestCase):
         self.assertEqual(result.authority_state, 'approved_brief')
 
     def test_review_coder_brief_approve_writes_output(self):
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
         OUTPUT_PATH.unlink(missing_ok=True)
         context = BriefContext(
             coder_run_brief_id='brief',

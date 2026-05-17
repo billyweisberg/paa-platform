@@ -443,8 +443,9 @@ This process suggests explicit producer-side tools and services for:
 10. slice-package materialization and derivation-readiness evaluation
 11. brief target sequencing and target-taxonomy validation
 12. brief review and approval governance
-13. policy selection and validation
-14. authority package publication
+13. packet-readiness and architect-packet preparation
+14. policy selection and validation
+15. authority package publication
 
 ## Process Governance Rules
 
