@@ -3,8 +3,9 @@ import argparse
 import json
 import os
 from pathlib import Path
-import subprocess
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+
+from paa_core.db import DBSettings, run_psql as shared_run_psql, settings_from_profile, settings_with_overrides
 
 STATUS_ORDER = {
     'undefined': 0,
@@ -25,9 +26,7 @@ READINESS_CLASSES = {
     'completed',
 }
 
-PAA_DB_CONTAINER = os.environ.get('PAA_DB_CONTAINER', 'agenthub-mm-db')
-PAA_DB_NAME = os.environ.get('PAA_DB_NAME', 'paa_dev')
-PAA_DB_USER = os.environ.get('PAA_DB_USER', 'mmuser')
+PAA_DB_PROFILE = os.environ.get('PAA_DB_PROFILE', 'paa_dev')
 DEFAULT_PROJECT_SLUG = os.environ.get('PAA_PROJECT_SLUG', 'fractal-core-python')
 
 
@@ -45,17 +44,23 @@ def sql_literal(value: Optional[str]) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def run_psql(sql: str, *, db_container: str, db_name: str, db_user: str) -> str:
-    result = subprocess.run(
-        ['docker', 'exec', '-i', db_container, 'psql', '-U', db_user, '-d', db_name, '-At', '-F', '\t'],
-        input=sql,
-        capture_output=True,
-        text=True,
-        check=False,
+def resolve_db_settings(
+    *,
+    db_profile: str,
+    db_container: str | None,
+    db_name: str | None,
+    db_user: str | None,
+) -> DBSettings:
+    return settings_with_overrides(
+        db_profile,
+        container=db_container,
+        name=db_name,
+        user=db_user,
     )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or 'psql command failed')
-    return result.stdout
+
+
+def run_psql(sql: str, *, settings: DBSettings) -> str:
+    return shared_run_psql(sql, settings=settings)
 
 
 def parse_override(values: Iterable[str], expected: Optional[Iterable[str]] = None) -> Dict[str, str]:
@@ -219,7 +224,7 @@ def discover_briefs(brief_dir: Path) -> List[Path]:
     return sorted(p for p in brief_dir.glob('coder_run_brief*.json') if p.is_file())
 
 
-def load_from_db(*, package_id_external: str, project_slug: str, db_container: str, db_name: str, db_user: str) -> Tuple[dict, List[Tuple[str, dict]], dict]:
+def load_from_db(*, package_id_external: str, project_slug: str, settings: DBSettings) -> Tuple[dict, List[Tuple[str, dict]], dict]:
     pkg_sql = f"""
     SELECT dp.package_json::text
     FROM paa.design_packages dp
@@ -228,7 +233,7 @@ def load_from_db(*, package_id_external: str, project_slug: str, db_container: s
       AND dp.package_id_external = {sql_literal(package_id_external)}
     LIMIT 1;
     """
-    pkg_out = run_psql(pkg_sql, db_container=db_container, db_name=db_name, db_user=db_user).strip()
+    pkg_out = run_psql(pkg_sql, settings=settings).strip()
     if not pkg_out:
         raise RuntimeError(f'No design package found for {project_slug}:{package_id_external}')
     package = json.loads(pkg_out)
@@ -242,7 +247,7 @@ def load_from_db(*, package_id_external: str, project_slug: str, db_container: s
     ORDER BY cb.brief_id_external;
     """
     brief_rows = []
-    for line in run_psql(brief_sql, db_container=db_container, db_name=db_name, db_user=db_user).splitlines():
+    for line in run_psql(brief_sql, settings=settings).splitlines():
         if not line.strip():
             continue
         brief_id, brief_json = line.split('\t', 1)
@@ -259,7 +264,7 @@ def load_from_db(*, package_id_external: str, project_slug: str, db_container: s
       AND dp.package_id_external = {sql_literal(package_id_external)};
     """
     edge_status_map: Dict[str, dict] = {}
-    for line in run_psql(edge_sql, db_container=db_container, db_name=db_name, db_user=db_user).splitlines():
+    for line in run_psql(edge_sql, settings=settings).splitlines():
         if not line.strip():
             continue
         edge_id, status, notes, shared_surface_conflict = line.split('\t')
@@ -276,9 +281,7 @@ def persist_to_db(
     project_slug: str,
     package_id_external: str,
     updated_briefs: List[dict],
-    db_container: str,
-    db_name: str,
-    db_user: str,
+    settings: DBSettings,
 ) -> None:
     statements = []
     for brief in updated_briefs:
@@ -332,7 +335,7 @@ def persist_to_db(
           AND cb.brief_id_external = {sql_literal(brief['brief_id'])};
         """)
     sql = 'BEGIN;\n' + '\n'.join(statements) + '\nCOMMIT;\n'
-    run_psql(sql, db_container=db_container, db_name=db_name, db_user=db_user)
+    run_psql(sql, settings=settings)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -342,9 +345,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument('--brief-dir', help='Directory containing coder_run_brief*.json artifacts to update.')
     parser.add_argument('--db-package-id-external', help='Load the design package and coder briefs from PAA by external package id.')
     parser.add_argument('--db-project-slug', default=DEFAULT_PROJECT_SLUG, help='Project slug for PAA-backed mode.')
-    parser.add_argument('--db-container', default=PAA_DB_CONTAINER, help='Docker container name for PAA Postgres.')
-    parser.add_argument('--db-name', default=PAA_DB_NAME, help='Database name for PAA Postgres.')
-    parser.add_argument('--db-user', default=PAA_DB_USER, help='Database user for PAA Postgres.')
+    parser.add_argument('--db-profile', default=PAA_DB_PROFILE, help='DB profile defined in paa_core.db.')
+    parser.add_argument('--db-container', help='Override Docker container name for PAA Postgres.')
+    parser.add_argument('--db-name', help='Override database name for PAA Postgres.')
+    parser.add_argument('--db-user', help='Override database user for PAA Postgres.')
     parser.add_argument('--set-edge-status', action='append', default=[], help='Override dependency edge status as edge_id=status.')
     parser.add_argument('--set-brief-readiness', action='append', default=[], help='Force a brief readiness class as brief_id=readiness_class.')
     parser.add_argument('--write', action='store_true', help='Persist updated briefs back to disk.')
@@ -357,14 +361,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         raise SystemExit('Pass either --brief-dir or --db-package-id-external.')
 
     updated_briefs: List[dict] = []
+    db_settings = resolve_db_settings(
+        db_profile=args.db_profile,
+        db_container=args.db_container,
+        db_name=args.db_name,
+        db_user=args.db_user,
+    )
 
     if args.db_package_id_external:
         package, brief_rows, edge_status_map = load_from_db(
             package_id_external=args.db_package_id_external,
             project_slug=args.db_project_slug,
-            db_container=args.db_container,
-            db_name=args.db_name,
-            db_user=args.db_user,
+            settings=db_settings,
         )
         graph = load_json(Path(args.dependency_graph).resolve()) if args.dependency_graph else package['dependency_graph_slice']
         for edge in graph['edges']:
@@ -420,9 +428,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             project_slug=args.db_project_slug,
             package_id_external=args.db_package_id_external,
             updated_briefs=updated_briefs,
-            db_container=args.db_container,
-            db_name=args.db_name,
-            db_user=args.db_user,
+            settings=db_settings,
         )
 
     print(json.dumps({'updated_briefs': summary}, indent=2))

@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from paa_core.db import run_psql as shared_run_psql
 from paa_core.config import load_producer_project_config
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_core.runtime_paths import default_installed_artifact_path, default_installed_manifest_path, producer_manifest_candidates
@@ -17,9 +18,6 @@ from paa_producer.issue_loader import load_issue_into_paa
 
 MANIFEST_ENV = 'FRACTAL_CORE_AUTHORITY_MANIFEST'
 CURRENT_MANIFEST = default_installed_manifest_path()
-PAA_DB_CONTAINER = os.environ.get('PAA_DB_CONTAINER', 'agenthub-mm-db')
-PAA_DB_NAME = os.environ.get('PAA_DB_NAME', 'paa_dev')
-PAA_DB_USER = os.environ.get('PAA_DB_USER', 'mmuser')
 PAA_PROJECT_SLUG = os.environ.get('PAA_PROJECT_SLUG', 'fractal-core-python')
 DEFAULT_GOVERNANCE_REMINDERS = [
     'Dev owns implementation, validation, and keeping the PR current',
@@ -80,16 +78,7 @@ def sql_literal(value):
 
 
 def run_psql(sql: str) -> str:
-    result = subprocess.run(
-        ['docker', 'exec', '-i', PAA_DB_CONTAINER, 'psql', '-U', PAA_DB_USER, '-d', PAA_DB_NAME, '-At', '-F', '\t'],
-        input=sql,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or 'PAA psql command failed')
-    return result.stdout
+    return shared_run_psql(sql)
 
 
 def resolve_work_item_id(project_slug: str, issue_number: Optional[int]) -> Optional[str]:

@@ -78,6 +78,29 @@ def settings_from_profile(profile: str | None) -> DBSettings:
     )
 
 
+def settings_with_overrides(
+    profile: str | None,
+    *,
+    mode: str | None = None,
+    container: str | None = None,
+    host: str | None = None,
+    port: int | None = None,
+    name: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+) -> DBSettings:
+    base = settings_from_profile(profile)
+    return DBSettings(
+        mode=mode or base.mode,
+        container=container or base.container,
+        host=host or base.host,
+        port=port or base.port,
+        name=name or base.name,
+        user=user or base.user,
+        password=password if password is not None else base.password,
+    )
+
+
 def sql_literal(value):
     if value is None:
         return 'NULL'

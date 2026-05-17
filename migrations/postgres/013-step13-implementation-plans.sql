@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS paa.implementation_plan_verification_surfaces (
   implementation_plan_verification_surface_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   implementation_plan_id UUID NOT NULL REFERENCES paa.implementation_plans(implementation_plan_id) ON DELETE CASCADE,
   implementation_plan_activity_id UUID REFERENCES paa.implementation_plan_activities(implementation_plan_activity_id) ON DELETE SET NULL,
-  verification_obligation_id UUID REFERENCES paa.verification_obligations(verification_obligation_id) ON DELETE SET NULL,
+  verification_obligation_id UUID REFERENCES paa.verification_obligations(verification_id) ON DELETE SET NULL,
   surface_kind TEXT NOT NULL,
   surface_ref TEXT,
   required BOOLEAN NOT NULL DEFAULT true,

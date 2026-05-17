@@ -74,4 +74,8 @@ The local PAA DB is now the intended default for:
 - derivation-state development
 - project-design / implementation-plan development
 
-AgentHub remains only a temporary compatibility source for already-materialized proof data until PAA runtime modules fully cut over.
+Canonical migrations have been validated successfully against this local DB, including:
+
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/migrations/postgres/013-step13-implementation-plans.sql`
+
+AgentHub remains only a temporary compatibility source for already-materialized proof data and legacy inspection.

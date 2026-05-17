@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -36,7 +37,7 @@ class CoderBriefAssemblerTests(unittest.TestCase):
         with patch(
             'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=None,
-        ):
+        ), patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
             result = assemble_coder_brief(
                 package_path=PACKAGE_PATH,
                 output_path=OUTPUT_PATH,

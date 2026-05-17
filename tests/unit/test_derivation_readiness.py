@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -36,7 +37,8 @@ class DerivationReadinessTests(unittest.TestCase):
             self.assertTrue(_has_brief_lifecycle_support())
 
     def test_evaluate_derivation_readiness_for_proof_slice(self):
-        result = evaluate_derivation_readiness(package_path=PACKAGE_PATH)
+        with patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
+            result = evaluate_derivation_readiness(package_path=PACKAGE_PATH)
         self.assertTrue(result.ready)
         self.assertEqual(result.readiness_class, 'derivation_ready')
         self.assertEqual(result.primary_component_name, 'Component Design Planning Service')

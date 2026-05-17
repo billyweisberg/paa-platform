@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from paa_core.db import run_psql as shared_run_psql
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     techlead_assignment_route_pairs,
@@ -29,9 +30,6 @@ DEFAULT_VHOST = os.environ.get("FRACTAL_CORE_RABBITMQ_VHOST", "/")
 DEFAULT_EXCHANGE = os.environ.get("FRACTAL_CORE_RABBITMQ_EXCHANGE", "fractal-core-handoff")
 DEFAULT_QUEUES = ["fractal-core-architecture", "fractal-core-qa", "fractal-core-python"]
 STATE_ENV_VAR = "FRACTAL_CORE_HANDOFF_STATE_DIR"
-PAA_DB_CONTAINER = os.environ.get("PAA_DB_CONTAINER", "agenthub-mm-db")
-PAA_DB_NAME = os.environ.get("PAA_DB_NAME", "paa_dev")
-PAA_DB_USER = os.environ.get("PAA_DB_USER", "mmuser")
 SUPPORTED_SCHEMA_TYPES = {
     "architect_cycle_packet",
     "qa_verification_packet",
@@ -203,15 +201,7 @@ def sql_literal(value):
 
 
 def run_psql(sql: str) -> str:
-    result = subprocess.run(
-        ["docker", "exec", "-i", PAA_DB_CONTAINER, "psql", "-U", PAA_DB_USER, "-d", PAA_DB_NAME, "-At", "-F", "\t"],
-        input=sql,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "PAA psql command failed")
-    return result.stdout
+    return shared_run_psql(sql)
 
 
 def normalize_role_name(raw_role: Optional[str]) -> Optional[str]:

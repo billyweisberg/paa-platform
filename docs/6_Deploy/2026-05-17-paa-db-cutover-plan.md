@@ -36,16 +36,24 @@ Repo-owned local DB definition added:
 
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docker-compose.postgres.yml`
 
-## Important current limitation
+## Current code status
 
-Not all runtime code uses `paa_core.db` yet.
+The previously identified runtime modules have now been migrated to use:
 
-These modules still contain direct legacy DB assumptions and must be migrated before final cutover:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/db.py`
+
+Completed migrations:
 
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/handoff_runtime.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/readiness.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+
+That means the remaining cutover work is now primarily:
+
+- data/bootstrap
+- proof-state re-materialization
+- operational default flipping
 
 ## Recommended cutover phases
 
@@ -84,7 +92,11 @@ from:
 
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/db.py`
 
-This is the real application cutover step.
+Status:
+
+- complete
+
+This was the real application cutover step.
 
 ### Phase 4. Re-materialize or copy required proof state
 
@@ -106,6 +118,12 @@ After Phase 3 and Phase 4 are complete:
 - keep `PAA_DB_PROFILE=paa_dev` as the PAA-local default
 - stop using AgentHub legacy profiles in normal docs and commands
 - reserve legacy profiles for fallback inspection only
+
+Status:
+
+- partially complete
+
+The code default now points to the PAA-local DB. Remaining work is to update any older operational habits and legacy commands to stop assuming AgentHub profiles during proof-data inspection.
 
 ### Phase 6. Retire legacy dependency
 

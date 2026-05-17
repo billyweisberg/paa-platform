@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 
+from paa_core.db import run_psql as shared_run_psql, settings_from_profile, settings_with_overrides
 from paa_core import handoff_runtime
 from paa_core.runtime_paths import repo_authority_manifest_path
 from paa_core.team_worker_roles import (
@@ -18,9 +19,11 @@ from paa_core.team_worker_roles import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_DB_CONTAINER = 'agenthub-mm-db'
-DEFAULT_DB_NAME = 'paa_dev'
-DEFAULT_DB_USER = 'mmuser'
+DEFAULT_DB_PROFILE = os.environ.get('PAA_DB_PROFILE', 'paa_dev')
+DEFAULT_DB_SETTINGS = settings_from_profile(DEFAULT_DB_PROFILE)
+DEFAULT_DB_CONTAINER = DEFAULT_DB_SETTINGS.container
+DEFAULT_DB_NAME = DEFAULT_DB_SETTINGS.name
+DEFAULT_DB_USER = DEFAULT_DB_SETTINGS.user
 DEFAULT_PROJECT_SLUG = 'fractal-core-python'
 DEFAULT_AGENT_NAME = 'Fractal Core TechLead Automation'
 ROLE_CONFIG = {
@@ -264,16 +267,24 @@ def run_text_with_errors(cmd, cwd: Path | None = None):
     return 0, result.stdout, None
 
 
-def run_psql(db_container, db_name, db_user, sql):
-    result = subprocess.run(
-        ['docker', 'exec', '-i', db_container, 'psql', '-U', db_user, '-d', db_name, '-At', '-F', '\t'],
-        input=sql,
-        capture_output=True,
-        text=True,
+def resolve_db_settings(db_profile=None, db_container=None, db_name=None, db_user=None):
+    profile = db_profile or DEFAULT_DB_PROFILE
+    return settings_with_overrides(
+        profile,
+        container=db_container,
+        name=db_name,
+        user=db_user,
     )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or 'psql command failed')
-    return result.stdout
+
+
+def run_psql(db_container, db_name, db_user, sql, db_profile=DEFAULT_DB_PROFILE):
+    settings = resolve_db_settings(
+        db_profile=db_profile,
+        db_container=db_container,
+        db_name=db_name,
+        db_user=db_user,
+    )
+    return shared_run_psql(sql, settings=settings)
 
 
 def sql_literal(value):
@@ -5080,10 +5091,11 @@ def role_return_bridge(args):
 
 
 def persist_report(report, args):
+    db_settings = resolve_db_settings(args.db_profile, args.db_container, args.db_name, args.db_user)
     agent_id = resolve_agent_id(
-        args.db_container,
-        args.db_name,
-        args.db_user,
+        db_settings.container,
+        db_settings.name,
+        db_settings.user,
         args.project_slug,
         args.agent_name,
     )
@@ -5094,9 +5106,9 @@ def persist_report(report, args):
 
     issue_number = ((report.get('active_work') or {}).get('work_item') or {}).get('issue_number')
     work_item_id = resolve_work_item_id(
-        args.db_container,
-        args.db_name,
-        args.db_user,
+        db_settings.container,
+        db_settings.name,
+        db_settings.user,
         args.project_slug,
         issue_number,
     )
@@ -5135,7 +5147,13 @@ def persist_report(report, args):
     )
     RETURNING automation_run_id;
     """
-    automation_run_id = run_psql(args.db_container, args.db_name, args.db_user, sql).strip()
+    automation_run_id = run_psql(
+        db_settings.container,
+        db_settings.name,
+        db_settings.user,
+        sql,
+        db_profile=args.db_profile,
+    ).strip()
     if not automation_run_id:
         raise RuntimeError('TechLead report insert did not return an automation_run_id.')
     return {
@@ -5156,9 +5174,10 @@ def parse_args(argv: list[str] | None = None):
     status.add_argument('--schema', type=Path, default=DEFAULT_SCHEMA, help='Schema path to use with --validate-schema.')
     status.add_argument('--validate-schema', action='store_true', help='Validate the generated report against the TechLead JSON schema.')
     status.add_argument('--persist-db', action='store_true', help='Persist the generated report into paa.automation_runs.')
-    status.add_argument('--db-container', default=DEFAULT_DB_CONTAINER, help='Docker container running Postgres.')
-    status.add_argument('--db-name', default=DEFAULT_DB_NAME, help='Postgres database name.')
-    status.add_argument('--db-user', default=DEFAULT_DB_USER, help='Postgres database user.')
+    status.add_argument('--db-profile', default=DEFAULT_DB_PROFILE, help='DB profile defined in paa_core.db.')
+    status.add_argument('--db-container', help='Override Docker container running Postgres.')
+    status.add_argument('--db-name', help='Override Postgres database name.')
+    status.add_argument('--db-user', help='Override Postgres database user.')
     status.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG, help='PAA project slug to resolve agent and work item IDs.')
     status.add_argument('--agent-name', default=DEFAULT_AGENT_NAME, help='PAA agent name used for TechLead persistence.')
 
@@ -5415,8 +5434,9 @@ def main(argv=None):
         if args.output:
             args.output.write_text(text + '\n')
         if persistence:
+            persisted_db_name = args.db_name or resolve_db_settings(args.db_profile, args.db_container, args.db_name, args.db_user).name
             sys.stderr.write(
-                f"Persisted TechLead report to {args.db_name} as automation_run_id={persistence['automation_run_id']}"
+                f"Persisted TechLead report to {persisted_db_name} as automation_run_id={persistence['automation_run_id']}"
             )
             if persistence.get('work_item_id'):
                 sys.stderr.write(f" work_item_id={persistence['work_item_id']}")
