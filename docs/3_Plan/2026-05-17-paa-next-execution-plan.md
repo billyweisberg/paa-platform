@@ -97,6 +97,11 @@ This is the first code-level infrastructure boundary for the new project-design 
 - design note or repository contract update for `ImplementationPlanRepository`
 - repository package layout under `paa-core`
 - initial repository methods identified and sequenced
+- explicit mapping from:
+  - component
+  - component elements
+  - code artifact targets
+  - implementation-plan activities
 
 ### Target files
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-implementation-plan-repository-contract.md`
@@ -113,6 +118,16 @@ This is the first code-level infrastructure boundary for the new project-design 
 - create/update plan root
 - create/update activities
 - create/update dependencies
+
+### Required modeling rule
+Use the existing PAA model only:
+- `Component`
+- `Component Elements`
+- `Code Artifact Target Taxonomy`
+- `ImplementationPlan`
+- `CoderBrief`
+
+Do not create a new parallel design-artifact family for this repository definition step.
 
 ## Step 2. Define `Implementation Plan Derivation Service`
 
