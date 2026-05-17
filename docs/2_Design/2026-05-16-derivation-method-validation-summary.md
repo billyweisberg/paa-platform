@@ -24,6 +24,11 @@ This summary closes the following phase notes:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-architecture-vs-derivation-validation.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-producer-tooling-validation.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-derivation-dry-run.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-component-design-planning-service-packet-ready-validation.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-proof-only-closeout-validation.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-live-github-closeout-validation.md`
 
 Primary method and process docs refined in this phase:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-03-coder-brief-derivation-method.md`
@@ -383,3 +388,56 @@ Important follow-on clarification:
 - the operator-facing runtime lineage now shows `workflow_stage = proof_only_closed`
 - the broad DB full-chain rollup still reports `acceptance_decision = proof_only_closed` without yet promoting this slice to a richer terminal `full_chain_state`
 - that is now a projection refinement opportunity, not a blocker to proof-only closeout governance
+
+## Status Update After Live GitHub-Backed Closeout Validation
+
+Follow-on validation completed on `2026-05-17`:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-live-github-closeout-validation.md`
+
+What changed:
+- the proof slice now validates a real merged PR and real closed GitHub issue closeout path
+- the live GitHub-backed closeout boundary now validates:
+  - `Merged PR + Closed Issue -> Live TechLead Closeout`
+  - `Live TechLead Closeout -> Accepted Delivery Event`
+  - `Live TechLead Closeout -> Terminal Runtime Lineage`
+  - `Live TechLead Closeout -> Queue Hygiene`
+
+Updated decision boundary:
+- `GO` for:
+  - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
+  - `Packet -> Consumer Bootstrap`
+  - `Packet -> Full Consumer Lane Execution`
+  - `Packet -> Worker Result`
+  - `Worker Result -> QA Assignment`
+  - `QA Assignment -> QA Pass Packet`
+  - `QA Pass -> Proof-Only Closeout`
+  - `Merged PR + Closed Issue -> Live TechLead Closeout`
+- still not yet proven as one single canonical proof in this cycle:
+  - one uninterrupted fresh live issue run from new derivation through worker, QA, merge, and closeout without any boundary-focused artifact reuse
+  - full `System Design -> Agent Team -> Functioning Software System` as a single uninterrupted live slice
+
+Important follow-on clarification:
+- the live closeout path is now validated as a real production-semantic terminal path
+- the broad DB full-chain rollup still reports `acceptance_decision = accepted` while leaving `full_chain_state = design_packaged`
+- that is a reporting-view refinement opportunity, not a blocker to live closeout correctness
+
+## Current Practical Verdict
+
+PAA now has validated boundary coverage for:
+- producer derivation
+- governed brief approval
+- packet-ready execution authority
+- architect handoff and queue dispatch
+- consumer queue claim and bootstrap
+- worker-lane execution
+- QA assignment and QA pass
+- proof-only closeout
+- live GitHub-backed closeout
+
+This is enough to say the architecture and derivation system are operationally real.
+
+It is still more honest to describe the current proof as:
+- maximum boundary closure
+
+than as:
+- one single uninterrupted canonical live run from fresh System Design all the way to delivered software without any staged proof support

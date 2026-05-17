@@ -1,0 +1,138 @@
+# Live GitHub-Backed Closeout Validation
+
+Date: 2026-05-17
+Repo: `/Users/billyweisberg/Repos/billyweisberg/paa-platform`
+Branch used for live PR: `codex/paa-platform-live-closeout-proof`
+Live issue: `#6`
+Live PR: `#7`
+Proof slice:
+- package: `paa-stage1-2026-05-16-component-design-planning-service`
+- brief: `paa-coder-2026-05-16-component-design-planning-service-governed-draft`
+
+## Goal
+Validate the live GitHub-backed closeout boundary separately from the already-validated proof-only closeout path.
+
+This run was intended to answer one narrower question:
+- can PAA record terminal TechLead closeout correctly when the slice is backed by a real merged PR and a real closed GitHub issue?
+
+## Preparation
+
+### 1. Integrated baseline was pushed to GitHub
+Local `main` was fast-forwarded to the integrated `system-design-1` baseline and pushed to `origin/main`.
+
+### 2. Fresh live-proof branch was created
+A fresh disposable branch was cut from integrated `main`:
+- `codex/paa-platform-live-closeout-proof`
+
+### 3. Real live issue and PR were created
+- issue: `#6`
+- PR: `#7`
+
+The PR carried one minimal tracked change:
+- rebinding the proof slice authority package to issue `#6`
+- switching the slice execution mode back to `live_delivery`
+
+### 4. Proof slice was rebound in DB
+`derive-design-package` was rerun so the persisted proof slice now resolves to live issue `#6`.
+
+### 5. Live QA-pass artifact was prepared
+A fresh repo-local QA packet was prepared for:
+- issue `#6`
+- PR `#7`
+
+This packet reused the already-validated QA payload shape, but was rebound to the real GitHub issue/PR for the purpose of exercising the live closeout boundary.
+
+Important honesty rule:
+- this was a focused closeout proof
+- it was not a full fresh worker/QA rerun from the live branch
+
+## Live GitHub state
+Before closeout execution:
+- PR `#7` was merged
+- issue `#6` was closed
+
+Validated GitHub state used by the runtime:
+- `pr_state = MERGED`
+- `pr_merged_at` populated
+- `issue_state = CLOSED`
+
+## Closeout execution
+Executed:
+- `paa_consumer techlead-closeout-qa-pass --issue-number 6 --send-decision`
+
+Result:
+- `ok = true`
+- `execution_mode = live_delivery`
+- `closeout_mode = live_delivery`
+
+Generated terminal decision artifacts:
+- `.project/data/paa/reports/techlead-decision.issue6.closed.json`
+- `.project/data/paa/reports/techlead-decision.issue6.closed.md`
+
+Terminal decision packet:
+- `message_id = fcore-techlead-2026-05-17-issue6-close_slice`
+- validated successfully
+- sent successfully
+- self-addressed terminal decision packet auto-acknowledged successfully
+
+## Durable DB result
+Validated latest acceptance event for issue `#6`:
+- `decision = accepted`
+- notes record TechLead acceptance after QA pass and merged PR `#7`
+
+This is the important distinction from proof-only closeout:
+- live closeout records normal accepted delivery semantics
+- proof-only closeout records `proof_only_closed`
+
+## Operator-facing lineage result
+Validated with `paa-consumer techlead-lineage`:
+- `workflow_stage = techlead_decision_recorded`
+- `lineage.lineage_state = closed`
+- `lineage.latest_lineage_action = closed`
+- `issue_url = https://github.com/billyweisberg/paa-platform/issues/6`
+- `pr_url = https://github.com/billyweisberg/paa-platform/pull/7`
+- `recommended_actions = []`
+- `unattended_safe = true`
+
+This confirms the live closeout path is visible and terminal to the operator-facing runtime surface.
+
+## Queue hygiene result
+Validated:
+- terminal closeout decision packet was auto-acknowledged after send
+- no residual architecture-queue packet remained from the self-addressed terminal decision
+
+## Additional observation
+The broad DB full-chain traceability view still reports:
+- `acceptance_decision = accepted`
+- but `full_chain_state = design_packaged`
+
+That means the reporting view still has a broader packet/evidence-linkage refinement opportunity.
+It does **not** invalidate the live closeout proof itself.
+
+## Decision
+Validated as `GO`:
+- `Merged PR + Closed Issue -> Live TechLead Closeout`
+- `Live TechLead Closeout -> Accepted Delivery Event`
+- `Live TechLead Closeout -> Terminal Runtime Lineage`
+- `Live TechLead Closeout -> Queue Hygiene`
+
+## Honest scope statement
+This run proves the live GitHub-backed closeout boundary.
+
+Taken together with the earlier proofs, PAA now has validated boundaries for:
+- producer derivation
+- packet readiness
+- queue dispatch
+- consumer bootstrap
+- worker lane
+- QA pass
+- proof-only closeout
+- live GitHub-backed closeout
+
+What this run does **not** prove by itself is:
+- one single uninterrupted live issue run from fresh derivation all the way to merge and closeout without any boundary-focused reuse of artifacts
+
+So this is best understood as:
+- maximum boundary closure
+not necessarily:
+- one canonical single-issue live end-to-end proof

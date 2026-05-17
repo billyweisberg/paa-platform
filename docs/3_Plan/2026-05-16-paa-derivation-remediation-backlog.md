@@ -480,7 +480,13 @@ Status update:
     - terminal lineage visibility
   - validation record:
     - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-proof-only-closeout-validation.md`
-  - live GitHub-backed closeout remains optional and separate
+  - `2026-05-17`: live GitHub-backed closeout path is now also validated separately through:
+    - `Merged PR + Closed Issue -> Live TechLead Closeout`
+    - durable `accepted` delivery event persistence
+    - terminal lineage visibility
+    - queue hygiene
+  - validation record:
+    - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-live-github-closeout-validation.md`
 
 ## Stop / Continue Rule
 
@@ -507,6 +513,8 @@ Current decision is now split:
   - `QA Assignment -> QA Pass Packet`
 - `GO` for the validated proof-only terminal path:
   - `QA Pass -> Proof-Only Closeout`
+- `GO` for the validated live GitHub-backed terminal path:
+  - `Merged PR + Closed Issue -> Live TechLead Closeout`
 - `NO-GO` for claiming full `System Design -> Agent Team -> Functioning Software System` from this cycle alone
 
 Current validated result:
@@ -514,11 +522,12 @@ Current validated result:
 - packet-ready proof completed on `2026-05-17`
 - self-hosted consumer bootstrap, worker lane, and QA pass proof completed on `2026-05-17`
 - proof-only closeout proof completed on `2026-05-17`
+- live GitHub-backed closeout proof completed on `2026-05-17`
 
 Correct next move:
-- either extend the proof through:
-  - optional live GitHub-backed closeout
-- or deliberately choose whether packet-ready producer-side authority is enough to resume the next implementation step
+- decide whether to:
+  - run one single uninterrupted fresh live slice as a highest-confidence proof
+  - or resume the next implementation step with the current maximum boundary-closure evidence set
 
 This keeps the next implementation run honest.
 It should be produced by the refined PAA process, not only supported by it after the fact.
