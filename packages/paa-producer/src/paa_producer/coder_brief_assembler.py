@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from paa_core.db import query_rows, sql_literal
+from paa_core.repositories.component_design import PostgresComponentDesignRepository
+from paa_core.repositories.implementation_plan import PostgresImplementationPlanRepository
+from paa_core.services.component_design_planning import (
+    DefaultComponentDesignPlanningService,
+)
 
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
 
@@ -36,6 +41,7 @@ class AssembledCoderBriefResult:
     authority_state: str
     readiness_class: str
     persisted: bool
+    implementation_plan_id: str | None
 
 
 def _require_jsonschema() -> None:
@@ -111,6 +117,45 @@ def _architect_role_id(project_slug: str) -> str | None:
     return _query_scalar(sql)
 
 
+
+
+def _load_implementation_plan_binding(design_package_id: str, consumer_context_key: str = 'python') -> dict[str, Any] | None:
+    sql = f"""
+    SELECT implementation_plan_id::text, coalesce(plan_id_external, ''), coalesce(authority_state::text, ''), coalesce(status::text, ''), count(*) OVER ()::text
+    FROM paa.implementation_plans
+    WHERE design_package_id = {sql_literal(design_package_id)}::uuid
+      AND consumer_context_key = {sql_literal(consumer_context_key)}
+    ORDER BY created_at DESC
+    LIMIT 1;
+    """
+    row = _query_single_row(sql)
+    if row is None:
+        return None
+    return {
+        'implementation_plan_id': row[0],
+        'plan_id_external': row[1] or None,
+        'authority_state': row[2] or None,
+        'status': row[3] or None,
+    }
+
+
+def _load_implementation_plan_context(implementation_plan_id: str) -> dict[str, Any] | None:
+    repository = PostgresImplementationPlanRepository()
+    plan = repository.get_implementation_plan(implementation_plan_id)
+    if plan is None:
+        return None
+    activities = repository.list_implementation_plan_activities(implementation_plan_id)
+    dependencies = repository.list_implementation_plan_activity_dependencies(implementation_plan_id)
+    verification_surfaces = repository.list_implementation_plan_verification_surfaces(implementation_plan_id)
+    return {
+        'plan_id_external': plan.plan_id_external,
+        'plan_title': plan.plan_title,
+        'consumer_context_key': plan.consumer_context_key,
+        'activities': activities,
+        'dependencies': dependencies,
+        'verification_surfaces': verification_surfaces,
+    }
+
 def _existing_brief_for_design_package(design_package_id: str) -> tuple[str, str, str] | None:
     sql = f"""
     SELECT coder_run_brief_id::text, coalesce(brief_id_external, ''), authority_state::text
@@ -125,19 +170,12 @@ def _existing_brief_for_design_package(design_package_id: str) -> tuple[str, str
     return row[0], row[1], row[2]
 
 
-def _derive_component_aspects(component_assignment: dict[str, Any], target_mappings: set[tuple[str, str]]) -> list[str]:
-    aspects: list[str] = []
-    if ('interfaces', 'service_interface') in target_mappings:
-        aspects.append('interfaces')
-    if ('functions', 'service_implementation') in target_mappings:
-        aspects.append('functions')
-    if any(str(path).endswith('/models.py') for path in component_assignment.get('target_modules', [])):
-        aspects.append('data_contract')
-    if ('verification_surfaces', 'test_module') in target_mappings:
-        aspects.append('tests')
-    if not aspects:
-        aspects.append('functions')
-    return aspects
+class _PlanningLogger:
+    def info(self, event: str, **fields: object) -> None:
+        return None
+
+    def warning(self, event: str, **fields: object) -> None:
+        return None
 
 
 def _derive_forbidden_surfaces(package: dict[str, Any]) -> list[str]:
@@ -198,13 +236,18 @@ def _derive_dependency_contract(package: dict[str, Any], collaboration_context: 
     }
 
 
-def _derive_behavioral_contract(package: dict[str, Any]) -> dict[str, Any]:
+def _derive_behavioral_contract(package: dict[str, Any], implementation_plan_context: dict[str, Any] | None = None) -> dict[str, Any]:
     requirements = (package.get('requirement_set') or {}).get('requirements') or []
     decisions = (package.get('design_decision_set') or {}).get('design_decisions') or []
     protected = (package.get('product_and_source_basis') or {}).get('protected_product_truths') or []
     canonical = (package.get('spec_fragment') or {}).get('canonical_statement')
     behavior = [canonical] if canonical else []
     behavior.extend(requirements)
+    if implementation_plan_context:
+        behavior.extend(
+            f"Execute implementation-plan activity: {activity.activity_title} [{activity.activity_key}]"
+            for activity in implementation_plan_context['activities']
+        )
     invariants = protected or [
         'The slice stays within the approved package boundary.',
     ]
@@ -220,7 +263,11 @@ def _derive_behavioral_contract(package: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _derive_test_contract(package: dict[str, Any], primary_surfaces: list[str]) -> dict[str, Any]:
+def _derive_test_contract(
+    package: dict[str, Any],
+    primary_surfaces: list[str],
+    implementation_plan_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     target = package.get('implementation_target') or {}
     tests_to_add = [surface for surface in primary_surfaces if 'test' in surface.lower()]
     component_slug = _slugify((package.get('component_model_slice') or {}).get('primary_component') or 'component')
@@ -236,6 +283,11 @@ def _derive_test_contract(package: dict[str, Any], primary_surfaces: list[str]) 
         artifacts_expected.append('default service implementation')
     if tests_to_add:
         artifacts_expected.append('unit tests')
+    if implementation_plan_context:
+        for activity in implementation_plan_context['activities']:
+            artifacts_expected.append(
+                f"implementation-plan activity artifact: {activity.activity_title} ({activity.planned_artifact_type_key or activity.activity_kind})"
+            )
     return {
         'tests_to_run': tests_to_run,
         'tests_to_add_or_update': tests_to_add,
@@ -244,13 +296,35 @@ def _derive_test_contract(package: dict[str, Any], primary_surfaces: list[str]) 
     }
 
 
-def _derive_execution_prerequisites(readiness: dict[str, Any], package: dict[str, Any], primary_surfaces: list[str]) -> dict[str, Any]:
+def _derive_execution_prerequisites(
+    readiness: dict[str, Any],
+    package: dict[str, Any],
+    primary_surfaces: list[str],
+    implementation_plan_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     notes = []
     notes.append('Stage 1 package materialized and passed derivation-readiness evaluation.')
     notes.extend((package.get('implementation_target') or {}).get('pre_handoff_scope_checks') or [])
+    prerequisite_briefs: list[str] = []
+    blocking_dependency_edges: list[str] = []
+    if implementation_plan_context:
+        prerequisite_briefs.append(
+            f"implementation-plan:{implementation_plan_context['plan_id_external']}"
+        )
+        notes.append(
+            f"Implementation plan {implementation_plan_context['plan_title']} ({implementation_plan_context['consumer_context_key']}) is the authoritative activity sequence for this brief."
+        )
+        notes.extend(
+            f"planned activity {activity.sequence_order}: {activity.activity_title} [{activity.activity_key}] -> {activity.target_path or activity.target_module or 'unspecified target'}"
+            for activity in implementation_plan_context['activities']
+        )
+        blocking_dependency_edges.extend(
+            f"{dependency.predecessor_activity_key} -> {dependency.successor_activity_key}"
+            for dependency in implementation_plan_context['dependencies']
+        )
     return {
-        'prerequisite_briefs': [],
-        'blocking_dependency_edges': [],
+        'prerequisite_briefs': prerequisite_briefs,
+        'blocking_dependency_edges': blocking_dependency_edges,
         'parallel_safe_with': [],
         'shared_surface_conflicts': [str(Path(surface).parent) for surface in primary_surfaces if '/services/' in surface][:1],
         'sequencing_notes': notes,
@@ -283,16 +357,24 @@ def _derive_execution_readiness(readiness: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _load_target_model_mappings() -> set[tuple[str, str]]:
-    sql = """
-    SELECT cet.element_key, cert.realization_key
-    FROM paa.component_element_type_realization_types m
-    JOIN paa.component_element_types cet
-      ON cet.component_element_type_id = m.component_element_type_id
-    JOIN paa.component_element_realization_types cert
-      ON cert.component_element_realization_type_id = m.component_element_realization_type_id;
-    """
-    return {(row[0], row[1]) for row in query_rows(sql)}
+def _load_component_brief_planning_payload(component_id: str, coder_run_brief_id: str | None) -> dict[str, Any]:
+    repository = PostgresComponentDesignRepository()
+    service = DefaultComponentDesignPlanningService(
+        repository=repository,
+        logger=_PlanningLogger(),
+    )
+    payload = service.build_brief_planning_payload(
+        component_id=component_id,
+        coder_run_brief_id=coder_run_brief_id,
+    )
+    return {
+        'component_name': payload.component_name,
+        'component_aspects': list(payload.component_aspects),
+        'target_modules': list(payload.target_modules),
+        'warnings': list(payload.warnings),
+        'gaps': [asdict(gap) for gap in payload.gaps],
+        'metadata': dict(payload.metadata),
+    }
 
 
 def _build_brief(
@@ -300,6 +382,8 @@ def _build_brief(
     package: dict[str, Any],
     readiness: dict[str, Any],
     existing_brief_id: str | None,
+    existing_coder_run_brief_id: str | None,
+    implementation_plan_binding: dict[str, Any] | None,
 ) -> dict[str, Any]:
     ctx = package['authority_context']
     spec_fragment = package['spec_fragment']
@@ -311,18 +395,27 @@ def _build_brief(
         {},
     )
     primary_surfaces = (package.get('component_surfaces') or {}).get('primary_surfaces') or target.get('expected_touch_surfaces') or []
-    target_mappings = _load_target_model_mappings()
     brief_id = existing_brief_id or (
         f"{readiness['project_slug']}-coder-{ctx['authority_version']}-{_slugify(ctx['task_id'])}-draft"
     )
     collaboration = _derive_collaboration_context(package)
+    planning_payload = _load_component_brief_planning_payload(
+        readiness['component_id'],
+        existing_coder_run_brief_id,
+    )
+    implementation_plan_context = (
+        _load_implementation_plan_context(implementation_plan_binding['implementation_plan_id'])
+        if implementation_plan_binding
+        else None
+    )
+    allowed_edit_surfaces = planning_payload['target_modules'] or list(primary_surfaces)
     component_assignment = {
-        'component_name': primary_component,
+        'component_name': planning_payload['component_name'] or primary_component,
         'component_role': node.get('component_role') or primary_component,
-        'system_layer': node.get('system_layer') or 'domain-services',
-        'tier': node.get('tier') or 'runtime',
-        'component_aspects': _derive_component_aspects({'target_modules': primary_surfaces}, target_mappings),
-        'target_modules': primary_surfaces,
+        'system_layer': planning_payload['metadata'].get('system_layer') or node.get('system_layer') or 'domain-services',
+        'tier': planning_payload['metadata'].get('tier') or node.get('tier') or 'runtime',
+        'component_aspects': planning_payload['component_aspects'] or ['functions'],
+        'target_modules': allowed_edit_surfaces,
     }
     brief = {
         'brief_id': brief_id,
@@ -346,15 +439,20 @@ def _build_brief(
         'architecture_constraints': {
             'required_architecture_seams': (package.get('architectural_authority_constraints') or {}).get('required_architecture_seams') or [],
             'target_module_boundaries': (package.get('architectural_authority_constraints') or {}).get('target_module_boundaries') or [],
-            'allowed_edit_surfaces': primary_surfaces,
+            'allowed_edit_surfaces': allowed_edit_surfaces,
             'forbidden_edit_surfaces': _derive_forbidden_surfaces(package),
             'forbidden_module_growth_patterns': (package.get('architectural_authority_constraints') or {}).get('forbidden_module_growth_patterns') or [],
         },
         'collaboration_context': collaboration,
-        'execution_prerequisites': _derive_execution_prerequisites(readiness, package, primary_surfaces),
+        'execution_prerequisites': _derive_execution_prerequisites(
+            readiness,
+            package,
+            allowed_edit_surfaces,
+            implementation_plan_context,
+        ),
         'dependency_contract': _derive_dependency_contract(package, collaboration),
-        'behavioral_contract': _derive_behavioral_contract(package),
-        'test_contract': _derive_test_contract(package, primary_surfaces),
+        'behavioral_contract': _derive_behavioral_contract(package, implementation_plan_context),
+        'test_contract': _derive_test_contract(package, allowed_edit_surfaces, implementation_plan_context),
         'execution_readiness': _derive_execution_readiness(readiness),
         'change_budget': {
             'max_responsibility_expansion': (package.get('architectural_authority_constraints') or {}).get('max_responsibility_expansion'),
@@ -369,14 +467,31 @@ def _build_brief(
     return brief
 
 
-def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], output_path: Path | None) -> str:
+def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], output_path: Path | None, implementation_plan_binding: dict[str, Any] | None) -> str:
     role_id = _architect_role_id(readiness['project_slug'])
     design_package_id = readiness['design_package_id']
     existing = _existing_brief_for_design_package(design_package_id)
-    coder_run_brief_id = existing[0] if existing else None
     brief_id_external = existing[1] if existing and existing[1] else brief['brief_id']
     brief['brief_id'] = brief_id_external
     output_literal = sql_literal(str(output_path)) if output_path else 'NULL'
+    implementation_plan_sql = (
+        f"{sql_literal(implementation_plan_binding['implementation_plan_id'])}::uuid"
+        if implementation_plan_binding
+        else 'NULL'
+    )
+    generated_from_json = {
+        'design_package_id': design_package_id,
+        'design_package_id_external': readiness['package_id'],
+        'readiness_class': readiness['readiness_class'],
+        'assembler': 'paa-producer assemble-coder-brief',
+        'implementation_plan_id': implementation_plan_binding['implementation_plan_id'] if implementation_plan_binding else None,
+        'implementation_plan_id_external': implementation_plan_binding['plan_id_external'] if implementation_plan_binding else None,
+        'source_design_package_artifact': readiness['package_path'],
+    }
+    metadata_json = {
+        'output_path': str(output_path) if output_path else None,
+        'evaluation_mode': readiness['evaluation_mode'],
+    }
     sql = f"""
     WITH existing AS (
       SELECT coder_run_brief_id
@@ -391,6 +506,7 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
         spec_fragment_id = {sql_literal(readiness['spec_fragment_id'])}::uuid,
         implementation_target_id = {sql_literal(readiness['implementation_target_id'])}::uuid,
         authority_version_id = {sql_literal(readiness['authority_version_id'])}::uuid,
+        implementation_plan_id = {implementation_plan_sql},
         primary_component_id = {sql_literal(readiness['component_id'])}::uuid,
         brief_id_external = {sql_literal(brief_id_external)},
         schema_version = {sql_literal(brief['schema_version'])},
@@ -405,17 +521,8 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
         change_budget_json = {sql_literal(json.dumps(brief['change_budget']))}::jsonb,
         anti_goals_json = {sql_literal(json.dumps(brief['anti_goals']))}::jsonb,
         brief_json = {sql_literal(json.dumps(brief))}::jsonb,
-        generated_from_json = {sql_literal(json.dumps({
-            'design_package_id': design_package_id,
-            'design_package_id_external': readiness['package_id'],
-            'readiness_class': readiness['readiness_class'],
-            'assembler': 'paa-producer assemble-coder-brief',
-            'source_design_package_artifact': readiness['package_path'],
-        }))}::jsonb,
-        metadata_json = {sql_literal(json.dumps({
-            'output_path': str(output_path) if output_path else None,
-            'evaluation_mode': readiness['evaluation_mode'],
-        }))}::jsonb,
+        generated_from_json = {sql_literal(json.dumps(generated_from_json))}::jsonb,
+        metadata_json = {sql_literal(json.dumps(metadata_json))}::jsonb,
         created_by_role_id = {sql_literal(role_id)}::uuid,
         authority_state = 'draft_brief'::paa.coder_brief_authority_state,
         authority_state_updated_at = now(),
@@ -425,7 +532,7 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
       RETURNING cb.coder_run_brief_id
     ), inserted AS (
       INSERT INTO paa.coder_run_briefs (
-        project_id, work_item_id, spec_fragment_id, implementation_target_id, authority_version_id, primary_component_id,
+        project_id, work_item_id, spec_fragment_id, implementation_target_id, authority_version_id, implementation_plan_id, primary_component_id,
         brief_id_external, schema_version, status, slice_scope_ref_json, component_assignment_json, architecture_constraints_json,
         collaboration_context_json, dependency_contract_json, behavioral_contract_json, test_contract_json, change_budget_json,
         anti_goals_json, brief_json, generated_from_json, metadata_json, created_by_role_id,
@@ -437,6 +544,7 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
         {sql_literal(readiness['spec_fragment_id'])}::uuid,
         {sql_literal(readiness['implementation_target_id'])}::uuid,
         {sql_literal(readiness['authority_version_id'])}::uuid,
+        {implementation_plan_sql},
         {sql_literal(readiness['component_id'])}::uuid,
         {sql_literal(brief_id_external)},
         {sql_literal(brief['schema_version'])},
@@ -451,17 +559,8 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
         {sql_literal(json.dumps(brief['change_budget']))}::jsonb,
         {sql_literal(json.dumps(brief['anti_goals']))}::jsonb,
         {sql_literal(json.dumps(brief))}::jsonb,
-        {sql_literal(json.dumps({
-            'design_package_id': design_package_id,
-            'design_package_id_external': readiness['package_id'],
-            'readiness_class': readiness['readiness_class'],
-            'assembler': 'paa-producer assemble-coder-brief',
-            'source_design_package_artifact': readiness['package_path'],
-        }))}::jsonb,
-        {sql_literal(json.dumps({
-            'output_path': str(output_path) if output_path else None,
-            'evaluation_mode': readiness['evaluation_mode'],
-        }))}::jsonb,
+        {sql_literal(json.dumps(generated_from_json))}::jsonb,
+        {sql_literal(json.dumps(metadata_json))}::jsonb,
         {sql_literal(role_id)}::uuid,
         'draft_brief'::paa.coder_brief_authority_state,
         now()
@@ -491,6 +590,7 @@ def _upsert_coder_brief(*, readiness: dict[str, Any], brief: dict[str, Any], out
         jsonb_build_object(
           'design_package_id', {sql_literal(design_package_id)},
           'package_id_external', {sql_literal(readiness['package_id'])},
+          'implementation_plan_id', {sql_literal(implementation_plan_binding['implementation_plan_id']) if implementation_plan_binding else 'NULL'},
           'output_path', {output_literal}
         )
       FROM resolved r
@@ -537,7 +637,14 @@ def assemble_coder_brief(
             f"coder brief for design package {readiness['design_package_id']} is already {existing[2]}; "
             'draft derivation may not overwrite governed authority state'
         )
-    brief = _build_brief(package=package, readiness=readiness, existing_brief_id=existing[1] if existing else None)
+    implementation_plan_binding = _load_implementation_plan_binding(readiness['design_package_id'])
+    brief = _build_brief(
+        package=package,
+        readiness=readiness,
+        existing_brief_id=existing[1] if existing else None,
+        existing_coder_run_brief_id=existing[0] if existing else None,
+        implementation_plan_binding=implementation_plan_binding,
+    )
     resolved_brief_schema = _resolve_coder_brief_schema_path(brief_schema_path)
     _validate_brief(brief, resolved_brief_schema)
 
@@ -548,7 +655,7 @@ def assemble_coder_brief(
 
     coder_run_brief_id = existing[0] if existing else ''
     if persist_db:
-        coder_run_brief_id = _upsert_coder_brief(readiness=readiness, brief=brief, output_path=resolved_output_path)
+        coder_run_brief_id = _upsert_coder_brief(readiness=readiness, brief=brief, output_path=resolved_output_path, implementation_plan_binding=implementation_plan_binding)
 
     return AssembledCoderBriefResult(
         project_slug=readiness['project_slug'],
@@ -563,4 +670,5 @@ def assemble_coder_brief(
         authority_state='draft_brief',
         readiness_class=readiness['readiness_class'],
         persisted=persist_db,
+        implementation_plan_id=implementation_plan_binding['implementation_plan_id'] if implementation_plan_binding else None,
     )

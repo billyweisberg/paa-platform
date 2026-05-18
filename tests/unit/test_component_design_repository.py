@@ -18,6 +18,28 @@ from paa_core.repositories.component_design import (
 
 
 class ComponentDesignRepositoryTests(unittest.TestCase):
+    def test_get_component_by_id_parses_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"component_id":"1","project_id":"p","name":"Component Design Planning Service","role":"planner","system_layer":"domain-services","tier":"runtime","description":"desc","status":"active","metadata":{"x":1}}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_component_by_id('1')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.name, 'Component Design Planning Service')
+        self.assertEqual(row.metadata, {'x': 1})
+
+    def test_get_component_element_by_id_parses_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"component_element_id":"e1","project_id":"p","component_id":"c","component_element_type_id":"t","element_key":"interfaces","title":"Service Interfaces","status":"active","definition":{"module":"contracts.py"},"provenance":{},"metadata":{"x":1}}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_component_element_by_id('e1')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.element_key, 'interfaces')
+        self.assertEqual(row.definition, {'module': 'contracts.py'})
+
     def test_list_component_element_types_parses_rows(self) -> None:
         repo = PostgresComponentDesignRepository()
         output = '\n'.join(

@@ -9,6 +9,7 @@ PRODUCER_COMMANDS = (
     'derive-artifacts',
     'derive-design-package',
     'evaluate-derivation-readiness',
+    'derive-implementation-plan',
     'assemble-coder-brief',
     'author-brief-targets',
     'review-coder-brief',

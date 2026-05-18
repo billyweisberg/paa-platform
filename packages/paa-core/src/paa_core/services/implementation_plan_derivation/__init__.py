@@ -1,3 +1,20 @@
-"""Implementation Plan Derivation service package for PAA."""
+"""Implementation Plan Derivation service package."""
 
-__all__: list[str] = []
+from .contracts import ImplementationPlanDerivationService, StructuredLogger
+from .default import DefaultImplementationPlanDerivationService
+from .models import (
+    ImplementationPlanActivityBlueprint,
+    ImplementationPlanDerivationRequest,
+    ImplementationPlanDerivationResult,
+    ImplementationPlanVerificationSurfaceDraft,
+)
+
+__all__ = [
+    'DefaultImplementationPlanDerivationService',
+    'ImplementationPlanActivityBlueprint',
+    'ImplementationPlanDerivationRequest',
+    'ImplementationPlanDerivationResult',
+    'ImplementationPlanDerivationService',
+    'ImplementationPlanVerificationSurfaceDraft',
+    'StructuredLogger',
+]

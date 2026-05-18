@@ -11,7 +11,22 @@ from pathlib import Path
 
 from paa_core.db import run_psql as shared_run_psql, settings_from_profile, settings_with_overrides
 from paa_core import handoff_runtime
+from paa_core.policies.acceptance import DefaultAcceptancePolicy
+from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
+from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
+from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
+from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
+from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
+from paa_core.repositories.workflow_state import PostgresWorkflowStateRepository
 from paa_core.runtime_paths import repo_authority_manifest_path
+from paa_core.services.execution_package_resolution import (
+    DefaultExecutionPackageResolutionService,
+    ExecutionPackageResolutionRequest,
+)
+from paa_core.services.workflow_lifecycle import (
+    DefaultWorkflowLifecycleService,
+    WorkflowLifecycleRequest,
+)
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_display_name,
@@ -117,7 +132,88 @@ def repo_automations_dir(repo_root: Path) -> Path:
     return repo_root / '.codex' / 'automations'
 
 
+def _repo_auth_manifest_from_execution_context(repo_root: Path) -> Path | None:
+    try:
+        service = DefaultExecutionPackageResolutionService(
+            repository=PostgresExecutionPackageRepository(),
+            capability_policy=DefaultDeploymentCapabilityPolicy(),
+        )
+        view = service.resolve_execution_context_for_repo_root(
+            str(repo_root.resolve()),
+            ExecutionPackageResolutionRequest(
+                required_artifact_refs=('installed_manifest',),
+                metadata={'consumer': 'techlead'},
+            ),
+        )
+    except Exception:
+        return None
+    if not view.capability_summary.allowed or not view.manifest_path:
+        return None
+    manifest_path = Path(view.manifest_path).expanduser().resolve()
+    if not manifest_path.exists():
+        return None
+    return manifest_path
+
+
+def workflow_lifecycle_worker_result_evaluation(
+    *,
+    current_task: dict | None,
+    packet: dict,
+    project_slug: str = DEFAULT_PROJECT_SLUG,
+    db_profile: str = DEFAULT_DB_PROFILE,
+    db_container: str = DEFAULT_DB_CONTAINER,
+    db_name: str = DEFAULT_DB_NAME,
+    db_user: str = DEFAULT_DB_USER,
+):
+    if not current_task:
+        return None
+    issue_number = current_task.get('issue_number')
+    work_item_id = resolve_work_item_id(
+        db_container,
+        db_name,
+        db_user,
+        project_slug,
+        issue_number,
+    )
+    if not work_item_id:
+        return None
+    settings = resolve_db_settings(
+        db_profile=db_profile,
+        db_container=db_container,
+        db_name=db_name,
+        db_user=db_user,
+    )
+    service = DefaultWorkflowLifecycleService(
+        workflow_state_repository=PostgresWorkflowStateRepository(settings=settings),
+        runtime_event_repository=PostgresRuntimeEventRepository(settings=settings),
+        execution_package_resolution_service=DefaultExecutionPackageResolutionService(
+            repository=PostgresExecutionPackageRepository(settings=settings),
+            capability_policy=DefaultDeploymentCapabilityPolicy(),
+        ),
+        workflow_transition_policy=DefaultWorkflowTransitionPolicy(),
+        acceptance_policy=DefaultAcceptancePolicy(),
+        reset_recovery_policy=DefaultResetRecoveryPolicy(),
+    )
+    return service.evaluate_workflow_transition(
+        WorkflowLifecycleRequest(
+            project_id=project_slug,
+            work_item_id=work_item_id,
+            requested_transition_type='worker_result_returned',
+            requested_from_stage='worker_execution_in_progress',
+            source_message_id_external=packet.get('message_id_external', packet.get('message_id')),
+            source_packet_schema_type=packet.get('schema_type'),
+            metadata={
+                'consumer': 'techlead',
+                'packet_queue_name': packet.get('queue_name'),
+            },
+        )
+    )
+
+
 def repo_auth_current(repo_root: Path) -> Path:
+    resolved = _repo_auth_manifest_from_execution_context(repo_root)
+    if resolved is not None:
+        return resolved
     return repo_authority_manifest_path(repo_root)
 
 
@@ -1568,30 +1664,53 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         if not worker_role:
             packet_from_role = handoff_runtime.normalize_role_name(latest_techlead_packet.get('from_role'))
             worker_role = packet_from_role or 'Worker'
+        lifecycle_result = None
+        try:
+            lifecycle_result = workflow_lifecycle_worker_result_evaluation(
+                current_task=current_task,
+                packet=latest_techlead_packet,
+            )
+        except Exception:
+            lifecycle_result = None
+        lifecycle_target_stage = None
+        if lifecycle_result is not None:
+            lifecycle_target_stage = (
+                (lifecycle_result.decision_summary.metadata or {}).get('resolved_to_stage')
+                or 'techlead_worker_review_pending'
+            )
         if worker_role == 'Python Dev':
             stage = 'techlead_dev_review_pending'
             summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
             reason = 'A Python worker result packet addressed to TechLead is waiting for the next routing decision.'
         else:
-            stage = 'techlead_worker_review_pending'
+            stage = lifecycle_target_stage or 'techlead_worker_review_pending'
             summary = f'TechLead has a waiting {worker_role} result packet to review.'
             reason = 'A worker result packet addressed to TechLead is waiting for the next routing decision.'
         owner = 'TechLead'
         unattended_safe = False
+        details = {
+            'message_id': latest_techlead_packet.get('message_id'),
+            'schema_type': latest_techlead_packet.get('schema_type'),
+            'queue_name': latest_techlead_packet.get('queue_name'),
+            'worker_role': worker_role,
+            'worker_family': worker_payload.get('worker_family'),
+            'result_type': worker_payload.get('result_type'),
+            'techlead_action_recommended': worker_payload.get('techlead_action_recommended'),
+        }
+        if lifecycle_result is not None:
+            details.update({
+                'workflow_transition_allowed': lifecycle_result.decision_summary.transition_allowed,
+                'workflow_blocking_reasons': list(lifecycle_result.decision_summary.blocking_reasons),
+                'workflow_notes': list(lifecycle_result.decision_summary.notes),
+                'workflow_recommended_next_action': lifecycle_result.recommended_next_action,
+                'workflow_target_stage': lifecycle_target_stage,
+            })
         escalations.append({
             'event_type': 'worker_packet_waiting_for_techlead',
             'severity': 'medium',
             'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
             'summary': summary,
-            'details': {
-                'message_id': latest_techlead_packet.get('message_id'),
-                'schema_type': latest_techlead_packet.get('schema_type'),
-                'queue_name': latest_techlead_packet.get('queue_name'),
-                'worker_role': worker_role,
-                'worker_family': worker_payload.get('worker_family'),
-                'result_type': worker_payload.get('result_type'),
-                'techlead_action_recommended': worker_payload.get('techlead_action_recommended'),
-            },
+            'details': details,
             'recommended_route': 'TechLead',
             'status': 'open',
         })

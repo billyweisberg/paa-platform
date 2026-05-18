@@ -1,0 +1,73 @@
+{
+  "implementation_plan_id": "4fa4e606-3622-4f6a-a5f9-ede659f1a225",
+  "plan_id_external": "plan-spec-component-design-planning-service-implementation-python",
+  "consumer_context_key": "python",
+  "plan_title": "Component Design Planning Service initial implementation slice (python)",
+  "activity_specs": [
+    {
+      "activity_key": "define-service-interface",
+      "activity_title": "Component Design Planning Service Service Interface",
+      "activity_kind": "artifact_construction",
+      "sequence_order": 10,
+      "code_artifact_target_key": "service_interface",
+      "target_path": "packages/paa-core/src/paa_core/services/component_design_planning/contracts.py"
+    },
+    {
+      "activity_key": "define-planning-dtos",
+      "activity_title": "Component Design Planning Service Planning DTOs",
+      "activity_kind": "artifact_construction",
+      "sequence_order": 20,
+      "code_artifact_target_key": "dto",
+      "target_path": "packages/paa-core/src/paa_core/services/component_design_planning/models.py"
+    },
+    {
+      "activity_key": "implement-service-default",
+      "activity_title": "Component Design Planning Service Default Implementation",
+      "activity_kind": "artifact_construction",
+      "sequence_order": 30,
+      "code_artifact_target_key": "service_implementation",
+      "target_path": "packages/paa-core/src/paa_core/services/component_design_planning/default.py"
+    },
+    {
+      "activity_key": "prove-service-behavior",
+      "activity_title": "Component Design Planning Service Unit Tests",
+      "activity_kind": "verification",
+      "sequence_order": 40,
+      "code_artifact_target_key": "test_module",
+      "target_path": "tests/unit/test_component_design_planning_service.py"
+    },
+    {
+      "activity_key": "export-service-package",
+      "activity_title": "Component Design Planning Service Package Export",
+      "activity_kind": "delivery_preparation",
+      "sequence_order": 50,
+      "code_artifact_target_key": "package_export",
+      "target_path": "packages/paa-core/src/paa_core/services/component_design_planning/__init__.py"
+    }
+  ],
+  "dependency_specs": [
+    {
+      "predecessor_activity_key": "define-service-interface",
+      "successor_activity_key": "define-planning-dtos"
+    },
+    {
+      "predecessor_activity_key": "define-planning-dtos",
+      "successor_activity_key": "implement-service-default"
+    },
+    {
+      "predecessor_activity_key": "implement-service-default",
+      "successor_activity_key": "prove-service-behavior"
+    },
+    {
+      "predecessor_activity_key": "implement-service-default",
+      "successor_activity_key": "export-service-package"
+    }
+  ],
+  "verification_surfaces": [
+    {
+      "activity_key": "prove-service-behavior",
+      "surface_kind": "unit_test",
+      "surface_ref": "tests/unit/test_component_design_planning_service.py"
+    }
+  ]
+}

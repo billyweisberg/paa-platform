@@ -18,6 +18,7 @@ from paa_producer.brief_reviewer import review_coder_brief
 from paa_producer.commands import PRODUCER_COMMANDS
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
+from paa_producer.implementation_plan_deriver import derive_implementation_plan
 from paa_producer.derive_artifacts import derive_inventory
 from paa_producer.issue_loader import load_issue_into_paa
 from paa_producer.obligation_loader import materialize_verification_obligations
@@ -160,6 +161,44 @@ def main() -> int:
         }, indent=2))
         return 0
 
+    if args.command == 'derive-implementation-plan':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer derive-implementation-plan',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--design-package', required=True)
+        argp.add_argument('--package-schema-path')
+        argp.add_argument('--project-slug')
+        argp.add_argument('--consumer-context-key', default='python')
+        argp.add_argument('--output')
+        argp.add_argument('--no-persist-db', action='store_true')
+        subargs = argp.parse_args(remainder)
+        result = derive_implementation_plan(
+            package_path=Path(subargs.design_package).resolve(),
+            package_schema_path=Path(subargs.package_schema_path).resolve() if subargs.package_schema_path else None,
+            project_slug=subargs.project_slug,
+            consumer_context_key=subargs.consumer_context_key,
+            output_path=Path(subargs.output).resolve() if subargs.output else None,
+            persist_db=not subargs.no_persist_db,
+        )
+        print(json.dumps({
+            'ok': True,
+            'project_slug': result.project_slug,
+            'package_id': result.package_id,
+            'package_path': result.package_path,
+            'design_package_id': result.design_package_id,
+            'implementation_plan_id': result.implementation_plan_id,
+            'plan_id_external': result.plan_id_external,
+            'consumer_context_key': result.consumer_context_key,
+            'activity_count': result.activity_count,
+            'dependency_count': result.dependency_count,
+            'verification_surface_count': result.verification_surface_count,
+            'output_path': result.output_path,
+            'persisted': result.persisted,
+            'implementation_plan_id': result.implementation_plan_id,
+        }, indent=2))
+        return 0
+
     if args.command == 'assemble-coder-brief':
         argp = argparse.ArgumentParser(
             prog='paa-producer assemble-coder-brief',
@@ -194,6 +233,7 @@ def main() -> int:
             'authority_state': result.authority_state,
             'readiness_class': result.readiness_class,
             'persisted': result.persisted,
+            'implementation_plan_id': result.implementation_plan_id,
         }, indent=2))
         return 0
 

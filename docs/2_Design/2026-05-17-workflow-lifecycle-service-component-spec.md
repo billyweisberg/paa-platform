@@ -1,0 +1,269 @@
+# Workflow Lifecycle Service Component Spec
+
+Date: 2026-05-17
+
+## Purpose
+
+Define the full `Component Spec` for `Workflow Lifecycle Service` using the current PAA layered architecture and the now-explicit workflow policy split.
+
+This service is the next fully specified Stratum 2 domain service after:
+
+- `Component Design Planning Service`
+- `Execution Package Resolution Service`
+
+It exists to turn DB-primary workflow-state truth plus runtime evidence into applied workflow transitions without allowing:
+
+- queue state
+- GitHub state
+- local reports
+- packet residue
+
+to redefine workflow truth directly.
+
+## Related Notes
+
+Read alongside:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-pre-spec.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-workflow-state-machine-component-design.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-workflow-state-repository-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-runtime-event-repository-contract.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-15-paa-layered-component-dependency-graph.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-13-paa-domain-object-model-and-oo-component-decomposition.md`
+
+## Architecture Placement
+
+Layer:
+- `Domain Services`
+
+Dependency stratum:
+- `Stratum 2`
+
+Primary upstream dependencies:
+- `WorkflowStateRepository`
+- `RuntimeEventRepository`
+- `Execution Package Resolution Service`
+- `WorkflowTransitionPolicy`
+- `AcceptancePolicy`
+- `ResetRecoveryPolicy`
+- `StructuredLogger`
+
+Primary downstream consumers:
+- `Work Item Coordination Service`
+- `TechLead Application Service`
+- runtime lifecycle and queue-closeout application paths
+
+## 1. Role
+
+`Workflow Lifecycle Service` coordinates authoritative workflow-state transition application for one work item by combining:
+
+- current workflow truth
+- runtime evidence and transport history
+- execution-context truth when needed
+- explicit policy decisions
+
+Authority boundary:
+- owns workflow-transition coordination
+- owns workflow-state and workflow-transition result assembly
+- owns service-level rejection vs applied outcome reporting
+- does not own queue transport
+- does not own GitHub mutation
+- does not own execution-package registration
+- does not own acceptance-event history as a runtime repository concern
+- does not own projection refresh
+
+## 2. Component State Model
+
+The service should be stateless between calls.
+
+### Persistent state
+This service owns no primary persistent state directly.
+
+It coordinates writes through:
+- `WorkflowStateRepository`
+
+and reads supporting runtime evidence through:
+- `RuntimeEventRepository`
+
+### In-memory working state
+During one call, the service may hold:
+- current workflow-state snapshot
+- transition-history slice
+- runtime evidence summary
+- execution-context resolution view
+- workflow-transition policy decision
+- acceptance policy decision
+- reset / recovery policy decision
+- derived service result DTOs
+
+## 3. Service Contract
+
+The service provides workflow-lifecycle coordination over authoritative workflow truth.
+
+### Inputs
+- work-item identity
+- requested transition identity
+- optional source/result runtime references
+- optional execution-context requirements
+- optional policy-driving metadata
+
+### Outputs
+- current workflow-state views
+- workflow-transition evaluation results
+- applied or rejected transition results
+- workflow block / repair diagnostics
+
+### Guarantees
+- current workflow truth is loaded from `paa.workflow_states`
+- transition history is loaded from `paa.workflow_transitions`
+- policy boundaries remain explicit
+- illegal transitions fail closed
+- service callers receive structured outcomes, not only booleans or prose
+
+## 4. Data Contract
+
+### Primary consumed records
+- `WorkflowStateRecord`
+- `WorkflowTransitionRecord`
+- `QueueClaimRecord`
+- `TransitionInputRecord`
+- `AutomationRunEventRecord`
+- `AcceptanceEventRecord`
+- `ExecutionPackageResolutionView`
+
+### Primary service DTOs
+
+#### `WorkflowLifecycleRequest`
+Carries:
+- `project_id`
+- `work_item_id`
+- optional `workflow_state_id`
+- optional `requested_transition_type`
+- optional `requested_from_stage`
+- optional `requested_to_stage`
+- optional `source_queue_message_id`
+- optional `source_message_id_external`
+- optional `source_packet_schema_type`
+- optional `automation_run_id`
+- optional `repo_root_path`
+- optional `runtime_root_path`
+- optional `execution_surface_key`
+- optional `metadata`
+
+#### `WorkflowLifecycleStateView`
+Carries:
+- current workflow stage
+- current owner role
+- lineage state
+- blocking / terminal status
+- current transport pointers
+- current execution-context pointers
+- consistency state
+- metadata
+
+#### `WorkflowLifecycleDecisionSummary`
+Carries:
+- `transition_allowed`
+- `acceptance_allowed`
+- `requires_manual_repair`
+- `should_reset`
+- `should_retry`
+- blocking reasons
+- notes
+- metadata
+
+#### `WorkflowLifecycleResult`
+Carries:
+- request echo identifiers
+- current workflow-state view
+- transition decision summary
+- optional resolved execution-context identity
+- applied / rejected status
+- optional recommended next action
+- metadata
+
+## 5. Injected Services
+
+### Required injected services
+- `WorkflowStateRepository`
+- `RuntimeEventRepository`
+- `ExecutionPackageResolutionService`
+- `WorkflowTransitionPolicy`
+- `AcceptancePolicy`
+- `ResetRecoveryPolicy`
+- `StructuredLogger`
+
+### Optional injected services
+- `Clock`
+- `TransactionRunner`
+
+## 6. Interfaces
+
+### Provided interface
+- `WorkflowLifecycleService`
+
+### Required interfaces
+- `WorkflowStateRepository`
+- `RuntimeEventRepository`
+- `ExecutionPackageResolutionService`
+- `WorkflowTransitionPolicy`
+- `AcceptancePolicy`
+- `ResetRecoveryPolicy`
+- `StructuredLogger`
+
+### Recommended code realization
+- interface / contract:
+  - `workflow_lifecycle_service_interface`
+- default implementation:
+  - `default_workflow_lifecycle_service`
+
+## 7. Functions
+
+Minimum public functions:
+- `get_current_workflow_state(work_item_id)`
+- `evaluate_workflow_transition(request)`
+- `apply_workflow_transition(request)`
+- `detect_workflow_blocks(request)`
+
+Likely internal helper functions:
+- `load_transition_evidence(...)`
+- `load_execution_context_if_required(...)`
+- `build_transition_policy_request(...)`
+- `build_acceptance_request(...)`
+- `build_reset_recovery_request(...)`
+- `assemble_result(...)`
+
+## 8. Messages Received
+
+This component receives service-level commands and queries, not queue packets.
+
+### Primary queries
+- `GetCurrentWorkflowState`
+- `DetectWorkflowBlocks`
+
+### Primary command-like operations
+- `EvaluateWorkflowTransition`
+- `ApplyWorkflowTransition`
+
+## 9. Messages Published
+
+For the first implementation slices, returning structured results is sufficient.
+
+If events are emitted later, they should remain internal domain or application events such as:
+- `WorkflowTransitionEvaluated`
+- `WorkflowTransitionApplied`
+- `WorkflowTransitionRejected`
+- `WorkflowRepairRequired`
+
+## First Implementation Scope
+
+Phase 1 and Phase 2 should provide:
+- service contract
+- DTOs
+- injected default shell
+- focused unit tests
+
+The first behavioral slice comes later and should remain narrow:
+- load current workflow state
+- evaluate one transition family
+- apply one transition family
+- fail closed on illegal transitions

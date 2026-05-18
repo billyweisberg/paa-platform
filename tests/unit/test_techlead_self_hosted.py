@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,6 +9,108 @@ from paa_consumer import techlead
 
 
 class TechLeadSelfHostedTests(unittest.TestCase):
+    def test_workflow_lifecycle_worker_result_evaluation_builds_request(self):
+        captured = {}
+
+        class _WorkflowService:
+            def evaluate_workflow_transition(self, request):
+                captured['request'] = request
+                return SimpleNamespace(decision_summary=SimpleNamespace(metadata={'resolved_to_stage': 'techlead_worker_review_pending'}))
+
+        packet = {
+            'message_id': 'msg-123',
+            'schema_type': 'worker_result_packet',
+            'queue_name': 'fractal-core-python',
+        }
+
+        with patch('paa_consumer.techlead.resolve_work_item_id', return_value='work-item-uuid'), \
+             patch('paa_consumer.techlead.DefaultWorkflowLifecycleService', return_value=_WorkflowService()):
+            result = techlead.workflow_lifecycle_worker_result_evaluation(
+                current_task={'issue_number': 42, 'task_id': 'task-42'},
+                packet=packet,
+            )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(captured['request'].work_item_id, 'work-item-uuid')
+        self.assertEqual(captured['request'].requested_transition_type, 'worker_result_returned')
+        self.assertEqual(captured['request'].requested_from_stage, 'worker_execution_in_progress')
+        self.assertEqual(captured['request'].source_message_id_external, 'msg-123')
+        self.assertEqual(captured['request'].source_packet_schema_type, 'worker_result_packet')
+
+    def test_derive_workflow_worker_packet_uses_workflow_lifecycle_result(self):
+        queues = {
+            'fractal-core-python': {
+                'preview': [{
+                    'payload_preview': {
+                        'correlation_id': 'issue-42',
+                        'schema_type': 'worker_result_packet',
+                        'to_role': 'techlead',
+                        'message_id': 'msg-123',
+                        'created_at': '2026-05-17T12:00:00Z',
+                        'payload': {
+                            'worker_role': 'Worker',
+                            'result_type': 'implemented_ready_for_qa',
+                        },
+                    }
+                }],
+                'messages_ready': 1,
+            },
+            'fractal-core-qa': {'preview': [], 'messages_ready': 0},
+            'fractal-core-architecture': {'preview': [], 'messages_ready': 0},
+        }
+
+        lifecycle_result = SimpleNamespace(
+            decision_summary=SimpleNamespace(
+                transition_allowed=True,
+                blocking_reasons=(),
+                notes=('validated',),
+                metadata={'resolved_to_stage': 'techlead_worker_review_pending'},
+            ),
+            recommended_next_action='Apply the worker-result transition to move the slice into TechLead worker review.',
+        )
+
+        with patch(
+            'paa_consumer.techlead.workflow_lifecycle_worker_result_evaluation',
+            return_value=lifecycle_result,
+        ):
+            stage, owner, escalations, recommended, unattended_safe = techlead.derive_workflow(
+                {'issue_number': 42, 'task_id': 'task-42', 'title': 'Issue #42', 'status': 'open'},
+                {'state': 'OPEN', 'comments': []},
+                None,
+                None,
+                queues,
+            )
+
+        self.assertEqual(stage, 'techlead_worker_review_pending')
+        self.assertEqual(owner, 'TechLead')
+        self.assertFalse(unattended_safe)
+        self.assertEqual(escalations[0]['details']['workflow_transition_allowed'], True)
+        self.assertEqual(escalations[0]['details']['workflow_target_stage'], 'techlead_worker_review_pending')
+        self.assertEqual(recommended[0]['target_role'], 'TechLead')
+
+    def test_repo_auth_current_prefers_execution_context_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            fallback_dir = repo_root / '.project' / 'data' / 'paa' / 'authority' / 'current' / 'authority'
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            fallback_manifest = fallback_dir / 'fallback-authority.json'
+            fallback_manifest.write_text(json.dumps({'project': {'repo': 'fallback/repo'}}))
+
+            resolved_manifest = repo_root / 'resolved' / 'paa-platform-authority.json'
+            resolved_manifest.parent.mkdir(parents=True, exist_ok=True)
+            resolved_manifest.write_text(json.dumps({'project': {'repo': 'billyweisberg/paa-platform'}}))
+
+            with patch(
+                'paa_consumer.techlead.DefaultExecutionPackageResolutionService.resolve_execution_context_for_repo_root',
+                return_value=SimpleNamespace(
+                    capability_summary=SimpleNamespace(allowed=True),
+                    manifest_path=str(resolved_manifest),
+                ),
+            ):
+                resolved = techlead.repo_auth_current(repo_root)
+
+            self.assertEqual(resolved, resolved_manifest.resolve())
+
     def test_repo_auth_current_uses_dynamic_installed_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)

@@ -28,6 +28,29 @@ class PostgresComponentDesignRepository:
     def __init__(self, *, settings: DBSettings | None = None) -> None:
         self._settings = settings
 
+    def get_component_by_id(self, component_id: str) -> ComponentRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    c.component_id::text,
+    c.project_id::text,
+    c.name,
+    c.role,
+    c.system_layer::text AS system_layer,
+    c.tier::text AS tier,
+    c.description,
+    c.status::text AS status,
+    c.metadata_json AS metadata
+  FROM paa.components c
+  WHERE c.component_id = {sql_literal(component_id)}::uuid
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        if not rows:
+            return None
+        return self._component_from_row(rows[0])
+
     def get_component_by_name(self, project_id: str, name: str) -> ComponentRecord | None:
         sql = f"""
 SELECT row_to_json(t)
@@ -71,6 +94,30 @@ FROM (
 ) AS t;
 """
         return [self._element_type_from_row(row) for row in self._query_json_rows(sql)]
+
+    def get_component_element_by_id(self, component_element_id: str) -> ComponentElementRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ce.component_element_id::text,
+    ce.project_id::text,
+    ce.component_id::text,
+    ce.component_element_type_id::text,
+    ce.element_key,
+    ce.title,
+    ce.status::text AS status,
+    ce.definition_json AS definition,
+    ce.provenance_json AS provenance,
+    ce.metadata_json AS metadata
+  FROM paa.component_elements ce
+  WHERE ce.component_element_id = {sql_literal(component_element_id)}::uuid
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        if not rows:
+            return None
+        return self._element_from_row(rows[0])
 
     def list_component_elements_for_component(self, component_id: str) -> list[ComponentElementRecord]:
         sql = f"""
