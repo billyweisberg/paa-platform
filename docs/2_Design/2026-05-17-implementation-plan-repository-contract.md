@@ -4,7 +4,7 @@ Doc-Type: contract
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-18
-Last-Edited: 2026-05-18
+Last-Edited: 2026-05-19
 Author: Billy Weisberg
 Repo: paa-platform
 Component: ImplementationPlanRepository
@@ -19,7 +19,7 @@ Owners:
 Expires: 
 Issue: 
 PR: 
-Authority-Source: 
+Authority-Source: code
 Implementation-Status: 
 Summary: Defines the persistence boundary for implementation-plan project-design truth using the current PAA component model.
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import re
 import sys
@@ -649,6 +650,68 @@ def validate_language_governance(records: list[dict[str, object]], root: Path) -
     return findings
 
 
+def load_code_component_registry(root: Path) -> dict[str, object]:
+    source_root = root / "packages/paa-core/src"
+    if not source_root.exists():
+        return {}
+    source_root_str = str(source_root)
+    added = False
+    if source_root_str not in sys.path:
+        sys.path.insert(0, source_root_str)
+        added = True
+    try:
+        importlib.invalidate_caches()
+        module = importlib.import_module("paa_core.governance.component_registry")
+        registry = getattr(module, "COMPONENT_METADATA_BY_NAME", {})
+        if isinstance(registry, dict):
+            return registry
+        return {}
+    except Exception:
+        return {}
+    finally:
+        if added:
+            try:
+                sys.path.remove(source_root_str)
+            except ValueError:
+                pass
+
+
+def validate_doc_code_consistency(
+    records: list[dict[str, object]],
+    root: Path,
+    component_registry: dict[str, object] | None = None,
+) -> list[Finding]:
+    findings: list[Finding] = []
+    registry = component_registry if component_registry is not None else load_code_component_registry(root)
+    for record in records:
+        if record.get("header_status") != "valid":
+            continue
+        if record.get("authority_source") != "code":
+            continue
+        rel_path = str(record.get("path"))
+        component_name = record.get("component")
+        if not isinstance(component_name, str) or not component_name:
+            findings.append(
+                Finding(
+                    "error",
+                    "missing_code_component",
+                    rel_path,
+                    "Document declares Authority-Source: code but does not define a Component header.",
+                )
+            )
+            continue
+        if component_name not in registry:
+            findings.append(
+                Finding(
+                    "error",
+                    "unmapped_code_component",
+                    rel_path,
+                    f"Component '{component_name}' does not resolve to an exported governed metadata constant.",
+                )
+            )
+    return findings
+
+
 def command_index(args: argparse.Namespace) -> int:
     records, _ = build_index(args.root)
     output_records = filter_records(records, args)
@@ -791,6 +854,22 @@ def command_language_lint(args: argparse.Namespace) -> int:
     return 1 if any(f.severity == "error" for f in ordered) else 0
 
 
+def command_code_lint(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    findings = validate_doc_code_consistency(records, args.root)
+    filtered = filter_findings(findings, args.path_prefix or [], include_legacy=False)
+    ordered = sorted(filtered, key=lambda item: (SEVERITY_ORDER[item.severity], item.path, item.code))
+    if args.format == "json":
+        print_json([finding.to_dict() for finding in ordered])
+    else:
+        if not ordered:
+            print("No findings.")
+        else:
+            for finding in ordered:
+                print(f"[{finding.severity}] {finding.path} {finding.code}: {finding.message}")
+    return 1 if any(f.severity == "error" for f in ordered) else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Index and lint PAA doc headers.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -855,6 +934,12 @@ def build_parser() -> argparse.ArgumentParser:
     language_lint_parser.add_argument("--format", choices=("json", "table"), default="table")
     language_lint_parser.add_argument("--path-prefix", action="append")
     language_lint_parser.set_defaults(func=command_language_lint)
+
+    code_lint_parser = subparsers.add_parser("code-lint")
+    code_lint_parser.add_argument("--root", type=Path, default=Path.cwd())
+    code_lint_parser.add_argument("--format", choices=("json", "table"), default="table")
+    code_lint_parser.add_argument("--path-prefix", action="append")
+    code_lint_parser.set_defaults(func=command_code_lint)
 
     def add_header_builder_args(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument("--path", type=Path, required=True)

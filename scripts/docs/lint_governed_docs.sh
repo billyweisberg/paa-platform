@@ -11,6 +11,10 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/2_Design/2026-05-17-implementation-plan-repository-contract.md \
   --path-prefix docs/2_Design/2026-05-17-project-delivery-projection-contract.md \
   --path-prefix docs/2_Design/2026-05-18- \
+  --path-prefix docs/2_Design/2026-05-19-paa-governed-code-vocabulary-and-type-enforcement.md \
+  --path-prefix docs/2_Design/2026-05-19-paa-model-to-code-and-runtime-consistency.md \
+  --path-prefix docs/2_Design/2026-05-19-paa-projection-code-consistency.md \
+  --path-prefix docs/2_Design/2026-05-19-governed-code-backed-component-materialization-policy.md \
   --path-prefix docs/3_Plan/2026-05-18- \
   --path-prefix docs/4_Build/2026-05-03-architect-packet-compiler.md \
   --path-prefix docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md \
@@ -22,6 +26,7 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/4_Build/2026-05-16-evaluate-derivation-readiness-flow.md \
   --path-prefix docs/4_Build/2026-05-16-review-coder-brief-flow.md \
   --path-prefix docs/4_Build/2026-05-17-derive-implementation-plan-flow.md \
+  --path-prefix docs/4_Build/2026-05-19-materialize-governed-code-backed-components-flow.md \
   --path-prefix docs/4_Build/2026-05-17-prepare-architect-packet-flow.md \
   --path-prefix docs/5_Test/2026-05-17-execution-package-resolution-service-validation.md \
   --path-prefix docs/5_Test/2026-05-17-workflow-lifecycle-techlead-bridge-validation.md \
@@ -29,6 +34,9 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md \
   --path-prefix docs/5_Test/2026-05-17-proof-only-closeout-validation.md \
   --path-prefix docs/5_Test/2026-05-17-live-github-closeout-validation.md \
+  --path-prefix docs/5_Test/2026-05-19-governed-proof-trio-full-chain-validation.md \
+  --path-prefix docs/5_Test/2026-05-19-governed-proof-trio-model-code-validation.md \
+  --path-prefix docs/5_Test/2026-05-19-governed-proof-trio-runtime-evidence-validation.md \
   --path-prefix docs/6_Deploy/2026-05-17-paa-db-cutover-plan.md \
   --path-prefix docs/6_Deploy/2026-05-17-paa-local-postgres-setup.md \
   --path-prefix docs/7_Monitor/2026-05-03-techlead-traceability-reporting.md \

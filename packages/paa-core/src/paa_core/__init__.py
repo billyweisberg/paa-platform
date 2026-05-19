@@ -2,6 +2,7 @@
 
 __all__ = [
     "config",
+    "governance",
     "package_metadata",
     "paths",
     "team_worker_roles",

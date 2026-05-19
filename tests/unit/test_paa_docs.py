@@ -438,6 +438,58 @@ Worker-result transition application is implemented for one runtime path.
         findings = paa_docs.validate_language_governance(records, self.root)
         self.assertFalse(any(f.code == "missing_status_scope" for f in findings))
 
+    def test_code_lint_resolves_code_authority_component(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-code-authority.md"
+        target.write_text(
+            """Title: Code Authority Note
+Doc-ID: paa-code-authority-note
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: WorkflowLifecycleService
+Canonical: true
+Authority-Source: code
+Summary: Binds a governed component spec to code metadata.
+
+# Code Authority Note
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_doc_code_consistency(
+            records,
+            self.root,
+            component_registry={"WorkflowLifecycleService": object()},
+        )
+        self.assertFalse(findings)
+
+    def test_code_lint_flags_unmapped_code_authority_component(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-unmapped-code-authority.md"
+        target.write_text(
+            """Title: Unmapped Code Authority Note
+Doc-ID: paa-unmapped-code-authority-note
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: MissingService
+Canonical: true
+Authority-Source: code
+Summary: Should fail when the component does not exist in code metadata.
+
+# Unmapped Code Authority Note
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_doc_code_consistency(records, self.root, component_registry={})
+        self.assertTrue(any(f.code == "unmapped_code_component" for f in findings))
+
 
 if __name__ == "__main__":
     unittest.main()

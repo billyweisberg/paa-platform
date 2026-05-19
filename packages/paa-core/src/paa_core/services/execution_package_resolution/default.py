@@ -9,6 +9,7 @@ from paa_core.policies.deployment_capability import (
     DeploymentCapabilityRequest,
 )
 from paa_core.repositories.execution_package import (
+    ExecutionPackageInstallRecord,
     ExecutionPackageRepository,
     InstalledExecutionContextRecord,
 )
@@ -185,13 +186,12 @@ class DefaultExecutionPackageResolutionService:
 
     def _context_from_install(
         self,
-        context: InstalledExecutionContextRecord | object | None,
+        context: InstalledExecutionContextRecord | ExecutionPackageInstallRecord | None,
     ) -> InstalledExecutionContextRecord | None:
         if context is None:
             return None
         if isinstance(context, InstalledExecutionContextRecord):
             return context
-        # The repository helper routes install records here for repo/runtime-root lookups.
         install = context
         overlays = tuple(
             self._repository.list_active_overlays_for_install(install.execution_package_install_id)

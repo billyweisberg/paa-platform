@@ -11,3 +11,8 @@ repos:
         entry: make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
         language: system
         pass_filenames: false
+      - id: paa-doc-code-consistency
+        name: PAA doc-to-code consistency
+        entry: make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-code
+        language: system
+        pass_filenames: false

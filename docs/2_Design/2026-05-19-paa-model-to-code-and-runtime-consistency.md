@@ -1,0 +1,268 @@
+Title: PAA Model To Code And Runtime Consistency
+Doc-ID: paa-model-to-code-and-runtime-consistency
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaModelCodeRuntimeConsistency
+Domain: governance
+Keywords: paa, governance, model, code, runtime, consistency, implementation-plan, projection, proof
+Depends-On: 2026-05-17-project-delivery-projection-contract.md, 2026-05-17-implementation-plan-repository-contract.md, 2026-05-19-paa-governed-code-vocabulary-and-type-enforcement.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the proof chain that validates governed code against primary PAA model truth, projection truth, and runtime evidence rather than docs alone.
+
+# PAA Model To Code And Runtime Consistency
+
+## Purpose
+
+This note defines the stronger governance target after:
+- doc governance
+- language governance
+- governed code vocabulary
+- doc-to-code consistency
+
+The goal is to prove that a PAA-defined component is not only described in docs and encoded in code, but is also:
+- present in primary PAA model truth
+- surfaced correctly in project projection truth
+- exercised by runtime evidence
+
+## Core Decision
+
+Doc-to-code consistency is necessary but not sufficient.
+
+The stronger proof target is:
+- model-to-code-to-runtime consistency
+
+The authoritative chain should be:
+- design authority
+- primary DB truth
+- projection truth
+- governed code truth
+- runtime evidence
+
+Important rule:
+- the projection is not the root source of truth
+- the projection is the operator-facing proof surface over primary truth
+
+## Problem
+
+If governance stops at doc-to-code binding, the system can still drift in a more serious way:
+- code can match a document name but not the active modeled project truth
+- a component can exist in code metadata but not in active implementation-plan work
+- a projection can describe a slice that does not cleanly map to code
+- runtime evidence can exercise paths that are not strongly tied back to the modeled component boundary
+
+That means doc-to-code validation proves vocabulary discipline, but not active PAA-system integrity.
+
+## Primary Truth Layers
+
+### 1. Design authority
+
+Defines:
+- intended component boundaries
+- intended service/repository/policy roles
+- intended slice scope
+
+Examples:
+- component specs
+- repository contracts
+- service specs
+- build-flow notes
+
+### 2. Primary DB model truth
+
+Defines the active modeled engineering truth.
+
+This is the most important bridge layer.
+
+For the current system, that includes:
+- `paa.implementation_plans`
+- `paa.implementation_plan_activities`
+- `paa.implementation_plan_activity_dependencies`
+- `paa.implementation_plan_verification_surfaces`
+- `paa.components`
+- `paa.component_elements`
+- `paa.component_element_realizations`
+- `paa.coder_brief_realization_targets`
+- workflow truth tables
+
+Important rule:
+- the DB model truth is closer to active engineering reality than the docs alone
+
+### 3. Projection truth
+
+Projection truth is the operator-facing read model over primary truth.
+
+Current source:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-project-delivery-projection-contract.md`
+
+Projection truth should show:
+- the current implementation-plan state
+- the current activity set
+- the next activity set
+- the blocked activity set
+- the verification surface state
+- the workflow/runtime evidence tied to the slice
+
+Important rule:
+- projection truth is proof surface, not proof origin
+
+### 4. Governed code truth
+
+Governed code truth is the typed code-side model of component identity and ownership.
+
+Current foundations:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/governance/language.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/governance/component_metadata.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/governance/component_registry.py`
+
+This layer proves:
+- the component exists in code
+- the component exposes governed identity
+- the component kind and alignment are explicit
+- owned and non-owned responsibilities are explicit
+
+### 5. Runtime evidence
+
+Runtime evidence proves that the modeled and implemented slice is actually being exercised.
+
+Examples:
+- workflow transitions
+- queue claims
+- handoffs
+- acceptance events
+- execution-package resolution state
+- validation notes tied to runtime behavior
+
+## Proof Chain
+
+The intended proof chain is:
+
+1. a governed design doc defines the component boundary
+2. a governed code metadata export encodes the component in code
+3. active DB truth contains the component and its active implementation-plan activity mappings
+4. projection truth surfaces the component and activity state coherently
+5. runtime evidence shows the slice is actually executing in the lifecycle
+
+If those five conditions are true together, then we can say:
+- the PAA-defined system is actively present in modeled truth, projected truth, code, and runtime behavior
+
+## Validation Layers
+
+### Layer 1: doc-to-code consistency
+
+Current implemented layer:
+- docs with `Authority-Source: code`
+- `Component:` resolves to exported governed metadata
+
+This is useful, but still narrow.
+
+### Layer 2: model-to-code consistency
+
+Next required layer:
+- code component name resolves to DB component truth
+- code component kind aligns with modeled role
+- owned responsibilities map to modeled component elements / realizations
+- active implementation-plan activities reference the component correctly
+- code artifact target keys align with the modeled realization or target mapping
+
+This is the most important next governance layer.
+
+### Layer 3: projection-to-code consistency
+
+Required after model-to-code:
+- projection output for a slice references the same component and activity structure
+- projected current/next/blocked views match active implementation-plan truth
+- projected verification surfaces line up with modeled and coded verification surfaces
+
+### Layer 4: runtime-to-model consistency
+
+Required after projection-to-code:
+- workflow and runtime evidence prove that the modeled slice has actually executed
+- validation notes are tied to the same governed component identity
+
+## First Checker Scope
+
+The first implementation should stay narrow.
+
+### Inputs
+
+- governed code metadata registry
+- DB component truth
+- DB implementation-plan activity truth
+- component element / realization truth
+- code artifact target keys where present
+
+### Narrow checks
+
+For one governed component:
+- component exists in DB component truth
+- component elements exist where the active slice expects them
+- active implementation-plan activities map to that component
+- activity keys and target keys map to known realization or target structures
+- code metadata exists for the same component name
+
+### Initial outputs
+
+The checker should emit a structured result like:
+- `component_found_in_model`
+- `metadata_found_in_code`
+- `active_activity_mapping_present`
+- `component_element_mapping_present`
+- `projection_alignment_status`
+- `runtime_evidence_status`
+- `blocking_gaps`
+
+## Recommended First Slice
+
+The first checker should target the already-governed vertical slice:
+
+- `WorkflowLifecycleService`
+- `ExecutionPackageResolutionService`
+- `ImplementationPlanRepository`
+
+Reason:
+- governed code metadata already exists
+- code-backed docs already exist
+- these components already appear in active design and validation authority
+
+## Non-Goals
+
+This note does not define:
+- a full runtime audit system
+- a generalized repo-wide proof engine
+- broad natural-language proof inference
+
+It defines only the architecture for the next consistency layer.
+
+## Implementation Order
+
+1. keep doc-to-code consistency active
+2. add model-to-code consistency checker
+3. bind the checker to one active vertical slice
+4. add projection-to-code checks for the same slice
+5. add runtime-evidence checks after the first three layers are stable
+
+## Success Condition
+
+This governance layer is successful when we can prove, for a specific component slice:
+
+- the docs define it
+- the DB model records it
+- the project projection surfaces it
+- the code exports it as governed metadata
+- runtime evidence shows it is actually participating in the lifecycle
+
+That is the stronger proof that the PAA-defined system is not just described, but actively running as modeled engineering truth.

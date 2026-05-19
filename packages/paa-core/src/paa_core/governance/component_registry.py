@@ -1,0 +1,24 @@
+"""Registry of governed code components that publish code-truth metadata."""
+
+from __future__ import annotations
+
+from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
+from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
+from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
+
+from .component_metadata import GovernedComponentMetadata
+
+GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = (
+    WORKFLOW_LIFECYCLE_SERVICE_METADATA,
+    EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA,
+    IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
+)
+
+COMPONENT_METADATA_BY_NAME: dict[str, GovernedComponentMetadata] = {
+    metadata.name: metadata for metadata in GOVERNED_COMPONENTS
+}
+
+__all__ = [
+    'COMPONENT_METADATA_BY_NAME',
+    'GOVERNED_COMPONENTS',
+]

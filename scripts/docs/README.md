@@ -13,6 +13,7 @@ Use it to:
 - inspect related docs
 - lint governed headers
 - lint language governance in governed docs
+- lint governed doc-to-code bindings
 - create new docs with headers
 - retrofit headers onto existing docs
 
@@ -111,6 +112,21 @@ This intentionally narrow linter checks for:
 - under-scoped strong status claims
 - path claims that omit `aligned`, `hybrid`, or `legacy` classification
 
+## Doc-To-Code Consistency Lint
+
+For docs that should bind directly to code truth:
+- set `Authority-Source: code`
+- use a `Component:` value that matches an exported governed metadata constant
+
+Run:
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py code-lint \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+```
+
+This checks that governed code-backed docs resolve to exported metadata in:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/governance/component_registry.py`
+
 ## Convenience Make Targets
 
 ```bash
@@ -123,6 +139,7 @@ make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-opera
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-reference
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-governed
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-code
 ```
 
 ## Workflow Rule

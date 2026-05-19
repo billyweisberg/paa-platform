@@ -32,6 +32,14 @@ When changing governed docs or writing architecture/status summaries, also run:
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
 ```
 
+When a governed doc is intended to bind directly to code truth, set:
+- `Authority-Source: code`
+
+Then verify the `Component:` header resolves to exported governed metadata with:
+```bash
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-code
+```
+
 If the task is about producer implementation flow or operator execution flow, check the governed build-stage docs first with:
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \
@@ -50,6 +58,7 @@ make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-opera
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-reference
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-governed
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-code
 ```
 
 ## Governed Docs

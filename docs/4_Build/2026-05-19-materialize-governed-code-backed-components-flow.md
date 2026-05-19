@@ -1,0 +1,185 @@
+Title: Materialize Governed Code Backed Components Flow
+Doc-ID: paa-materialize-governed-code-backed-components-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: GovernedCodeBackedComponentMaterialization
+Domain: governance
+Keywords: paa, build, materialization, component, implementation-plan, component-elements, realizations
+Depends-On: 2026-05-19-governed-code-backed-component-materialization-policy.md, 2026-05-17-derive-implementation-plan-flow.md, 2026-05-19-paa-model-to-code-and-runtime-consistency.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the first producer-side flow for materializing governed code-backed components into primary component, component-element, realization, and implementation-plan truth.
+
+# Materialize Governed Code Backed Components Flow
+
+## Purpose
+
+Define the first concrete flow that materializes governed code-backed components into primary PAA model truth.
+
+This flow exists because the first live model-to-code check showed:
+- code metadata exists for the target components
+- primary DB component truth does not yet exist for them
+
+## First Target Set
+
+Apply this flow first to:
+- `WorkflowLifecycleService`
+- `ExecutionPackageResolutionService`
+- `ImplementationPlanRepository`
+
+## Current Gap
+
+The current proof environment materially contains:
+- `Component Design Planning Service`
+
+It does not yet materially contain:
+- `WorkflowLifecycleService`
+- `ExecutionPackageResolutionService`
+- `ImplementationPlanRepository`
+
+So this flow is a real materialization step, not just a verification pass.
+
+## Governing Rule
+
+Use the existing producer-side materialization path.
+
+Do not start with:
+- ad hoc name mapping
+- code-only metadata expansion
+- projection-only placeholders
+
+Prefer:
+- design-package materialization
+- component-element and realization materialization
+- implementation-plan activity materialization
+
+## Flow
+
+1. define a governed design package for one target component
+2. derive or update the `component_model_slice` with the intended primary component name
+3. materialize the component row through the producer design-package flow
+4. materialize required component elements and realization instances
+5. derive implementation-plan activities that reference the component through modeled IDs
+6. rerun the model-to-code checker
+7. only after that evaluate projection and runtime-evidence alignment
+
+## Existing Producer Path To Reuse
+
+### Component row materialization
+
+Current real path:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/design_package_deriver.py`
+
+Important existing function:
+- `_ensure_component(...)`
+
+That path already:
+- inserts or updates `paa.components`
+- binds by `(project_id, name)`
+
+### Component element and realization materialization
+
+Current real paths:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_target_author.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/implementation_plan_deriver.py`
+
+These paths already:
+- create required `component_elements`
+- create required `component_element_realizations`
+- create implementation-plan activity mappings through realization IDs
+
+## First Thin Slice
+
+Keep the first thin slice narrow.
+
+For each of the three target components, the first materialization slice should establish:
+
+### Component row
+- one `paa.components` row
+
+### Minimal component elements
+- `interfaces`
+- `functions`
+
+And where applicable:
+- `data_contract`
+- `verification_surfaces`
+
+### Minimal realization instances
+- one interface realization
+- one implementation realization
+
+And when the component participates in proving:
+- one test realization
+
+### Implementation-plan activity links
+
+At least one `ImplementationPlanActivity` chain that references:
+- `component_element_id`
+- and preferably `component_element_realization_id`
+
+## Suggested Order
+
+1. `ImplementationPlanRepository`
+- smallest persistence-boundary component
+- easiest to align to implementation-plan truth directly
+
+2. `ExecutionPackageResolutionService`
+- already has clear governed code metadata
+- already has validation notes
+
+3. `WorkflowLifecycleService`
+- stronger downstream/runtime coupling
+- should follow after the first two prove the path
+
+## Output Artifacts
+
+This flow should produce:
+- governed component rows in the DB
+- component elements
+- realization instances
+- implementation-plan activities
+- updated model-to-code consistency report
+
+## Verification
+
+After each component materialization slice, run:
+
+```bash
+cd /Users/billyweisberg/Repos/billyweisberg/paa-platform && \
+python scripts/governance/paa_model_code_consistency.py --component ImplementationPlanRepository
+```
+
+and equivalent runs for:
+- `ExecutionPackageResolutionService`
+- `WorkflowLifecycleService`
+
+The first success threshold is:
+- `missing_model_component` disappears
+
+The next threshold is:
+- `missing_component_elements` disappears
+- `missing_component_realizations` disappears
+- `missing_implementation_plan_activities` disappears
+
+## Non-Goals
+
+This first flow does not require:
+- runtime-evidence proof for all three components immediately
+- repo-wide component normalization
+- broad historical backfill
+
+It is only the first governed materialization path for the active code-backed component set.

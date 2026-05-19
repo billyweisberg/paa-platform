@@ -101,7 +101,7 @@ def settings_with_overrides(
     )
 
 
-def sql_literal(value):
+def sql_literal(value: object | None) -> str:
     if value is None:
         return 'NULL'
     return "'" + str(value).replace("'", "''") + "'"

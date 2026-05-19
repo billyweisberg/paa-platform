@@ -1,0 +1,172 @@
+Title: Governed Code Backed Component Materialization Policy
+Doc-ID: paa-governed-code-backed-component-materialization-policy
+Doc-Type: policy
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaCodeBackedComponentMaterialization
+Domain: governance
+Keywords: paa, governance, component, materialization, model, code, implementation-plan, projection
+Depends-On: 2026-05-19-paa-model-to-code-and-runtime-consistency.md, 2026-05-19-paa-governed-code-vocabulary-and-type-enforcement.md, 2026-05-17-project-delivery-projection-contract.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines when governed code-backed components must be materialized into primary PAA model truth and rejects code-name to model-name mapping as a substitute for missing component truth.
+
+# Governed Code Backed Component Materialization Policy
+
+## Purpose
+
+Define the rule for components that are:
+- represented in governed code metadata
+- referenced by governed code-backed docs
+- expected to participate in implementation-plan and projection truth
+
+This policy closes the gap between:
+- code-truth governance
+- and primary PAA model truth
+
+## Core Decision
+
+When a component is governed in code and expected to participate in the active PAA system, it must be materialized in primary DB truth.
+
+Important rule:
+- a missing modeled component is a model gap
+- it is not a naming problem by default
+
+## Current Proof From The Live Model
+
+The current `paa.components` truth in the local proof environment contains:
+- `Component Design Planning Service`
+
+The first model-to-code checker run found no modeled rows for:
+- `WorkflowLifecycleService`
+- `ExecutionPackageResolutionService`
+- `ImplementationPlanRepository`
+
+That means the current gap is:
+- missing DB materialization
+
+It does not support introducing a name-mapping layer as the first response.
+
+## Policy
+
+### Rule 1: model truth is required for governed code-backed components
+
+If a component is:
+- exported in governed code metadata
+- and referenced by a governed doc with `Authority-Source: code`
+
+then the component should also exist in:
+- `paa.components`
+
+unless the component is explicitly classified as:
+- documentation-only
+- planned but not yet materialized
+
+### Rule 2: component elements and realizations are part of materialization
+
+Materialization is not complete when only the component row exists.
+
+For an actively modeled component, materialization should also include:
+- `paa.component_elements`
+- `paa.component_element_realizations`
+
+when the component is expected to participate in:
+- `ImplementationPlanActivity`
+- coder brief targeting
+- projection truth
+
+### Rule 3: implementation-plan activity truth is part of the proof chain
+
+For a component to participate in active delivery truth, it should eventually appear in:
+- `paa.implementation_plan_activities`
+
+through:
+- `component_element_id`
+- `component_element_realization_id`
+- or both
+
+### Rule 4: projection truth depends on model truth
+
+`Project Delivery Projection` is not a substitute for component materialization.
+
+It is valid only when its upstream model truth exists.
+
+### Rule 5: name-mapping is a second-order tool, not a first response
+
+An explicit model-name to code-name mapping layer is allowed only when:
+- the model intentionally uses different names
+- the divergence is documented as intentional
+- both sides remain authoritative for distinct reasons
+
+It must not be used to hide:
+- missing `paa.components` truth
+- missing component elements
+- missing realizations
+- missing implementation-plan activity links
+
+## Materialization Criteria
+
+A governed code-backed component is materially present in the PAA model when:
+
+1. a component row exists in `paa.components`
+2. required component elements exist in `paa.component_elements`
+3. required realization instances exist in `paa.component_element_realizations`
+4. active implementation-plan activities can reference the component through modeled IDs
+
+That is the minimum threshold for:
+- projection truth
+- stronger model-to-code consistency
+
+## Preferred Materialization Path
+
+The preferred path is the existing producer-side path:
+
+1. materialize the component row through design-package derivation
+2. materialize component elements and realization instances through component-design / implementation-plan derivation
+3. materialize implementation-plan activities through implementation-plan derivation
+
+Important rule:
+- prefer the real producer/materialization path over ad hoc direct SQL patches
+
+## First Target Set
+
+The first governed code-backed components that should follow this policy are:
+- `WorkflowLifecycleService`
+- `ExecutionPackageResolutionService`
+- `ImplementationPlanRepository`
+
+These are already:
+- represented in governed code metadata
+- bound to governed code-backed docs
+- checked by the first model-to-code consistency checker
+
+## Non-Goals
+
+This policy does not require:
+- immediate repo-wide component materialization
+- a full runtime audit
+- broad synonym resolution across all historical component names
+
+It defines the next materialization rule for governed active components.
+
+## Success Condition
+
+This policy is successful when:
+- code-backed governed components are no longer allowed to remain code-only indefinitely
+- missing model truth is surfaced as missing materialization
+- model-to-code checkers can distinguish:
+  - missing model truth
+  - ambiguous model truth
+  - intentional naming divergence

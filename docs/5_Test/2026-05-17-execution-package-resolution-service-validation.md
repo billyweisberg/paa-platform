@@ -4,7 +4,7 @@ Doc-Type: validation-note
 Status: active
 Lifecycle-Stage: test
 Created: 2026-05-18
-Last-Edited: 2026-05-18
+Last-Edited: 2026-05-19
 Author: Billy Weisberg
 Repo: paa-platform
 Component: ExecutionPackageResolutionService
@@ -19,7 +19,7 @@ Owners:
 Expires: 
 Issue: 
 PR: 
-Authority-Source: 
+Authority-Source: code
 Implementation-Status: 
 Summary: Validates repository, policy, and downstream-consumer alignment for the execution package resolution service.
 
