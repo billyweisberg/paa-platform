@@ -1,3 +1,28 @@
+Title: Implementation Plan Derivation Service Component Spec
+Doc-ID: paa-implementation-plan-derivation-service-component-spec
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ImplementationPlanDerivationService
+Domain: implementation-plan
+Keywords: implementation, plan, derivation, service, activities, planning
+Depends-On: 2026-05-17-implementation-plan-entity-design.md, 2026-05-17-implementation-plan-repository-contract.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the service boundary that derives authoritative implementation plans and activities from approved slice authority.
+
 # Implementation Plan Derivation Service Component Spec
 
 Date: 2026-05-17

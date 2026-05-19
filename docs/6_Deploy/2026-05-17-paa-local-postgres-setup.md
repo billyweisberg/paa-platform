@@ -1,3 +1,28 @@
+Title: PAA Local Postgres Setup
+Doc-ID: paa-local-postgres-setup
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: deploy
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaLocalPostgres
+Domain: deploy-db
+Keywords: deploy, db, postgres, local, setup, runtime
+Depends-On: 2026-05-17-paa-db-cutover-plan.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the repo-owned local Postgres service and the preferred runtime profile model for PAA database development.
+
 # PAA Local Postgres Setup
 
 ## Purpose

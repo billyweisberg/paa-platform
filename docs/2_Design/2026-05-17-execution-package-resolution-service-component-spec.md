@@ -1,3 +1,28 @@
+Title: Execution Package Resolution Service Component Spec
+Doc-ID: paa-execution-package-resolution-service-component-spec
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ExecutionPackageResolutionService
+Domain: execution-package-resolution
+Keywords: execution-package, resolution, service, runtime, install, overlay
+Depends-On: 2026-05-17-execution-package-resolution-service-pre-spec.md, 2026-05-13-execution-package-repository-contract.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the service boundary for resolving active execution-package context from install and overlay truth.
+
 # Execution Package Resolution Service Component Spec
 
 Date: 2026-05-17

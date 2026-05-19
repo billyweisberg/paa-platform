@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
+  --root "$REPO_ROOT" \
+  --path-prefix docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md \
+  --path-prefix docs/2_Design/2026-05-17-execution-package-resolution-service-component-spec.md \
+  --path-prefix docs/2_Design/2026-05-17-implementation-plan-derivation-service-component-spec.md \
+  --path-prefix docs/2_Design/2026-05-17-implementation-plan-repository-contract.md \
+  --path-prefix docs/2_Design/2026-05-17-project-delivery-projection-contract.md \
+  --path-prefix docs/2_Design/2026-05-18- \
+  --path-prefix docs/3_Plan/2026-05-18- \
+  --path-prefix docs/4_Build/2026-05-03-architect-packet-compiler.md \
+  --path-prefix docs/4_Build/2026-05-03-coder-brief-readiness-materializer.md \
+  --path-prefix docs/4_Build/2026-05-03-dev-and-qa-packet-compilers.md \
+  --path-prefix docs/4_Build/2026-05-03-paa-backed-architect-packet-brief-resolution.md \
+  --path-prefix docs/4_Build/2026-05-16-assemble-coder-brief-flow.md \
+  --path-prefix docs/4_Build/2026-05-16-derive-design-package-flow.md \
+  --path-prefix docs/4_Build/2026-05-17-derive-implementation-plan-flow.md \
+  --path-prefix docs/4_Build/2026-05-17-prepare-architect-packet-flow.md \
+  --path-prefix docs/5_Test/2026-05-17-execution-package-resolution-service-validation.md \
+  --path-prefix docs/5_Test/2026-05-17-workflow-lifecycle-techlead-bridge-validation.md \
+  --path-prefix docs/5_Test/2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md \
+  --path-prefix docs/5_Test/2026-05-17-self-hosted-consumer-runtime-validation.md \
+  --path-prefix docs/5_Test/2026-05-17-proof-only-closeout-validation.md \
+  --path-prefix docs/5_Test/2026-05-17-live-github-closeout-validation.md \
+  --path-prefix docs/6_Deploy/2026-05-17-paa-db-cutover-plan.md \
+  --path-prefix docs/6_Deploy/2026-05-17-paa-local-postgres-setup.md \
+  --path-prefix docs/7_Monitor/2026-05-03-techlead-traceability-reporting.md \
+  --path-prefix docs/terminology/paa-engineering-terminology-glossary.md \
+  --format table

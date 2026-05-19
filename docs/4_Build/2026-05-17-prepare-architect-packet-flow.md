@@ -1,3 +1,28 @@
+Title: Prepare Architect Packet Flow
+Doc-ID: paa-prepare-architect-packet-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ArchitectPacketPreparer
+Domain: architect-packet-preparation
+Keywords: architect-packet, packet-ready, producer, build, flow
+Depends-On: 2026-05-16-assemble-coder-brief-flow.md, 2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow that promotes an approved brief to packet-ready authority and compiles an architect cycle packet.
+
 # Prepare Architect Packet Flow
 
 ## Purpose

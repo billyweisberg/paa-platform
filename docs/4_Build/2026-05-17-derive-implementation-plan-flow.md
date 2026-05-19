@@ -1,3 +1,28 @@
+Title: Derive Implementation Plan Flow
+Doc-ID: paa-derive-implementation-plan-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ImplementationPlanDerivationService
+Domain: implementation-plan
+Keywords: implementation-plan, derivation, producer, build, flow
+Depends-On: 2026-05-17-implementation-plan-derivation-service-component-spec.md, 2026-05-17-implementation-plan-activity-derivation-policy.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow that materializes implementation-plan truth and connects it forward into coder-brief assembly.
+
 # Derive Implementation Plan Flow
 
 Date: 2026-05-17

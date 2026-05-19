@@ -1,3 +1,28 @@
+Title: Paa Backed Architect Packet Brief Resolution
+Doc-ID: paa-backed-architect-packet-brief-resolution
+Doc-Type: design-note
+Status: superseded
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ArchitectPacketBriefResolver
+Domain: coder-brief-resolution
+Keywords: architect, packet, brief, resolution, build, precursor
+Depends-On: 
+Supersedes: 
+Superseded-By: 2026-05-16-assemble-coder-brief-flow.md, 2026-05-17-prepare-architect-packet-flow.md
+Canonical: false
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Captures the precursor design for resolving execution-eligible coder briefs into architect packet preparation.
+
 # 93. PAA-Backed Architect Packet Brief Resolution
 
 ## Purpose

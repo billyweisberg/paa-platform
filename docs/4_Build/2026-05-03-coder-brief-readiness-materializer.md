@@ -1,3 +1,28 @@
+Title: Coder Brief Readiness Materializer
+Doc-ID: paa-coder-brief-readiness-materializer
+Doc-Type: design-note
+Status: superseded
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: CoderBriefReadinessMaterializer
+Domain: coder-brief-readiness
+Keywords: coder-brief, readiness, materializer, producer, build, precursor
+Depends-On: 
+Supersedes: 
+Superseded-By: 2026-05-16-assemble-coder-brief-flow.md, 2026-05-17-derive-implementation-plan-flow.md
+Canonical: false
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Captures the precursor build note for materializing coder-brief readiness before the governed producer flows were implemented.
+
 # 90. Coder Brief Readiness Materializer
 
 ## Purpose

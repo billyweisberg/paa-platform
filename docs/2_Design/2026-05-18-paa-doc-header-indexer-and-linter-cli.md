@@ -1,0 +1,458 @@
+Title: PAA Doc Header Indexer And Linter CLI
+Doc-ID: paa-doc-header-indexer-and-linter-cli
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaDocHeaderCli
+Domain: doc-governance
+Keywords: docs, headers, indexer, linter, cli
+Depends-On: 2026-05-18-paa-doc-super-header-schema.md, 2026-05-18-paa-system-design-tables-method.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-15
+Summary: Defines the header-only CLI for indexing, finding, relating, and linting governed PAA documents.
+
+# PAA Doc Header Indexer And Linter CLI
+
+## Status
+Draft.
+
+## Purpose
+
+Define a lightweight CLI and supporting skill behavior for indexing and linting governed PAA markdown documents using only the super-header metadata.
+
+This CLI exists to let humans and agents:
+- discover docs without reading them fully
+- find canonical docs quickly
+- navigate relationships between docs
+- detect stale, malformed, or superseded docs
+- reduce context waste during long-horizon work
+
+This v1 design intentionally avoids full-text indexing or embeddings.
+The first target is fast, strict, header-only navigation.
+
+## Related Notes
+
+Read alongside:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-18-paa-doc-super-header-schema.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-18-paa-system-design-tables-method.md`
+
+## Tooling Scope
+
+The initial tool should be a Python CLI.
+
+Suggested location:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py`
+
+Suggested companion skill behavior later:
+- a Codex skill that calls the CLI before loading many docs
+- a workflow that prefers `header-first discovery, body-second reading`
+
+## Design Goals
+
+The CLI should be:
+- fast
+- deterministic
+- header-only by default
+- machine-readable when needed
+- easy to call from scripts or skills
+- strict enough to enforce metadata discipline
+
+The CLI should not:
+- parse whole documents unless explicitly asked
+- become a general search engine in v1
+- depend on a database in v1
+
+## Input Scope
+
+The CLI should scan markdown docs under configurable repo roots.
+
+Default focus:
+- `docs/2_Design`
+- `docs/3_Plan`
+- `docs/4_Build`
+- `docs/5_Test`
+- `docs/6_Deploy`
+- optionally `docs/terminology`
+
+### Legacy docs
+The CLI should tolerate docs without headers.
+
+Behavior:
+- index command may list them as `legacy_missing_header`
+- lint command should report them
+- find/current commands may exclude them by default unless asked to include legacy docs
+
+## Data Model
+
+### Parsed header record
+Each indexed doc should produce a normalized record like:
+
+```json
+{
+  "path": "docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md",
+  "title": "Workflow Lifecycle Service Component Spec",
+  "doc_id": "paa-workflow-lifecycle-service-component-spec",
+  "doc_type": "component-spec",
+  "status": "active",
+  "lifecycle_stage": "design",
+  "created": "2026-05-17",
+  "last_edited": "2026-05-18",
+  "author": "Billy Weisberg",
+  "repo": "paa-platform",
+  "component": "WorkflowLifecycleService",
+  "domain": "workflow-lifecycle",
+  "keywords": ["workflow", "lifecycle", "service"],
+  "depends_on": ["2026-05-17-workflow-lifecycle-service-pre-spec.md"],
+  "supersedes": [],
+  "superseded_by": [],
+  "canonical": true,
+  "review_after": "2026-06-01",
+  "summary": "Defines the authoritative workflow transition service boundary for work-item lifecycle coordination.",
+  "header_status": "valid"
+}
+```
+
+### Header status values
+Allowed:
+- `valid`
+- `legacy_missing_header`
+- `invalid_header`
+
+## CLI Commands
+
+### 1. `index`
+Purpose:
+- parse all eligible doc headers and emit a normalized index
+
+Example:
+```bash
+python scripts/docs/paa_docs.py index --root .
+```
+
+Options:
+- `--root`
+- `--format json|table`
+- `--include-legacy`
+- `--stage design`
+- `--doc-type component-spec`
+- `--status active`
+
+Output:
+- JSON array or compact table
+
+### 2. `find`
+Purpose:
+- find docs by header metadata only
+
+Example:
+```bash
+python scripts/docs/paa_docs.py find --component WorkflowLifecycleService
+python scripts/docs/paa_docs.py find --domain workflow-lifecycle --status active
+python scripts/docs/paa_docs.py find --keyword workflow
+```
+
+Supported filters:
+- `--doc-id`
+- `--title-contains`
+- `--doc-type`
+- `--status`
+- `--stage`
+- `--component`
+- `--domain`
+- `--keyword`
+- `--canonical true|false`
+- `--path-prefix`
+
+### 3. `current`
+Purpose:
+- find the canonical current doc or docs for a topic
+
+Example:
+```bash
+python scripts/docs/paa_docs.py current --component WorkflowLifecycleService
+python scripts/docs/paa_docs.py current --domain techlead-runtime
+```
+
+Behavior:
+- prefer `Canonical: true`
+- exclude `superseded`
+- optionally warn on ambiguous canonicals
+
+### 4. `related`
+Purpose:
+- show doc relationships without full content reads
+
+Example:
+```bash
+python scripts/docs/paa_docs.py related --doc-id paa-workflow-lifecycle-service-component-spec
+```
+
+Output groups:
+- depends on
+- supersedes
+- superseded by
+- same component
+- same domain
+- same lifecycle stage
+
+### 5. `stale`
+Purpose:
+- show docs needing review or cleanup
+
+Example:
+```bash
+python scripts/docs/paa_docs.py stale
+```
+
+Flags and checks:
+- `Review-After` in the past
+- `Expires` in the past
+- `Status: superseded` but still `Canonical: true`
+- missing `Last-Edited`
+- invalid or unresolved references
+
+### 6. `lint`
+Purpose:
+- validate the header schema and cross-doc consistency
+
+Example:
+```bash
+python scripts/docs/paa_docs.py lint --root .
+```
+
+Checks:
+- required fields present
+- enum values valid
+- dates valid
+- duplicate `Doc-ID`
+- malformed headers
+- missing referenced docs
+- multiple canonical docs for one topic where disallowed
+
+### 7. `show`
+Purpose:
+- print one parsed header record in a clean format
+
+Example:
+```bash
+python scripts/docs/paa_docs.py show --path docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md
+```
+
+This is useful for quick inspection and debugging.
+
+### 8. `new-doc`
+Purpose:
+- create a new governed markdown document with a fully rendered super header
+
+Example:
+```bash
+python scripts/docs/paa_docs.py new-doc --path docs/2_Design/2026-05-18-example.md --doc-type design-note --status draft --summary "Creates a new governed design note."
+```
+
+Behavior:
+- infers title from filename when not provided
+- infers lifecycle stage from docs path when not provided
+- fills `Created` and `Last-Edited` with today when not provided
+- writes a starter body when no body is supplied
+
+### 9. `set-header`
+Purpose:
+- add, replace, or normalize the header on an existing doc without rewriting the body
+
+Example:
+```bash
+python scripts/docs/paa_docs.py set-header --path docs/3_Plan/2026-05-18-example-plan.md --doc-type plan --status active --canonical
+```
+
+Behavior:
+- preserves body content
+- updates or inserts a governed super header
+- uses existing parsed values when present and not explicitly overridden
+
+## Output Modes
+
+The CLI should support two output families.
+
+### Human-readable
+- compact table
+- grouped findings
+- short warning text
+
+### Machine-readable
+- JSON
+- newline-delimited JSON optional later
+
+This matters because both humans and Codex skills should be able to consume the same tool.
+
+## Parsing Strategy
+
+### Header-only scan
+The parser should:
+1. open file
+2. read up to `40` lines
+3. parse contiguous `Key: Value` lines from line 1
+4. stop at the first blank line
+5. normalize the record
+6. not load the rest of the body
+
+### Why this matters
+This keeps:
+- latency low
+- context small
+- behavior predictable
+
+## Normalization Rules
+
+### Comma-separated list fields
+Normalize by:
+- split on `,`
+- trim whitespace
+- discard empty values
+
+Applies to:
+- `Keywords`
+- `Depends-On`
+- `Supersedes`
+- `Superseded-By`
+- `Owners`
+
+### Boolean fields
+Normalize:
+- `true` -> `True`
+- `false` -> `False`
+
+Reject anything else in lint mode.
+
+### Date fields
+Treat these as ISO dates:
+- `Created`
+- `Last-Edited`
+- `Review-After`
+- `Expires`
+
+## Lint Severity Model
+
+Suggested severities:
+- `error`
+- `warning`
+- `info`
+
+### Errors
+Examples:
+- missing required field
+- malformed header line
+- invalid enum value
+- invalid date format
+- duplicate `Doc-ID`
+
+### Warnings
+Examples:
+- unresolved `Depends-On`
+- unresolved `Superseded-By`
+- multiple canonical docs in same topic cluster
+- stale `Review-After`
+
+### Info
+Examples:
+- legacy doc missing header
+- optional field omitted
+
+## Suggested Topic-Cluster Rules
+
+The first version should stay conservative.
+
+### v1 cluster logic
+Use exact-match grouping by one of:
+- `Doc-ID`
+- `Component`
+- `Domain`
+
+### canonical ambiguity check
+Warn when:
+- multiple `Canonical: true` docs exist with same `Doc-ID`
+- or same exact `Component + Doc-Type + Lifecycle-Stage` triple
+
+## Suggested Skill Behavior
+
+A future skill using this CLI should follow this sequence:
+
+1. call `current` or `find`
+2. inspect header-only results
+3. load only the top 1 to 4 docs fully
+4. avoid bulk-reading docs unless the header index cannot disambiguate
+
+This is the main efficiency win.
+
+## Example Workflows
+
+### Workflow A: Find current workflow docs
+```bash
+python scripts/docs/paa_docs.py current --domain workflow-lifecycle
+```
+
+### Workflow B: Find all active component specs
+```bash
+python scripts/docs/paa_docs.py find --doc-type component-spec --status active
+```
+
+### Workflow C: Find stale canonical docs
+```bash
+python scripts/docs/paa_docs.py stale --canonical-only
+```
+
+### Workflow D: Lint docs before commit
+```bash
+python scripts/docs/paa_docs.py lint --root .
+```
+
+## Implementation Plan
+
+### Phase 1
+- implement parser
+- implement `index`
+- implement `show`
+- implement `lint`
+- implement `new-doc`
+- implement `set-header`
+
+### Phase 2
+- implement `find`
+- implement `current`
+- implement `related`
+- implement `stale`
+
+### Phase 3
+- integrate into Codex workflow/skill
+- backfill active canonical docs
+- add repo-local preflight or CI usage if desired
+
+## Why This Is Enough For v1
+
+This v1 design is intentionally small.
+
+It does not try to solve:
+- semantic full-text search
+- embeddings
+- auto-summarization
+- body-content classification
+
+Those are later problems.
+
+The current problem is that doc discovery and continuity are too dependent on rereading prose and remembering filenames.
+This CLI directly addresses that.
+
+## Conclusion
+
+The `PAA Doc Header Indexer And Linter CLI` should be implemented as a strict, header-only metadata tool.
+
+That will give PAA:
+- better document recovery
+- better canonical-doc discovery
+- better continuity across long-horizon work
+- lower context waste for both humans and agents

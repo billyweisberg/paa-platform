@@ -1,0 +1,799 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+from typing import Iterable
+
+HEADER_LINE_LIMIT = 40
+SCANNED_DOC_DIRS = (
+    "docs/2_Design",
+    "docs/3_Plan",
+    "docs/4_Build",
+    "docs/5_Test",
+    "docs/6_Deploy",
+    "docs/7_Monitor",
+    "docs/terminology",
+)
+REQUIRED_FIELDS = (
+    "Title",
+    "Doc-ID",
+    "Doc-Type",
+    "Status",
+    "Lifecycle-Stage",
+    "Created",
+    "Last-Edited",
+    "Author",
+    "Repo",
+    "Canonical",
+    "Summary",
+)
+RECOMMENDED_FIELDS = (
+    "Component",
+    "Domain",
+    "Keywords",
+    "Depends-On",
+    "Supersedes",
+    "Superseded-By",
+    "Review-After",
+)
+OPTIONAL_FIELDS = (
+    "Owners",
+    "Expires",
+    "Issue",
+    "PR",
+    "Authority-Source",
+    "Implementation-Status",
+)
+LIST_FIELDS = {
+    "Keywords",
+    "Depends-On",
+    "Supersedes",
+    "Superseded-By",
+    "Owners",
+}
+HEADER_FIELD_ORDER = [
+    "Title",
+    "Doc-ID",
+    "Doc-Type",
+    "Status",
+    "Lifecycle-Stage",
+    "Created",
+    "Last-Edited",
+    "Author",
+    "Repo",
+    "Component",
+    "Domain",
+    "Keywords",
+    "Depends-On",
+    "Supersedes",
+    "Superseded-By",
+    "Canonical",
+    "Review-After",
+    "Owners",
+    "Expires",
+    "Issue",
+    "PR",
+    "Authority-Source",
+    "Implementation-Status",
+    "Summary",
+]
+DATE_FIELDS = {
+    "Created",
+    "Last-Edited",
+    "Review-After",
+    "Expires",
+}
+DOC_TYPE_VALUES = {
+    "design-note",
+    "component-spec",
+    "contract",
+    "plan",
+    "validation-note",
+    "policy",
+    "schema-note",
+    "proof",
+    "runbook",
+    "glossary",
+    "reference",
+}
+STATUS_VALUES = {"draft", "active", "superseded", "archived"}
+LIFECYCLE_VALUES = {"design", "plan", "build", "test", "deploy", "operate", "reference"}
+BOOLEAN_VALUES = {"true", "false"}
+ALLOWED_FIELDS = set(REQUIRED_FIELDS) | set(RECOMMENDED_FIELDS) | set(OPTIONAL_FIELDS)
+SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
+FIELD_TO_ARG = {
+    "Title": "title",
+    "Doc-ID": "doc_id",
+    "Doc-Type": "doc_type",
+    "Status": "status",
+    "Lifecycle-Stage": "stage",
+    "Created": "created",
+    "Last-Edited": "last_edited",
+    "Author": "author",
+    "Repo": "repo",
+    "Component": "component",
+    "Domain": "domain",
+    "Keywords": "keywords",
+    "Depends-On": "depends_on",
+    "Supersedes": "supersedes",
+    "Superseded-By": "superseded_by",
+    "Canonical": "canonical",
+    "Review-After": "review_after",
+    "Owners": "owners",
+    "Expires": "expires",
+    "Issue": "issue",
+    "PR": "pr",
+    "Authority-Source": "authority_source",
+    "Implementation-Status": "implementation_status",
+    "Summary": "summary",
+}
+
+
+@dataclass
+class Finding:
+    severity: str
+    code: str
+    path: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "severity": self.severity,
+            "code": self.code,
+            "path": self.path,
+            "message": self.message,
+        }
+
+
+def parse_iso_date(value: str) -> date:
+    return date.fromisoformat(value)
+
+
+def repo_relative(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
+def today_iso() -> str:
+    return date.today().isoformat()
+
+
+def infer_title_from_path(path: Path) -> str:
+    stem = path.stem
+    stem = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", stem)
+    stem = stem.replace("-", " ").replace("_", " ").strip()
+    return " ".join(word.capitalize() if word.islower() else word for word in stem.split()) or path.stem
+
+
+def slugify_title(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return slug or "untitled-doc"
+
+
+def detect_stage_from_path(path: Path) -> str:
+    parts = path.parts
+    for idx, part in enumerate(parts):
+        if part == "docs" and idx + 1 < len(parts):
+            next_part = parts[idx + 1]
+            mapping = {
+                "2_Design": "design",
+                "3_Plan": "plan",
+                "4_Build": "build",
+                "5_Test": "test",
+                "6_Deploy": "deploy",
+                "terminology": "reference",
+            }
+            if next_part in mapping:
+                return mapping[next_part]
+    return "design"
+
+
+def read_header_lines(path: Path) -> tuple[list[str], bool]:
+    lines: list[str] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for _ in range(HEADER_LINE_LIMIT):
+            line = handle.readline()
+            if line == "":
+                break
+            lines.append(line.rstrip("\n"))
+            if line.strip() == "":
+                return lines, True
+    return lines, False
+
+
+def parse_header(path: Path, root: Path) -> tuple[dict[str, object] | None, list[Finding]]:
+    rel_path = repo_relative(path, root)
+    lines, terminated = read_header_lines(path)
+    findings: list[Finding] = []
+    if not lines:
+        findings.append(Finding("info", "legacy_missing_header", rel_path, "Document is empty or missing a header."))
+        return None, findings
+    header_lines: list[str] = []
+    for line in lines:
+        if line.strip() == "":
+            break
+        header_lines.append(line)
+    if not header_lines:
+        findings.append(Finding("info", "legacy_missing_header", rel_path, "Document does not begin with a super header."))
+        return None, findings
+    first_key, first_sep, _first_value = header_lines[0].partition(":")
+    if not first_sep or first_key.strip() not in ALLOWED_FIELDS:
+        findings.append(Finding("info", "legacy_missing_header", rel_path, "Document does not begin with a governed super header."))
+        return None, findings
+    if not terminated:
+        findings.append(Finding("error", "header_too_long", rel_path, f"Header did not terminate with a blank line within {HEADER_LINE_LIMIT} lines."))
+    raw: dict[str, str] = {}
+    seen: set[str] = set()
+    for line in header_lines:
+        key, sep, value = line.partition(":")
+        if not sep:
+            findings.append(Finding("error", "invalid_header", rel_path, "Header contains malformed lines; expected 'Key: Value'."))
+            return None, findings
+        key = key.strip()
+        value = value.lstrip()
+        if key in seen:
+            findings.append(Finding("error", "duplicate_field", rel_path, f"Duplicate header field: {key}"))
+            continue
+        seen.add(key)
+        raw[key] = value.strip()
+    unknown_fields = sorted(set(raw) - ALLOWED_FIELDS)
+    for field in unknown_fields:
+        findings.append(Finding("error", "unknown_field", rel_path, f"Unknown header field: {field}"))
+    for field in REQUIRED_FIELDS:
+        if field not in raw:
+            findings.append(Finding("error", "missing_required_field", rel_path, f"Missing required field: {field}"))
+    record = normalize_record(raw, rel_path)
+    findings.extend(validate_normalized_record(record))
+    if any(f.severity == "error" for f in findings):
+        record["header_status"] = "invalid_header"
+    else:
+        record["header_status"] = "valid"
+    return record, findings
+
+
+def normalize_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def normalize_record(raw: dict[str, str], rel_path: str) -> dict[str, object]:
+    record: dict[str, object] = {
+        "path": rel_path,
+        "header_status": "valid",
+    }
+    for key, value in raw.items():
+        normalized_key = key.lower().replace("-", "_")
+        if key in LIST_FIELDS:
+            record[normalized_key] = normalize_list(value)
+        elif key == "Canonical":
+            record[normalized_key] = value.lower() == "true"
+        else:
+            record[normalized_key] = value
+    return record
+
+
+def validate_normalized_record(record: dict[str, object]) -> list[Finding]:
+    rel_path = str(record.get("path", ""))
+    findings: list[Finding] = []
+    doc_type = record.get("doc_type")
+    if isinstance(doc_type, str) and doc_type not in DOC_TYPE_VALUES:
+        findings.append(Finding("error", "invalid_doc_type", rel_path, f"Invalid Doc-Type: {doc_type}"))
+    status = record.get("status")
+    if isinstance(status, str) and status not in STATUS_VALUES:
+        findings.append(Finding("error", "invalid_status", rel_path, f"Invalid Status: {status}"))
+    stage = record.get("lifecycle_stage")
+    if isinstance(stage, str) and stage not in LIFECYCLE_VALUES:
+        findings.append(Finding("error", "invalid_lifecycle_stage", rel_path, f"Invalid Lifecycle-Stage: {stage}"))
+    canonical = record.get("canonical")
+    if not isinstance(canonical, bool):
+        findings.append(Finding("error", "invalid_canonical", rel_path, "Canonical must be exactly 'true' or 'false'."))
+    for field in DATE_FIELDS:
+        normalized_field = field.lower().replace("-", "_")
+        value = record.get(normalized_field)
+        if not value:
+            continue
+        if not isinstance(value, str):
+            findings.append(Finding("error", "invalid_date_field", rel_path, f"{field} must be a string date."))
+            continue
+        try:
+            parse_iso_date(value)
+        except ValueError:
+            findings.append(Finding("error", "invalid_date_format", rel_path, f"{field} must use YYYY-MM-DD."))
+    summary = record.get("summary")
+    if isinstance(summary, str) and len(summary) > 200:
+        findings.append(Finding("warning", "summary_too_long", rel_path, "Summary exceeds 200 characters."))
+    return findings
+
+
+def iter_doc_paths(root: Path) -> Iterable[Path]:
+    for rel_dir in SCANNED_DOC_DIRS:
+        base = root / rel_dir
+        if not base.exists():
+            continue
+        yield from sorted(base.rglob("*.md"))
+
+
+def build_index(root: Path) -> tuple[list[dict[str, object]], list[Finding]]:
+    records: list[dict[str, object]] = []
+    findings: list[Finding] = []
+    for path in iter_doc_paths(root):
+        record, record_findings = parse_header(path, root)
+        findings.extend(record_findings)
+        if record is not None:
+            records.append(record)
+        else:
+            records.append({
+                "path": repo_relative(path, root),
+                "header_status": "legacy_missing_header" if any(f.code == "legacy_missing_header" for f in record_findings) else "invalid_header",
+            })
+    findings.extend(validate_index(records))
+    return records, findings
+
+
+def group_key(record: dict[str, object]) -> tuple[object, object, object]:
+    return (record.get("component"), record.get("doc_type"), record.get("lifecycle_stage"))
+
+
+def validate_index(records: list[dict[str, object]]) -> list[Finding]:
+    findings: list[Finding] = []
+    seen_doc_ids: dict[str, str] = {}
+    canonical_groups: dict[tuple[object, object, object], list[str]] = {}
+    path_lookup = {str(record.get("path")): record for record in records}
+    file_name_lookup = {Path(str(record.get("path"))).name: str(record.get("path")) for record in records}
+    for record in records:
+        rel_path = str(record.get("path"))
+        if record.get("header_status") == "legacy_missing_header":
+            continue
+        doc_id = record.get("doc_id")
+        if isinstance(doc_id, str):
+            previous = seen_doc_ids.get(doc_id)
+            if previous and previous != rel_path:
+                findings.append(Finding("error", "duplicate_doc_id", rel_path, f"Doc-ID duplicates {previous}"))
+            else:
+                seen_doc_ids[doc_id] = rel_path
+        if record.get("canonical") is True:
+            canonical_groups.setdefault(group_key(record), []).append(rel_path)
+        if record.get("status") == "superseded" and record.get("canonical") is True:
+            findings.append(Finding("warning", "canonical_superseded", rel_path, "Superseded document should not be canonical."))
+        for field_name in ("depends_on", "supersedes", "superseded_by"):
+            references = record.get(field_name) or []
+            if not isinstance(references, list):
+                continue
+            for ref in references:
+                if ref in path_lookup:
+                    continue
+                if Path(ref).name in file_name_lookup:
+                    continue
+                findings.append(Finding("warning", "unresolved_reference", rel_path, f"{field_name} reference does not resolve: {ref}"))
+        for field_name in ("review_after", "expires"):
+            value = record.get(field_name)
+            if isinstance(value, str):
+                try:
+                    if parse_iso_date(value) < date.today():
+                        findings.append(Finding("warning", "stale_review", rel_path, f"{field_name.replace('_', '-').title()} is in the past."))
+                except ValueError:
+                    pass
+    for key, paths in canonical_groups.items():
+        if len(paths) > 1 and key != (None, None, None):
+            for rel_path in paths:
+                findings.append(Finding("warning", "canonical_ambiguity", rel_path, f"Multiple canonical docs share component/doc-type/lifecycle-stage group {key}."))
+    return findings
+
+
+def filter_records(records: list[dict[str, object]], args: argparse.Namespace) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    for record in records:
+        if record.get("header_status") == "legacy_missing_header" and not getattr(args, "include_legacy", False):
+            continue
+        if getattr(args, "doc_id", None) and record.get("doc_id") != args.doc_id:
+            continue
+        if getattr(args, "title_contains", None):
+            title = str(record.get("title", "")).lower()
+            if args.title_contains.lower() not in title:
+                continue
+        if getattr(args, "doc_type", None) and record.get("doc_type") != args.doc_type:
+            continue
+        if getattr(args, "status", None) and record.get("status") != args.status:
+            continue
+        if getattr(args, "stage", None) and record.get("lifecycle_stage") != args.stage:
+            continue
+        if getattr(args, "component", None) and record.get("component") != args.component:
+            continue
+        if getattr(args, "domain", None) and record.get("domain") != args.domain:
+            continue
+        if getattr(args, "keyword", None):
+            keywords = record.get("keywords") or []
+            if args.keyword not in keywords:
+                continue
+        if getattr(args, "canonical", None) is not None and record.get("canonical") is not args.canonical:
+            continue
+        if getattr(args, "path_prefix", None) and not str(record.get("path", "")).startswith(args.path_prefix):
+            continue
+        results.append(record)
+    return results
+
+
+def current_records(records: list[dict[str, object]], args: argparse.Namespace) -> list[dict[str, object]]:
+    filtered = filter_records(records, args)
+    filtered = [r for r in filtered if r.get("status") != "superseded" and r.get("header_status") == "valid"]
+    canonicals = [r for r in filtered if r.get("canonical") is True]
+    return canonicals or filtered
+
+
+def related_payload(records: list[dict[str, object]], args: argparse.Namespace) -> dict[str, object]:
+    target = None
+    for record in records:
+        if args.doc_id and record.get("doc_id") == args.doc_id:
+            target = record
+            break
+        if args.path and record.get("path") == args.path:
+            target = record
+            break
+    if target is None:
+        raise SystemExit("No matching document found for related lookup.")
+    def matches_same(field: str) -> list[dict[str, object]]:
+        value = target.get(field)
+        if not value:
+            return []
+        return [r for r in records if r is not target and r.get(field) == value and r.get("header_status") == "valid"]
+    return {
+        "target": target,
+        "depends_on": target.get("depends_on", []),
+        "supersedes": target.get("supersedes", []),
+        "superseded_by": target.get("superseded_by", []),
+        "same_component": matches_same("component"),
+        "same_domain": matches_same("domain"),
+        "same_lifecycle_stage": matches_same("lifecycle_stage"),
+    }
+
+
+def stale_records(records: list[dict[str, object]], findings: list[Finding], canonical_only: bool) -> list[dict[str, object]]:
+    stale_paths = {
+        finding.path
+        for finding in findings
+        if finding.severity in {"warning", "error"}
+        and finding.code in {"stale_review", "canonical_superseded", "unresolved_reference", "invalid_header", "missing_required_field", "duplicate_doc_id"}
+    }
+    results = []
+    for record in records:
+        if str(record.get("path")) not in stale_paths:
+            continue
+        if canonical_only and record.get("canonical") is not True:
+            continue
+        results.append(record)
+    return results
+
+
+def render_table(records: list[dict[str, object]]) -> str:
+    if not records:
+        return "No records found."
+    columns = ["path", "doc_type", "status", "lifecycle_stage", "component", "domain", "canonical", "header_status"]
+    widths = {col: len(col) for col in columns}
+    rows: list[list[str]] = []
+    for record in records:
+        row = [format_cell(record.get(col)) for col in columns]
+        rows.append(row)
+        for col, value in zip(columns, row):
+            widths[col] = max(widths[col], len(value))
+    header = "  ".join(col.ljust(widths[col]) for col in columns)
+    sep = "  ".join("-" * widths[col] for col in columns)
+    body = ["  ".join(value.ljust(widths[col]) for value, col in zip(row, columns)) for row in rows]
+    return "\n".join([header, sep, *body])
+
+
+def format_cell(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return "" if value is None else str(value)
+
+
+def print_json(payload: object) -> None:
+    json.dump(payload, sys.stdout, indent=2, sort_keys=True)
+    sys.stdout.write("\n")
+
+
+def header_values_from_args(args: argparse.Namespace, path: Path) -> dict[str, str]:
+    created = getattr(args, "created", None) or today_iso()
+    last_edited = getattr(args, "last_edited", None) or created
+    title = getattr(args, "title", None) or infer_title_from_path(path)
+    doc_id = getattr(args, "doc_id", None) or slugify_title(title)
+    stage = getattr(args, "stage", None) or detect_stage_from_path(path)
+    author = getattr(args, "author", None) or "Billy Weisberg"
+    repo = getattr(args, "repo", None) or path.parts[path.parts.index("Repos") + 2] if "Repos" in path.parts else "paa-platform"
+    values: dict[str, str] = {
+        "Title": title,
+        "Doc-ID": doc_id,
+        "Doc-Type": getattr(args, "doc_type", None) or "design-note",
+        "Status": getattr(args, "status", None) or "draft",
+        "Lifecycle-Stage": stage,
+        "Created": created,
+        "Last-Edited": last_edited,
+        "Author": author,
+        "Repo": repo,
+        "Component": getattr(args, "component", None) or "",
+        "Domain": getattr(args, "domain", None) or "",
+        "Keywords": ", ".join(getattr(args, "keywords", None) or []),
+        "Depends-On": ", ".join(getattr(args, "depends_on", None) or []),
+        "Supersedes": ", ".join(getattr(args, "supersedes", None) or []),
+        "Superseded-By": ", ".join(getattr(args, "superseded_by", None) or []),
+        "Canonical": "true" if getattr(args, "canonical", False) else "false",
+        "Review-After": getattr(args, "review_after", None) or "",
+        "Owners": ", ".join(getattr(args, "owners", None) or []),
+        "Expires": getattr(args, "expires", None) or "",
+        "Issue": getattr(args, "issue", None) or "",
+        "PR": getattr(args, "pr", None) or "",
+        "Authority-Source": getattr(args, "authority_source", None) or "",
+        "Implementation-Status": getattr(args, "implementation_status", None) or "",
+        "Summary": getattr(args, "summary", None) or "",
+    }
+    return values
+
+
+def render_header(values: dict[str, str]) -> str:
+    lines = [f"{field}: {values.get(field, '')}" for field in HEADER_FIELD_ORDER]
+    return "\n".join(lines) + "\n\n"
+
+
+def read_body_without_header(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if not lines:
+        return ""
+    header_lines, _terminated = read_header_lines(path)
+    if header_lines and header_lines[0].partition(":")[0].strip() in ALLOWED_FIELDS:
+        consumed = len(header_lines)
+        return "\n".join(lines[consumed:]).lstrip("\n")
+    return text
+
+
+def command_index(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    output_records = filter_records(records, args)
+    if args.format == "json":
+        print_json(output_records)
+    else:
+        print(render_table(output_records))
+    return 0
+
+
+def command_show(args: argparse.Namespace) -> int:
+    root = args.root
+    path = Path(args.path)
+    full_path = path if path.is_absolute() else root / path
+    record, findings = parse_header(full_path, root)
+    payload = {
+        "record": record,
+        "findings": [finding.to_dict() for finding in findings],
+    }
+    print_json(payload)
+    return 0
+
+
+def command_find(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    output_records = filter_records(records, args)
+    if args.format == "json":
+        print_json(output_records)
+    else:
+        print(render_table(output_records))
+    return 0
+
+
+def command_current(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    output_records = current_records(records, args)
+    if args.format == "json":
+        print_json(output_records)
+    else:
+        print(render_table(output_records))
+    return 0
+
+
+def command_related(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    payload = related_payload(records, args)
+    print_json(payload)
+    return 0
+
+
+def command_stale(args: argparse.Namespace) -> int:
+    records, findings = build_index(args.root)
+    output_records = stale_records(records, findings, args.canonical_only)
+    if args.format == "json":
+        print_json(output_records)
+    else:
+        print(render_table(output_records))
+    return 0
+
+
+def command_new_doc(args: argparse.Namespace) -> int:
+    path = args.path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not args.force:
+        raise SystemExit(f"Refusing to overwrite existing file: {path}")
+    values = header_values_from_args(args, path)
+    body = args.body or f"# {values['Title']}\n"
+    path.write_text(render_header(values) + body, encoding="utf-8")
+    print_json({"ok": True, "path": str(path), "doc_id": values["Doc-ID"]})
+    return 0
+
+
+def command_set_header(args: argparse.Namespace) -> int:
+    path = args.path.resolve()
+    existing_body = read_body_without_header(path) if path.exists() else ""
+    if path.exists():
+        existing_record, _ = parse_header(path, args.root)
+    else:
+        existing_record = None
+    values = header_values_from_args(args, path)
+    if existing_record:
+        for field in HEADER_FIELD_ORDER:
+            arg_name = FIELD_TO_ARG[field]
+            explicit_value = getattr(args, arg_name, None)
+            explicit_provided = explicit_value not in (None, [], "")
+            if field == "Canonical":
+                explicit_provided = explicit_value is not None
+            key = field.lower().replace("-", "_")
+            if not explicit_provided and key in existing_record:
+                existing_value = existing_record[key]
+                if isinstance(existing_value, bool):
+                    values[field] = "true" if existing_value else "false"
+                elif isinstance(existing_value, list):
+                    values[field] = ", ".join(existing_value)
+                else:
+                    values[field] = str(existing_value)
+    body = existing_body or args.body or f"# {values['Title']}\n"
+    path.write_text(render_header(values) + body, encoding="utf-8")
+    print_json({"ok": True, "path": str(path), "doc_id": values["Doc-ID"]})
+    return 0
+
+
+def filter_findings(findings: list[Finding], path_prefixes: list[str] | None, include_legacy: bool) -> list[Finding]:
+    filtered = findings
+    if path_prefixes:
+        filtered = [finding for finding in filtered if any(finding.path.startswith(prefix) for prefix in path_prefixes)]
+    if not include_legacy:
+        filtered = [finding for finding in filtered if finding.code != "legacy_missing_header"]
+    return filtered
+
+
+def command_lint(args: argparse.Namespace) -> int:
+    _, findings = build_index(args.root)
+    filtered = filter_findings(findings, args.path_prefix or [], args.include_legacy)
+    ordered = sorted(filtered, key=lambda item: (SEVERITY_ORDER[item.severity], item.path, item.code))
+    if args.format == "json":
+        print_json([finding.to_dict() for finding in ordered])
+    else:
+        if not ordered:
+            print("No findings.")
+        else:
+            for finding in ordered:
+                print(f"[{finding.severity}] {finding.path} {finding.code}: {finding.message}")
+    return 1 if any(f.severity == "error" for f in ordered) else 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Index and lint PAA doc headers.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    def add_root_and_format(subparser: argparse.ArgumentParser, *, include_filters: bool = False) -> None:
+        subparser.add_argument("--root", type=Path, default=Path.cwd())
+        subparser.add_argument("--format", choices=("json", "table"), default="json")
+        if include_filters:
+            add_common_filters(subparser)
+
+    def add_common_filters(subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument("--include-legacy", action="store_true")
+        subparser.add_argument("--doc-id")
+        subparser.add_argument("--title-contains")
+        subparser.add_argument("--doc-type")
+        subparser.add_argument("--status")
+        subparser.add_argument("--stage")
+        subparser.add_argument("--component")
+        subparser.add_argument("--domain")
+        subparser.add_argument("--keyword")
+        subparser.add_argument("--path-prefix")
+        subparser.add_argument("--canonical", type=parse_bool_arg)
+
+    index_parser = subparsers.add_parser("index")
+    add_root_and_format(index_parser, include_filters=True)
+    index_parser.set_defaults(func=command_index)
+
+    show_parser = subparsers.add_parser("show")
+    show_parser.add_argument("--root", type=Path, default=Path.cwd())
+    show_parser.add_argument("--path", required=True)
+    show_parser.set_defaults(func=command_show)
+
+    find_parser = subparsers.add_parser("find")
+    add_root_and_format(find_parser, include_filters=True)
+    find_parser.set_defaults(func=command_find)
+
+    current_parser = subparsers.add_parser("current")
+    add_root_and_format(current_parser, include_filters=True)
+    current_parser.set_defaults(func=command_current)
+
+    related_parser = subparsers.add_parser("related")
+    related_parser.add_argument("--root", type=Path, default=Path.cwd())
+    related_parser.add_argument("--doc-id")
+    related_parser.add_argument("--path")
+    related_parser.set_defaults(func=command_related)
+
+    stale_parser = subparsers.add_parser("stale")
+    stale_parser.add_argument("--root", type=Path, default=Path.cwd())
+    stale_parser.add_argument("--format", choices=("json", "table"), default="json")
+    stale_parser.add_argument("--canonical-only", action="store_true")
+    stale_parser.set_defaults(func=command_stale)
+
+    lint_parser = subparsers.add_parser("lint")
+    lint_parser.add_argument("--root", type=Path, default=Path.cwd())
+    lint_parser.add_argument("--format", choices=("json", "table"), default="table")
+    lint_parser.add_argument("--path-prefix", action="append")
+    lint_parser.add_argument("--include-legacy", action="store_true")
+    lint_parser.set_defaults(func=command_lint)
+
+    def add_header_builder_args(subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument("--path", type=Path, required=True)
+        subparser.add_argument("--title")
+        subparser.add_argument("--doc-id")
+        subparser.add_argument("--doc-type", choices=sorted(DOC_TYPE_VALUES))
+        subparser.add_argument("--status", choices=sorted(STATUS_VALUES))
+        subparser.add_argument("--stage", choices=sorted(LIFECYCLE_VALUES))
+        subparser.add_argument("--created")
+        subparser.add_argument("--last-edited")
+        subparser.add_argument("--author")
+        subparser.add_argument("--repo")
+        subparser.add_argument("--component")
+        subparser.add_argument("--domain")
+        subparser.add_argument("--keywords", nargs="*")
+        subparser.add_argument("--depends-on", nargs="*")
+        subparser.add_argument("--supersedes", nargs="*")
+        subparser.add_argument("--superseded-by", nargs="*")
+        subparser.add_argument("--canonical", action="store_true", default=None)
+        subparser.add_argument("--review-after")
+        subparser.add_argument("--owners", nargs="*")
+        subparser.add_argument("--expires")
+        subparser.add_argument("--issue")
+        subparser.add_argument("--pr")
+        subparser.add_argument("--authority-source")
+        subparser.add_argument("--implementation-status")
+        subparser.add_argument("--summary")
+        subparser.add_argument("--body")
+        subparser.add_argument("--root", type=Path, default=Path.cwd())
+
+    new_doc_parser = subparsers.add_parser("new-doc")
+    add_header_builder_args(new_doc_parser)
+    new_doc_parser.add_argument("--force", action="store_true")
+    new_doc_parser.set_defaults(func=command_new_doc)
+
+    set_header_parser = subparsers.add_parser("set-header")
+    add_header_builder_args(set_header_parser)
+    set_header_parser.set_defaults(func=command_set_header)
+
+    return parser
+
+
+def parse_bool_arg(value: str) -> bool:
+    lowered = value.lower()
+    if lowered not in BOOLEAN_VALUES:
+        raise argparse.ArgumentTypeError("Expected true or false.")
+    return lowered == "true"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    args.root = args.root.resolve()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

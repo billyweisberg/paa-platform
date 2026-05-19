@@ -1,3 +1,28 @@
+Title: PAA DB Cutover Plan
+Doc-ID: paa-db-cutover-plan
+Doc-Type: plan
+Status: active
+Lifecycle-Stage: deploy
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaDatabaseCutover
+Domain: deploy-db
+Keywords: deploy, db, cutover, postgres, migration
+Depends-On: 2026-05-17-paa-local-postgres-setup.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the repo-owned database cutover sequence from the shared AgentHub database to the PAA-local Postgres service.
+
 # PAA DB Cutover Plan
 
 ## Goal

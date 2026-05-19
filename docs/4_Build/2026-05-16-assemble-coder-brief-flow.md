@@ -1,3 +1,28 @@
+Title: Assemble Coder Brief Flow
+Doc-ID: paa-assemble-coder-brief-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: CoderBriefAssembler
+Domain: coder-brief-derivation
+Keywords: coder-brief, brief, assembly, producer, build, flow
+Depends-On: 2026-05-16-evaluate-derivation-readiness-flow.md, 2026-05-03-coder-brief-derivation-method.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow for assembling a governed draft coder brief from active derivation state.
+
 # Assemble Coder Brief Flow
 
 Date: 2026-05-16

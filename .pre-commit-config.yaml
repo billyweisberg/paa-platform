@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: paa-governed-doc-headers
+        name: PAA governed doc headers
+        entry: bash scripts/docs/lint_governed_docs.sh
+        language: system
+        pass_filenames: false

@@ -1,3 +1,28 @@
+Title: Workflow Lifecycle Service Component Spec
+Doc-ID: paa-workflow-lifecycle-service-component-spec
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: WorkflowLifecycleService
+Domain: workflow-lifecycle
+Keywords: workflow, lifecycle, service, state, transition
+Depends-On: 2026-05-17-workflow-lifecycle-service-pre-spec.md, 2026-05-13-workflow-state-machine-component-design.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the authoritative workflow transition service boundary for work-item lifecycle coordination.
+
 # Workflow Lifecycle Service Component Spec
 
 Date: 2026-05-17

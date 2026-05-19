@@ -1,3 +1,28 @@
+Title: Project Delivery Projection Contract
+Doc-ID: paa-project-delivery-projection-contract
+Doc-Type: contract
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ProjectDeliveryProjection
+Domain: project-delivery
+Keywords: projection, contract, project, delivery, implementation, plan
+Depends-On: 2026-05-17-implementation-plan-entity-design.md, 2026-05-17-implementation-plan-activity-derivation-policy.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the projection-only contract for the operator-facing project delivery read model.
+
 # Project Delivery Projection Contract
 
 Date: 2026-05-17

@@ -1,3 +1,28 @@
+Title: ImplementationPlanRepository Contract
+Doc-ID: paa-implementation-plan-repository-contract
+Doc-Type: contract
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ImplementationPlanRepository
+Domain: implementation-plan
+Keywords: implementation, plan, repository, contract, persistence
+Depends-On: 2026-05-17-implementation-plan-entity-design.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the persistence boundary for implementation-plan project-design truth using the current PAA component model.
+
 # ImplementationPlanRepository Contract
 
 Date: 2026-05-17

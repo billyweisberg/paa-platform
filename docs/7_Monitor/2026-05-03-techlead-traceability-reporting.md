@@ -1,3 +1,28 @@
+Title: Techlead Traceability Reporting
+Doc-ID: paa-techlead-traceability-reporting
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: operate
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: TechLeadTraceabilityReporting
+Domain: traceability-reporting
+Keywords: techlead, traceability, reporting, monitor, operate, full-chain
+Depends-On: 
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the live reporting surface for full-chain work-item traceability and the TechLead traceability report section.
+
 # TechLead Traceability Reporting
 
 The single-slice full-chain proof is now promoted into two reusable reporting surfaces:

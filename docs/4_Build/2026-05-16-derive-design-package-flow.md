@@ -1,3 +1,28 @@
+Title: Derive Design Package Flow
+Doc-ID: paa-derive-design-package-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: DesignPackageDeriver
+Domain: design-package-derivation
+Keywords: design-package, producer, derivation, build, flow
+Depends-On: 2026-05-16-paa-producer-derivation-subsystem.md, 2026-05-03-stage1-design-package-contract.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow for validating and materializing a Stage 1 design package into governed authority records.
+
 # Derive Design Package Flow
 
 Date: 2026-05-16

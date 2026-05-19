@@ -1,3 +1,28 @@
+Title: Self-Hosted Consumer Runtime Validation
+Doc-ID: paa-self-hosted-consumer-runtime-validation
+Doc-Type: validation-note
+Status: active
+Lifecycle-Stage: test
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: SelfHostedConsumerRuntime
+Domain: consumer-runtime
+Keywords: self-hosted, consumer, runtime, validation, worker, qa, closeout
+Depends-On: 2026-05-17-packet-ready-handoff-and-consumer-claim-validation.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Validates self-hosted consumer runtime bootstrap and the queue-to-worker-to-QA execution path for the proof slice.
+
 # Self-Hosted Consumer Runtime Validation
 
 Date: 2026-05-17

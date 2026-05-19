@@ -1,3 +1,28 @@
+Title: Live GitHub-Backed Closeout Validation
+Doc-ID: paa-live-github-backed-closeout-validation
+Doc-Type: validation-note
+Status: active
+Lifecycle-Stage: test
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: LiveGithubCloseout
+Domain: closeout
+Keywords: live, github, closeout, validation, accepted, delivery, qa
+Depends-On: 2026-05-17-proof-only-closeout-validation.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Validates the live GitHub-backed closeout boundary for a merged PR and closed issue after QA pass.
+
 # Live GitHub-Backed Closeout Validation
 
 Date: 2026-05-17

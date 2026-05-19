@@ -1,3 +1,28 @@
+Title: Execution Package Resolution Service Validation
+Doc-ID: paa-execution-package-resolution-service-validation
+Doc-Type: validation-note
+Status: active
+Lifecycle-Stage: test
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ExecutionPackageResolutionService
+Domain: execution-package-resolution
+Keywords: validation, execution-package, runtime, service, consumer
+Depends-On: 2026-05-17-execution-package-resolution-service-component-spec.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Validates repository, policy, and downstream-consumer alignment for the execution package resolution service.
+
 # Execution Package Resolution Service Validation
 
 Date: 2026-05-17
