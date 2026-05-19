@@ -1,7 +1,7 @@
 # Execution Package And Workflow Next Plan
 
 Date: 2026-05-17
-Status: active, Step 1 through Step 10 complete
+Status: active, Steps 1 through 10 established
 
 ## Purpose
 
@@ -14,7 +14,7 @@ This plan continues the dependency-graph-driven implementation sequence by:
 
 ## Why This Plan Exists
 
-The prior plan is effectively complete.
+The prior plan is effectively exhausted as an execution sequence.
 
 We now have:
 - `ImplementationPlan` repo/service backbone
@@ -30,7 +30,7 @@ It is the next real service wave.
 
 ## Current Status Snapshot
 
-### Completed already
+### Established already
 
 #### `Execution Package Resolution Service` design
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-execution-package-resolution-service-pre-spec.md`
@@ -82,7 +82,7 @@ This ordering is still correct because:
 ## Ordered Execution Plan
 
 ## Step 1. Implement `Execution Package Resolution Service` Phase 3
-Status: complete
+Status: established
 
 ### Why first
 The service shell now exists. The next move is to make it a real read service over the execution-package repository.
@@ -107,7 +107,7 @@ The service shell now exists. The next move is to make it a real read service ov
 - `resolve_execution_context_for_runtime_root(...)`
 
 ## Step 2. Implement `Execution Package Resolution Service` Phase 4
-Status: complete
+Status: established
 
 ### Why second
 Once resolution reads work, capability evaluation and gap detection can be applied over real context instead of placeholders.
@@ -127,7 +127,7 @@ Once resolution reads work, capability evaluation and gap detection can be appli
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/tests/unit/test_execution_package_resolution_service.py`
 
 ## Step 3. Validate execution-context bridge alignment
-Status: complete
+Status: established
 
 ### Why third
 Before wiring more consumers to this service, confirm that repository truth, policy truth, and service outputs align the same way the planning bridge did.
@@ -143,7 +143,7 @@ Before wiring more consumers to this service, confirm that repository truth, pol
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-execution-package-resolution-service-validation.md`
 
 ## Step 4. Connect `Execution Package Resolution Service` into the next real consumer path
-Status: complete
+Status: established
 
 ### Why fourth
 A service is only proven once a real downstream consumer uses it.
@@ -162,7 +162,7 @@ A service is only proven once a real downstream consumer uses it.
 - `repo_auth_current(...)` now resolves the authority manifest through `Execution Package Resolution Service` before falling back to direct filesystem lookup
 
 ## Step 5. Write `Workflow Lifecycle Service` pre-spec
-Status: complete
+Status: established
 
 ### Why fifth
 Before touching workflow code, replace the earlier over-compressed mental model with the explicit service boundary we now want.
@@ -180,7 +180,7 @@ Before touching workflow code, replace the earlier over-compressed mental model 
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-pre-spec.md`
 
 ## Step 6. Define workflow policy contracts
-Status: complete
+Status: established
 
 ### Why sixth
 `Workflow Lifecycle Service` should not absorb all policy logic directly.
@@ -208,7 +208,7 @@ Each policy must pass the same four-part check:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/policies/reset_recovery/`
 
 ## Step 7. Implement repository adapter slices for workflow support
-Status: complete
+Status: established
 
 ### Why seventh
 `Workflow Lifecycle Service` needs real repository collaborators, not only design docs.
@@ -230,7 +230,7 @@ Status: complete
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/repositories/runtime_event/`
 
 ## Step 8. Write full `Workflow Lifecycle Service` component spec
-Status: complete
+Status: established
 
 ### Why eighth
 Once the policy and repository prerequisites are real enough, the service spec can be written against actual collaborators rather than placeholders.
@@ -242,7 +242,7 @@ Once the policy and repository prerequisites are real enough, the service spec c
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md`
 
 ## Step 9. Implement `Workflow Lifecycle Service` Phase 1 and Phase 2
-Status: complete
+Status: established
 
 ### Why ninth
 Start with the same disciplined pattern:
@@ -265,7 +265,7 @@ Start with the same disciplined pattern:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/tests/unit/test_workflow_lifecycle_service.py`
 
 ## Step 10. Implement `Workflow Lifecycle Service` first behavioral slice
-Status: complete
+Status: established
 
 ### Why tenth
 Only after the collaborators and contracts are real should transition logic begin.
@@ -300,7 +300,7 @@ Only after the collaborators and contracts are real should transition logic begi
   - repair-required workflow state
 
 ## Step 11. Validate and connect the workflow slice into one downstream runtime path
-Status: complete
+Status: established
 
 ### Why eleventh
 The workflow slice is most useful once a real runtime or orchestration path consumes it instead of duplicating transition logic.
@@ -319,12 +319,13 @@ The workflow slice is most useful once a real runtime or orchestration path cons
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
 - validation note:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-workflow-lifecycle-techlead-bridge-validation.md`
-- completed behavior:
+- established behavior:
   - resolve DB-primary `work_item_id` from issue context
   - evaluate pending `worker_result_packet` through `WorkflowLifecycleService`
   - surface workflow decision details back into TechLead escalation context
 
 ## Step 12. Choose the next workflow expansion slice
+Status: in progress
 
 ### Why twelfth
 The first consumer bridge is proven. The next work should extend the workflow model deliberately instead of broadening the consumer path ad hoc.
@@ -333,6 +334,26 @@ The first consumer bridge is proven. The next work should extend the workflow mo
 1. add `qa_result_returned`
 2. connect workflow transition application into one real runtime action path
 3. continue replacing inline workflow heuristics in `techlead.py` incrementally
+
+### Current progress
+- `qa_result_returned` is now supported in `WorkflowLifecycleService`
+- supported QA transition family:
+  - `qa_execution_in_progress -> techlead_qa_review_pending`
+- supported QA packet schema:
+  - `qa_verification_packet`
+- lifecycle behavior now advances lineage from:
+  - `awaiting_result -> awaiting_acceptance`
+- one real runtime action path now uses:
+  - `apply_workflow_transition(...)`
+- connected runtime path:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+  - `emit_next_assignment(...)`
+- current applied runtime family:
+  - `worker_result_returned`
+
+### Remaining next choice
+1. extend runtime application to `qa_result_returned`
+2. continue replacing inline workflow heuristics in `techlead.py` incrementally
 
 ## Priority Summary
 

@@ -1,7 +1,11 @@
-.PHONY: docs-lint-governed docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference
+.PHONY: docs-lint-governed docs-lint-language docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference
 
 docs-lint-governed:
 	bash /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/lint_governed_docs.sh
+
+docs-lint-language:
+	python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py language-lint \
+	  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform
 
 docs-current-design:
 	python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \

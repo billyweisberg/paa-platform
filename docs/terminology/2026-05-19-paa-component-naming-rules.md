@@ -1,0 +1,120 @@
+Title: PAA Component Naming Rules
+Doc-ID: paa-component-naming-rules
+Doc-Type: policy
+Status: active
+Lifecycle-Stage: reference
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaComponentNamingGovernance
+Domain: terminology
+Keywords: paa, component, naming, governance, service, repository, policy, adapter
+Depends-On: paa-engineering-terminology-glossary.md, 2026-05-19-paa-language-governance-rules.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines when an engineering element may be named a component, service, repository, policy, adapter, projection, or runtime hub in PAA.
+
+# PAA Component Naming Rules
+
+## Purpose
+
+PAA naming is governance, not decoration.
+
+A name like `service` or `repository` is a claim about ownership, collaborators, and allowed responsibilities.
+That claim must be true in code and docs.
+
+## Core Rule
+
+Do not name an engineering element after a clean architectural role unless it actually owns that role.
+
+## Allowed Names And Their Requirements
+
+### Component
+
+Use `component` when the element has:
+- a bounded role
+- explicit owned responsibilities
+- explicit non-ownership
+- defined collaborators or dependencies
+- traceable implementation or governed design authority
+
+### Service
+
+Use `service` when the element:
+- performs coordination or derivation work
+- owns a service boundary
+- has explicit inputs and outputs
+- does not primarily exist as storage access or side-effect plumbing
+
+### Repository
+
+Use `repository` when the element:
+- owns persistence access for a specific truth family
+- hides SQL/storage details from higher layers
+- does not perform domain policy or orchestration
+
+### Policy
+
+Use `policy` when the element:
+- evaluates rules
+- returns allow/deny or structured decision logic
+- does not load persistence truth directly unless explicitly designed to do so
+
+### Adapter
+
+Use `adapter` when the element:
+- translates between the system and an external surface
+- wraps transport, storage, filesystem, HTTP, queue, or runtime specifics
+- does not own the domain decision itself
+
+### Projection
+
+Use `projection` when the element:
+- is read-model only
+- derives a consumable view from primary truth
+- does not own the underlying write truth
+
+### Runtime hub
+
+Use `runtime hub` or `legacy runtime hub` when a module:
+- mixes multiple concerns
+- orchestrates many paths directly
+- still contains hybrid or procedural ownership
+
+Do not rename such a module as a `service` just because it calls services.
+
+## Disallowed Naming Behavior
+
+Disallowed:
+- calling a helper a `service` because it feels important
+- calling a giant script a `component` because it is central
+- calling a persistence helper a `repository` when it contains business policy
+- calling a review script a `workflow system`
+
+## Required Naming Check
+
+Before introducing a new named element, answer:
+1. what does it own?
+2. what does it explicitly not own?
+3. what truth or behavior boundary does it protect?
+4. what collaborators does it depend on?
+
+If those answers are weak, the name is premature.
+
+## Naming Correction Rule
+
+If an element is hybrid or legacy, say so directly.
+Example:
+- `techlead.py is a legacy runtime hub with partial service integration.`
+
+Not:
+- `TechLead orchestration service` unless that service truly exists as a bounded component.

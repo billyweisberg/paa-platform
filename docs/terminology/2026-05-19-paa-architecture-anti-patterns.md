@@ -1,0 +1,103 @@
+Title: PAA Architecture Anti Patterns
+Doc-ID: paa-architecture-anti-patterns
+Doc-Type: reference
+Status: active
+Lifecycle-Stage: reference
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaArchitectureAntiPatterns
+Domain: terminology
+Keywords: paa, architecture, anti-patterns, god-module, loose-narrative, hybrid-drift
+Depends-On: 2026-05-19-paa-language-governance-rules.md, 2026-05-19-paa-component-naming-rules.md, 2026-05-19-paa-status-claim-rules.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the recurring architecture anti-patterns that PAA explicitly rejects, including runtime hubs, loose narrative claims, and hidden ownership.
+
+# PAA Architecture Anti Patterns
+
+## Purpose
+
+This note records the patterns PAA should explicitly reject during design, implementation, and reporting.
+
+## Anti Patterns
+
+### 1. God module
+
+A single file or module accumulates:
+- workflow logic
+- routing logic
+- transport logic
+- persistence lookups
+- side effects
+- review decisions
+
+Why rejected:
+- ownership becomes unreadable
+- testing becomes indirect
+- status claims become broad and misleading
+
+### 2. Loose narrative architecture
+
+A path is described in broad prose without clear mapping to:
+- components
+- records
+- runtime code
+- validation
+
+Why rejected:
+- it sounds coherent while hiding missing structure
+- it enables drift in both code and reporting
+
+### 3. Hidden ownership
+
+A capability is described as if `the system` owns it, while the actual owner is unclear or mixed.
+
+Why rejected:
+- no one can remediate or validate what has no owner
+
+### 4. Packet-time guessing
+
+A role reconstructs authority or next actions from memory, packet fragments, or heuristics instead of governed upstream truth.
+
+Why rejected:
+- causes workflow drift
+- weakens reproducibility
+
+### 5. Policy leakage into repositories or adapters
+
+Persistence or transport code starts owning domain decisions.
+
+Why rejected:
+- destroys clean boundaries
+- makes later extraction difficult
+
+### 6. Architectural renaming without structural change
+
+A legacy runtime hub is renamed as a service or component without real decomposition.
+
+Why rejected:
+- creates architecture theater
+- prevents honest hybrid classification
+
+## Required Response
+
+When an anti-pattern is found:
+1. name it explicitly
+2. identify the current owner module
+3. classify the path as aligned, hybrid, or legacy
+4. create a bounded remediation plan
+
+## Governance Intent
+
+This note is not descriptive only.
+It is intended to support review language, design remediation, and architecture discipline during long-horizon work.

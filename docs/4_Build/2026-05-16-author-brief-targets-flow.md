@@ -1,7 +1,32 @@
-# Build Note: `author-brief-targets` Flow
+Title: Author Brief Targets Flow
+Doc-ID: paa-author-brief-targets-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: BriefTargetAuthor
+Domain: brief-target-authoring
+Keywords: brief-targets, producer, authoring, build, flow
+Depends-On: 2026-05-16-assemble-coder-brief-flow.md, 2026-05-16-derive-design-package-flow.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow for materializing explicit brief targets from a derivation-ready slice package and draft coder brief.
+
+# Author Brief Targets Flow
 
 Date: 2026-05-16
-Status: `implemented and validated`
+Status: active build-flow authority
 
 ## Purpose
 
@@ -47,7 +72,7 @@ Tests:
 
 ## Proof Slice Validation
 
-Validated against:
+Proof-slice validation ran against:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
 
 Generated output artifact:
@@ -68,10 +93,10 @@ Authored target chain:
 4. `verification_surfaces -> test_module`
 5. `interfaces -> package_export`
 
-Validated execution order:
+Observed execution order for the proof slice:
 - `10 -> 20 -> 30 -> 40 -> 50`
 
-Validated dependency chain:
+Observed dependency chain for the proof slice:
 - `dto` depends on `service_interface`
 - `service_implementation` depends on `dto`
 - `test_module` depends on `service_implementation`
@@ -106,7 +131,7 @@ PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_produce
 
 ## Exit Result
 
-This remediation item is complete.
+This governed build-flow slice is established for the proof path.
 
-The next remaining Priority 1 blocker is:
+The next remaining Priority 1 blocker at this point in the sequence was:
 - `review-coder-brief`

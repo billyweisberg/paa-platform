@@ -6,3 +6,8 @@ repos:
         entry: bash scripts/docs/lint_governed_docs.sh
         language: system
         pass_filenames: false
+      - id: paa-language-governance
+        name: PAA language governance
+        entry: make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
+        language: system
+        pass_filenames: false

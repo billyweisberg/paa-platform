@@ -96,7 +96,7 @@ Generated terminal decision artifacts:
 
 Terminal decision packet:
 - `message_id = fcore-techlead-2026-05-17-issue6-close_slice`
-- validated successfully
+- validation succeeded for this packet send
 - sent successfully
 - self-addressed terminal decision packet auto-acknowledged successfully
 
@@ -144,7 +144,7 @@ Validated as `GO`:
 ## Honest scope statement
 This run proves the live GitHub-backed closeout boundary.
 
-Taken together with the earlier proofs, PAA now has validated boundaries for:
+Taken together with the earlier proofs, PAA has validated boundary coverage for:
 - producer derivation
 - packet readiness
 - queue dispatch

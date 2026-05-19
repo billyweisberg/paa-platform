@@ -142,7 +142,7 @@ This is the correct narrow first integration because TechLead is a real consumer
 
 `GO`
 
-We now have validated alignment from:
+Validated alignment now exists from:
 
 - execution-package repository truth
 - through deployment-capability policy evaluation

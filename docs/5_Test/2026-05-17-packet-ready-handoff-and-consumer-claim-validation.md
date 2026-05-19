@@ -121,7 +121,7 @@ This does not invalidate the proof, but future dispatch validation should prefer
 - or explicit queue cleanup between repeated debug runs
 
 ## Overall outcome
-Current validated boundary set is now:
+Current validated boundary set for this proof sequence is:
 - `System Design -> Producer Derivation -> Packet-Ready Execution Authority`
 - `Packet-Ready Execution Authority -> Architect Handoff / Queue Dispatch`
 - `Packet -> Consumer Queue Claim / Envelope Consumption`

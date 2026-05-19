@@ -107,6 +107,24 @@ LIFECYCLE_VALUES = {"design", "plan", "build", "test", "deploy", "operate", "ref
 BOOLEAN_VALUES = {"true", "false"}
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | set(RECOMMENDED_FIELDS) | set(OPTIONAL_FIELDS)
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
+LANGUAGE_STRONG_STATUS_WORDS = {
+    "implemented",
+    "validated",
+    "complete",
+    "done",
+    "integrated",
+    "supported",
+}
+LANGUAGE_BANNED_PHRASES = {
+    "the system handles": "Use an explicit owner instead of 'the system'.",
+    "the system knows": "Describe the concrete source of truth instead of 'the system'.",
+    "this is aligned": "Qualify alignment with scope and evidence.",
+    "this is complete": "Prefer scoped completion language instead of broad completion claims.",
+    "we now have": "State the concrete implemented scope instead of broad summary language.",
+    "the architecture does": "Name the owning component or governed document directly.",
+}
+PATH_CLASSIFICATION_HINTS = {"aligned", "hybrid", "legacy"}
+PATH_CLAIM_TERMS = {"owns", "orchestrates", "routes", "applies", "supports", "handles"}
 FIELD_TO_ARG = {
     "Title": "title",
     "Doc-ID": "doc_id",
@@ -555,6 +573,82 @@ def read_body_without_header(path: Path) -> str:
     return text
 
 
+def iter_body_lines(text: str) -> Iterable[tuple[int, str]]:
+    for idx, line in enumerate(text.splitlines(), start=1):
+        yield idx, line
+
+
+def line_contains_code_path(line: str) -> bool:
+    return bool(
+        re.search(r"`[^`]+\.(py|ts|js|md|json)`", line)
+        or re.search(r"\b[\w./-]+\.(py|ts|js|md|json)\b", line)
+        or "packages/" in line
+    )
+
+
+def validate_language_governance(records: list[dict[str, object]], root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    for record in records:
+        if record.get("header_status") != "valid":
+            continue
+        rel_path = str(record.get("path"))
+        full_path = root / rel_path
+        if not full_path.exists():
+            continue
+        body = read_body_without_header(full_path)
+        lower_body = body.lower()
+        has_path_classification = any(hint in lower_body for hint in PATH_CLASSIFICATION_HINTS)
+        in_code_block = False
+        for line_number, line in iter_body_lines(body):
+            lower_line = line.lower()
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue
+            if in_code_block:
+                continue
+            if "`" in line:
+                skip_phrase_check = True
+            else:
+                skip_phrase_check = False
+            for phrase, guidance in LANGUAGE_BANNED_PHRASES.items():
+                if not skip_phrase_check and phrase in lower_line:
+                    findings.append(
+                        Finding(
+                            "warning",
+                            "banned_vague_phrase",
+                            rel_path,
+                            f"Line {line_number}: '{phrase}' is too vague. {guidance}",
+                        )
+                    )
+            words = set(re.findall(r"[a-z]+", lower_line))
+            stripped_line = lower_line.strip().rstrip(".!")
+            bare_status_match = stripped_line in LANGUAGE_STRONG_STATUS_WORDS
+            pronoun_status_match = bool(
+                re.match(r"^(this|it|that)\s+(is|was)\s+(" + "|".join(sorted(LANGUAGE_STRONG_STATUS_WORDS)) + r")$", stripped_line)
+            )
+            if bare_status_match or pronoun_status_match:
+                strong_status_hits = words & LANGUAGE_STRONG_STATUS_WORDS
+                hit_list = ", ".join(sorted(strong_status_hits))
+                findings.append(
+                    Finding(
+                        "warning",
+                        "missing_status_scope",
+                        rel_path,
+                        f"Line {line_number}: strong status word(s) {hit_list} lack an obvious scope qualifier.",
+                    )
+                )
+            if line_contains_code_path(line) and (words & PATH_CLAIM_TERMS) and not has_path_classification:
+                findings.append(
+                    Finding(
+                        "warning",
+                        "missing_path_classification",
+                        rel_path,
+                        f"Line {line_number}: path or module claim should classify the path as aligned, hybrid, or legacy.",
+                    )
+                )
+    return findings
+
+
 def command_index(args: argparse.Namespace) -> int:
     records, _ = build_index(args.root)
     output_records = filter_records(records, args)
@@ -681,6 +775,22 @@ def command_lint(args: argparse.Namespace) -> int:
     return 1 if any(f.severity == "error" for f in ordered) else 0
 
 
+def command_language_lint(args: argparse.Namespace) -> int:
+    records, _ = build_index(args.root)
+    findings = validate_language_governance(records, args.root)
+    filtered = filter_findings(findings, args.path_prefix or [], include_legacy=False)
+    ordered = sorted(filtered, key=lambda item: (SEVERITY_ORDER[item.severity], item.path, item.code))
+    if args.format == "json":
+        print_json([finding.to_dict() for finding in ordered])
+    else:
+        if not ordered:
+            print("No findings.")
+        else:
+            for finding in ordered:
+                print(f"[{finding.severity}] {finding.path} {finding.code}: {finding.message}")
+    return 1 if any(f.severity == "error" for f in ordered) else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Index and lint PAA doc headers.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -739,6 +849,12 @@ def build_parser() -> argparse.ArgumentParser:
     lint_parser.add_argument("--path-prefix", action="append")
     lint_parser.add_argument("--include-legacy", action="store_true")
     lint_parser.set_defaults(func=command_lint)
+
+    language_lint_parser = subparsers.add_parser("language-lint")
+    language_lint_parser.add_argument("--root", type=Path, default=Path.cwd())
+    language_lint_parser.add_argument("--format", choices=("json", "table"), default="table")
+    language_lint_parser.add_argument("--path-prefix", action="append")
+    language_lint_parser.set_defaults(func=command_language_lint)
 
     def add_header_builder_args(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument("--path", type=Path, required=True)

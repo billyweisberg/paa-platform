@@ -1,3 +1,28 @@
+Title: Evaluate Derivation Readiness Flow
+Doc-ID: paa-evaluate-derivation-readiness-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: DerivationReadinessEvaluator
+Domain: derivation-readiness
+Keywords: derivation, readiness, producer, build, flow
+Depends-On: 2026-05-16-derive-design-package-flow.md, 2026-05-03-stage1-design-package-contract.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side flow that evaluates whether an approved design package is ready to enter derivation.
+
 # Evaluate Derivation Readiness Flow
 
 Date: 2026-05-16
@@ -90,10 +115,10 @@ The first implementation checks:
 
 ## Proof-Slice Validation
 
-Validated against:
+Proof-slice validation ran against:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
 
-Validated result:
+Observed result for the proof slice:
 - `readiness_class = derivation_ready`
 - `ready = true`
 
@@ -124,10 +149,10 @@ So this command:
 ## Decision
 
 Decision:
-- `Priority 1 item 5 complete`
+- `Priority 1 item 5 established for the proof slice`
 
 Meaning:
-- the producer-side derivation-entry gate now exists as a real implementation path
-- the next work should move into:
+- the producer-side derivation-entry gate exists as a real implementation path for the supported slice
+- the next work in sequence should move into:
   - `assemble-coder-brief`
   - `author-brief-targets`

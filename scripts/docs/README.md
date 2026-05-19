@@ -12,6 +12,7 @@ Use it to:
 - find current canonical docs
 - inspect related docs
 - lint governed headers
+- lint language governance in governed docs
 - create new docs with headers
 - retrofit headers onto existing docs
 
@@ -36,6 +37,13 @@ python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_do
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \
   --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
   --domain workflow-lifecycle
+```
+
+For language and terminology governance:
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
+  --stage reference
 ```
 
 ### 3. Find docs for one component
@@ -90,6 +98,19 @@ bash /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/lint_gov
 
 This wrapper only checks the current governed doc set, not the entire historical docs tree.
 
+## Language Governance Lint
+
+Run:
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py language-lint \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+```
+
+This intentionally narrow linter checks for:
+- banned vague phrases
+- under-scoped strong status claims
+- path claims that omit `aligned`, `hybrid`, or `legacy` classification
+
 ## Convenience Make Targets
 
 ```bash
@@ -101,6 +122,7 @@ make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-deplo
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-operate
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-reference
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-governed
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
 ```
 
 ## Workflow Rule

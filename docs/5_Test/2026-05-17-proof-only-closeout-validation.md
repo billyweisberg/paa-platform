@@ -151,10 +151,10 @@ This does **not** mean proof-only closeout failed.
 It means the older packet-compilation / evidence-linkage surfaces for this slice are still not rich enough to satisfy the view's stricter full-chain rollup cases.
 
 So the current state is:
-- proof-only terminal governance is real and validated
+- proof-only terminal governance is established and validated for this proof path
 - the broad one-row traceability rollup still has a separate follow-on refinement opportunity
 
 ## Decision
-Proof-only closeout is now implemented and validated as a first-class governed path.
+Proof-only closeout is implemented and validated for the supported proof-only governed path.
 
 A separate live GitHub-backed closeout proof is now optional rather than required for this proof slice.

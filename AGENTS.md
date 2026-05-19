@@ -16,6 +16,22 @@ Preferred workflow:
 
 Do not bulk-read design/planning docs when header-first lookup can narrow the target set.
 
+If the task involves architecture descriptions, status summaries, naming a new service or component, or explaining implementation state, check the reference-stage terminology governance docs first with:
+```bash
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-reference
+```
+
+Use those docs to avoid:
+- loose narrative claims
+- broad status descriptions without scope
+- naming hybrid runtime hubs as clean components
+- overstating alignment or completeness
+
+When changing governed docs or writing architecture/status summaries, also run:
+```bash
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
+```
+
 If the task is about producer implementation flow or operator execution flow, check the governed build-stage docs first with:
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \
@@ -33,6 +49,7 @@ make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-deplo
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-operate
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-current-reference
 make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-governed
+make -C /Users/billyweisberg/Repos/billyweisberg/paa-platform docs-lint-language
 ```
 
 ## Governed Docs

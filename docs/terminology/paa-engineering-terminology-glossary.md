@@ -4,13 +4,13 @@ Doc-Type: glossary
 Status: active
 Lifecycle-Stage: reference
 Created: 2026-05-18
-Last-Edited: 2026-05-18
+Last-Edited: 2026-05-19
 Author: Billy Weisberg
 Repo: paa-platform
 Component: PaaEngineeringTerminology
 Domain: terminology
 Keywords: paa, terminology, glossary, vocabulary, reference, engineering
-Depends-On: 
+Depends-On: 2026-05-19-paa-language-governance-rules.md, 2026-05-19-paa-component-naming-rules.md, 2026-05-19-paa-status-claim-rules.md, 2026-05-19-paa-architecture-anti-patterns.md
 Supersedes: 
 Superseded-By: 
 Canonical: true
@@ -25,27 +25,44 @@ Summary: Defines the standardized PAA engineering vocabulary and phase terminolo
 
 # PAA Engineering Terminology Glossary
 
-**Version**: 2026-05-12
+**Version**: 2026-05-19
 **Status**: Living Document
 **Maintained by**: Senior Architect Agent
 
-## Introduction
+## Purpose
 
-This glossary defines the standardized vocabulary and process phases used by the PAA Team for all system, component, and project engineering activities. It enables rapid onboarding of new Architect Agents and Coder Agents (Worker Agents) and ensures consistent application of our engineering discipline.
+This glossary defines the standardized vocabulary and process phases used by the PAA Team for system, component, and project engineering work.
 
-All terminology is clean, positive, and forward-looking. We derive behavior from data wherever possible through registries and policy services.
+It is a vocabulary authority, not the full language-governance authority.
+
+Use this glossary together with:
+- `2026-05-19-paa-language-governance-rules.md`
+- `2026-05-19-paa-component-naming-rules.md`
+- `2026-05-19-paa-status-claim-rules.md`
+- `2026-05-19-paa-architecture-anti-patterns.md`
+
+Those companion reference docs govern:
+- how claims may be stated
+- when component names are justified
+- what status words mean
+- which architecture patterns are explicitly rejected
+
+## Vocabulary Scope
+
+This glossary exists to make core PAA engineering terms stable and reusable.
+It does not authorize loose or narrative use of those terms.
 
 ## Visualization Artifacts
 
 ### Component Node Diagram
 - **Nodes** = Components
 - **Arrows** = Dependencies (injected services, event flows, data contracts)
-- Primary use: System Design & dependency discovery (static architecture view)
+- Primary use: System Design and dependency discovery (static architecture view)
 
 ### Build Arrow Diagram
 - **Nodes** = Milestones (discrete, verifiable state points)
 - **Arrows** = Build Activities (time-boxed work performed by Worker Agents)
-- Primary use: Project Design Phase – sequencing the development schedule, parallel streams, and critical path
+- Primary use: Project Design phase sequencing, parallel streams, and critical path
 
 **Standard Node Types (Milestones)**
 - Design Approved
@@ -53,44 +70,44 @@ All terminology is clean, positive, and forward-looking. We derive behavior from
 - Data Contracts Complete
 - Dependencies Wired
 - Internal Tests Passing
-- Integration & Sequence Validation Complete
+- Integration and Sequence Validation Complete
 - Role Delivery Packet Ready
-- PR Merged & Deployed
+- PR Merged and Deployed
 - Post-Delivery Monitoring Complete
 
 **Arrow Types (Build Activities)**
-Drawn directly from Phases of Component Development (e.g., "Implement Service Contract & Core Logic", "Wire Dependencies & Replace Hard-coded Logic", etc.)
+- Derived from the Phases of Component Development
+- Must describe actual build work, not vague progress language
 
 ## Phases of System Design
 
 **System Design** is the architectural phase responsible for transforming a desired **Outcome Behavior** into a coherent, evolvable set of **Components** with explicit contracts, relationships, and lifecycle semantics.
 
-1. **Decompose Outcome Behavior into System Components**
+1. **Decompose Outcome Behavior into System Components**  
    Break a high-level desired outcome into a set of named, bounded components, each owning a distinct **Role**.
-   Output: Candidate component list with one-sentence Role statements.
 
-2. **Define the Logical Relationships between Components**
+2. **Define the Logical Relationships between Components**  
    Identify control-plane, data-plane, and event-plane relationships, ownership, and visibility rules.
 
-3. **Define the Dependencies between Components**
+3. **Define the Dependencies between Components**  
    Enumerate Injected Services, Required Interfaces, and Runtime Dependencies.
 
-4. **Generate a Node Diagram of Component Dependencies**
-   Produce a Mermaid flowchart visualizing components and directed dependency/relationship edges.
+4. **Generate a Node Diagram of Component Dependencies**  
+   Produce a Mermaid flowchart visualizing components and directed dependency or relationship edges.
 
-5. **Define the Call Sequences and Component Interactions**
+5. **Define the Call Sequences and Component Interactions**  
    Specify temporal ordering and message flows for key use cases.
 
-6. **Generate Sequence Diagrams for the System**
+6. **Generate Sequence Diagrams for the System**  
    Create Mermaid sequence diagrams for critical flows, including happy path and error paths.
 
-7. **Design Data Model**
+7. **Design Data Model**  
    Define persistent and transient data contracts, entities, and schemas.
 
-8. **Specify System Configuration**
+8. **Specify System Configuration**  
    Define runtime-configurable knobs, feature flags, and project-scoped overrides.
 
-9. **Specify System Lifecycle**
+9. **Specify System Lifecycle**  
    Map component and system behavior across Vision → Design → Plan → Build → Test → Deploy → Monitor.
 
 ## Phases of Component Design
@@ -177,34 +194,34 @@ Important refinement:
 
 **Component Development** is the Build → Test → Deliver execution phase performed by Worker Agents.
 
-1. **Checkout & Environment Setup**  
-   Create/switch to feature branch and bootstrap environment.
+1. **Checkout and Environment Setup**  
+   Create or switch to feature branch and bootstrap environment.
 
-2. **Implement Service Contract & Core Logic**  
+2. **Implement Service Contract and Core Logic**  
    Code primary Service Contract and implementation.
 
-3. **Implement Data Contracts & Persistence**  
+3. **Implement Data Contracts and Persistence**  
    Extend data structures and repository logic.
 
-4. **Wire Dependencies & Replace Hard-coded Logic**  
-   Replace static mappings with Registry / Policy services.
+4. **Wire Dependencies and Replace Hard-coded Logic**  
+   Replace static mappings with registry or policy services.
 
-5. **Implement Component Configuration & Lifecycle**  
+5. **Implement Component Configuration and Lifecycle**  
    Add configuration and lifecycle behavior.
 
-6. **Internal Verification (Unit + Contract Tests)**  
+6. **Internal Verification (Unit and Contract Tests)**  
    Execute component test suite.
 
-7. **Integration & Sequence Validation**  
+7. **Integration and Sequence Validation**  
    Validate in full runtime against Sequence Diagrams.
 
 8. **Role-Specific Delivery Preparation**  
-   Prepare artifacts and compile/send result packet.
+   Prepare artifacts and compile or send result packets.
 
-9. **Code Review & Merge Readiness**  
+9. **Code Review and Merge Readiness**  
    Create PR and pass CI.
 
-10. **Merge & Post-Delivery Monitoring**  
+10. **Merge and Post-Delivery Monitoring**  
    Merge and monitor initial behavior.
 
 ## Usage Rules
@@ -213,5 +230,4 @@ Important refinement:
 - Component Designs must address all 15 Component Design elements.
 - Worker Agents reference Component Design documents in commits and PRs.
 - Build Schedule is the single source of truth for execution tracking.
-
-This glossary will be updated iteratively as we refine our process.
+- Language and status claims must follow the companion governance rules in this folder.

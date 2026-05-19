@@ -1,7 +1,32 @@
-# Build Note: `review-coder-brief` Flow
+Title: Review Coder Brief Flow
+Doc-ID: paa-review-coder-brief-flow
+Doc-Type: runbook
+Status: active
+Lifecycle-Stage: build
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Component: BriefReviewer
+Domain: brief-review-governance
+Keywords: coder-brief, review, approval, producer, build, flow
+Depends-On: 2026-05-16-author-brief-targets-flow.md, 2026-05-16-assemble-coder-brief-flow.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-15
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the producer-side governed review flow that transitions coder briefs from draft state into approved authority.
+
+# Review Coder Brief Flow
 
 Date: 2026-05-16
-Status: `implemented and validated`
+Status: active build-flow authority
 
 ## Purpose
 
@@ -67,7 +92,7 @@ That means a rerun on an already approved brief:
 
 ## Proof Slice Validation
 
-Validated against:
+Proof-slice validation ran against:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
 
 Generated approval artifact:
@@ -76,13 +101,13 @@ Generated approval artifact:
 Persisted proof-slice brief:
 - `coder_run_brief_id = fceab499-60f4-4a11-851d-b1059d8dbde9`
 
-Validated governed state in DB:
+Observed governed state in DB for the proof slice:
 - `authority_state = approved_brief`
 - `status = approved`
 - `approved_at` populated
 - `approval_json` populated with review summary and notes
 
-Validated authority-event history for the proof slice:
+Observed authority-event history for the proof slice:
 1. `derive_draft`
 2. `approve_brief`
 
@@ -107,7 +132,7 @@ PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_produce
 
 ## Exit Result
 
-This remediation item is complete.
+This governed review-flow slice is established for the proof path.
 
-The next move is no longer producer-side derivation completion for Priority 1.
-The next move is to use the proof slice again against the now-complete Priority 1 path.
+The next move was no longer producer-side derivation completion for Priority 1.
+The next move was to rerun the proof slice against the now-governed Priority 1 path.

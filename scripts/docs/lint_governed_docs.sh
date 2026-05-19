@@ -17,7 +17,10 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/4_Build/2026-05-03-dev-and-qa-packet-compilers.md \
   --path-prefix docs/4_Build/2026-05-03-paa-backed-architect-packet-brief-resolution.md \
   --path-prefix docs/4_Build/2026-05-16-assemble-coder-brief-flow.md \
+  --path-prefix docs/4_Build/2026-05-16-author-brief-targets-flow.md \
   --path-prefix docs/4_Build/2026-05-16-derive-design-package-flow.md \
+  --path-prefix docs/4_Build/2026-05-16-evaluate-derivation-readiness-flow.md \
+  --path-prefix docs/4_Build/2026-05-16-review-coder-brief-flow.md \
   --path-prefix docs/4_Build/2026-05-17-derive-implementation-plan-flow.md \
   --path-prefix docs/4_Build/2026-05-17-prepare-architect-packet-flow.md \
   --path-prefix docs/5_Test/2026-05-17-execution-package-resolution-service-validation.md \
@@ -29,5 +32,9 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/6_Deploy/2026-05-17-paa-db-cutover-plan.md \
   --path-prefix docs/6_Deploy/2026-05-17-paa-local-postgres-setup.md \
   --path-prefix docs/7_Monitor/2026-05-03-techlead-traceability-reporting.md \
+  --path-prefix docs/terminology/2026-05-19-paa-language-governance-rules.md \
+  --path-prefix docs/terminology/2026-05-19-paa-component-naming-rules.md \
+  --path-prefix docs/terminology/2026-05-19-paa-status-claim-rules.md \
+  --path-prefix docs/terminology/2026-05-19-paa-architecture-anti-patterns.md \
   --path-prefix docs/terminology/paa-engineering-terminology-glossary.md \
   --format table

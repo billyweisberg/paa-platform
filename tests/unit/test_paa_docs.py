@@ -327,6 +327,117 @@ Summary: Defines the reference-stage terminology surface.
         self.assertEqual(1, len(current))
         self.assertEqual("paa-engineering-terminology-glossary", current[0].get("doc_id"))
 
+    def test_language_lint_flags_banned_vague_phrase(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-vague.md"
+        target.write_text(
+            """Title: Vague Language Note
+Doc-ID: paa-vague-language-note
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Canonical: false
+Summary: Contains a banned vague phrase.
+
+The system handles review routing.
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_language_governance(records, self.root)
+        self.assertTrue(any(f.code == "banned_vague_phrase" for f in findings))
+
+    def test_language_lint_flags_missing_status_scope(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-status.md"
+        target.write_text(
+            """Title: Status Note
+Doc-ID: paa-status-note
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Canonical: false
+Summary: Contains an under-scoped status word.
+
+Implemented.
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_language_governance(records, self.root)
+        self.assertTrue(any(f.code == "missing_status_scope" for f in findings))
+
+    def test_language_lint_flags_missing_path_classification(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-path-claim.md"
+        target.write_text(
+            """Title: Path Claim Note
+Doc-ID: paa-path-claim-note
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Canonical: false
+Summary: Contains a path claim without classification.
+
+`packages/paa-consumer/src/paa_consumer/techlead.py` orchestrates review routing.
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_language_governance(records, self.root)
+        self.assertTrue(any(f.code == "missing_path_classification" for f in findings))
+
+    def test_language_lint_ignores_backticked_banned_phrase_examples(self) -> None:
+        target = self.root / "docs/terminology/2026-05-19-rules.md"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            """Title: Rules Note
+Doc-ID: paa-rules-note
+Doc-Type: policy
+Status: active
+Lifecycle-Stage: reference
+Created: 2026-05-19
+Last-Edited: 2026-05-19
+Author: Billy Weisberg
+Repo: paa-platform
+Canonical: false
+Summary: Contains a quoted banned phrase example.
+
+- `the system handles`
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_language_governance(records, self.root)
+        self.assertFalse(any(f.code == "banned_vague_phrase" for f in findings))
+
+    def test_language_lint_allows_scoped_status_sentence(self) -> None:
+        target = self.root / "docs/2_Design/2026-05-18-scoped-status.md"
+        target.write_text(
+            """Title: Scoped Status Note
+Doc-ID: paa-scoped-status-note
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Canonical: false
+Summary: Uses a scoped status sentence.
+
+Worker-result transition application is implemented for one runtime path.
+""",
+        )
+        records, _ = paa_docs.build_index(self.root)
+        findings = paa_docs.validate_language_governance(records, self.root)
+        self.assertFalse(any(f.code == "missing_status_scope" for f in findings))
+
 
 if __name__ == "__main__":
     unittest.main()
