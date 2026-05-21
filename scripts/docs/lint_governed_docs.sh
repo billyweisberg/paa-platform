@@ -19,6 +19,8 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/2_Design/2026-05-20-component-spec-section-to-model-mapping-table.md \
   --path-prefix docs/2_Design/2026-05-20-workflow-lifecycle-component-spec-template-conformance-delta.md \
   --path-prefix docs/2_Design/2026-05-20-component-spec-doc-to-materialization-extraction-rules.md \
+  --path-prefix docs/2_Design/2026-05-20-delivery-architect-component-spec-materialization-assignment-result-contract.md \
+  --path-prefix docs/2_Design/2026-05-20-delivery-architect-proof-runner-cli-contract.md \
   --path-prefix docs/3_Plan/2026-05-20-delivery-architect-component-spec-materialization-proof-packet.md \
   --path-prefix docs/3_Plan/2026-05-18- \
   --path-prefix docs/4_Build/2026-05-03-architect-packet-compiler.md \
