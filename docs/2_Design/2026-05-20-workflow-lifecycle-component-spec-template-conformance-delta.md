@@ -1,0 +1,248 @@
+Title: Workflow Lifecycle Component Spec Template Conformance Delta
+Doc-ID: paa-workflow-lifecycle-component-spec-template-conformance-delta
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-20
+Last-Edited: 2026-05-20
+Author: Billy Weisberg
+Repo: paa-platform
+Component: WorkflowLifecycleSpecConformance
+Domain: workflow-lifecycle
+Keywords: paa, workflow-lifecycle, component-spec, template, conformance, materialization, delta
+Depends-On: 2026-05-17-workflow-lifecycle-service-component-spec.md, 2026-05-20-component-spec-template-materialization-bridge.md, 2026-05-20-component-spec-section-to-model-mapping-table.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-20
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: defined
+Summary: Records the exact template-conformance gap between the current WorkflowLifecycleService component spec and the governed materialization-ready Component Spec template.
+
+# Workflow Lifecycle Component Spec Template Conformance Delta
+
+## Purpose
+
+Define the exact delta required to refactor:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md`
+
+into a template-conformant, materialization-ready `Component Spec`.
+
+This note is not a new component spec.
+
+It is a design-authority delta note that states:
+- what the current spec already satisfies
+- which required sections are missing today
+- which exact tables must be added
+- which existing narrative sections should be preserved and re-homed
+
+## Current Spec Assessment
+
+The current `WorkflowLifecycleService` component spec is strong as:
+- narrative component authority
+- service-boundary definition
+- contract and dependency reasoning
+
+It is not yet strong enough as:
+- a materialization-driving component spec
+
+The missing capability is not conceptual design.
+
+The missing capability is structured sections that can drive:
+- `paa.components`
+- `paa.component_elements`
+- `paa.component_element_realizations`
+- `paa.implementation_plans`
+- `paa.implementation_plan_activities`
+
+## What The Current Spec Already Satisfies
+
+| Required Template Area | Current Status | Existing Source In Current Spec | Action |
+|---|---|---|---|
+| Header | satisfied | governed doc header | preserve |
+| Purpose | satisfied | `## Purpose` | preserve |
+| Architecture Placement | partially satisfied | `## Architecture Placement` | normalize into controlled labels plus identity table |
+| Role | satisfied | `## 1. Role` | preserve |
+| Ownership Boundary | partially satisfied | `## 1. Role` authority boundary bullets | split into explicit ownership and non-ownership sections |
+| Non-Ownership Boundary | partially satisfied | `## 1. Role` authority boundary bullets | split into explicit non-ownership section |
+| Collaborators | partially satisfied | `## Architecture Placement`, `## 5. Injected Services`, `## 6. Interfaces` | normalize into collaborator table or list |
+| Constraints And Non-Goals | partially satisfied | implied across role and guarantees | make explicit |
+
+## Missing Today
+
+The current spec is missing these required materialization-driving sections in structured form.
+
+| Missing Section | Why It Is Missing Today | Why It Matters |
+|---|---|---|
+| Component Identity Table | current spec names the component narratively but does not provide a structured identity row | needed to create or reconcile `paa.components` |
+| Component Elements Table | current spec discusses responsibilities and functions but not stable modeled elements | needed for `paa.component_elements` |
+| Realizations Table | current spec mentions recommended code realization loosely but not element-bound realizations | needed for `paa.component_element_realizations` |
+| Plan Seed Table | current spec does not define implementation-plan root fields | needed for `paa.implementation_plans` |
+| Activity Seed Table | current spec lists functions but not sequenced plan activities | needed for `paa.implementation_plan_activities` |
+| Activity Dependency Table | current spec has no explicit dependency truth for execution order | needed for critical-path and blocked-state derivation |
+| Verification Surface Table | current spec defines guarantees but not structured verification surfaces | needed for validation planning and projection/reporting |
+| Explicit Ownership Section | ownership is mixed into role text | needed to drive scope and review constraints |
+| Explicit Non-Ownership Section | exclusions are mixed into authority-boundary bullets | needed to fail closed against scope drift |
+| Explicit Collaborators Section | dependencies are spread across three sections | needed for materialization-aware dependency clarity |
+
+## Existing Sections To Preserve And Re-Home
+
+| Current Section | Keep | Re-home Into |
+|---|---|---|
+| `## Purpose` | yes | unchanged |
+| `## Related Notes` | yes | unchanged |
+| `## Architecture Placement` | yes | keep narrative, add identity table below it |
+| `## 1. Role` | yes | keep role prose, split out ownership and non-ownership |
+| `## 2. Component State Model` | yes | keep as narrative authority; optionally link to element and realization rows |
+| `## 3. Service Contract` | yes | keep narrative authority and link to realization rows |
+| `## 4. Data Contract` | yes | keep narrative authority and link to realization and verification rows |
+| `## 5. Injected Services` | yes | keep, but summarize collaborator truth in one explicit collaborator section |
+| `## 6. Interfaces` | yes | keep, but add realization rows for interface and implementation artifacts |
+| `## 7. Functions` | yes | keep, but derive activity seed rows from it rather than treating it as the plan |
+| `## 8. Messages Received` | yes | keep as supporting authority |
+| `## 9. Messages Published` | yes | keep as supporting authority |
+| `## First Implementation Scope` | yes | fold into plan seed, activity seed, and constraints sections |
+
+## Exact New Tables To Add
+
+### 1. Component Identity Table
+
+Add a table with at least these columns:
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| WorkflowLifecycleService | service | aligned | domain-services | runtime | active |
+
+Purpose:
+- source row for `paa.components`
+
+### 2. Component Elements Table
+
+Add a table with at least these columns:
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| workflow_transition_interface | interface | public service contract for workflow transition evaluation and application | WorkflowLifecycleService |
+| workflow_transition_decision_models | dto | request, state-view, decision-summary, and result models | WorkflowLifecycleService |
+| workflow_transition_coordination_logic | implementation | default service logic for evidence loading, policy coordination, and result assembly | WorkflowLifecycleService |
+| workflow_transition_verification_surface | verification-surface | tests and proof surfaces for transition application and failure-closed behavior | WorkflowLifecycleService |
+
+Purpose:
+- source rows for `paa.component_elements`
+
+### 3. Realizations Table
+
+Add a table with at least these columns:
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| workflow_transition_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/contracts.py` | interface contract validation |
+| workflow_transition_decision_models | dto | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/models.py` | DTO and record-shape validation |
+| workflow_transition_coordination_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/default.py` | behavioral and policy-integration validation |
+| workflow_transition_verification_surface | test_module | python-module | `tests/unit/test_workflow_lifecycle_service.py` | service-level validation and proof |
+| workflow_transition_coordination_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/__init__.py` | export-surface validation |
+
+Purpose:
+- source rows for `paa.component_element_realizations`
+
+### 4. Plan Seed Table
+
+Add a table with at least these columns:
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-workflow-lifecycle-service-proof-python | governance-materialization-python-workflow-lifecycle | WorkflowLifecycleService | python-runtime-service | draft_plan |
+
+Purpose:
+- seed row for `paa.implementation_plans`
+
+### 5. Activity Seed Table
+
+Add a table with at least these columns:
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---|---|---|---|---|
+| workflow-interface-contract | Author workflow lifecycle service contract | 10 | contract-authoring | workflow_transition_interface | service_interface | contract surface is explicit and exportable |
+| workflow-decision-models | Materialize workflow lifecycle DTO models | 20 | dto-materialization | workflow_transition_decision_models | dto | request and result models are defined and typed |
+| workflow-default-service | Implement workflow lifecycle default service | 30 | service-implementation | workflow_transition_coordination_logic | service_implementation | default service applies workflow transition rules through collaborators |
+| workflow-validation-surface | Validate workflow lifecycle service behavior | 40 | verification | workflow_transition_verification_surface | test_module | unit proof covers pass and fail-closed transition paths |
+
+Purpose:
+- seed rows for `paa.implementation_plan_activities`
+
+### 6. Activity Dependency Table
+
+Add a table with at least these columns:
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| workflow-decision-models | workflow-interface-contract | hard |
+| workflow-default-service | workflow-decision-models | hard |
+| workflow-validation-surface | workflow-default-service | hard |
+
+Purpose:
+- source truth for activity dependencies and critical path
+
+### 7. Verification Surface Table
+
+Add a table with at least these columns:
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| workflow-lifecycle-unit-tests | unit-test | `tests/unit/test_workflow_lifecycle_service.py` | true |
+| workflow-lifecycle-model-code-proof | governance-check | `scripts/governance/paa_model_code_consistency.py --component WorkflowLifecycleService` | true |
+| workflow-lifecycle-projection-proof | governance-check | `scripts/governance/paa_projection_code_consistency.py --component WorkflowLifecycleService` | true |
+| workflow-lifecycle-runtime-proof | governance-check | `scripts/governance/paa_runtime_evidence_model_consistency.py --component WorkflowLifecycleService` | true |
+
+Purpose:
+- seed verification expectations for validation planning and proof-chain reporting
+
+## Proposed Refactor Shape
+
+The refactored spec should keep the existing narrative sections and insert the missing structured sections in this approximate order:
+
+1. Purpose
+2. Related Notes
+3. Architecture Placement
+4. Component Identity Table
+5. Role
+6. Ownership Boundary
+7. Non-Ownership Boundary
+8. Collaborators
+9. Component Elements Table
+10. Realizations Table
+11. Component State Model
+12. Service Contract
+13. Data Contract
+14. Injected Services
+15. Interfaces
+16. Functions
+17. Messages Received
+18. Messages Published
+19. Plan Seed Table
+20. Activity Seed Table
+21. Activity Dependency Table
+22. Verification Surface Table
+23. Constraints And Non-Goals
+24. First Implementation Scope
+
+## Technical Operation Being Proposed
+
+The operation is not to create a separate object called a template instance.
+
+The operation is to:
+- refactor the existing governed `WorkflowLifecycleService` component-spec doc so it conforms to template authority
+- treat the resulting doc as the materialization-ready `Component Spec`
+- validate that the structured sections can drive downstream model truth correctly
+
+## Exit Criteria
+
+This delta is complete when:
+- the `WorkflowLifecycleService` component spec contains all required materialization tables
+- the existing narrative authority remains intact
+- the spec is lint-clean as a governed doc
+- a downstream materialization flow can consume the spec without re-inventing component, element, realization, or activity structure from prose

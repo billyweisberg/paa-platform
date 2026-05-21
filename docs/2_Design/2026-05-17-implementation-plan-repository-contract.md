@@ -4,7 +4,7 @@ Doc-Type: contract
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-18
-Last-Edited: 2026-05-19
+Last-Edited: 2026-05-20
 Author: Billy Weisberg
 Repo: paa-platform
 Component: ImplementationPlanRepository
@@ -74,6 +74,12 @@ It is a component whose design can be fully expressed through the current PAA mo
 ### Downstream adapter expectation
 - `PostgresImplementationPlanRepository`
 
+## Component Identity Table
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| ImplementationPlanRepository | repository | aligned | infrastructure-ports | runtime | active |
+
 Important rule:
 - the repository contract is the persistence boundary
 - the repository implementation is a code artifact target derived from that boundary
@@ -105,6 +111,24 @@ Important rule:
 - it does not own project delivery projections
 - it does not own coder-brief assembly
 
+## Ownership Boundary
+
+Owned responsibilities:
+- structured persistence access to implementation-plan truth
+- persistence access to implementation-plan activities and activity dependencies
+- persistence access to implementation-plan verification surfaces and authority events
+- repository-level reads and writes over implementation-plan aggregates
+
+## Non-Ownership Boundary
+
+Excluded responsibilities:
+- derivation logic from design packages
+- build sequencing policy decisions
+- project-delivery projection computation
+- coder-brief assembly
+- packet publication
+- workflow truth inference
+
 ## Non-Goals
 
 `ImplementationPlanRepository` does not:
@@ -124,6 +148,33 @@ Those belong downstream to services or projections.
 - `Project Delivery Projection`
 - future `Brief Assembly Service`
 - future operator reporting / project views
+
+## Collaborators
+
+| collaborator | collaborator_kind | dependency_role |
+|---|---|---|
+| PostgresImplementationPlanRepository | adapter | concrete persistence implementation surface |
+| ImplementationPlanDerivationService | service | upstream producer of implementation-plan truth |
+| ProjectDeliveryProjection | projection | downstream consumer of repository truth |
+
+## Component Elements Table
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| implementation_plan_repository_interface | interface | collaborator-facing repository contract for implementation-plan persistence | ImplementationPlanRepository |
+| implementation_plan_repository_models | dto | repository DTOs and aggregate record shapes | ImplementationPlanRepository |
+| implementation_plan_repository_logic | implementation | concrete Postgres persistence behavior for plans, activities, dependencies, and verification surfaces | ImplementationPlanRepository |
+| implementation_plan_repository_verification_surface | verification-surface | unit and clean-db proof surfaces for repository behavior | ImplementationPlanRepository |
+
+## Realizations Table
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| implementation_plan_repository_interface | repository_interface | python-module | `packages/paa-core/src/paa_core/repositories/implementation_plan/contracts.py` | interface contract validation |
+| implementation_plan_repository_models | dto | python-module | `packages/paa-core/src/paa_core/repositories/implementation_plan/models.py` | DTO and record-shape validation |
+| implementation_plan_repository_logic | concrete_repository_class | python-module | `packages/paa-core/src/paa_core/repositories/implementation_plan/postgres.py` | persistence behavior validation |
+| implementation_plan_repository_verification_surface | test_module | python-module | `tests/unit/test_implementation_plan_repository.py` | repository-level validation and proof |
+| implementation_plan_repository_logic | package_export | python-module | `packages/paa-core/src/paa_core/repositories/implementation_plan/__init__.py` | export-surface validation |
 
 ## Required Repository Capabilities
 
@@ -358,6 +409,54 @@ Instead, the flow is:
    - code artifact targets
 
 2. derive implementation-plan activities from that structure
+
+## Plan Seed Table
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-implementation-plan-repository-proof-python | governance-materialization-python | ImplementationPlanRepository | python-runtime-repository | draft_plan |
+
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---|---|---|---|---|
+| implementation-plan-repository-interface | Define implementation plan repository interface | 10 | contract-authoring | implementation_plan_repository_interface | repository_interface | repository contract surface is explicit and exportable |
+| implementation-plan-repository-models | Define implementation plan repository DTOs | 20 | dto-materialization | implementation_plan_repository_models | dto | plan, activity, dependency, and verification-surface DTOs are defined and typed |
+| implementation-plan-repository-postgres | Implement Postgres implementation plan repository | 30 | service-implementation | implementation_plan_repository_logic | concrete_repository_class | persistence behavior exists for the first governed proof slice |
+| implementation-plan-repository-export | Export implementation plan repository package surface | 40 | service-implementation | implementation_plan_repository_logic | package_export | package surface exposes the repository contract and implementation cleanly |
+| implementation-plan-repository-tests | Validate implementation plan repository behavior | 50 | verification | implementation_plan_repository_verification_surface | test_module | unit proof covers first-slice persistence behavior |
+
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| implementation-plan-repository-models | implementation-plan-repository-interface | hard |
+| implementation-plan-repository-postgres | implementation-plan-repository-models | hard |
+| implementation-plan-repository-export | implementation-plan-repository-postgres | hard |
+| implementation-plan-repository-tests | implementation-plan-repository-export | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| implementation-plan-repository-unit-tests | unit-test | `tests/unit/test_implementation_plan_repository.py` | true |
+| implementation-plan-repository-model-code-proof | governance-check | `scripts/governance/paa_model_code_consistency.py --component ImplementationPlanRepository` | true |
+| implementation-plan-repository-projection-proof | governance-check | `scripts/governance/paa_projection_code_consistency.py --component ImplementationPlanRepository` | true |
+| implementation-plan-repository-runtime-proof | governance-check | `scripts/governance/paa_runtime_evidence_model_consistency.py --component ImplementationPlanRepository` | true |
+
+## Constraints And Non-Goals
+
+Constraints:
+- implementation-plan truth must remain DB-primary
+- repository methods must return structured DTOs rather than loosely shaped records
+- repository behavior must not derive plan sequencing or workflow truth
+- repository operations must preserve the explicit implementation-plan aggregate boundary
+
+Non-goals:
+- design-package derivation
+- project-delivery projection computation
+- coder-brief assembly
+- workflow routing or queue publication
 
 3. add those structured activities into a `CoderBrief`
 

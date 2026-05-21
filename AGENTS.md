@@ -74,6 +74,17 @@ bash /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/lint_gov
 
 before changing governed docs.
 
+## Component Spec Materialization Proof
+
+When the task is to turn a governed component authority doc into a materialization-ready bridge and prove downstream model reconciliation, use:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/.codex/skills/paa-component-spec-materialization-proof/SKILL.md`
+
+This workflow expects both proofs to pass:
+```bash
+cd /Users/billyweisberg/Repos/billyweisberg/paa-platform && PYTHONPATH=packages/paa-core/src python scripts/governance/paa_model_code_consistency.py --component <ComponentName>
+cd /Users/billyweisberg/Repos/billyweisberg/paa-platform && PYTHONPATH=packages/paa-core/src python scripts/governance/paa_component_spec_model_consistency.py --spec <spec-path>
+```
+
 ## New Docs
 
 When creating a new governed markdown doc, prefer:

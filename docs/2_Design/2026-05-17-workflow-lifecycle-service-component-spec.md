@@ -4,7 +4,7 @@ Doc-Type: component-spec
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-18
-Last-Edited: 2026-05-19
+Last-Edited: 2026-05-20
 Author: Billy Weisberg
 Repo: paa-platform
 Component: WorkflowLifecycleService
@@ -77,6 +77,12 @@ Primary downstream consumers:
 - `TechLead Application Service`
 - runtime lifecycle and queue-closeout application paths
 
+## Component Identity Table
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| WorkflowLifecycleService | service | aligned | domain-services | runtime | active |
+
 ## 1. Role
 
 `Workflow Lifecycle Service` coordinates authoritative workflow-state transition application for one work item by combining:
@@ -95,6 +101,56 @@ Authority boundary:
 - does not own execution-package registration
 - does not own acceptance-event history as a runtime repository concern
 - does not own projection refresh
+
+## Ownership Boundary
+
+Owned responsibilities:
+- workflow-transition coordination
+- workflow-state and workflow-transition result assembly
+- service-level rejected versus applied outcome reporting
+- fail-closed transition evaluation against explicit workflow policies
+- workflow block and repair diagnostics derived from authoritative state and runtime evidence
+
+## Non-Ownership Boundary
+
+Excluded responsibilities:
+- queue transport
+- GitHub mutation
+- execution-package registration
+- acceptance-event history as a runtime repository concern
+- projection refresh
+- direct packet transport acknowledgement
+
+## Collaborators
+
+| collaborator | collaborator_kind | dependency_role |
+|---|---|---|
+| WorkflowStateRepository | repository | load and persist workflow-state truth |
+| RuntimeEventRepository | repository | load runtime evidence and transition-supporting transport history |
+| ExecutionPackageResolutionService | service | resolve execution-context truth when requested by the transition flow |
+| WorkflowTransitionPolicy | policy | decide whether a requested workflow transition is allowed |
+| AcceptancePolicy | policy | decide whether acceptance-related transition paths are allowed |
+| ResetRecoveryPolicy | policy | decide whether reset or retry behavior is allowed |
+| StructuredLogger | adapter | emit structured operational diagnostics |
+
+## Component Elements Table
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| workflow_transition_interface | interface | public service contract for workflow transition evaluation and application | WorkflowLifecycleService |
+| workflow_transition_decision_models | dto | request, state-view, decision-summary, and result models | WorkflowLifecycleService |
+| workflow_transition_coordination_logic | implementation | default service logic for evidence loading, policy coordination, and result assembly | WorkflowLifecycleService |
+| workflow_transition_verification_surface | verification-surface | tests and proof surfaces for transition application and fail-closed behavior | WorkflowLifecycleService |
+
+## Realizations Table
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| workflow_transition_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/contracts.py` | interface contract validation |
+| workflow_transition_decision_models | dto | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/models.py` | DTO and record-shape validation |
+| workflow_transition_coordination_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/default.py` | behavioral and policy-integration validation |
+| workflow_transition_verification_surface | test_module | python-module | `tests/unit/test_workflow_lifecycle_service.py` | service-level validation and proof |
+| workflow_transition_coordination_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/workflow_lifecycle/__init__.py` | export-surface validation |
 
 ## 2. Component State Model
 
@@ -278,6 +334,53 @@ If events are emitted later, they should remain internal domain or application e
 - `WorkflowTransitionApplied`
 - `WorkflowTransitionRejected`
 - `WorkflowRepairRequired`
+
+## Plan Seed Table
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-workflow-lifecycle-service-proof-python | governance-materialization-python-workflow-lifecycle | WorkflowLifecycleService | python-runtime-service | draft_plan |
+
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---|---|---|---|---|
+| workflow-interface-contract | Author workflow lifecycle service contract | 10 | contract-authoring | workflow_transition_interface | service_interface | contract surface is explicit and exportable |
+| workflow-decision-models | Materialize workflow lifecycle DTO models | 20 | dto-materialization | workflow_transition_decision_models | dto | request and result models are defined and typed |
+| workflow-default-service | Implement workflow lifecycle default service | 30 | service-implementation | workflow_transition_coordination_logic | service_implementation | default service applies workflow transition rules through collaborators |
+| workflow-validation-surface | Validate workflow lifecycle service behavior | 40 | verification | workflow_transition_verification_surface | test_module | unit proof covers pass and fail-closed transition paths |
+
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| workflow-decision-models | workflow-interface-contract | hard |
+| workflow-default-service | workflow-decision-models | hard |
+| workflow-validation-surface | workflow-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| workflow-lifecycle-unit-tests | unit-test | `tests/unit/test_workflow_lifecycle_service.py` | true |
+| workflow-lifecycle-model-code-proof | governance-check | `scripts/governance/paa_model_code_consistency.py --component WorkflowLifecycleService` | true |
+| workflow-lifecycle-projection-proof | governance-check | `scripts/governance/paa_projection_code_consistency.py --component WorkflowLifecycleService` | true |
+| workflow-lifecycle-runtime-proof | governance-check | `scripts/governance/paa_runtime_evidence_model_consistency.py --component WorkflowLifecycleService` | true |
+
+## Constraints And Non-Goals
+
+Constraints:
+- workflow truth must be loaded from DB-primary workflow-state records
+- illegal transitions must fail closed
+- policy boundaries must remain explicit and injectable
+- the service must return structured results rather than prose-only outcomes
+
+Non-goals:
+- owning queue transport
+- owning GitHub mutation
+- owning execution-package registration
+- owning projection refresh
+- re-defining workflow truth from packet residue or local report state
 
 ## First Implementation Scope
 

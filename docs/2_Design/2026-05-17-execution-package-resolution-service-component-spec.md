@@ -4,7 +4,7 @@ Doc-Type: component-spec
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-18
-Last-Edited: 2026-05-19
+Last-Edited: 2026-05-20
 Author: Billy Weisberg
 Repo: paa-platform
 Component: ExecutionPackageResolutionService
@@ -72,6 +72,12 @@ Primary downstream consumers:
 - `TechLead Application Service`
 - future runtime inspection and reporting consumers
 
+## Component Identity Table
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| ExecutionPackageResolutionService | service | aligned | domain-services | runtime | active |
+
 ## 1. Role
 
 `Execution Package Resolution Service` resolves the effective execution-time package context for one runtime surface and optional slice context by combining DB-primary install truth, active overlay truth, and deployment-capability rules into a normalized execution-context output.
@@ -86,6 +92,53 @@ Authority boundary:
 - does not own workflow lifecycle semantics
 - does not own queue transport, GitHub, or host-surface orchestration
 - does not own persistence beyond reading through the repository
+
+## Ownership Boundary
+
+Owned responsibilities:
+- execution-time package-context resolution
+- active install and active overlay interpretation at the domain-service level
+- capability-evaluation application over resolved execution context
+- normalized execution-context output for downstream consumers
+- gap and missing-install diagnostics for resolution consumers
+
+## Non-Ownership Boundary
+
+Excluded responsibilities:
+- install registration mutation
+- overlay activation mutation
+- workflow lifecycle semantics
+- queue transport
+- GitHub or host-surface orchestration
+- persistence beyond reading through the repository
+- projection refresh or reporting ownership
+
+## Collaborators
+
+| collaborator | collaborator_kind | dependency_role |
+|---|---|---|
+| ExecutionPackageRepository | repository | load active install and overlay truth |
+| DeploymentCapabilityPolicy | policy | evaluate deployment capability over the resolved execution context |
+| StructuredLogger | adapter | emit structured resolution diagnostics |
+
+## Component Elements Table
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| execution_context_resolution_interface | interface | public service contract for execution-context resolution operations | ExecutionPackageResolutionService |
+| execution_context_resolution_models | dto | request, view, gap, and capability-summary models | ExecutionPackageResolutionService |
+| execution_context_resolution_logic | implementation | default service logic for install lookup, overlay resolution, and capability evaluation | ExecutionPackageResolutionService |
+| execution_context_resolution_verification_surface | verification-surface | tests and proof surfaces for resolution behavior and fail-closed gap reporting | ExecutionPackageResolutionService |
+
+## Realizations Table
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| execution_context_resolution_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py` | interface contract validation |
+| execution_context_resolution_models | dto | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/models.py` | DTO and record-shape validation |
+| execution_context_resolution_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/default.py` | behavioral and policy-integration validation |
+| execution_context_resolution_verification_surface | test_module | python-module | `tests/unit/test_execution_package_resolution_service.py` | service-level validation and proof |
+| execution_context_resolution_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/__init__.py` | export-surface validation |
 
 ## 2. Component State Model
 
@@ -479,6 +532,53 @@ This component is ready for implementation once:
 - the first implementation is kept read-only and resolution-oriented
 
 That condition is now satisfied.
+
+## Plan Seed Table
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-execution-package-resolution-service-proof-python | governance-materialization-python-execution-package-resolution | ExecutionPackageResolutionService | python-runtime-service | draft_plan |
+
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---|---|---|---|---|
+| execution-resolution-interface-contract | Author execution package resolution service contract | 10 | contract-authoring | execution_context_resolution_interface | service_interface | contract surface is explicit and exportable |
+| execution-resolution-models | Materialize execution package resolution DTO models | 20 | dto-materialization | execution_context_resolution_models | dto | request, view, gap, and capability-summary models are defined and typed |
+| execution-resolution-default-service | Implement execution package resolution default service | 30 | service-implementation | execution_context_resolution_logic | service_implementation | default service resolves installs, overlays, and capability results through collaborators |
+| execution-resolution-validation-surface | Validate execution package resolution service behavior | 40 | verification | execution_context_resolution_verification_surface | test_module | unit proof covers pass and fail-closed resolution paths |
+
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| execution-resolution-models | execution-resolution-interface-contract | hard |
+| execution-resolution-default-service | execution-resolution-models | hard |
+| execution-resolution-validation-surface | execution-resolution-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| execution-package-resolution-unit-tests | unit-test | `tests/unit/test_execution_package_resolution_service.py` | true |
+| execution-package-resolution-model-code-proof | governance-check | `scripts/governance/paa_model_code_consistency.py --component ExecutionPackageResolutionService` | true |
+| execution-package-resolution-projection-proof | governance-check | `scripts/governance/paa_projection_code_consistency.py --component ExecutionPackageResolutionService` | true |
+| execution-package-resolution-runtime-proof | governance-check | `scripts/governance/paa_runtime_evidence_model_consistency.py --component ExecutionPackageResolutionService` | true |
+
+## Constraints And Non-Goals
+
+Constraints:
+- execution-time package resolution must be derived from DB-primary install and overlay truth
+- capability evaluation must remain separate from raw repository lookup logic
+- the service must fail closed when no active install exists
+- the service must return structured gaps and diagnostics rather than prose-only outcomes
+
+Non-goals:
+- install registration writes
+- overlay activation writes
+- workflow readiness decisions
+- brief correctness guarantees
+- queue transport or host-surface orchestration ownership
 
 ## Next Step
 

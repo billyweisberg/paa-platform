@@ -1,0 +1,39 @@
+{
+  "include": [
+    "packages/paa-core/src",
+    "packages/paa-producer/src"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    ".codex",
+    ".codex-work",
+    ".project",
+    "docs",
+    "migrations",
+    "tests"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "packages/paa-core/src",
+      "extraPaths": [
+        "packages/paa-core/src"
+      ]
+    },
+    {
+      "root": "packages/paa-producer/src",
+      "extraPaths": [
+        "packages/paa-producer/src",
+        "packages/paa-core/src"
+      ]
+    }
+  ],
+  "typeCheckingMode": "standard",
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportUnknownLambdaType": "warning",
+  "pythonPlatform": "All"
+}
