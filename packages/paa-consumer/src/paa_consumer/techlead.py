@@ -210,6 +210,74 @@ def workflow_lifecycle_worker_result_evaluation(
     )
 
 
+def workflow_lifecycle_apply_for_packet(
+    *,
+    current_task: dict | None,
+    packet: dict,
+    project_slug: str = DEFAULT_PROJECT_SLUG,
+    db_profile: str = DEFAULT_DB_PROFILE,
+    db_container: str = DEFAULT_DB_CONTAINER,
+    db_name: str = DEFAULT_DB_NAME,
+    db_user: str = DEFAULT_DB_USER,
+):
+    if not current_task:
+        return None
+    schema_type = packet.get('schema_type')
+    transition_type = None
+    requested_from_stage = None
+    if schema_type == 'worker_result_packet':
+        transition_type = 'worker_result_returned'
+        requested_from_stage = 'worker_execution_in_progress'
+    elif schema_type == 'qa_verification_packet':
+        transition_type = 'qa_result_returned'
+        requested_from_stage = 'qa_execution_in_progress'
+    else:
+        return None
+
+    issue_number = current_task.get('issue_number')
+    work_item_id = resolve_work_item_id(
+        db_container,
+        db_name,
+        db_user,
+        project_slug,
+        issue_number,
+    )
+    if not work_item_id:
+        return None
+    settings = resolve_db_settings(
+        db_profile=db_profile,
+        db_container=db_container,
+        db_name=db_name,
+        db_user=db_user,
+    )
+    service = DefaultWorkflowLifecycleService(
+        workflow_state_repository=PostgresWorkflowStateRepository(settings=settings),
+        runtime_event_repository=PostgresRuntimeEventRepository(settings=settings),
+        execution_package_resolution_service=DefaultExecutionPackageResolutionService(
+            repository=PostgresExecutionPackageRepository(settings=settings),
+            capability_policy=DefaultDeploymentCapabilityPolicy(),
+        ),
+        workflow_transition_policy=DefaultWorkflowTransitionPolicy(),
+        acceptance_policy=DefaultAcceptancePolicy(),
+        reset_recovery_policy=DefaultResetRecoveryPolicy(),
+    )
+    return service.apply_workflow_transition(
+        WorkflowLifecycleRequest(
+            project_id=project_slug,
+            work_item_id=work_item_id,
+            requested_transition_type=transition_type,
+            requested_from_stage=requested_from_stage,
+            source_message_id_external=packet.get('message_id_external', packet.get('message_id')),
+            source_packet_schema_type=schema_type,
+            metadata={
+                'consumer': 'techlead',
+                'packet_queue_name': packet.get('queue_name'),
+                'runtime_action': 'emit_next_assignment',
+            },
+        )
+    )
+
+
 def repo_auth_current(repo_root: Path) -> Path:
     resolved = _repo_auth_manifest_from_execution_context(repo_root)
     if resolved is not None:
@@ -2600,6 +2668,7 @@ def derive_next_assignment_context(args) -> dict:
             'source_packet_message_id': source_message_id,
             'source_packet_path': source_packet_path,
             'source_packet_queue': source_packet_queue,
+            'source_packet_schema_type': source_packet.get('schema_type'),
             'issue': issue,
             'pr': pr,
             'recommended_actions': recommended,
@@ -2682,6 +2751,7 @@ def derive_next_assignment_context(args) -> dict:
                 'source_packet_message_id': source_message_id,
                 'source_packet_path': source_packet_path,
                 'source_packet_queue': 'fractal-core-architecture',
+                'source_packet_schema_type': pending_delivery_review_packet.get('schema_type'),
                 'issue': issue,
                 'pr': pr,
                 'recommended_actions': recommended,
@@ -2727,6 +2797,48 @@ def emit_next_assignment(args):
     context = derive_next_assignment_context(args)
     if not context.get('ok'):
         return context
+    source_packet = None
+    source_packet_path = context.get('source_packet_path')
+    if source_packet_path:
+        try:
+            source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
+        except Exception:
+            source_packet = None
+    if source_packet is None and context.get('source_packet_schema_type'):
+        source_packet = {
+            'schema_type': context.get('source_packet_schema_type'),
+            'message_id': context.get('source_packet_message_id'),
+            'queue_name': context.get('source_packet_queue'),
+        }
+    workflow_transition = None
+    current_task = {
+        'issue_number': context.get('issue_number'),
+        'task_id': f"issue-{context.get('issue_number')}",
+    }
+    if source_packet and source_packet.get('schema_type') in {'worker_result_packet', 'qa_verification_packet'}:
+        workflow_transition = workflow_lifecycle_apply_for_packet(
+            current_task=current_task,
+            packet=source_packet,
+            project_slug=args.project_slug,
+            db_profile=getattr(args, 'db_profile', DEFAULT_DB_PROFILE),
+            db_container=args.db_container,
+            db_name=args.db_name,
+            db_user=args.db_user,
+        )
+        if workflow_transition is not None and not workflow_transition.applied:
+            return {
+                'ok': False,
+                'workflow_stage': context['workflow_stage'],
+                'reason': 'workflow_transition_rejected',
+                'details': workflow_transition.recommended_next_action
+                or 'Workflow lifecycle service rejected the return transition for the source packet.',
+                'workflow_transition': {
+                    'requested_transition_type': workflow_transition.requested_transition_type,
+                    'blocking_reasons': list(workflow_transition.decision_summary.blocking_reasons),
+                    'notes': list(workflow_transition.decision_summary.notes),
+                    'metadata': dict(workflow_transition.metadata),
+                },
+            }
     default_output_path, default_review_output_path = default_assignment_paths(
         repo_root,
         context['issue_number'],
@@ -2799,6 +2911,18 @@ def emit_next_assignment(args):
             'message_id': context.get('source_packet_message_id'),
             'path': context.get('source_packet_path'),
         },
+        'workflow_transition': (
+            None
+            if workflow_transition is None
+            else {
+                'requested_transition_type': workflow_transition.requested_transition_type,
+                'applied': workflow_transition.applied,
+                'workflow_stage': workflow_transition.state_view.workflow_stage
+                if workflow_transition.state_view
+                else None,
+                'recommended_next_action': workflow_transition.recommended_next_action,
+            }
+        ),
     }
     if validate_code != 0:
         result['error'] = validate_error

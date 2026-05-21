@@ -52,6 +52,10 @@ class DefaultWorkflowLifecycleService:
     _WORKER_RESULT_FROM_STAGE = 'worker_execution_in_progress'
     _WORKER_RESULT_TO_STAGE = 'techlead_worker_review_pending'
     _WORKER_RESULT_PACKET_SCHEMA = 'worker_result_packet'
+    _QA_RESULT_TRANSITION = 'qa_result_returned'
+    _QA_RESULT_FROM_STAGE = 'qa_execution_in_progress'
+    _QA_RESULT_TO_STAGE = 'techlead_qa_review_pending'
+    _QA_RESULT_PACKET_SCHEMA = 'qa_verification_packet'
 
     def __init__(
         self,
@@ -116,7 +120,7 @@ class DefaultWorkflowLifecycleService:
         self,
         request: WorkflowLifecycleRequest,
     ) -> WorkflowLifecycleResult:
-        evaluation = self._evaluate_worker_result_transition(request)
+        evaluation = self._evaluate_supported_transition(request)
         self._logger.info(
             'workflow_lifecycle.evaluate_workflow_transition',
             work_item_id=request.work_item_id,
@@ -130,7 +134,7 @@ class DefaultWorkflowLifecycleService:
         self,
         request: WorkflowLifecycleRequest,
     ) -> WorkflowLifecycleResult:
-        evaluation = self._evaluate_worker_result_transition(request)
+        evaluation = self._evaluate_supported_transition(request)
         if not evaluation.decision_summary.transition_allowed:
             self._logger.warning(
                 'workflow_lifecycle.apply_workflow_transition.rejected',
@@ -142,13 +146,16 @@ class DefaultWorkflowLifecycleService:
 
         current_state = self._require_current_state(request)
         transition_applied_at = self._now_iso()
+        transition_type = request.requested_transition_type or self._WORKER_RESULT_TRANSITION
         next_owner_role_id = current_state.active_result_role_id or current_state.current_owner_role_id
-        next_lineage_state = self._derive_worker_result_lineage_state(current_state)
+        next_lineage_state = self._derive_next_lineage_state(transition_type, current_state)
+        target_stage = self._target_stage_for_transition(transition_type)
+        packet_schema = self._packet_schema_for_transition(transition_type)
         next_metadata = dict(current_state.metadata or {})
         next_metadata.update(
             {
-                'last_applied_transition_type': self._WORKER_RESULT_TRANSITION,
-                'lineage_state_strategy': 'preserve_current_lineage_state',
+                'last_applied_transition_type': transition_type,
+                'lineage_state_strategy': self._lineage_strategy_for_transition(transition_type),
             }
         )
 
@@ -156,7 +163,7 @@ class DefaultWorkflowLifecycleService:
             WorkflowStateUpsertSpec(
                 project_id=current_state.project_id,
                 work_item_id=current_state.work_item_id,
-                workflow_stage=self._WORKER_RESULT_TO_STAGE,
+                workflow_stage=target_stage,
                 lineage_state=next_lineage_state,
                 current_owner_role_id=next_owner_role_id,
                 authority_version_id=current_state.authority_version_id,
@@ -188,10 +195,10 @@ class DefaultWorkflowLifecycleService:
                 workflow_state_id=current_state.workflow_state_id,
                 project_id=current_state.project_id,
                 work_item_id=current_state.work_item_id,
-                transition_type=self._WORKER_RESULT_TRANSITION,
+                transition_type=transition_type,
                 transition_status='applied',
                 from_workflow_stage=current_state.workflow_stage,
-                to_workflow_stage=self._WORKER_RESULT_TO_STAGE,
+                to_workflow_stage=target_stage,
                 from_owner_role_id=current_state.current_owner_role_id,
                 to_owner_role_id=next_owner_role_id,
                 source_handoff_id=current_state.active_handoff_id,
@@ -199,7 +206,7 @@ class DefaultWorkflowLifecycleService:
                 source_queue_claim_id=current_state.active_queue_claim_id,
                 source_message_id_external=request.source_message_id_external
                 or current_state.active_message_id_external,
-                source_packet_schema_type=self._WORKER_RESULT_PACKET_SCHEMA,
+                source_packet_schema_type=packet_schema,
                 result_role_id=next_owner_role_id,
                 automation_run_id=request.automation_run_id,
                 transition_requested_at=transition_applied_at,
@@ -219,10 +226,10 @@ class DefaultWorkflowLifecycleService:
             state_view=self._state_view_from_record(updated_state),
             decision_summary=evaluation.decision_summary,
             resolved_execution_surface_key=evaluation.resolved_execution_surface_key,
-            recommended_next_action='TechLead should review the returned worker result.',
+            recommended_next_action=self._post_apply_review_action(transition_type),
             metadata={
                 **dict(evaluation.metadata),
-                'applied_transition_type': self._WORKER_RESULT_TRANSITION,
+                'applied_transition_type': transition_type,
                 'transition_applied_at': transition_applied_at,
             },
         )
@@ -239,7 +246,7 @@ class DefaultWorkflowLifecycleService:
         self,
         request: WorkflowLifecycleRequest,
     ) -> WorkflowLifecycleResult:
-        evaluation = self._evaluate_worker_result_transition(request)
+        evaluation = self._evaluate_supported_transition(request)
         self._logger.info(
             'workflow_lifecycle.detect_workflow_blocks',
             work_item_id=request.work_item_id,
@@ -248,46 +255,57 @@ class DefaultWorkflowLifecycleService:
         )
         return evaluation
 
-    def _evaluate_worker_result_transition(
+    def _evaluate_supported_transition(
         self,
         request: WorkflowLifecycleRequest,
     ) -> WorkflowLifecycleResult:
-        if request.requested_transition_type != self._WORKER_RESULT_TRANSITION:
+        transition_type = request.requested_transition_type
+        if transition_type not in {self._WORKER_RESULT_TRANSITION, self._QA_RESULT_TRANSITION}:
             return self._rejected_result(
                 request,
                 state=None,
                 blocking_reasons=(
-                    f"Unsupported transition type {request.requested_transition_type!r}; only {self._WORKER_RESULT_TRANSITION!r} is implemented in this slice.",
+                    f"Unsupported transition type {request.requested_transition_type!r}; only {self._WORKER_RESULT_TRANSITION!r} and {self._QA_RESULT_TRANSITION!r} are implemented in this slice.",
                 ),
-                notes=('This workflow lifecycle slice currently supports only the worker-result return path.',),
+                notes=(
+                    'This workflow lifecycle slice currently supports only worker-result and qa-result return paths.',
+                ),
                 resolved_execution_surface_key=None,
-                metadata={'supported_transition_type': self._WORKER_RESULT_TRANSITION},
-                recommended_next_action='Use the worker-result transition family or extend the workflow lifecycle slice.',
+                metadata={
+                    'supported_transition_types': (
+                        self._WORKER_RESULT_TRANSITION,
+                        self._QA_RESULT_TRANSITION,
+                    )
+                },
+                recommended_next_action='Use the worker-result or qa-result transition family, or extend the workflow lifecycle slice.',
             )
 
         current_state = self._require_current_state(request)
-        queue_message, transition_input = self._resolve_worker_result_evidence(request)
+        queue_message, transition_input = self._resolve_transition_evidence(request)
         source_schema_type = self._resolve_source_schema_type(request, queue_message, transition_input)
         blocking: list[str] = []
         notes: list[str] = []
+        target_stage = self._target_stage_for_transition(transition_type)
+        packet_schema = self._packet_schema_for_transition(transition_type)
+        from_stage = self._from_stage_for_transition(transition_type)
 
-        if request.requested_to_stage and request.requested_to_stage != self._WORKER_RESULT_TO_STAGE:
+        if request.requested_to_stage and request.requested_to_stage != target_stage:
             blocking.append(
-                f"Requested to-stage {request.requested_to_stage!r} does not match the supported target stage {self._WORKER_RESULT_TO_STAGE!r}."
+                f"Requested to-stage {request.requested_to_stage!r} does not match the supported target stage {target_stage!r}."
             )
-        if source_schema_type != self._WORKER_RESULT_PACKET_SCHEMA:
+        if source_schema_type != packet_schema:
             blocking.append(
-                f"Worker-result transition requires source schema {self._WORKER_RESULT_PACKET_SCHEMA!r}, received {source_schema_type!r}."
+                f"{transition_type!r} requires source schema {packet_schema!r}, received {source_schema_type!r}."
             )
         if queue_message is None and transition_input is None and request.source_packet_schema_type is None:
-            blocking.append('No worker-result runtime evidence was provided for this transition.')
+            blocking.append(f'No runtime evidence was provided for transition {transition_type!r}.')
 
         transition_decision = self._workflow_transition_policy.evaluate_transition(
             WorkflowTransitionRequest(
                 work_item_id=request.work_item_id,
-                transition_type=self._WORKER_RESULT_TRANSITION,
-                requested_from_stage=request.requested_from_stage or self._WORKER_RESULT_FROM_STAGE,
-                requested_to_stage=self._WORKER_RESULT_TO_STAGE,
+                transition_type=transition_type,
+                requested_from_stage=request.requested_from_stage or from_stage,
+                requested_to_stage=target_stage,
                 source_schema_type=source_schema_type,
                 metadata=dict(request.metadata or {}),
             ),
@@ -330,9 +348,9 @@ class DefaultWorkflowLifecycleService:
 
         transition_allowed = not blocking and transition_decision.allowed
         recommended_next_action = (
-            'Apply the worker-result transition to move the slice into TechLead worker review.'
+            self._recommended_apply_action(transition_type)
             if transition_allowed
-            else self._recommended_next_action(reset_decision, blocking)
+            else self._recommended_next_action(transition_type, reset_decision, blocking)
         )
 
         return WorkflowLifecycleResult(
@@ -353,13 +371,14 @@ class DefaultWorkflowLifecycleService:
                     'resolved_to_stage': transition_decision.resolved_to_stage,
                     'rejection_code': transition_decision.rejection_code,
                     'source_schema_type': source_schema_type,
+                    'transition_type': transition_type,
                 },
             ),
             resolved_execution_surface_key=resolved_execution_surface_key,
             recommended_next_action=recommended_next_action,
             metadata={
                 'current_workflow_stage': current_state.workflow_stage,
-                'target_workflow_stage': self._WORKER_RESULT_TO_STAGE,
+                'target_workflow_stage': target_stage,
                 'source_queue_message_id': request.source_queue_message_id,
                 'source_message_id_external': request.source_message_id_external,
                 'source_transition_input_id': transition_input.transition_input_id if transition_input else None,
@@ -427,7 +446,7 @@ class DefaultWorkflowLifecycleService:
             raise LookupError(f'No workflow state found for work item {request.work_item_id!r}')
         return state
 
-    def _resolve_worker_result_evidence(
+    def _resolve_transition_evidence(
         self,
         request: WorkflowLifecycleRequest,
     ) -> tuple[QueueMessageRecord | None, TransitionInputRecord | None]:
@@ -441,10 +460,13 @@ class DefaultWorkflowLifecycleService:
 
         transition_input = None
         if queue_message is None and request.source_packet_schema_type is None:
+            expected_schema = self._packet_schema_for_transition(
+                request.requested_transition_type or self._WORKER_RESULT_TRANSITION
+            )
             for candidate in self._runtime_event_repository.list_transition_inputs_for_work_item(
                 request.work_item_id
             ):
-                if candidate.input_schema_type == self._WORKER_RESULT_PACKET_SCHEMA:
+                if candidate.input_schema_type == expected_schema:
                     transition_input = candidate
                     break
         return queue_message, transition_input
@@ -524,22 +546,59 @@ class DefaultWorkflowLifecycleService:
             metadata=metadata,
         )
 
-    @staticmethod
-    def _derive_worker_result_lineage_state(current_state: WorkflowStateRecord) -> str:
+    def _derive_next_lineage_state(
+        self,
+        transition_type: str,
+        current_state: WorkflowStateRecord,
+    ) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return 'awaiting_acceptance'
         return current_state.lineage_state or 'awaiting_result'
 
-    @staticmethod
+    def _target_stage_for_transition(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return self._QA_RESULT_TO_STAGE
+        return self._WORKER_RESULT_TO_STAGE
+
+    def _from_stage_for_transition(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return self._QA_RESULT_FROM_STAGE
+        return self._WORKER_RESULT_FROM_STAGE
+
+    def _packet_schema_for_transition(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return self._QA_RESULT_PACKET_SCHEMA
+        return self._WORKER_RESULT_PACKET_SCHEMA
+
+    def _lineage_strategy_for_transition(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return 'advance_to_awaiting_acceptance'
+        return 'preserve_current_lineage_state'
+
+    def _recommended_apply_action(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return 'Apply the QA-result transition to move the slice into TechLead QA review.'
+        return 'Apply the worker-result transition to move the slice into TechLead worker review.'
+
+    def _post_apply_review_action(self, transition_type: str) -> str:
+        if transition_type == self._QA_RESULT_TRANSITION:
+            return 'TechLead should review the returned QA verification result.'
+        return 'TechLead should review the returned worker result.'
+
     def _recommended_next_action(
+        self,
+        transition_type: str,
         reset_decision: ResetRecoveryDecision,
         blocking_reasons: list[str],
     ) -> str:
+        transition_label = 'QA-result' if transition_type == self._QA_RESULT_TRANSITION else 'worker-result'
         if reset_decision.requires_manual_repair:
-            return 'Repair workflow consistency before applying the worker-result transition.'
+            return f'Repair workflow consistency before applying the {transition_label} transition.'
         if reset_decision.should_reset:
-            return 'Reset or reassign the active claim before accepting the worker-result transition.'
+            return f'Reset or reassign the active claim before accepting the {transition_label} transition.'
         if blocking_reasons:
-            return 'Correct the worker-result transition request and evidence before retrying.'
-        return 'Apply the worker-result transition.'
+            return f'Correct the {transition_label} transition request and evidence before retrying.'
+        return self._recommended_apply_action(transition_type)
 
     @staticmethod
     def _now_iso() -> str:

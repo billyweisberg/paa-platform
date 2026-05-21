@@ -188,6 +188,10 @@ def _state(
     *,
     workflow_stage: str = 'worker_execution_in_progress',
     state_consistency: str = 'consistent',
+    lineage_state: str = 'awaiting_result',
+    current_owner_role_id: str = 'role-worker',
+    active_assignment_role_id: str = 'role-worker',
+    active_result_role_id: str = 'role-techlead',
 ) -> WorkflowStateRecord:
     return WorkflowStateRecord(
         workflow_state_id='ws-1',
@@ -197,8 +201,8 @@ def _state(
         design_package_id='pkg-1',
         coder_run_brief_id='brief-1',
         workflow_stage=workflow_stage,
-        current_owner_role_id='role-worker',
-        lineage_state='awaiting_result',
+        current_owner_role_id=current_owner_role_id,
+        lineage_state=lineage_state,
         blocking_reason_code=None,
         blocking_reason_text=None,
         terminal_decision='none',
@@ -210,8 +214,8 @@ def _state(
         active_handoff_id='handoff-1',
         active_queue_message_id='msg-queue-1',
         active_message_id_external='msg-ext-1',
-        active_assignment_role_id='role-worker',
-        active_result_role_id='role-techlead',
+        active_assignment_role_id=active_assignment_role_id,
+        active_result_role_id=active_result_role_id,
         active_queue_claim_id='claim-1',
         state_entered_at='2026-05-17T12:00:00+00:00',
         last_transition_at='2026-05-17T12:10:00+00:00',
@@ -438,6 +442,88 @@ class WorkflowLifecycleServiceTests(unittest.TestCase):
         self.assertEqual(workflow_repo.append_specs[0].transition_type, 'worker_result_returned')
         self.assertEqual(workflow_repo.append_specs[0].to_workflow_stage, 'techlead_worker_review_pending')
 
+    def test_evaluate_qa_result_transition_allows_legal_transition(self) -> None:
+        service, _workflow_repo, _runtime_repo, _execution_service, _logger = self._service(
+            state=_state(
+                workflow_stage='qa_execution_in_progress',
+                lineage_state='awaiting_result',
+                current_owner_role_id='role-qa',
+                active_assignment_role_id='role-qa',
+                active_result_role_id='role-techlead',
+            ),
+            queue_message=_queue_message(schema_type='qa_verification_packet'),
+        )
+
+        result = service.evaluate_workflow_transition(
+            WorkflowLifecycleRequest(
+                project_id='proj-1',
+                work_item_id='work-1',
+                requested_transition_type='qa_result_returned',
+                requested_from_stage='qa_execution_in_progress',
+                source_queue_message_id='msg-queue-1',
+            )
+        )
+
+        self.assertFalse(result.applied)
+        self.assertTrue(result.decision_summary.transition_allowed)
+        self.assertEqual(result.decision_summary.metadata['resolved_to_stage'], 'techlead_qa_review_pending')
+        self.assertEqual(result.state_view.workflow_stage, 'qa_execution_in_progress')
+
+    def test_apply_qa_result_transition_updates_state_and_advances_lineage(self) -> None:
+        service, workflow_repo, _runtime_repo, _execution_service, _logger = self._service(
+            state=_state(
+                workflow_stage='qa_execution_in_progress',
+                lineage_state='awaiting_result',
+                current_owner_role_id='role-qa',
+                active_assignment_role_id='role-qa',
+                active_result_role_id='role-techlead',
+            ),
+            queue_message=_queue_message(schema_type='qa_verification_packet'),
+        )
+
+        result = service.apply_workflow_transition(
+            WorkflowLifecycleRequest(
+                project_id='proj-1',
+                work_item_id='work-1',
+                requested_transition_type='qa_result_returned',
+                requested_from_stage='qa_execution_in_progress',
+                source_queue_message_id='msg-queue-1',
+            )
+        )
+
+        self.assertTrue(result.applied)
+        self.assertEqual(result.state_view.workflow_stage, 'techlead_qa_review_pending')
+        self.assertEqual(result.state_view.current_owner_role_id, 'role-techlead')
+        self.assertEqual(result.state_view.lineage_state, 'awaiting_acceptance')
+        self.assertEqual(len(workflow_repo.upsert_specs), 1)
+        self.assertEqual(workflow_repo.upsert_specs[0].lineage_state, 'awaiting_acceptance')
+        self.assertEqual(workflow_repo.append_specs[0].transition_type, 'qa_result_returned')
+        self.assertEqual(workflow_repo.append_specs[0].to_workflow_stage, 'techlead_qa_review_pending')
+
+    def test_evaluate_qa_result_transition_rejects_wrong_packet_schema(self) -> None:
+        service, *_rest = self._service(
+            state=_state(
+                workflow_stage='qa_execution_in_progress',
+                current_owner_role_id='role-qa',
+                active_assignment_role_id='role-qa',
+            ),
+            queue_message=_queue_message(schema_type='worker_result_packet'),
+        )
+
+        result = service.evaluate_workflow_transition(
+            WorkflowLifecycleRequest(
+                project_id='proj-1',
+                work_item_id='work-1',
+                requested_transition_type='qa_result_returned',
+                source_queue_message_id='msg-queue-1',
+            )
+        )
+
+        self.assertFalse(result.decision_summary.transition_allowed)
+        self.assertTrue(
+            any('qa_verification_packet' in reason for reason in result.decision_summary.blocking_reasons)
+        )
+
     def test_detect_workflow_blocks_surfaces_manual_repair_requirement(self) -> None:
         service, *_rest = self._service(state=_state(state_consistency='manual_repair_required'))
 
@@ -464,7 +550,7 @@ class WorkflowLifecycleServiceTests(unittest.TestCase):
             WorkflowLifecycleRequest(
                 project_id='proj-1',
                 work_item_id='work-1',
-                requested_transition_type='qa_result_returned',
+                requested_transition_type='slice_closed',
             )
         )
 

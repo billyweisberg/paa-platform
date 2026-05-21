@@ -9,6 +9,34 @@ from paa_consumer import techlead
 
 
 class TechLeadSelfHostedTests(unittest.TestCase):
+    def test_workflow_lifecycle_apply_for_packet_builds_worker_request(self):
+        captured = {}
+
+        class _WorkflowService:
+            def apply_workflow_transition(self, request):
+                captured['request'] = request
+                return SimpleNamespace(applied=True)
+
+        packet = {
+            'message_id': 'msg-123',
+            'schema_type': 'worker_result_packet',
+            'queue_name': 'fractal-core-python',
+        }
+
+        with patch('paa_consumer.techlead.resolve_work_item_id', return_value='work-item-uuid'), \
+             patch('paa_consumer.techlead.DefaultWorkflowLifecycleService', return_value=_WorkflowService()):
+            result = techlead.workflow_lifecycle_apply_for_packet(
+                current_task={'issue_number': 42, 'task_id': 'task-42'},
+                packet=packet,
+            )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(captured['request'].work_item_id, 'work-item-uuid')
+        self.assertEqual(captured['request'].requested_transition_type, 'worker_result_returned')
+        self.assertEqual(captured['request'].requested_from_stage, 'worker_execution_in_progress')
+        self.assertEqual(captured['request'].source_message_id_external, 'msg-123')
+        self.assertEqual(captured['request'].source_packet_schema_type, 'worker_result_packet')
+
     def test_workflow_lifecycle_worker_result_evaluation_builds_request(self):
         captured = {}
 
@@ -36,6 +64,72 @@ class TechLeadSelfHostedTests(unittest.TestCase):
         self.assertEqual(captured['request'].requested_from_stage, 'worker_execution_in_progress')
         self.assertEqual(captured['request'].source_message_id_external, 'msg-123')
         self.assertEqual(captured['request'].source_packet_schema_type, 'worker_result_packet')
+
+    def test_emit_next_assignment_applies_workflow_transition_for_worker_packet(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_packet_path = repo_root / 'worker-result.json'
+            source_packet_path.write_text(json.dumps({
+                'schema_type': 'worker_result_packet',
+                'message_id': 'msg-123',
+                'queue_name': 'fractal-core-python',
+            }))
+
+            context = {
+                'ok': True,
+                'workflow_stage': 'techlead_worker_review_pending',
+                'issue_number': 42,
+                'issue_url': 'https://example.invalid/issues/42',
+                'pr_number': 77,
+                'pr_url': 'https://example.invalid/pull/77',
+                'branch': 'issue-42-worker',
+                'target_role': 'QA',
+                'target_role_cli': 'qa',
+                'assignment_type': 'verify_authorized_slice',
+                'allowed_result_types': ['pass', 'fail_fixable'],
+                'assignment_summary': 'Route worker result to QA.',
+                'source_packet_message_id': 'msg-123',
+                'source_packet_path': str(source_packet_path),
+                'source_packet_queue': 'fractal-core-python',
+                'source_packet_schema_type': 'worker_result_packet',
+            }
+            applied = []
+
+            def _apply(**kwargs):
+                applied.append(kwargs)
+                return SimpleNamespace(
+                    applied=True,
+                    requested_transition_type='worker_result_returned',
+                    state_view=SimpleNamespace(workflow_stage='techlead_worker_review_pending'),
+                    recommended_next_action='TechLead should review the returned worker result.',
+                )
+
+            args = type('Args', (), {
+                'repo_root': repo_root,
+                'project_slug': 'fractal-core-python',
+                'package_id_external': 'pkg-1',
+                'brief_id_external': 'brief-1',
+                'output': repo_root / 'assignment.json',
+                'review_output': repo_root / 'assignment.md',
+                'send': False,
+                'db_profile': 'paa_dev',
+                'db_container': 'db',
+                'db_name': 'paa_dev',
+                'db_user': 'paa',
+            })()
+
+            with patch('paa_consumer.techlead.derive_next_assignment_context', return_value=context), \
+                 patch('paa_consumer.techlead.workflow_lifecycle_apply_for_packet', side_effect=_apply), \
+                 patch('paa_consumer.techlead.run_json', return_value={'message_id': 'assign-1', 'automation_run_id': 'run-1'}), \
+                 patch('paa_consumer.techlead.run_json_with_errors', return_value=(0, {'resolved_queue': 'fractal-core-qa'}, None)):
+                result = techlead.emit_next_assignment(args)
+
+        self.assertTrue(result['ok'])
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(applied[0]['current_task']['issue_number'], 42)
+        self.assertEqual(applied[0]['packet']['schema_type'], 'worker_result_packet')
+        self.assertEqual(result['workflow_transition']['applied'], True)
+        self.assertEqual(result['workflow_transition']['requested_transition_type'], 'worker_result_returned')
 
     def test_derive_workflow_worker_packet_uses_workflow_lifecycle_result(self):
         queues = {
