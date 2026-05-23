@@ -73,6 +73,7 @@ class PaaDocsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
+        (self.root / "docs/1_Vision").mkdir(parents=True)
         (self.root / "docs/2_Design").mkdir(parents=True)
         (self.root / "docs/3_Plan").mkdir(parents=True)
         (self.root / "docs/7_Monitor").mkdir(parents=True)
@@ -489,6 +490,80 @@ Summary: Should fail when the component does not exist in code metadata.
         records, _ = paa_docs.build_index(self.root)
         findings = paa_docs.validate_doc_code_consistency(records, self.root, component_registry={})
         self.assertTrue(any(f.code == "unmapped_code_component" for f in findings))
+
+    def test_build_index_excludes_current_tree_docs(self) -> None:
+        current_doc = self.root / "docs/2_Design/current/components/workflow-lifecycle-service-component-spec.md"
+        current_doc.parent.mkdir(parents=True, exist_ok=True)
+        current_doc.write_text(VALID_DOC)
+        records, _ = paa_docs.build_index(self.root)
+        paths = {record.get("path") for record in records}
+        self.assertNotIn("docs/2_Design/current/components/workflow-lifecycle-service-component-spec.md", paths)
+
+    def test_snapshot_payload_resolves_design_component_target(self) -> None:
+        records, _ = paa_docs.build_index(self.root)
+        payload = paa_docs.snapshot_payload(self.root, records)
+        target = next(record for record in payload["records"] if record["doc_id"] == "paa-workflow-lifecycle-service-component-spec")
+        self.assertEqual(
+            "docs/2_Design/current/components/workflow-lifecycle-service-component-spec.md",
+            target["current_path"],
+        )
+        self.assertEqual("components", target["current_category"])
+        self.assertEqual("missing", target["sync_status"])
+
+    def test_sync_current_creates_generated_copy(self) -> None:
+        args = SimpleNamespace(root=self.root, stage=None, doc_id=None, dry_run=False, prune=False, format="json")
+        result = paa_docs.command_sync_current(args)
+        self.assertEqual(0, result)
+        current_path = self.root / "docs/2_Design/current/components/workflow-lifecycle-service-component-spec.md"
+        self.assertTrue(current_path.exists())
+        text = current_path.read_text()
+        self.assertIn("<!-- GENERATED CURRENT AUTHORITY COPY -->", text)
+        self.assertIn("<!-- Source: docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md -->", text)
+
+    def test_snapshot_payload_marks_in_sync_after_sync(self) -> None:
+        args = SimpleNamespace(root=self.root, stage=None, doc_id=None, dry_run=False, prune=False, format="json")
+        paa_docs.command_sync_current(args)
+        records, _ = paa_docs.build_index(self.root)
+        payload = paa_docs.snapshot_payload(self.root, records)
+        target = next(record for record in payload["records"] if record["doc_id"] == "paa-workflow-lifecycle-service-component-spec")
+        self.assertEqual("in_sync", target["sync_status"])
+        self.assertTrue(target["current_exists"])
+
+    def test_snapshot_payload_marks_collision(self) -> None:
+        colliding_doc = """Title: Workflow Lifecycle Alternate Spec
+Doc-ID: paa-workflow-lifecycle-alt
+Doc-Type: component-spec
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-18
+Last-Edited: 2026-05-18
+Author: Billy Weisberg
+Repo: paa-platform
+Component: WorkflowLifecycleAlternate
+Domain: workflow-lifecycle
+Keywords: workflow, lifecycle, alt
+Depends-On:
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-01
+Summary: Collides on stable filename.
+
+# Workflow Lifecycle Service Component Spec
+"""
+        path = self.root / "docs/2_Design/2026-05-18-workflow-lifecycle-service-component-spec.md"
+        path.write_text(colliding_doc)
+        records, _ = paa_docs.build_index(self.root)
+        payload = paa_docs.snapshot_payload(self.root, records)
+        collisions = [record for record in payload["records"] if record["sync_status"] == "collision"]
+        self.assertEqual(1, len(collisions))
+
+    def test_snapshot_markdown_contains_stage_section(self) -> None:
+        records, _ = paa_docs.build_index(self.root)
+        payload = paa_docs.snapshot_payload(self.root, records)
+        markdown = paa_docs.render_snapshot_markdown(payload)
+        self.assertIn("# Current Authority Snapshot", markdown)
+        self.assertIn("## design", markdown)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ Path:
 Use it to:
 - index governed docs by header only
 - find current canonical docs
+- generate current authority copies
+- generate current authority snapshot reports
 - inspect related docs
 - lint governed headers
 - lint language governance in governed docs
@@ -54,21 +56,42 @@ python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_do
   --component WorkflowLifecycleService
 ```
 
-### 4. Inspect one doc header
+### 4. Generate the current authority snapshot
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py snapshot \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
+  --format markdown \
+  --output /Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/_reports/current-authority-snapshot.md
+```
+
+### 5. Sync generated `current/` authority copies
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py sync-current \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+```
+
+Dry-run:
+```bash
+python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py sync-current \
+  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
+  --dry-run
+```
+
+### 6. Inspect one doc header
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py show \
   --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
   --path docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md
 ```
 
-### 5. Inspect related docs
+### 7. Inspect related docs
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py related \
   --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
   --doc-id paa-workflow-lifecycle-service-component-spec
 ```
 
-### 6. Create a new governed doc
+### 8. Create a new governed doc
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py new-doc \
   --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
@@ -78,7 +101,7 @@ python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_do
   --summary "Creates a new governed design note."
 ```
 
-### 7. Add or normalize a header on an existing doc
+### 9. Add or normalize a header on an existing doc
 ```bash
 python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py set-header \
   --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
