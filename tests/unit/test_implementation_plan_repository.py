@@ -8,8 +8,11 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.repositories.implementation_plan import (
+    ImplementationPlanActivityStateUpdateSpec,
+    ImplementationPlanAuthorityEventAppendSpec,
     ImplementationPlanActivityDependencyUpsertSpec,
     ImplementationPlanActivityUpsertSpec,
+    ImplementationPlanProgressUpdateSpec,
     ImplementationPlanUpsertSpec,
     PostgresImplementationPlanRepository,
 )
@@ -44,6 +47,25 @@ class ImplementationPlanRepositoryTests(unittest.TestCase):
         self.assertEqual(rows[1].planned_artifact_type_key, 'concrete_repository_class')
         self.assertEqual(rows[1].blocking_reason, 'await interface')
 
+    def test_get_implementation_plan_activity_by_key_parses_single_row(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        output = '{"implementation_plan_activity_id":"a1","implementation_plan_id":"plan-1","component_element_id":"ce-1","component_element_realization_id":null,"assigned_role_id":"role-1","activity_key":"define-interface","activity_title":"Define interface","activity_kind":"design_contract","activity_state":"planned","sequence_order":1,"target_path":"contracts.py","target_module":"contracts.py","planned_artifact_type_key":"repository_interface","blocking_reason":null,"metadata":{},"started_at":null,"completed_at":null,"created_at":"2026-05-17T12:00:00+00:00","updated_at":"2026-05-17T12:00:00+00:00"}'
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value=output):
+            row = repo.get_implementation_plan_activity_by_key('plan-1', 'define-interface')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.activity_key, 'define-interface')
+
+    def test_list_implementation_plan_activities_by_state_filters_state(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        output = '{"implementation_plan_activity_id":"a2","implementation_plan_id":"plan-1","component_element_id":"ce-2","component_element_realization_id":null,"assigned_role_id":"role-1","activity_key":"implement-postgres","activity_title":"Implement Postgres repository","activity_kind":"implement_artifact","activity_state":"blocked","sequence_order":2,"target_path":"postgres.py","target_module":"postgres.py","planned_artifact_type_key":"concrete_repository_class","blocking_reason":"await interface","metadata":{},"started_at":null,"completed_at":null,"created_at":"2026-05-17T12:00:00+00:00","updated_at":"2026-05-17T12:00:00+00:00"}'
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value=output) as mock_run:
+            rows = repo.list_implementation_plan_activities_by_state('plan-1', 'blocked')
+
+        self.assertEqual(rows[0].activity_state, 'blocked')
+        self.assertIn("ipa.activity_state = 'blocked'::paa.implementation_plan_activity_state", mock_run.call_args.args[0])
+
     def test_list_activity_dependencies_parses_keys(self) -> None:
         repo = PostgresImplementationPlanRepository()
         output = '{"implementation_plan_activity_dependency_id":"d1","implementation_plan_id":"plan-1","predecessor_activity_id":"a1","predecessor_activity_key":"define-interface","successor_activity_id":"a2","successor_activity_key":"implement-postgres","sequencing_requirement":"hard","dependency_strength":"required","notes":"Implementation follows interface","metadata":{"phase":"first-slice"},"created_at":"2026-05-17T12:00:00+00:00"}'
@@ -64,6 +86,25 @@ class ImplementationPlanRepositoryTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertTrue(rows[0].required)
         self.assertEqual(rows[0].surface_ref, 'tests/unit/test_implementation_plan_repository.py')
+
+    def test_list_verification_surfaces_for_activity_joins_activity_key(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        output = '{"implementation_plan_verification_surface_id":"vs1","implementation_plan_id":"plan-1","implementation_plan_activity_id":"a2","verification_obligation_id":"vo1","surface_kind":"unit_test","surface_ref":"tests/unit/test_implementation_plan_repository.py","required":true,"sequence_order":10,"status":"planned","metadata":{},"created_at":"2026-05-17T12:00:00+00:00","updated_at":"2026-05-17T12:00:00+00:00"}'
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value=output) as mock_run:
+            rows = repo.list_implementation_plan_verification_surfaces_for_activity('plan-1', 'implement-postgres')
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ipa.activity_key = 'implement-postgres'", mock_run.call_args.args[0])
+
+    def test_list_authority_events_parses_rows(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        output = '{"implementation_plan_authority_event_id":"ev1","project_id":"proj-1","work_item_id":"work-1","implementation_plan_id":"plan-1","from_state":"draft_plan","to_state":"active_plan","transition_kind":"activate_plan","actor_role_id":"role-1","actor_name":"Architect","notes":"Activated","evidence":{"source":"test"},"created_at":"2026-05-23T12:00:00+00:00"}'
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value=output):
+            rows = repo.list_implementation_plan_authority_events('plan-1')
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].to_state, 'active_plan')
+        self.assertEqual(rows[0].evidence, {'source': 'test'})
 
     def test_upsert_implementation_plan_emits_upsert_sql(self) -> None:
         repo = PostgresImplementationPlanRepository()
@@ -137,6 +178,61 @@ class ImplementationPlanRepositoryTests(unittest.TestCase):
         self.assertIn("pred.activity_key = 'define-interface'", sql)
         self.assertIn("succ.activity_key = 'implement-postgres'", sql)
         self.assertIn('ON CONFLICT (implementation_plan_id, predecessor_activity_id, successor_activity_id) DO UPDATE', sql)
+
+    def test_update_implementation_plan_progress_updates_component_completion_metadata(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        spec = ImplementationPlanProgressUpdateSpec(
+            implementation_plan_id='11111111-1111-1111-1111-111111111111',
+            component_completion={'realization_state': 'partially_realized', 'next_activity_key': 'define-models'},
+            authority_state='partially_realized_plan',
+            status='active_execution',
+        )
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value='') as mock_run:
+            repo.update_implementation_plan_progress(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn("jsonb_set(COALESCE(metadata_json, '{}'::jsonb), '{component_completion}'", sql)
+        self.assertIn("authority_state = 'partially_realized_plan'::paa.implementation_plan_authority_state", sql)
+        self.assertIn("status = 'active_execution'::paa.implementation_plan_status", sql)
+
+    def test_set_implementation_plan_activity_state_emits_update_sql(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        spec = ImplementationPlanActivityStateUpdateSpec(
+            implementation_plan_id='11111111-1111-1111-1111-111111111111',
+            activity_key='implement-postgres',
+            activity_state='in_progress',
+            blocking_reason=None,
+            started_at='2026-05-23T12:00:00+00:00',
+            metadata={'worker': 'python-dev'},
+        )
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value='') as mock_run:
+            repo.set_implementation_plan_activity_state(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('UPDATE paa.implementation_plan_activities', sql)
+        self.assertIn("activity_state = 'in_progress'::paa.implementation_plan_activity_state", sql)
+        self.assertIn("activity_key = 'implement-postgres'", sql)
+
+    def test_append_implementation_plan_authority_event_inserts_event(self) -> None:
+        repo = PostgresImplementationPlanRepository()
+        spec = ImplementationPlanAuthorityEventAppendSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            work_item_id='22222222-2222-2222-2222-222222222222',
+            implementation_plan_id='33333333-3333-3333-3333-333333333333',
+            from_state='draft_plan',
+            to_state='active_plan',
+            transition_kind='activate_plan',
+            actor_name='Architect',
+            notes='Activated plan',
+            evidence={'source': 'test'},
+        )
+        with patch('paa_core.repositories.implementation_plan.postgres.run_psql', return_value='') as mock_run:
+            repo.append_implementation_plan_authority_event(spec)
+
+        sql = mock_run.call_args.args[0]
+        self.assertIn('INSERT INTO paa.implementation_plan_authority_events', sql)
+        self.assertIn("'active_plan'::paa.implementation_plan_authority_state", sql)
+        self.assertIn("'activate_plan'::paa.implementation_plan_authority_transition_kind", sql)
 
 
 if __name__ == '__main__':

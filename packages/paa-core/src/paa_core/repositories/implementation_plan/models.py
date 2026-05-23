@@ -95,6 +95,22 @@ class ImplementationPlanVerificationSurfaceRecord:
 
 
 @dataclass(frozen=True)
+class ImplementationPlanAuthorityEventRecord:
+    implementation_plan_authority_event_id: str
+    project_id: str
+    work_item_id: str | None
+    implementation_plan_id: str
+    from_state: str | None
+    to_state: str
+    transition_kind: str
+    actor_role_id: str | None
+    actor_name: str | None
+    notes: str | None
+    evidence: dict[str, Any]
+    created_at: str | None
+
+
+@dataclass(frozen=True)
 class ImplementationPlanUpsertSpec:
     project_id: str
     design_package_id: str
@@ -155,11 +171,49 @@ class ImplementationPlanActivityDependencyUpsertSpec:
     metadata: dict[str, Any] | None = None
 
 
+@dataclass(frozen=True)
+class ImplementationPlanProgressUpdateSpec:
+    implementation_plan_id: str
+    component_completion: dict[str, Any]
+    authority_state: str | None = None
+    status: str | None = None
+    completed_at: str | None = None
+
+
+@dataclass(frozen=True)
+class ImplementationPlanActivityStateUpdateSpec:
+    implementation_plan_id: str
+    activity_key: str
+    activity_state: str
+    blocking_reason: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ImplementationPlanAuthorityEventAppendSpec:
+    project_id: str
+    implementation_plan_id: str
+    to_state: str
+    transition_kind: str
+    work_item_id: str | None = None
+    from_state: str | None = None
+    actor_role_id: str | None = None
+    actor_name: str | None = None
+    notes: str | None = None
+    evidence: dict[str, Any] | None = None
+
+
 __all__ = [
+    'ImplementationPlanActivityStateUpdateSpec',
+    'ImplementationPlanAuthorityEventAppendSpec',
+    'ImplementationPlanAuthorityEventRecord',
     'ImplementationPlanActivityDependencyRecord',
     'ImplementationPlanActivityDependencyUpsertSpec',
     'ImplementationPlanActivityRecord',
     'ImplementationPlanActivityUpsertSpec',
+    'ImplementationPlanProgressUpdateSpec',
     'ImplementationPlanRecord',
     'ImplementationPlanUpsertSpec',
     'ImplementationPlanVerificationSurfaceRecord',

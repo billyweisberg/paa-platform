@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-23T14:31:49+00:00",
+  "generated_at": "2026-05-23T15:41:11+00:00",
   "records": [
     {
       "canonical": true,
@@ -391,6 +391,57 @@
       "status": "active",
       "sync_status": "in_sync",
       "title": "TechLead Worker Review Routing Service Component Spec"
+    },
+    {
+      "canonical": true,
+      "component": "PaaComponentCompletionPolicy",
+      "current_category": "policy",
+      "current_exists": true,
+      "current_path": "docs/2_Design/current/policy/component-completion-policy.md",
+      "doc_id": "paa-component-completion-policy",
+      "doc_type": "policy",
+      "domain": "governance",
+      "lifecycle_stage": "design",
+      "notes": [],
+      "source_last_edited": "2026-05-23",
+      "source_path": "docs/2_Design/2026-05-23-component-completion-policy.md",
+      "status": "active",
+      "sync_status": "in_sync",
+      "title": "Component Completion Policy"
+    },
+    {
+      "canonical": true,
+      "component": "PaaComponentRealizationStatusVocabulary",
+      "current_category": "policy",
+      "current_exists": true,
+      "current_path": "docs/2_Design/current/policy/component-realization-status-vocabulary.md",
+      "doc_id": "paa-component-realization-status-vocabulary",
+      "doc_type": "policy",
+      "domain": "governance",
+      "lifecycle_stage": "design",
+      "notes": [],
+      "source_last_edited": "2026-05-23",
+      "source_path": "docs/2_Design/2026-05-23-component-realization-status-vocabulary.md",
+      "status": "active",
+      "sync_status": "in_sync",
+      "title": "Component Realization Status Vocabulary"
+    },
+    {
+      "canonical": true,
+      "component": "PaaComponentSliceSuccessorDerivationPolicy",
+      "current_category": "policy",
+      "current_exists": true,
+      "current_path": "docs/2_Design/current/policy/component-slice-successor-derivation-policy.md",
+      "doc_id": "paa-component-slice-successor-derivation-policy",
+      "doc_type": "policy",
+      "domain": "governance",
+      "lifecycle_stage": "design",
+      "notes": [],
+      "source_last_edited": "2026-05-23",
+      "source_path": "docs/2_Design/2026-05-23-component-slice-successor-derivation-policy.md",
+      "status": "active",
+      "sync_status": "in_sync",
+      "title": "Component Slice Successor Derivation Policy"
     },
     {
       "canonical": true,
@@ -854,9 +905,9 @@
   ],
   "root": "/Users/billyweisberg/Repos/billyweisberg/paa-platform",
   "summary": {
-    "canonical_active_source_count": 50,
+    "canonical_active_source_count": 53,
     "collision_count": 0,
-    "current_target_count": 50,
+    "current_target_count": 53,
     "missing_current_count": 0,
     "stale_current_count": 0
   }

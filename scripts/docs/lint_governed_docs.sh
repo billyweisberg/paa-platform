@@ -24,6 +24,10 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md \
   --path-prefix docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md \
   --path-prefix docs/2_Design/2026-05-22-techlead-decomposition-build-arrow-diagram.md \
+  --path-prefix docs/2_Design/2026-05-23-component-realization-status-vocabulary.md \
+  --path-prefix docs/2_Design/2026-05-23-component-completion-policy.md \
+  --path-prefix docs/2_Design/2026-05-23-component-slice-successor-derivation-policy.md \
+  --path-prefix docs/2_Design/2026-05-23-governed-vocabulary-normalization-policy.md \
   --path-prefix docs/3_Plan/2026-05-20-delivery-architect-component-spec-materialization-proof-packet.md \
   --path-prefix docs/3_Plan/2026-05-18- \
   --path-prefix docs/4_Build/2026-05-03-architect-packet-compiler.md \

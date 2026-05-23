@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 from typing import Any
 
+from .component_vocabulary import validate_component_identity_vocabulary
+
 
 _REQUIRED_SECTIONS = (
     "Component Identity Table",
@@ -199,6 +201,11 @@ def extract_component_spec_materialization_seed(path: str | Path) -> ComponentSp
         system_layer=identity_row["system_layer"],
         tier=identity_row["tier"],
         status=identity_row["status"],
+    )
+    validate_component_identity_vocabulary(
+        system_layer=component_identity.system_layer,
+        tier=component_identity.tier,
+        status=component_identity.status,
     )
 
     element_headers, element_rows = section_tables["Component Elements Table"]

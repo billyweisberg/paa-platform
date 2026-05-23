@@ -21,6 +21,17 @@ from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.implementation_plan_deriver import derive_implementation_plan
 from paa_producer.derive_artifacts import derive_inventory
 from paa_producer.issue_loader import load_issue_into_paa
+from paa_producer.component_spec_materializer import (
+    DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
+    DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
+    DEFAULT_PROJECT_SLUG,
+    materialize_component_spec,
+)
+from paa_producer.implementation_plan_progress import (
+    derive_next_activity_bundle,
+    implementation_plan_progress,
+    reconcile_implementation_plan_progress,
+)
 from paa_producer.obligation_loader import materialize_verification_obligations
 from paa_producer.publish import publish_from_project_config
 from paa_producer.smoke_test import run_smoke_test
@@ -197,6 +208,72 @@ def main() -> int:
             'persisted': result.persisted,
             'implementation_plan_id': result.implementation_plan_id,
         }, indent=2))
+        return 0
+
+    if args.command == 'materialize-component-spec':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer materialize-component-spec',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--spec', required=True)
+        argp.add_argument('--project-slug', default=DEFAULT_PROJECT_SLUG)
+        argp.add_argument(
+            '--anchor-design-package-external',
+            default=DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
+        )
+        argp.add_argument(
+            '--anchor-consumer-context-key',
+            default=DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
+        )
+        subargs = argp.parse_args(remainder)
+        result = materialize_component_spec(
+            spec_path=Path(subargs.spec).resolve(),
+            project_slug=subargs.project_slug,
+            anchor_design_package_external=subargs.anchor_design_package_external,
+            anchor_consumer_context_key=subargs.anchor_consumer_context_key,
+        )
+        print(json.dumps({
+            'source_path': result.source_path,
+            'project_id': result.project_id,
+            'design_package_id': result.design_package_id,
+            'component_id': result.component_id,
+            'implementation_plan_id': result.implementation_plan_id,
+            'plan_id_external': result.plan_id_external,
+            'consumer_context_key': result.consumer_context_key,
+            'component_element_keys': result.component_element_keys,
+            'realization_keys': result.realization_keys,
+            'activity_keys': result.activity_keys,
+        }, indent=2))
+        return 0
+
+    if args.command == 'implementation-plan-progress':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer implementation-plan-progress',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--plan-id', required=True)
+        subargs = argp.parse_args(remainder)
+        print(json.dumps(implementation_plan_progress(plan_id=subargs.plan_id), indent=2))
+        return 0
+
+    if args.command == 'derive-next-activity-bundle':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer derive-next-activity-bundle',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--plan-id', required=True)
+        subargs = argp.parse_args(remainder)
+        print(json.dumps(derive_next_activity_bundle(plan_id=subargs.plan_id), indent=2))
+        return 0
+
+    if args.command == 'reconcile-implementation-plan-progress':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer reconcile-implementation-plan-progress',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--plan-id', required=True)
+        subargs = argp.parse_args(remainder)
+        print(json.dumps(reconcile_implementation_plan_progress(plan_id=subargs.plan_id), indent=2))
         return 0
 
     if args.command == 'assemble-coder-brief':

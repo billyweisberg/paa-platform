@@ -1,0 +1,151 @@
+Title: Component Realization Status Vocabulary
+Doc-ID: paa-component-realization-status-vocabulary
+Doc-Type: policy
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-23
+Last-Edited: 2026-05-23
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaComponentRealizationStatusVocabulary
+Domain: governance
+Keywords: paa, implementation-plan, component, realization, vocabulary, progress
+Depends-On: 2026-05-03-paa-staged-lifecycle.md, 2026-05-20-component-spec-template-materialization-bridge.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-23
+Owners:
+Expires:
+Issue:
+PR:
+Authority-Source:
+Implementation-Status: defined
+Summary: Defines the authoritative vocabulary for component authority completeness, implementation realization state, activity execution state, and iterative plan-completion reporting.
+
+# Component Realization Status Vocabulary
+
+Date: 2026-05-23
+
+## Purpose
+
+Define the closed vocabulary used to track iterative component implementation progress without introducing a second progress object outside the existing `ImplementationPlan` model.
+
+This vocabulary exists so the system can answer, at any point in time:
+- whether a component spec is complete enough to derive work
+- whether a component is not started, partially realized, or fully realized
+- which implementation-plan activities are done, blocked, deferred, or remaining
+- what state one implementation plan is in during recursive thin-slice delivery
+
+## Core Decision
+
+The existing `ImplementationPlan` family is the correct progress carrier for iterative component realization.
+
+Important rule:
+- component authority completeness and implementation realization are different truths
+- implementation progress should be computed from implementation-plan rows plus verification surfaces
+- the system should not invent a separate top-level `ComponentProgress` object in this slice
+
+## Vocabulary
+
+### Component authority state
+
+| value | meaning |
+|---|---|
+| `authority_complete` | the governed component spec is materially complete enough to drive derivation and successor-slice planning |
+
+Important rule:
+- `authority_complete` does not mean implemented
+- it means the authority surface is sufficient for derivation
+
+### Component implementation realization state
+
+| value | meaning |
+|---|---|
+| `not_started` | no implementation-plan activities have been completed yet |
+| `partially_realized` | some required activities are complete and remaining required activities still exist |
+| `substantially_realized` | most required activities are complete and the component is materially usable, but required activities still remain |
+| `fully_realized` | no required incomplete activities remain for the currently authorized implementation plan |
+| `blocked` | remaining required activities exist but cannot proceed due to blocked predecessors or unresolved proof requirements |
+| `deferred` | remaining activities are intentionally deferred by authority or plan-state decision |
+
+### Activity execution state
+
+| value | meaning |
+|---|---|
+| `planned` | the activity exists in the plan but is not yet executable |
+| `ready` | the activity is dependency-clear and eligible to start |
+| `in_progress` | the activity is currently being executed |
+| `completed` | the activity implementation and required proof are complete |
+| `blocked` | the activity cannot proceed because of an explicit blocking condition |
+| `deferred` | the activity remains in scope but is intentionally postponed |
+| `cancelled` | the activity is no longer part of the active execution path |
+
+Compatibility rule:
+- legacy states such as `active`, `skipped`, and `superseded` may still exist in historical rows
+- current iterative progress logic should normalize them into the current vocabulary when possible
+
+### Plan authority state
+
+| value | meaning |
+|---|---|
+| `draft_plan` | derived but not yet the active execution authority |
+| `active_plan` | the plan is the active implementation authority for the current slice loop |
+| `partially_realized_plan` | the plan has accepted completed activities and still has remaining work |
+| `completed_plan` | no required incomplete activities remain for the plan |
+| `blocked_plan` | required remaining work exists but cannot advance |
+| `deferred_plan` | the plan remains authoritative but further work is intentionally deferred |
+
+Compatibility rule:
+- legacy authority states such as `approved_plan` may remain in persisted history
+- current progress reporting should map them into this vocabulary for current-state computation when needed
+
+## Usage Rules
+
+### Rule 1: authority and realization are separate
+
+A component may be:
+- `authority_complete`
+- and still `not_started` or `partially_realized`
+
+That is the normal recursive build path.
+
+### Rule 2: component realization is computed, not claimed
+
+A component realization state should be derived from:
+- implementation-plan activity state
+- dependency truth
+- verification-surface status
+
+It should not be inferred from prose-only status notes.
+
+### Rule 3: completed means proven complete
+
+An activity should not be treated as `completed` when:
+- required verification surfaces remain unresolved
+- or the activity is only coded but not yet proven under the plan's required verification surface
+
+### Rule 4: fully realized is plan-scoped
+
+`fully_realized` means:
+- the currently authorized implementation plan has no remaining required incomplete activities
+
+It does not mean:
+- the whole product is done
+- the larger system is finished
+- no future authority updates will ever extend the component
+
+## Non-Goals
+
+This vocabulary does not:
+- define packet-generation behavior
+- replace workflow runtime truth
+- create a second progress ledger
+- require every historical plan to be backfilled immediately
+
+## Success Condition
+
+This policy is successful when:
+- the system can distinguish design completeness from implementation completeness
+- iterative thin-slice completion can be tracked without losing truth
+- successor-slice derivation can rely on current-state vocabulary rather than ad hoc interpretation

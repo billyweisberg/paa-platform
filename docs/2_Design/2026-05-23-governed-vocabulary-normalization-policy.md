@@ -1,0 +1,126 @@
+Title: Governed Vocabulary Normalization Policy
+Doc-ID: paa-governed-vocabulary-normalization-policy
+Doc-Type: policy
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-23
+Last-Edited: 2026-05-23
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PaaGovernedVocabularyNormalization
+Domain: governance
+Keywords: paa, vocabulary, normalization, canonical, materialization, system-layer
+Depends-On: 2026-05-19-paa-governed-code-vocabulary-and-type-enforcement.md, 2026-05-20-component-spec-template-materialization-bridge.md, 2026-05-23-component-realization-status-vocabulary.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-23
+Owners:
+Expires:
+Issue:
+PR:
+Authority-Source:
+Implementation-Status: defined
+Summary: Defines the single canonical component vocabulary used by governed docs, model materialization, and runtime tooling, and rejects ad hoc cross-vocabulary mapping as a steady-state pattern.
+
+# Governed Vocabulary Normalization Policy
+
+Date: 2026-05-23
+
+## Purpose
+
+Define the rule that PAA must use one shared canonical vocabulary for active governed component materialization.
+
+This policy exists because repeated proof runs exposed the same failure mode:
+- governed docs use one term
+- DB enums or tooling use a different term
+- materializers compensate with local mappings
+
+That is not the target architecture.
+
+## Core Decision
+
+PAA should maintain one canonical vocabulary for active governed component identity and materialization.
+
+Important rule:
+- the system should not normalize drift by growing a mesh of mapper rules
+- the system should instead normalize the authoritative vocabulary and make docs, model, and tooling converge on it
+
+## Policy
+
+### Rule 1: canonical vocabulary is shared across docs, model, and tooling
+
+For active governed component materialization, the same vocabulary should be used in:
+- governed docs
+- extraction tooling
+- DB model enums and persisted rows
+- producer and consumer tooling
+
+### Rule 2: drift should be corrected at the source of truth
+
+When a governed component spec uses a value that the live DB enum cannot represent, the preferred response is:
+1. confirm the intended canonical value
+2. extend or normalize the DB enum and related tooling
+3. make the materializer use the canonical value directly
+
+It is not acceptable as the steady-state design to hide the mismatch inside one-off materializer aliases.
+
+### Rule 3: enforcement should fail closed
+
+If a component spec uses a non-canonical active vocabulary value, extraction or materialization should fail closed with a clear error.
+
+### Rule 4: vocabulary evolution is allowed, but canonical truth must remain singular
+
+The vocabulary may evolve as:
+- system design reveals missing distinctions
+- coder results expose drift or ambiguity
+- runtime proof reveals missing states or categories
+
+But each evolution step must produce:
+- one updated canonical vocabulary
+- one normalized DB/tooling surface
+- no long-lived dual-vocabulary regime
+
+## Canonical Active Component Vocabulary
+
+### `system_layer`
+
+Canonical active values:
+- `domain-core`
+- `domain-services`
+- `application-services`
+- `infrastructure-ports`
+- `infrastructure-adapters`
+- `host-surfaces`
+
+### `tier`
+
+Canonical active values:
+- `runtime`
+- `integration`
+- `test`
+- `docs`
+
+### `status`
+
+Canonical active values:
+- `draft`
+- `active`
+- `superseded`
+- `retired`
+
+## Non-Goals
+
+This policy does not require:
+- immediate backfill of all historical docs
+- removal of every historical enum value in one migration
+- repo-wide terminology cleanup in one slice
+
+It defines the forward rule for active governed component materialization.
+
+## Success Condition
+
+This policy is successful when:
+- governed docs, DB enums, and materializers use the same active vocabulary
+- new component-spec materialization does not require ad hoc term mapping
+- repeated proof work stops rediscovering the same vocabulary mismatch

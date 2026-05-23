@@ -8,10 +8,14 @@ from typing import Any
 from paa_core.db import DBSettings, run_psql, sql_literal
 
 from .models import (
+    ImplementationPlanActivityStateUpdateSpec,
+    ImplementationPlanAuthorityEventAppendSpec,
+    ImplementationPlanAuthorityEventRecord,
     ImplementationPlanActivityDependencyRecord,
     ImplementationPlanActivityDependencyUpsertSpec,
     ImplementationPlanActivityRecord,
     ImplementationPlanActivityUpsertSpec,
+    ImplementationPlanProgressUpdateSpec,
     ImplementationPlanRecord,
     ImplementationPlanUpsertSpec,
     ImplementationPlanVerificationSurfaceRecord,
@@ -195,6 +199,80 @@ FROM (
 """
         return [self._activity_from_row(row) for row in self._query_json_rows(sql)]
 
+    def get_implementation_plan_activity_by_key(
+        self,
+        implementation_plan_id: str,
+        activity_key: str,
+    ) -> ImplementationPlanActivityRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ipa.implementation_plan_activity_id::text,
+    ipa.implementation_plan_id::text,
+    ipa.component_element_id::text,
+    ipa.component_element_realization_id::text,
+    ipa.assigned_role_id::text,
+    ipa.activity_key,
+    ipa.activity_title,
+    ipa.activity_kind::text AS activity_kind,
+    ipa.activity_state::text AS activity_state,
+    ipa.sequence_order,
+    ipa.target_path,
+    ipa.target_module,
+    ipa.planned_artifact_type_key,
+    ipa.blocking_reason,
+    ipa.metadata_json AS metadata,
+    ipa.started_at::text,
+    ipa.completed_at::text,
+    ipa.created_at::text,
+    ipa.updated_at::text
+  FROM paa.implementation_plan_activities ipa
+  WHERE ipa.implementation_plan_id = {sql_literal(implementation_plan_id)}::uuid
+    AND ipa.activity_key = {sql_literal(activity_key)}
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        if not rows:
+            return None
+        return self._activity_from_row(rows[0])
+
+    def list_implementation_plan_activities_by_state(
+        self,
+        implementation_plan_id: str,
+        activity_state: str,
+    ) -> list[ImplementationPlanActivityRecord]:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ipa.implementation_plan_activity_id::text,
+    ipa.implementation_plan_id::text,
+    ipa.component_element_id::text,
+    ipa.component_element_realization_id::text,
+    ipa.assigned_role_id::text,
+    ipa.activity_key,
+    ipa.activity_title,
+    ipa.activity_kind::text AS activity_kind,
+    ipa.activity_state::text AS activity_state,
+    ipa.sequence_order,
+    ipa.target_path,
+    ipa.target_module,
+    ipa.planned_artifact_type_key,
+    ipa.blocking_reason,
+    ipa.metadata_json AS metadata,
+    ipa.started_at::text,
+    ipa.completed_at::text,
+    ipa.created_at::text,
+    ipa.updated_at::text
+  FROM paa.implementation_plan_activities ipa
+  WHERE ipa.implementation_plan_id = {sql_literal(implementation_plan_id)}::uuid
+    AND ipa.activity_state = {sql_literal(activity_state)}::paa.implementation_plan_activity_state
+  ORDER BY ipa.sequence_order, ipa.activity_key
+) AS t;
+"""
+        return [self._activity_from_row(row) for row in self._query_json_rows(sql)]
+
     def list_implementation_plan_activity_dependencies(
         self, implementation_plan_id: str
     ) -> list[ImplementationPlanActivityDependencyRecord]:
@@ -249,6 +327,64 @@ FROM (
 ) AS t;
 """
         return [self._verification_surface_from_row(row) for row in self._query_json_rows(sql)]
+
+    def list_implementation_plan_verification_surfaces_for_activity(
+        self,
+        implementation_plan_id: str,
+        activity_key: str,
+    ) -> list[ImplementationPlanVerificationSurfaceRecord]:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ipvs.implementation_plan_verification_surface_id::text,
+    ipvs.implementation_plan_id::text,
+    ipvs.implementation_plan_activity_id::text,
+    ipvs.verification_obligation_id::text,
+    ipvs.surface_kind,
+    ipvs.surface_ref,
+    ipvs.required,
+    ipvs.sequence_order,
+    ipvs.status::text AS status,
+    ipvs.metadata_json AS metadata,
+    ipvs.created_at::text,
+    ipvs.updated_at::text
+  FROM paa.implementation_plan_verification_surfaces ipvs
+  JOIN paa.implementation_plan_activities ipa
+    ON ipa.implementation_plan_activity_id = ipvs.implementation_plan_activity_id
+  WHERE ipvs.implementation_plan_id = {sql_literal(implementation_plan_id)}::uuid
+    AND ipa.activity_key = {sql_literal(activity_key)}
+  ORDER BY ipvs.sequence_order, ipvs.surface_kind, ipvs.surface_ref
+) AS t;
+"""
+        return [self._verification_surface_from_row(row) for row in self._query_json_rows(sql)]
+
+    def list_implementation_plan_authority_events(
+        self,
+        implementation_plan_id: str,
+    ) -> list[ImplementationPlanAuthorityEventRecord]:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ipae.implementation_plan_authority_event_id::text,
+    ipae.project_id::text,
+    ipae.work_item_id::text,
+    ipae.implementation_plan_id::text,
+    ipae.from_state::text AS from_state,
+    ipae.to_state::text AS to_state,
+    ipae.transition_kind::text AS transition_kind,
+    ipae.actor_role_id::text,
+    ipae.actor_name,
+    ipae.notes,
+    ipae.evidence_json AS evidence,
+    ipae.created_at::text
+  FROM paa.implementation_plan_authority_events ipae
+  WHERE ipae.implementation_plan_id = {sql_literal(implementation_plan_id)}::uuid
+  ORDER BY ipae.created_at DESC, ipae.implementation_plan_authority_event_id
+) AS t;
+"""
+        return [self._authority_event_from_row(row) for row in self._query_json_rows(sql)]
 
     def upsert_implementation_plan(self, spec: ImplementationPlanUpsertSpec) -> None:
         sql = f"""
@@ -338,6 +474,41 @@ ON CONFLICT (design_package_id, consumer_context_key) DO UPDATE SET
 """
         run_psql(sql, settings=self._settings)
 
+    def update_implementation_plan_progress(self, spec: ImplementationPlanProgressUpdateSpec) -> None:
+        component_completion_json = sql_literal(json.dumps(spec.component_completion, sort_keys=True))
+        metadata_update = (
+            f"jsonb_set(COALESCE(metadata_json, '{{}}'::jsonb), '{{component_completion}}', {component_completion_json}::jsonb, true)"
+        )
+        status_clause = (
+            f"status = {sql_literal(spec.status)}::paa.implementation_plan_status,"
+            if spec.status is not None
+            else ''
+        )
+        authority_state_clause = (
+            (
+                f"authority_state = {sql_literal(spec.authority_state)}::paa.implementation_plan_authority_state,\n"
+                "  authority_state_updated_at = now(),"
+            )
+            if spec.authority_state is not None
+            else ''
+        )
+        completed_clause = (
+            f"completed_at = {self._timestamp_or_null(spec.completed_at)},"
+            if spec.completed_at is not None
+            else ''
+        )
+        sql = f"""
+UPDATE paa.implementation_plans
+SET
+  metadata_json = {metadata_update},
+  {status_clause}
+  {authority_state_clause}
+  {completed_clause}
+  updated_at = now()
+WHERE implementation_plan_id = {sql_literal(spec.implementation_plan_id)}::uuid;
+"""
+        run_psql(sql, settings=self._settings)
+
     def upsert_implementation_plan_activity(self, spec: ImplementationPlanActivityUpsertSpec) -> None:
         sql = f"""
 INSERT INTO paa.implementation_plan_activities (
@@ -395,6 +566,26 @@ ON CONFLICT (implementation_plan_id, activity_key) DO UPDATE SET
 """
         run_psql(sql, settings=self._settings)
 
+    def set_implementation_plan_activity_state(self, spec: ImplementationPlanActivityStateUpdateSpec) -> None:
+        metadata_expr = (
+            f"COALESCE(metadata_json, '{{}}'::jsonb) || {self._json_sql(spec.metadata)}::jsonb"
+            if spec.metadata is not None
+            else 'metadata_json'
+        )
+        sql = f"""
+UPDATE paa.implementation_plan_activities
+SET
+  activity_state = {sql_literal(spec.activity_state)}::paa.implementation_plan_activity_state,
+  blocking_reason = {sql_literal(spec.blocking_reason)},
+  started_at = COALESCE({self._timestamp_or_null(spec.started_at)}, started_at),
+  completed_at = {self._timestamp_or_null(spec.completed_at)},
+  metadata_json = {metadata_expr},
+  updated_at = now()
+WHERE implementation_plan_id = {sql_literal(spec.implementation_plan_id)}::uuid
+  AND activity_key = {sql_literal(spec.activity_key)};
+"""
+        run_psql(sql, settings=self._settings)
+
     def upsert_implementation_plan_activity_dependency(
         self, spec: ImplementationPlanActivityDependencyUpsertSpec
     ) -> None:
@@ -427,6 +618,38 @@ ON CONFLICT (implementation_plan_id, predecessor_activity_id, successor_activity
   dependency_strength = EXCLUDED.dependency_strength,
   notes = EXCLUDED.notes,
   metadata_json = EXCLUDED.metadata_json;
+"""
+        run_psql(sql, settings=self._settings)
+
+    def append_implementation_plan_authority_event(
+        self,
+        spec: ImplementationPlanAuthorityEventAppendSpec,
+    ) -> None:
+        sql = f"""
+INSERT INTO paa.implementation_plan_authority_events (
+  project_id,
+  work_item_id,
+  implementation_plan_id,
+  from_state,
+  to_state,
+  transition_kind,
+  actor_role_id,
+  actor_name,
+  notes,
+  evidence_json
+)
+VALUES (
+  {sql_literal(spec.project_id)}::uuid,
+  {self._uuid_or_null(spec.work_item_id)},
+  {sql_literal(spec.implementation_plan_id)}::uuid,
+  {sql_literal(spec.from_state)}::paa.implementation_plan_authority_state,
+  {sql_literal(spec.to_state)}::paa.implementation_plan_authority_state,
+  {sql_literal(spec.transition_kind)}::paa.implementation_plan_authority_transition_kind,
+  {self._uuid_or_null(spec.actor_role_id)},
+  {sql_literal(spec.actor_name)},
+  {sql_literal(spec.notes)},
+  {self._json_sql(spec.evidence)}::jsonb
+);
 """
         run_psql(sql, settings=self._settings)
 
@@ -530,6 +753,23 @@ ON CONFLICT (implementation_plan_id, predecessor_activity_id, successor_activity
             metadata=row.get('metadata') or {},
             created_at=row.get('created_at'),
             updated_at=row.get('updated_at'),
+        )
+
+    @staticmethod
+    def _authority_event_from_row(row: dict[str, Any]) -> ImplementationPlanAuthorityEventRecord:
+        return ImplementationPlanAuthorityEventRecord(
+            implementation_plan_authority_event_id=row['implementation_plan_authority_event_id'],
+            project_id=row['project_id'],
+            work_item_id=row.get('work_item_id'),
+            implementation_plan_id=row['implementation_plan_id'],
+            from_state=row.get('from_state'),
+            to_state=row['to_state'],
+            transition_kind=row['transition_kind'],
+            actor_role_id=row.get('actor_role_id'),
+            actor_name=row.get('actor_name'),
+            notes=row.get('notes'),
+            evidence=row.get('evidence') or {},
+            created_at=row.get('created_at'),
         )
 
     @staticmethod

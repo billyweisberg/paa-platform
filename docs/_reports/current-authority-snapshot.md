@@ -1,11 +1,11 @@
 # Current Authority Snapshot
 
-Generated at: `2026-05-23T14:31:49+00:00`
+Generated at: `2026-05-23T15:41:11+00:00`
 
 ## Summary
 
-- canonical active source count: `50`
-- current target count: `50`
+- canonical active source count: `53`
+- current target count: `53`
 - collision count: `0`
 - missing current count: `0`
 - stale current count: `0`
@@ -57,6 +57,9 @@ Generated at: `2026-05-23T14:31:49+00:00`
 | docs/2_Design/current/components/techlead-acceptance-decision-service-component-spec.md | docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md | paa-techlead-acceptance-decision-service-component-spec | component-spec | TechLeadAcceptanceDecisionService | 2026-05-23 | in_sync |
 | docs/2_Design/current/diagrams/techlead-decomposition-build-arrow-diagram.md | docs/2_Design/2026-05-22-techlead-decomposition-build-arrow-diagram.md | paa-techlead-decomposition-build-arrow-diagram | design-note | TechLeadDecompositionBuildArrowDiagram | 2026-05-22 | in_sync |
 | docs/2_Design/current/components/techlead-worker-review-routing-service-component-spec.md | docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md | paa-techlead-worker-review-routing-service-component-spec | component-spec | TechLeadWorkerReviewRoutingService | 2026-05-23 | in_sync |
+| docs/2_Design/current/policy/component-completion-policy.md | docs/2_Design/2026-05-23-component-completion-policy.md | paa-component-completion-policy | policy | PaaComponentCompletionPolicy | 2026-05-23 | in_sync |
+| docs/2_Design/current/policy/component-realization-status-vocabulary.md | docs/2_Design/2026-05-23-component-realization-status-vocabulary.md | paa-component-realization-status-vocabulary | policy | PaaComponentRealizationStatusVocabulary | 2026-05-23 | in_sync |
+| docs/2_Design/current/policy/component-slice-successor-derivation-policy.md | docs/2_Design/2026-05-23-component-slice-successor-derivation-policy.md | paa-component-slice-successor-derivation-policy | policy | PaaComponentSliceSuccessorDerivationPolicy | 2026-05-23 | in_sync |
 
 ## operate
 

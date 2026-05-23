@@ -4,10 +4,14 @@ from paa_core.governance import GovernedComponentMetadata
 
 from .contracts import ImplementationPlanRepository
 from .models import (
+    ImplementationPlanActivityStateUpdateSpec,
+    ImplementationPlanAuthorityEventAppendSpec,
+    ImplementationPlanAuthorityEventRecord,
     ImplementationPlanActivityDependencyRecord,
     ImplementationPlanActivityDependencyUpsertSpec,
     ImplementationPlanActivityRecord,
     ImplementationPlanActivityUpsertSpec,
+    ImplementationPlanProgressUpdateSpec,
     ImplementationPlanRecord,
     ImplementationPlanUpsertSpec,
     ImplementationPlanVerificationSurfaceRecord,
@@ -34,10 +38,14 @@ IMPLEMENTATION_PLAN_REPOSITORY_METADATA = GovernedComponentMetadata(
 )
 
 __all__ = [
+    'ImplementationPlanActivityStateUpdateSpec',
+    'ImplementationPlanAuthorityEventAppendSpec',
+    'ImplementationPlanAuthorityEventRecord',
     'ImplementationPlanActivityDependencyRecord',
     'ImplementationPlanActivityDependencyUpsertSpec',
     'ImplementationPlanActivityRecord',
     'ImplementationPlanActivityUpsertSpec',
+    'ImplementationPlanProgressUpdateSpec',
     'ImplementationPlanRecord',
     'ImplementationPlanRepository',
     'ImplementationPlanUpsertSpec',
