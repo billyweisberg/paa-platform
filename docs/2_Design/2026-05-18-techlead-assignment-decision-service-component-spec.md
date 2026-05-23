@@ -4,7 +4,7 @@ Doc-Type: component-spec
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-18
-Last-Edited: 2026-05-18
+Last-Edited: 2026-05-23
 Author: Billy Weisberg
 Repo: paa-platform
 Component: TechLeadAssignmentDecisionService
@@ -59,6 +59,12 @@ Primary downstream consumers:
 - `Assignment Packet Materialization Flow`
 - later `TechLead Worker Review Routing Service`
 
+## Component Identity Table
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| TechLeadAssignmentDecisionService | service | aligned | application-services | runtime | active |
+
 ## 1. Role
 
 `TechLeadAssignmentDecisionService` derives the next assignment decision for one active slice from current workflow stage, current packet context, and current issue/PR identity.
@@ -76,6 +82,58 @@ Authority boundary:
 - does not own worktree operations
 - does not own GitHub mutation or merge/closeout
 - does not own packet transport acknowledgement
+
+## Ownership Boundary
+
+Owned responsibilities:
+- next-assignment decision derivation
+- target-role selection for supported slices
+- assignment-type selection for supported slices
+- allowed-result-type selection for supported slices
+- source-packet reference carry-forward needed by downstream dispatch
+- structured decision outputs for the runtime shell
+- fail-closed rejected-result derivation for unsupported lifecycle paths
+
+## Non-Ownership Boundary
+
+Excluded responsibilities:
+- queue dispatch
+- packet materialization
+- workflow-state mutation
+- worktree operations
+- GitHub mutation or merge/closeout
+- packet transport acknowledgement
+- acceptance and closeout decision derivation
+- worker-result review and QA-routing decision derivation
+
+## Collaborators
+
+| collaborator | collaborator_kind | dependency_role |
+|---|---|---|
+| WorkflowLifecycleService | service | provide authoritative workflow-stage and lifecycle evaluation context |
+| StructuredLogger | adapter | emit structured runtime diagnostics |
+| TechLead Runtime Shell | runtime-shell | provide packet-preview and issue/PR context inputs and consume structured assignment decisions |
+| Assignment Packet Materialization Flow | flow | consume structured assignment decision outputs and materialize packet shells |
+| TechLeadWorkerReviewRoutingService | service | later downstream companion service in the broader TechLead decomposition sequence |
+
+## Component Elements Table
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| assignment_decision_interface | interface | public service contract for next-assignment decision derivation over one active slice | TechLeadAssignmentDecisionService |
+| assignment_decision_models | dto | request, summary, and result DTOs for assignment-decision derivation | TechLeadAssignmentDecisionService |
+| assignment_decision_coordination_logic | implementation | default service logic for workflow-aware target-role and assignment-type derivation | TechLeadAssignmentDecisionService |
+| assignment_decision_verification_surface | verification-surface | tests and governed proof surfaces for fail-closed assignment-decision behavior | TechLeadAssignmentDecisionService |
+
+## Realizations Table
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| assignment_decision_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/contracts.py` | interface contract validation |
+| assignment_decision_models | dto | python-module | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/models.py` | DTO and result-shape validation |
+| assignment_decision_coordination_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/default.py` | behavioral and policy-integration validation |
+| assignment_decision_verification_surface | test_module | python-module | `tests/unit/test_techlead_assignment_decision_service.py` | service-level validation and proof |
+| assignment_decision_coordination_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/__init__.py` | export-surface validation |
 
 ## 2. Component State Model
 
@@ -273,6 +331,37 @@ Initial replacement goal:
 - `derive_next_assignment_context(...)` becomes a thin adapter around `TechLeadAssignmentDecisionService`
 - `emit_next_assignment(...)` keeps packet materialization and dispatch, but stops owning decision derivation
 
+## Plan Seed Table
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-techlead-assignment-decision-service-proof-python | governance-materialization-python-techlead-assignment-decision | TechLeadAssignmentDecisionService | python-runtime-service | draft_plan |
+
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---|---|---|---|---|
+| assignment-decision-interface-contract | Author TechLead assignment decision service contract | 10 | contract-authoring | assignment_decision_interface | service_interface | contract surface is explicit and exportable |
+| assignment-decision-dto-models | Materialize assignment decision DTO models | 20 | dto-materialization | assignment_decision_models | dto | request, summary, and result models are defined and typed |
+| assignment-decision-default-service | Implement assignment decision default service | 30 | service-implementation | assignment_decision_coordination_logic | service_implementation | default service derives supported assignment decisions from authoritative context |
+| assignment-decision-validation-surface | Validate assignment decision service behavior | 40 | verification | assignment_decision_verification_surface | test_module | unit proof covers supported and fail-closed assignment paths |
+
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| assignment-decision-dto-models | assignment-decision-interface-contract | hard |
+| assignment-decision-default-service | assignment-decision-dto-models | hard |
+| assignment-decision-validation-surface | assignment-decision-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| techlead-assignment-decision-unit-tests | unit-test | `tests/unit/test_techlead_assignment_decision_service.py` | true |
+| techlead-assignment-decision-model-code-proof | governance-check | `scripts/governance/paa_model_code_consistency.py --component TechLeadAssignmentDecisionService` | true |
+| techlead-assignment-decision-spec-model-proof | governance-check | `scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-18-techlead-assignment-decision-service-component-spec.md` | true |
+
 ## 11. First Implementation Scope
 
 ### Phase 1 and Phase 2
@@ -307,6 +396,22 @@ Outputs for this slice:
 - packet dispatch
 - packet acknowledgement
 - branch / worktree mutation
+
+## Constraints And Non-Goals
+
+Constraints:
+- derive decisions from authoritative or caller-resolved context, not hidden globals
+- unsupported lifecycle paths must fail closed with explicit reason codes
+- target-role selection must remain explicit and structured
+- source-packet references must be preserved when assignment derivation depends on a prior packet
+
+Non-goals:
+- queue dispatch
+- packet transport acknowledgement
+- workflow-state mutation
+- merge or closeout ownership
+- broad delivery-review branching in the first slice
+- turning this service into a second TechLead hub
 
 ## 12. Responsibility Summary
 
