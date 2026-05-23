@@ -4,7 +4,7 @@ Doc-Type: component-spec
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-22
-Last-Edited: 2026-05-22
+Last-Edited: 2026-05-23
 Author: Billy Weisberg
 Repo: paa-platform
 Component: TechLeadAcceptanceDecisionService
@@ -19,12 +19,24 @@ Summary: Defines the acceptance, reroute, and closeout decision application serv
 
 # TechLead Acceptance Decision Service Component Spec
 
+Date: 2026-05-22
+
 ## Purpose
 
 Define the extracted application service that turns QA verification context into acceptance, reroute, pause, or closeout decisions.
 
 This service exists to remove terminal decision logic from:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+
+## Related Notes
+
+Read alongside:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-18-p0-techlead-runtime-extraction-plan.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-18-paa-operational-remediation-backlog.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-18-techlead-assignment-decision-service-component-spec.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-05-phase-g-worker-result-and-delivery-review-contracts.md`
 
 ## Architecture Placement
 
@@ -44,6 +56,12 @@ Primary downstream consumers:
 - closeout and acceptance flows
 - merge-preparation and proof-only closeout paths
 
+## Component Identity Table
+
+| component_name | component_kind | alignment_state | system_layer | tier | status |
+|---|---|---|---|---|---|
+| TechLeadAcceptanceDecisionService | service | aligned | application-services | runtime | active |
+
 ## 1. Role
 
 `TechLeadAcceptanceDecisionService` derives the next terminal or near-terminal decision for one active slice after QA verification.
@@ -58,13 +76,86 @@ Authority boundary:
 - does not own merge execution
 - does not own direct workflow-state persistence
 
+## Ownership Boundary
+
+Owned responsibilities:
+- acceptance decision derivation from QA context
+- reroute recommendation derivation from QA non-pass context
+- pause recommendation derivation from QA non-pass context
+- reject recommendation derivation from QA non-pass context
+- structured terminal-decision outputs
+- fail-closed rejected-result derivation for unsupported or unsafe terminal paths
+
+## Non-Ownership Boundary
+
+Excluded responsibilities:
+- queue dispatch
+- packet transport
+- GitHub mutation
+- merge execution
+- direct workflow-state persistence
+- packet compilation
+- initial assignment decision derivation
+- worker-result review and QA-routing decision derivation
+
+## Collaborators
+
+| collaborator | collaborator_kind | dependency_role |
+|---|---|---|
+| WorkflowLifecycleService | service | provide authoritative workflow-stage and lifecycle evaluation context |
+| StructuredLogger | adapter | emit structured runtime diagnostics |
+| TechLead Runtime Shell | runtime-shell | provide QA verification packet context, merge-state context, and acceptance-event context and consume structured acceptance decisions |
+| Closeout And Acceptance Flows | flow | consume supported acceptance and closeout decisions |
+| Merge Preparation And Proof-Only Closeout Paths | flow | consume supported merge-preparation and proof-only closeout decisions |
+
+## Component Elements Table
+
+| element_name | element_kind | description | owned_by_component |
+|---|---|---|---|
+| acceptance_decision_interface | interface | public service contract for acceptance, reroute, pause, and closeout decision derivation over one active slice | TechLeadAcceptanceDecisionService |
+| acceptance_decision_models | dto | request, summary, and result DTOs for acceptance-decision derivation | TechLeadAcceptanceDecisionService |
+| acceptance_decision_coordination_logic | implementation | default service logic for supported QA-result classification and terminal decision derivation | TechLeadAcceptanceDecisionService |
+| acceptance_decision_verification_surface | verification-surface | tests and governed proof surfaces for fail-closed acceptance-decision behavior | TechLeadAcceptanceDecisionService |
+
+## Realizations Table
+
+| element_name | realization_kind | artifact_kind | artifact_target | verification_role |
+|---|---|---|---|---|
+| acceptance_decision_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/contracts.py` | interface contract validation |
+| acceptance_decision_models | dto | python-module | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/models.py` | DTO and result-shape validation |
+| acceptance_decision_coordination_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/default.py` | behavioral and policy-integration validation |
+| acceptance_decision_verification_surface | test_module | python-module | `tests/unit/test_techlead_acceptance_decision_service.py` | service-level validation and proof |
+| acceptance_decision_coordination_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/__init__.py` | export-surface validation |
+
 ## 2. Component State Model
 
 The service is stateless between calls.
 
 It consumes authoritative acceptance and workflow context and returns stable acceptance-decision DTOs.
 
+### Persistent state
+This component owns no primary persistent state.
+
+It consumes already-derived runtime context from callers and may depend on evaluation outputs from `WorkflowLifecycleService`, but it does not persist rows directly.
+
+### In-memory working state
+During one call, the service may hold:
+- QA verification packet summary
+- current workflow stage
+- issue and PR identity
+- optional workflow-lifecycle evaluation summary
+- optional merge-state summary
+- optional acceptance-event summary
+- supported terminal-decision candidates
+- acceptance-decision DTOs
+
+### State rule
+This service derives terminal decisions from authoritative or already-resolved context.
+It does not create new workflow truth.
+
 ## 3. Service Contract
+
+The service provides acceptance, reroute, pause, and closeout decision derivation over one active slice.
 
 ### Inputs
 - QA verification packet summary
@@ -79,13 +170,32 @@ It consumes authoritative acceptance and workflow context and returns stable acc
 - structured acceptance decision DTOs
 - explicit next-step recommendation
 - blocked or unsupported reason codes when the decision cannot be made safely
+- source packet references required by downstream acceptance, closeout, or reroute materialization flows
 
 ### Guarantees
 - acceptance decision logic is centralized outside `techlead.py`
 - outputs are structured and stable
 - unsupported or unsafe terminal cases fail closed
 
+### Non-guarantees
+- this service does not send packets
+- this service does not claim or acknowledge queue messages
+- this service does not apply workflow transitions
+- this service does not mutate GitHub state
+- this service does not execute merges
+
 ## 4. Data Contract
+
+The service operates on structured request and response DTOs.
+
+### Primary consumed records or views
+- QA verification packet summary from runtime shell inputs
+- current workflow stage summary from runtime shell inputs
+- optional `WorkflowLifecycleResult`
+- merge-state summary
+- acceptance-event summary
+- issue summary
+- PR summary
 
 ### `TechLeadAcceptanceDecisionRequest`
 Carries:
@@ -122,11 +232,47 @@ Carries:
 - optional `details`
 - optional `recommended_actions`
 - optional `unattended_safe`
+- optional `metadata`
+
+### Data contract rule
+The service should return stable structured acceptance-decision objects suitable for packet materialization and runtime orchestration.
+It should not return ad hoc dicts that require the runtime shell to reconstruct meaning.
 
 ## 5. Interfaces
 
 ### Provided interface
 - `TechLeadAcceptanceDecisionService`
+
+## Plan Seed Table
+
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-techlead-acceptance-decision-service-proof-python | governance-materialization-python-techlead-acceptance-decision | TechLeadAcceptanceDecisionService | python-runtime-service | draft_plan |
+
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---:|---|---|---|---|
+| acceptance-decision-interface-contract | Author acceptance-decision interface contract | 10 | artifact_construction | acceptance_decision_interface | service_interface | Interface exposes stable terminal-decision entrypoint and supported result contract. |
+| acceptance-decision-dto-models | Model acceptance-decision DTOs | 20 | artifact_construction | acceptance_decision_models | dto | Request, summary, and result DTOs cover supported QA-result terminal decision cases. |
+| acceptance-decision-default-service | Implement default acceptance-decision service | 30 | artifact_construction | acceptance_decision_coordination_logic | service_implementation | Default service derives supported acceptance and reroute outcomes and fails closed for unsupported states. |
+| acceptance-decision-validation-surface | Add acceptance-decision validation surface | 40 | verification | acceptance_decision_verification_surface | test_module | Unit coverage proves supported outcomes and blocked-path behavior. |
+
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
+|---|---|---|
+| acceptance-decision-dto-models | acceptance-decision-interface-contract | hard |
+| acceptance-decision-default-service | acceptance-decision-dto-models | hard |
+| acceptance-decision-validation-surface | acceptance-decision-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| techlead_acceptance_decision_unit_tests | unit-test | `tests/unit/test_techlead_acceptance_decision_service.py` | yes |
+| techlead_acceptance_decision_model_code_consistency | governed-proof | `python scripts/governance/paa_model_code_consistency.py --component TechLeadAcceptanceDecisionService` | yes |
+| techlead_acceptance_decision_spec_model_consistency | governed-proof | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md` | yes |
 
 ## 6. Primary Supported Outcomes
 
@@ -140,3 +286,16 @@ Carries:
 
 This service must not become a second TechLead hub.
 It must not send packets, mutate queue state, or directly merge PRs.
+
+## Constraints And Non-Goals
+
+This service is constrained to terminal-decision derivation only.
+
+It must not:
+- perform queue dispatch
+- perform packet transport
+- mutate GitHub state
+- execute merges
+- persist workflow-state truth directly
+- compile packets directly
+- become a second TechLead hub
