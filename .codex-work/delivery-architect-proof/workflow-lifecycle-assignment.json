@@ -1,0 +1,77 @@
+{
+  "message_id": "da-proof-assignment-workflow-lifecycle-2026-05-20",
+  "schema_type": "techlead_assignment_packet",
+  "schema_version": "1.0.0",
+  "project": "paa-platform",
+  "from_role": "techlead",
+  "to_role": "delivery-architect",
+  "created_at": "2026-05-20T00:00:00Z",
+  "correlation_id": "workflow-lifecycle-proof-2026-05-20",
+  "github_context": {
+    "issue": {
+      "number": 0,
+      "title": "WorkflowLifecycleService component-spec proof lane"
+    }
+  },
+  "authority_context": {
+    "authority_docs": [
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-template-materialization-bridge.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-section-to-model-mapping-table.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-doc-to-materialization-extraction-rules.md"
+    ]
+  },
+  "payload": {
+    "assignment_type": "component_spec_materialization_proof",
+    "issue": {
+      "number": 0,
+      "title": "WorkflowLifecycleService component-spec proof lane"
+    },
+    "branch": {
+      "canonical_branch": "issue-0",
+      "role_branch": "issue-0-delivery"
+    },
+    "target_component": {
+      "component_name": "WorkflowLifecycleService",
+      "component_kind": "service",
+      "alignment_state": "aligned",
+      "target_repo": "paa-platform"
+    },
+    "target_authority_doc": {
+      "path": "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md",
+      "doc_id": "workflow-lifecycle-service-component-spec",
+      "doc_type": "component-spec"
+    },
+    "authority_docs": [
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-template-materialization-bridge.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-section-to-model-mapping-table.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-20-component-spec-doc-to-materialization-extraction-rules.md",
+      "/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-19-governed-code-backed-component-materialization-policy.md"
+    ],
+    "expected_materializer": {
+      "script_path": "/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/materialize_workflow_lifecycle_from_component_spec.py",
+      "mode": "doc_driven_materialize_from_spec",
+      "reconciliation_scope": [
+        "components",
+        "component_elements",
+        "component_element_realizations",
+        "implementation_plans",
+        "implementation_plan_activities",
+        "implementation_plan_activity_dependencies"
+      ]
+    },
+    "expected_proof_commands": [
+      "python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py lint --root /Users/billyweisberg/Repos/billyweisberg/paa-platform --path-prefix docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md --format json",
+      "python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/materialize_workflow_lifecycle_from_component_spec.py",
+      "cd /Users/billyweisberg/Repos/billyweisberg/paa-platform && PYTHONPATH=packages/paa-core/src python scripts/governance/paa_model_code_consistency.py --component WorkflowLifecycleService",
+      "cd /Users/billyweisberg/Repos/billyweisberg/paa-platform && PYTHONPATH=packages/paa-core/src python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-17-workflow-lifecycle-service-component-spec.md"
+    ],
+    "deliverable_requirements": {
+      "require_validation_summary": true,
+      "require_blocking_findings_list": true,
+      "require_next_step_recommendation": true
+    },
+    "source_assignment_context": {
+      "reason": "prove Delivery Architect component-spec materialization lane for WorkflowLifecycleService"
+    }
+  }
+}
