@@ -21,6 +21,9 @@ python "$REPO_ROOT/scripts/docs/paa_docs.py" lint \
   --path-prefix docs/2_Design/2026-05-20-component-spec-doc-to-materialization-extraction-rules.md \
   --path-prefix docs/2_Design/2026-05-20-delivery-architect-component-spec-materialization-assignment-result-contract.md \
   --path-prefix docs/2_Design/2026-05-20-delivery-architect-proof-runner-cli-contract.md \
+  --path-prefix docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md \
+  --path-prefix docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md \
+  --path-prefix docs/2_Design/2026-05-22-techlead-decomposition-build-arrow-diagram.md \
   --path-prefix docs/3_Plan/2026-05-20-delivery-architect-component-spec-materialization-proof-packet.md \
   --path-prefix docs/3_Plan/2026-05-18- \
   --path-prefix docs/4_Build/2026-05-03-architect-packet-compiler.md \
