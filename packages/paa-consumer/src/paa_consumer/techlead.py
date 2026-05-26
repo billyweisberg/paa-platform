@@ -23,6 +23,10 @@ from paa_core.services.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
 )
+from paa_core.services.techlead_assignment_decision import (
+    DefaultTechLeadAssignmentDecisionService,
+    TechLeadAssignmentDecisionRequest,
+)
 from paa_core.services.workflow_lifecycle import (
     DefaultWorkflowLifecycleService,
     WorkflowLifecycleRequest,
@@ -2518,6 +2522,75 @@ def default_result_packet_paths(repo_root: Path, issue_number: int, target_role:
     return reports_dir / f'{stem}.json', reports_dir / f'{stem}.md'
 
 
+def _build_assignment_decision_request(
+    *,
+    issue_number: int,
+    issue: dict,
+    pr: dict | None,
+    workflow_stage: str,
+    source_packet: dict | None,
+    explicit_target_role: str | None,
+    project_slug: str,
+    recommended_actions: list[dict] | tuple[dict, ...] | None,
+) -> TechLeadAssignmentDecisionRequest:
+    branch_name = pr.get('headRefName') if pr else None
+    return TechLeadAssignmentDecisionRequest(
+        project_slug=project_slug,
+        issue_number=issue_number,
+        issue_url=issue.get('url'),
+        pr_number=pr.get('number') if pr else None,
+        pr_url=pr.get('url') if pr else None,
+        branch_name=branch_name or (f'issue-{issue_number}' if pr else None),
+        workflow_stage=workflow_stage,
+        source_packet_schema_type=source_packet.get('schema_type') if source_packet else None,
+        source_packet_message_id=source_packet.get('message_id') if source_packet else None,
+        source_packet_queue_name=source_packet.get('queue_name') if source_packet else None,
+        source_packet_path=source_packet.get('path') if source_packet else None,
+        explicit_target_role=explicit_target_role,
+        recommended_actions=tuple(recommended_actions or ()),
+    )
+
+
+def _assignment_result_to_context(
+    *,
+    result,
+    issue: dict,
+    pr: dict | None,
+) -> dict:
+    summary = result.summary
+    context = {
+        'ok': result.ok,
+        'workflow_stage': result.workflow_stage,
+        'issue_number': result.issue_number,
+        'issue_url': result.issue_url,
+        'pr_number': result.pr_number,
+        'pr_url': result.pr_url,
+        'branch': result.branch_name,
+        'target_role': summary.target_role,
+        'target_role_cli': summary.target_role_cli,
+        'assignment_type': summary.assignment_type,
+        'allowed_result_types': list(summary.allowed_result_types),
+        'assignment_summary': summary.assignment_summary,
+        'source_packet_message_id': result.source_packet_message_id,
+        'source_packet_path': result.source_packet_path,
+        'source_packet_queue': result.source_packet_queue_name,
+        'source_packet_schema_type': result.source_packet_schema_type,
+        'issue': issue,
+        'pr': pr,
+        'recommended_actions': list(result.recommended_actions or ()),
+        'unattended_safe': result.unattended_safe,
+        'decision_reason': summary.decision_reason,
+    }
+    if not result.ok:
+        context.update(
+            {
+                'reason': result.reason,
+                'details': result.details,
+            }
+        )
+    return context
+
+
 def derive_next_assignment_context(args) -> dict:
     repo_root = args.repo_root.resolve()
     current, manifest = load_authority(repo_root)
@@ -2554,6 +2627,7 @@ def derive_next_assignment_context(args) -> dict:
         schema_type='delivery_review_packet',
         to_role='techlead',
     )
+    assignment_decision_service = DefaultTechLeadAssignmentDecisionService()
     explicit_team_worker = team_worker_role_for_cli(args.target_role, repo_root=repo_root) if args.target_role else None
     if args.target_role == 'delivery-architect':
         if not pr:
@@ -2603,35 +2677,20 @@ def derive_next_assignment_context(args) -> dict:
                     f'{explicit_team_worker.display_name} emission could not derive PR context.'
                 ),
             }
-        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number'),
-            'pr_url': pr.get('url'),
-            'branch': branch_name,
-            'target_role': explicit_team_worker.display_name,
-            'target_role_cli': explicit_team_worker.key,
-            'assignment_type': 'implement_authorized_slice',
-            'allowed_result_types': [
-                'implemented_ready_for_qa',
-                'blocked',
-                'needs_clarification',
-            ],
-            'assignment_summary': (
-                f'TechLead is explicitly issuing a {explicit_team_worker.display_name} implementation assignment '
-                f'for issue #{issue_number} on branch {branch_name}.'
-            ),
-            'source_packet_message_id': None,
-            'source_packet_path': None,
-            'source_packet_queue': None,
-            'issue': issue,
-            'pr': pr,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        request = _build_assignment_decision_request(
+            issue_number=issue_number,
+            issue=issue,
+            pr=pr,
+            workflow_stage=workflow_stage,
+            source_packet=None,
+            explicit_target_role=args.target_role,
+            project_slug=args.project_slug,
+            recommended_actions=recommended,
+        )
+        result = assignment_decision_service.derive_assignment_decision(request)
+        context = _assignment_result_to_context(result=result, issue=issue, pr=pr)
+        context['branch'] = pr.get('headRefName') or f'issue-{issue_number}'
+        return context
     if workflow_stage in {'techlead_dev_review_pending', 'techlead_worker_review_pending'} and (pending_dev_packet or pending_worker_packet):
         if not pr:
             return {
@@ -2640,40 +2699,21 @@ def derive_next_assignment_context(args) -> dict:
                 'reason': 'dev_review_pending_but_no_pr_context',
                 'details': 'A Dev result packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
             }
-        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
         source_packet = pending_worker_packet or pending_dev_packet
-        source_message_id = source_packet.get('message_id')
-        source_packet_path = source_packet.get('path')
-        source_packet_queue = source_packet.get('queue_name')
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number'),
-            'pr_url': pr.get('url'),
-            'branch': branch_name,
-            'target_role': 'QA',
-            'target_role_cli': 'qa',
-            'assignment_type': 'verify_authorized_slice',
-            'allowed_result_types': [
-                'pass',
-                'fail_fixable',
-                'needs_human_review',
-            ],
-            'assignment_summary': (
-                f'TechLead is routing Dev result packet {source_message_id} '
-                f'for issue #{issue_number} to QA on branch {branch_name}.'
-            ),
-            'source_packet_message_id': source_message_id,
-            'source_packet_path': source_packet_path,
-            'source_packet_queue': source_packet_queue,
-            'source_packet_schema_type': source_packet.get('schema_type'),
-            'issue': issue,
-            'pr': pr,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        request = _build_assignment_decision_request(
+            issue_number=issue_number,
+            issue=issue,
+            pr=pr,
+            workflow_stage=workflow_stage,
+            source_packet=source_packet,
+            explicit_target_role=None,
+            project_slug=args.project_slug,
+            recommended_actions=recommended,
+        )
+        result = assignment_decision_service.derive_assignment_decision(request)
+        context = _assignment_result_to_context(result=result, issue=issue, pr=pr)
+        context['branch'] = pr.get('headRefName') or f'issue-{issue_number}'
+        return context
     if workflow_stage == 'techlead_delivery_review_pending' and pending_delivery_review_packet:
         if not pr:
             return {

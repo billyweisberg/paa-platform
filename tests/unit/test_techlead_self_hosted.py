@@ -9,6 +9,142 @@ from paa_consumer import techlead
 
 
 class TechLeadSelfHostedTests(unittest.TestCase):
+    def test_derive_next_assignment_context_uses_service_for_explicit_team_worker(self):
+        captured = {}
+
+        class _AssignmentService:
+            def derive_assignment_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    target_role='Python Dev',
+                    target_role_cli='python',
+                    assignment_type='implement_authorized_slice',
+                    allowed_result_types=('implemented_ready_for_qa', 'blocked', 'needs_clarification'),
+                    assignment_summary='Use the extracted assignment decision service.',
+                    decision_reason='supported_explicit_team_worker_emission',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    source_packet_message_id=None,
+                    source_packet_path=None,
+                    source_packet_queue_name=None,
+                    source_packet_schema_type=None,
+                    summary=summary,
+                    recommended_actions=request.recommended_actions,
+                    unattended_safe=True,
+                    reason=None,
+                    details=None,
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            target_role='python-dev',
+        )
+
+        with patch('paa_consumer.techlead.load_authority', return_value=({}, {'tasks': []})), \
+             patch('paa_consumer.techlead.github_repo_for_root', return_value='billyweisberg/paa-platform'), \
+             patch('paa_consumer.techlead.load_design_package', return_value={'package_id_external': 'pkg-1'}), \
+             patch('paa_consumer.techlead.resolve_issue_number_from_package', return_value=42), \
+             patch('paa_consumer.techlead.resolve_task_summary', return_value={'issue_number': 42, 'task_id': 'task-42'}), \
+             patch('paa_consumer.techlead.queue_state', return_value={}), \
+             patch('paa_consumer.techlead.latest_qa_packet', return_value=None), \
+             patch('paa_consumer.techlead.latest_packet_preview', return_value=None), \
+             patch('paa_consumer.techlead.github_state', return_value=(
+                 {'number': 42, 'url': 'https://example.invalid/issues/42'},
+                 {'number': 77, 'url': 'https://example.invalid/pulls/77', 'headRefName': 'issue-42-worker'},
+             )), \
+             patch('paa_consumer.techlead.derive_workflow', return_value=('worker_execution_in_progress', 'TechLead', [], [{'action': 'assign_worker'}], True)), \
+             patch('paa_consumer.techlead.team_worker_role_for_cli', return_value=SimpleNamespace(display_name='Python Dev', key='python')), \
+             patch('paa_consumer.techlead.DefaultTechLeadAssignmentDecisionService', return_value=_AssignmentService()):
+            context = techlead.derive_next_assignment_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].explicit_target_role, 'python-dev')
+        self.assertEqual(captured['request'].issue_number, 42)
+        self.assertEqual(context['target_role_cli'], 'python')
+        self.assertEqual(context['branch'], 'issue-42-worker')
+
+    def test_derive_next_assignment_context_uses_service_for_qa_routing(self):
+        captured = {}
+        source_packet = {
+            'message_id': 'msg-123',
+            'schema_type': 'worker_result_packet',
+            'queue_name': 'fractal-core-python',
+            'path': '/tmp/worker-result.json',
+        }
+
+        class _AssignmentService:
+            def derive_assignment_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    target_role='QA',
+                    target_role_cli='qa',
+                    assignment_type='verify_authorized_slice',
+                    allowed_result_types=('pass', 'fail_fixable', 'needs_human_review'),
+                    assignment_summary='Route the returned slice to QA.',
+                    decision_reason='supported_worker_review_ready_to_qa_assignment',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    source_packet_message_id=request.source_packet_message_id,
+                    source_packet_path=request.source_packet_path,
+                    source_packet_queue_name=request.source_packet_queue_name,
+                    source_packet_schema_type=request.source_packet_schema_type,
+                    summary=summary,
+                    recommended_actions=request.recommended_actions,
+                    unattended_safe=False,
+                    reason=None,
+                    details=None,
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            target_role=None,
+        )
+
+        def _latest_packet_preview(_queues, _issue_number, schema_type=None, to_role=None):
+            if schema_type == 'worker_result_packet' and to_role == 'techlead':
+                return source_packet
+            return None
+
+        with patch('paa_consumer.techlead.load_authority', return_value=({}, {'tasks': []})), \
+             patch('paa_consumer.techlead.github_repo_for_root', return_value='billyweisberg/paa-platform'), \
+             patch('paa_consumer.techlead.load_design_package', return_value={'package_id_external': 'pkg-1'}), \
+             patch('paa_consumer.techlead.resolve_issue_number_from_package', return_value=42), \
+             patch('paa_consumer.techlead.resolve_task_summary', return_value={'issue_number': 42, 'task_id': 'task-42'}), \
+             patch('paa_consumer.techlead.queue_state', return_value={}), \
+             patch('paa_consumer.techlead.latest_qa_packet', return_value=None), \
+             patch('paa_consumer.techlead.latest_packet_preview', side_effect=_latest_packet_preview), \
+             patch('paa_consumer.techlead.github_state', return_value=(
+                 {'number': 42, 'url': 'https://example.invalid/issues/42'},
+                 {'number': 77, 'url': 'https://example.invalid/pulls/77', 'headRefName': 'issue-42-worker'},
+             )), \
+             patch('paa_consumer.techlead.derive_workflow', return_value=('techlead_worker_review_pending', 'TechLead', [], [{'action': 'route_to_qa'}], False)), \
+             patch('paa_consumer.techlead.DefaultTechLeadAssignmentDecisionService', return_value=_AssignmentService()):
+            context = techlead.derive_next_assignment_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].source_packet_message_id, 'msg-123')
+        self.assertEqual(captured['request'].source_packet_schema_type, 'worker_result_packet')
+        self.assertEqual(context['target_role_cli'], 'qa')
+        self.assertEqual(context['source_packet_queue'], 'fractal-core-python')
+
     def test_workflow_lifecycle_apply_for_packet_builds_worker_request(self):
         captured = {}
 
