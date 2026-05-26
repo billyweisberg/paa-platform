@@ -27,6 +27,10 @@ from paa_core.services.techlead_assignment_decision import (
     DefaultTechLeadAssignmentDecisionService,
     TechLeadAssignmentDecisionRequest,
 )
+from paa_core.services.techlead_worker_review_routing import (
+    DefaultTechLeadWorkerReviewRoutingService,
+    TechLeadWorkerReviewRoutingRequest,
+)
 from paa_core.services.workflow_lifecycle import (
     DefaultWorkflowLifecycleService,
     WorkflowLifecycleRequest,
@@ -1750,6 +1754,22 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                 (lifecycle_result.decision_summary.metadata or {}).get('resolved_to_stage')
                 or 'techlead_worker_review_pending'
             )
+        review_routing_result = None
+        try:
+            review_routing_service = DefaultTechLeadWorkerReviewRoutingService()
+            review_routing_request = _build_worker_review_routing_request(
+                current_task=current_task,
+                pr=pr,
+                workflow_stage=lifecycle_target_stage or 'techlead_worker_review_pending',
+                worker_role=worker_role,
+                worker_result_packet=latest_techlead_packet,
+                workflow_lifecycle_result=lifecycle_result,
+            )
+            review_routing_result = review_routing_service.derive_worker_review_routing(
+                review_routing_request
+            )
+        except Exception:
+            review_routing_result = None
         if worker_role == 'Python Dev':
             stage = 'techlead_dev_review_pending'
             summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
@@ -1769,6 +1789,15 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             'result_type': worker_payload.get('result_type'),
             'techlead_action_recommended': worker_payload.get('techlead_action_recommended'),
         }
+        if review_routing_result is not None:
+            details.update({
+                'review_routing_decision_supported': review_routing_result.summary.decision_supported,
+                'review_routing_next_decision': review_routing_result.summary.recommended_next_decision,
+                'review_routing_target_role': review_routing_result.summary.recommended_target_role,
+                'review_routing_qa_allowed': review_routing_result.summary.qa_assignment_allowed,
+                'review_routing_blocking_reasons': list(review_routing_result.summary.blocking_reasons),
+                'review_routing_reason': review_routing_result.reason,
+            })
         if lifecycle_result is not None:
             details.update({
                 'workflow_transition_allowed': lifecycle_result.decision_summary.transition_allowed,
@@ -1788,9 +1817,21 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         })
         recommended.append({
             'priority': 1,
-            'action_type': 'route_to_techlead',
-            'reason': reason,
-            'target_role': 'TechLead',
+            'action_type': action_type_for_role(
+                review_routing_result.summary.recommended_target_role
+                if review_routing_result is not None and review_routing_result.summary.recommended_target_role
+                else 'TechLead'
+            ),
+            'reason': (
+                review_routing_result.summary.review_summary
+                if review_routing_result is not None and review_routing_result.summary.review_summary
+                else reason
+            ),
+            'target_role': (
+                review_routing_result.summary.recommended_target_role
+                if review_routing_result is not None and review_routing_result.summary.recommended_target_role
+                else 'TechLead'
+            ),
             'blocking': True,
         })
         return stage, owner, escalations, recommended, unattended_safe
@@ -2589,6 +2630,34 @@ def _assignment_result_to_context(
             }
         )
     return context
+
+
+def _build_worker_review_routing_request(
+    *,
+    current_task: dict | None,
+    pr: dict | None,
+    workflow_stage: str,
+    worker_role: str,
+    worker_result_packet: dict,
+    workflow_lifecycle_result,
+) -> TechLeadWorkerReviewRoutingRequest:
+    payload = worker_result_packet.get('payload') or {}
+    issue_number = (current_task or {}).get('issue_number') or 0
+    return TechLeadWorkerReviewRoutingRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        pr_number=pr.get('number') if pr else None,
+        workflow_stage=workflow_stage,
+        worker_role=worker_role,
+        worker_result_type=payload.get('result_type') or '',
+        source_packet_schema_type=worker_result_packet.get('schema_type'),
+        source_packet_message_id=worker_result_packet.get('message_id'),
+        workflow_lifecycle_result=workflow_lifecycle_result,
+        metadata={
+            'source_queue_name': worker_result_packet.get('queue_name'),
+            'source_worker_family': payload.get('worker_family'),
+        },
+    )
 
 
 def derive_next_assignment_context(args) -> dict:

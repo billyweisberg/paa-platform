@@ -316,7 +316,79 @@ class TechLeadSelfHostedTests(unittest.TestCase):
         self.assertFalse(unattended_safe)
         self.assertEqual(escalations[0]['details']['workflow_transition_allowed'], True)
         self.assertEqual(escalations[0]['details']['workflow_target_stage'], 'techlead_worker_review_pending')
-        self.assertEqual(recommended[0]['target_role'], 'TechLead')
+        self.assertEqual(escalations[0]['details']['review_routing_target_role'], 'QA')
+        self.assertEqual(recommended[0]['target_role'], 'QA')
+
+    def test_derive_workflow_worker_packet_uses_worker_review_routing_service(self):
+        queues = {
+            'fractal-core-python': {
+                'preview': [{
+                    'payload_preview': {
+                        'correlation_id': 'issue-42',
+                        'schema_type': 'worker_result_packet',
+                        'to_role': 'techlead',
+                        'message_id': 'msg-123',
+                        'created_at': '2026-05-17T12:00:00Z',
+                        'payload': {
+                            'worker_role': 'Python Dev',
+                            'result_type': 'implemented_ready_for_qa',
+                        },
+                    }
+                }],
+                'messages_ready': 1,
+            },
+            'fractal-core-qa': {'preview': [], 'messages_ready': 0},
+            'fractal-core-architecture': {'preview': [], 'messages_ready': 0},
+        }
+        captured = {}
+        lifecycle_result = SimpleNamespace(
+            decision_summary=SimpleNamespace(
+                transition_allowed=True,
+                blocking_reasons=(),
+                notes=('validated',),
+                metadata={'resolved_to_stage': 'techlead_worker_review_pending'},
+            ),
+            recommended_next_action='Apply the worker-result transition to move the slice into TechLead worker review.',
+        )
+
+        class _WorkerReviewRoutingService:
+            def derive_worker_review_routing(self, request):
+                captured['request'] = request
+                return SimpleNamespace(
+                    summary=SimpleNamespace(
+                        decision_supported=True,
+                        recommended_next_decision='assign_qa',
+                        recommended_target_role='QA',
+                        qa_assignment_allowed=True,
+                        review_summary='Worker result is ready for QA verification.',
+                        blocking_reasons=(),
+                    ),
+                    reason=None,
+                )
+
+        with patch(
+            'paa_consumer.techlead.workflow_lifecycle_worker_result_evaluation',
+            return_value=lifecycle_result,
+        ), patch(
+            'paa_consumer.techlead.DefaultTechLeadWorkerReviewRoutingService',
+            return_value=_WorkerReviewRoutingService(),
+        ):
+            stage, owner, escalations, recommended, unattended_safe = techlead.derive_workflow(
+                {'issue_number': 42, 'task_id': 'task-42', 'title': 'Issue #42', 'status': 'open'},
+                {'state': 'OPEN', 'comments': []},
+                {'number': 77},
+                None,
+                queues,
+            )
+
+        self.assertEqual(captured['request'].issue_number, 42)
+        self.assertEqual(captured['request'].worker_role, 'Python Dev')
+        self.assertEqual(captured['request'].worker_result_type, 'implemented_ready_for_qa')
+        self.assertEqual(stage, 'techlead_dev_review_pending')
+        self.assertEqual(owner, 'TechLead')
+        self.assertFalse(unattended_safe)
+        self.assertEqual(escalations[0]['details']['review_routing_next_decision'], 'assign_qa')
+        self.assertEqual(recommended[0]['target_role'], 'QA')
 
     def test_repo_auth_current_prefers_execution_context_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
