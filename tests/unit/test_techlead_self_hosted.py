@@ -384,6 +384,7 @@ class TechLeadSelfHostedTests(unittest.TestCase):
         self.assertEqual(captured['request'].issue_number, 42)
         self.assertEqual(captured['request'].worker_role, 'Python Dev')
         self.assertEqual(captured['request'].worker_result_type, 'implemented_ready_for_qa')
+        self.assertEqual(captured['request'].workflow_stage, 'techlead_dev_review_pending')
         self.assertEqual(stage, 'techlead_dev_review_pending')
         self.assertEqual(owner, 'TechLead')
         self.assertFalse(unattended_safe)

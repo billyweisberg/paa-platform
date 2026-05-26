@@ -1755,14 +1755,18 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                 or 'techlead_worker_review_pending'
             )
         review_routing_result = None
+        derived_review_stage = _resolve_worker_review_stage(
+            worker_role=worker_role,
+            lifecycle_target_stage=lifecycle_target_stage,
+        )
         try:
             review_routing_service = DefaultTechLeadWorkerReviewRoutingService()
             review_routing_request = _build_worker_review_routing_request(
                 current_task=current_task,
                 pr=pr,
-                workflow_stage=lifecycle_target_stage or 'techlead_worker_review_pending',
                 worker_role=worker_role,
                 worker_result_packet=latest_techlead_packet,
+                lifecycle_target_stage=lifecycle_target_stage,
                 workflow_lifecycle_result=lifecycle_result,
             )
             review_routing_result = review_routing_service.derive_worker_review_routing(
@@ -1770,13 +1774,21 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             )
         except Exception:
             review_routing_result = None
-        if worker_role == 'Python Dev':
-            stage = 'techlead_dev_review_pending'
+        routed_workflow_stage = (
+            getattr(review_routing_result, 'workflow_stage', None)
+            if review_routing_result is not None
+            else None
+        )
+        stage = routed_workflow_stage or derived_review_stage
+        if review_routing_result is not None and review_routing_result.summary.review_summary:
+            summary = review_routing_result.summary.review_summary
+        elif worker_role == 'Python Dev':
             summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
+        else:
+            summary = f'TechLead has a waiting {worker_role} result packet to review.'
+        if worker_role == 'Python Dev':
             reason = 'A Python worker result packet addressed to TechLead is waiting for the next routing decision.'
         else:
-            stage = lifecycle_target_stage or 'techlead_worker_review_pending'
-            summary = f'TechLead has a waiting {worker_role} result packet to review.'
             reason = 'A worker result packet addressed to TechLead is waiting for the next routing decision.'
         owner = 'TechLead'
         unattended_safe = False
@@ -2636,9 +2648,9 @@ def _build_worker_review_routing_request(
     *,
     current_task: dict | None,
     pr: dict | None,
-    workflow_stage: str,
     worker_role: str,
     worker_result_packet: dict,
+    lifecycle_target_stage: str | None,
     workflow_lifecycle_result,
 ) -> TechLeadWorkerReviewRoutingRequest:
     payload = worker_result_packet.get('payload') or {}
@@ -2647,7 +2659,10 @@ def _build_worker_review_routing_request(
         project_slug=DEFAULT_PROJECT_SLUG,
         issue_number=issue_number,
         pr_number=pr.get('number') if pr else None,
-        workflow_stage=workflow_stage,
+        workflow_stage=_resolve_worker_review_stage(
+            worker_role=worker_role,
+            lifecycle_target_stage=lifecycle_target_stage,
+        ),
         worker_role=worker_role,
         worker_result_type=payload.get('result_type') or '',
         source_packet_schema_type=worker_result_packet.get('schema_type'),
@@ -2658,6 +2673,16 @@ def _build_worker_review_routing_request(
             'source_worker_family': payload.get('worker_family'),
         },
     )
+
+
+def _resolve_worker_review_stage(
+    *,
+    worker_role: str,
+    lifecycle_target_stage: str | None,
+) -> str:
+    if worker_role == 'Python Dev':
+        return 'techlead_dev_review_pending'
+    return lifecycle_target_stage or 'techlead_worker_review_pending'
 
 
 def derive_next_assignment_context(args) -> dict:
