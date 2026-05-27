@@ -253,9 +253,9 @@ It should not return ad hoc dicts that require the runtime shell to reconstruct 
 
 | activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
 |---|---|---:|---|---|---|---|
-| acceptance-decision-interface-contract | Author acceptance-decision interface contract | 10 | artifact_construction | acceptance_decision_interface | service_interface | Interface exposes stable terminal-decision entrypoint and supported result contract. |
-| acceptance-decision-dto-models | Model acceptance-decision DTOs | 20 | artifact_construction | acceptance_decision_models | dto | Request, summary, and result DTOs cover supported QA-result terminal decision cases. |
-| acceptance-decision-default-service | Implement default acceptance-decision service | 30 | artifact_construction | acceptance_decision_coordination_logic | service_implementation | Default service derives supported acceptance and reroute outcomes and fails closed for unsupported states. |
+| acceptance-decision-interface-contract | Author acceptance-decision interface contract | 10 | contract-authoring | acceptance_decision_interface | service_interface | Interface exposes stable terminal-decision entrypoint and supported result contract. |
+| acceptance-decision-dto-models | Model acceptance-decision DTOs | 20 | dto-materialization | acceptance_decision_models | dto | Request, summary, and result DTOs cover supported QA-result terminal decision cases. |
+| acceptance-decision-default-service | Implement default acceptance-decision service | 30 | service-implementation | acceptance_decision_coordination_logic | service_implementation | Default service derives supported acceptance and reroute outcomes and fails closed for unsupported states. |
 | acceptance-decision-validation-surface | Add acceptance-decision validation surface | 40 | verification | acceptance_decision_verification_surface | test_module | Unit coverage proves supported outcomes and blocked-path behavior. |
 
 ## Activity Dependency Table
@@ -270,9 +270,9 @@ It should not return ad hoc dicts that require the runtime shell to reconstruct 
 
 | verification_surface | verification_kind | artifact_target | required_for_acceptance |
 |---|---|---|---|
-| techlead_acceptance_decision_unit_tests | unit-test | `tests/unit/test_techlead_acceptance_decision_service.py` | yes |
-| techlead_acceptance_decision_model_code_consistency | governed-proof | `python scripts/governance/paa_model_code_consistency.py --component TechLeadAcceptanceDecisionService` | yes |
-| techlead_acceptance_decision_spec_model_consistency | governed-proof | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md` | yes |
+| techlead_acceptance_decision_unit_tests | unit-test | `tests/unit/test_techlead_acceptance_decision_service.py` | true |
+| techlead_acceptance_decision_model_code_consistency | governed-proof | `python scripts/governance/paa_model_code_consistency.py --component TechLeadAcceptanceDecisionService` | true |
+| techlead_acceptance_decision_spec_model_consistency | governed-proof | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-22-techlead-acceptance-decision-service-component-spec.md` | true |
 
 ## 6. Primary Supported Outcomes
 
