@@ -27,6 +27,14 @@ from paa_core.services.techlead_assignment_decision import (
     DefaultTechLeadAssignmentDecisionService,
     TechLeadAssignmentDecisionRequest,
 )
+from paa_core.services.techlead_acceptance_decision import (
+    DefaultTechLeadAcceptanceDecisionService,
+    TechLeadAcceptanceDecisionRequest,
+)
+from paa_core.services.techlead_delivery_review_decision import (
+    DefaultTechLeadDeliveryReviewDecisionService,
+    TechLeadDeliveryReviewDecisionRequest,
+)
 from paa_core.services.techlead_worker_review_routing import (
     DefaultTechLeadWorkerReviewRoutingService,
     TechLeadWorkerReviewRoutingRequest,
@@ -1679,6 +1687,21 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         stage = 'techlead_qa_review_pending'
         owner = 'TechLead'
         unattended_safe = False
+        acceptance_decision_result = None
+        try:
+            acceptance_decision_service = DefaultTechLeadAcceptanceDecisionService()
+            acceptance_decision_request = _build_acceptance_decision_request(
+                current_task=current_task,
+                pr=pr,
+                qa_packet=qa_packet,
+                source_packet=latest_techlead_packet,
+                workflow_stage=stage,
+            )
+            acceptance_decision_result = acceptance_decision_service.derive_acceptance_decision(
+                acceptance_decision_request
+            )
+        except Exception:
+            acceptance_decision_result = None
         details = {
             'message_id': latest_techlead_packet.get('message_id'),
             'schema_type': latest_techlead_packet.get('schema_type'),
@@ -1686,11 +1709,24 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         }
         if qa_packet:
             details['verification_status'] = qa_packet.get('verification_status')
+        if acceptance_decision_result is not None:
+            details.update({
+                'acceptance_decision_supported': acceptance_decision_result.summary.decision_supported,
+                'acceptance_next_decision': acceptance_decision_result.summary.recommended_next_decision,
+                'acceptance_allowed': acceptance_decision_result.summary.acceptance_allowed,
+                'closeout_allowed': acceptance_decision_result.summary.closeout_allowed,
+                'acceptance_blocking_reasons': list(acceptance_decision_result.summary.blocking_reasons),
+                'acceptance_reason': acceptance_decision_result.reason,
+            })
         escalations.append({
             'event_type': 'qa_packet_waiting_for_techlead',
             'severity': 'high',
             'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
-            'summary': 'TechLead has a waiting QA verification result packet to review.',
+            'summary': (
+                acceptance_decision_result.summary.decision_summary
+                if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
+                else 'TechLead has a waiting QA verification result packet to review.'
+            ),
             'details': details,
             'recommended_route': 'TechLead',
             'status': 'open',
@@ -1698,7 +1734,11 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         recommended.append({
             'priority': 1,
             'action_type': 'route_to_techlead',
-            'reason': 'A QA verification packet addressed to TechLead is waiting for a merge, rework, or escalation decision.',
+            'reason': (
+                acceptance_decision_result.summary.decision_summary
+                if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
+                else 'A QA verification packet addressed to TechLead is waiting for a merge, rework, or escalation decision.'
+            ),
             'target_role': 'TechLead',
             'blocking': True,
         })
@@ -2041,14 +2081,43 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             stage = 'techlead_qa_review_pending'
             owner = 'TechLead'
             unattended_safe = False
+            acceptance_decision_result = None
+            try:
+                acceptance_decision_service = DefaultTechLeadAcceptanceDecisionService()
+                acceptance_decision_request = _build_acceptance_decision_request(
+                    current_task=current_task,
+                    pr=pr,
+                    qa_packet=qa_packet,
+                    source_packet=qa_packet,
+                    workflow_stage=stage,
+                )
+                acceptance_decision_result = acceptance_decision_service.derive_acceptance_decision(
+                    acceptance_decision_request
+                )
+            except Exception:
+                acceptance_decision_result = None
             escalations.append({
                 'event_type': 'qa_pass_pending_acceptance',
                 'severity': 'medium',
                 'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
-                'summary': 'QA passed the active slice, but Architect acceptance is still pending.',
+                'summary': (
+                    acceptance_decision_result.summary.decision_summary
+                    if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
+                    else 'QA passed the active slice, but Architect acceptance is still pending.'
+                ),
                 'details': {
                     'qa_packet_id': qa_packet.get('message_id'),
                     'path': qa_packet.get('path'),
+                    'acceptance_decision_supported': (
+                        acceptance_decision_result.summary.decision_supported
+                        if acceptance_decision_result is not None
+                        else None
+                    ),
+                    'acceptance_next_decision': (
+                        acceptance_decision_result.summary.recommended_next_decision
+                        if acceptance_decision_result is not None
+                        else None
+                    ),
                 },
                 'recommended_route': 'TechLead',
                 'status': 'open',
@@ -2056,7 +2125,11 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             recommended.append({
                 'priority': 1,
                 'action_type': 'route_to_techlead',
-                'reason': 'QA pass is recorded locally, and TechLead should decide whether the slice is ready for merge preparation.',
+                'reason': (
+                    acceptance_decision_result.summary.decision_summary
+                    if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
+                    else 'QA pass is recorded locally, and TechLead should decide whether the slice is ready for merge preparation.'
+                ),
                 'target_role': 'TechLead',
                 'blocking': True,
             })
@@ -2675,6 +2748,141 @@ def _build_worker_review_routing_request(
     )
 
 
+def _build_acceptance_decision_request(
+    *,
+    current_task: dict | None,
+    pr: dict | None,
+    qa_packet: dict | None,
+    source_packet: dict,
+    workflow_stage: str,
+) -> TechLeadAcceptanceDecisionRequest:
+    payload = source_packet.get('payload') or {}
+    issue_number = (current_task or {}).get('issue_number') or 0
+    recommended_action = (qa_packet or {}).get('recommended_action') or payload.get('recommended_action') or {}
+    merge_recommendation = recommended_action.get('merge_recommendation')
+    execution_mode = 'proof_only' if merge_recommendation == 'do_not_merge_proof_slice' else 'live_delivery'
+    merge_ready = None
+    if execution_mode == 'live_delivery' and pr is not None:
+        merge_ready = True
+    return TechLeadAcceptanceDecisionRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        pr_number=pr.get('number') if pr else None,
+        workflow_stage=workflow_stage,
+        qa_result_type=(qa_packet or {}).get('verification_status') or payload.get('verification_status') or '',
+        source_packet_schema_type=source_packet.get('schema_type'),
+        source_packet_message_id=source_packet.get('message_id'),
+        merge_state={
+            'execution_mode': execution_mode,
+            'merge_ready': merge_ready,
+            'merge_recommendation': merge_recommendation,
+        },
+        metadata={
+            'execution_mode': execution_mode,
+            'source_queue_name': source_packet.get('queue_name'),
+            'qa_packet_path': (qa_packet or {}).get('path'),
+        },
+    )
+
+
+def _build_delivery_review_decision_request(
+    *,
+    current_task: dict | None,
+    issue: dict | None,
+    pr: dict | None,
+    source_packet: dict,
+    repo_root: Path,
+) -> TechLeadDeliveryReviewDecisionRequest:
+    payload = source_packet.get('payload') or {}
+    issue_number = (current_task or {}).get('issue_number') or 0
+    recommended_action = payload.get('techlead_action_recommended') or {}
+    if isinstance(recommended_action, dict):
+        recommended_action_name = recommended_action.get('action')
+        recommended_target_role = recommended_action.get('target_role')
+        recommended_reason = recommended_action.get('reason')
+    else:
+        recommended_action_name = None
+        recommended_target_role = None
+        recommended_reason = None
+    normalized_target_role = handoff_runtime.normalize_role_name(recommended_target_role)
+    team_worker = team_worker_role_for_label(normalized_target_role, repo_root=repo_root)
+    branch_name = (
+        (pr or {}).get('headRefName')
+        or source_packet.get('github_context', {}).get('branch')
+        or (payload.get('branch') or {}).get('name')
+        or f'issue-{issue_number}'
+    )
+    source_assignment = payload.get('source_assignment_ref') or {}
+    return TechLeadDeliveryReviewDecisionRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        issue_url=(issue or {}).get('url'),
+        pr_number=(pr or {}).get('number'),
+        pr_url=(pr or {}).get('url'),
+        workflow_stage='techlead_delivery_review_pending',
+        delivery_review_result_type=payload.get('result_type') or '',
+        recommended_action_name=recommended_action_name,
+        recommended_target_role=recommended_target_role,
+        recommended_reason=recommended_reason,
+        resolved_team_worker_key=team_worker.key if team_worker else None,
+        resolved_team_worker_display_name=team_worker.display_name if team_worker else None,
+        source_packet_schema_type=source_packet.get('schema_type'),
+        source_packet_message_id=source_packet.get('message_id'),
+        source_packet_path=source_assignment.get('path'),
+        branch_name=branch_name,
+        metadata={
+            'source_queue_name': source_packet.get('queue_name'),
+            'normalized_target_role': normalized_target_role,
+        },
+    )
+
+
+def _delivery_review_result_to_context(
+    *,
+    result,
+    issue: dict | None,
+    pr: dict | None,
+    recommended_actions: list[dict] | None,
+    unattended_safe: bool,
+) -> dict:
+    if not result.ok:
+        return {
+            'ok': False,
+            'workflow_stage': result.workflow_stage,
+            'reason': result.reason,
+            'details': result.details,
+            'recommended_actions': recommended_actions,
+            'unattended_safe': unattended_safe,
+        }
+    return {
+        'ok': True,
+        'workflow_stage': result.workflow_stage,
+        'issue_number': result.issue_number,
+        'issue_url': result.issue_url or ((issue or {}).get('url')),
+        'pr_number': result.pr_number,
+        'pr_url': result.pr_url or ((pr or {}).get('url')),
+        'branch': result.branch_name or ((pr or {}).get('headRefName')) or f'issue-{result.issue_number}',
+        'target_role': result.summary.recommended_target_role,
+        'target_role_cli': result.resolved_team_worker_key,
+        'assignment_type': 'implement_authorized_slice',
+        'allowed_result_types': [
+            'implemented_ready_for_qa',
+            'blocked',
+            'needs_clarification',
+        ],
+        'assignment_summary': result.summary.delivery_review_summary,
+        'source_packet_message_id': result.source_packet_message_id,
+        'source_packet_path': result.source_packet_path,
+        'source_packet_queue': (result.metadata or {}).get('source_queue_name'),
+        'source_packet_schema_type': result.source_packet_schema_type,
+        'issue': issue,
+        'pr': pr,
+        'recommended_actions': recommended_actions,
+        'unattended_safe': unattended_safe,
+        'decision_reason': result.reason,
+    }
+
+
 def _resolve_worker_review_stage(
     *,
     worker_role: str,
@@ -2818,101 +3026,24 @@ def derive_next_assignment_context(args) -> dict:
                 'recommended_actions': recommended,
                 'unattended_safe': unattended_safe,
             }
-        delivery_payload = pending_delivery_review_packet.get('payload') or {}
-        recommended_action = delivery_payload.get('techlead_action_recommended')
-        result_type = delivery_payload.get('result_type')
-        if isinstance(recommended_action, dict):
-            recommended_action_name = recommended_action.get('action')
-            recommended_target_role = recommended_action.get('target_role')
-            recommended_reason = recommended_action.get('reason')
-        else:
-            recommended_action_name = None
-            recommended_target_role = None
-            recommended_reason = None
-        normalized_target_role = handoff_runtime.normalize_role_name(recommended_target_role)
-        recommended_team_worker = team_worker_role_for_label(normalized_target_role, repo_root=repo_root)
-        if result_type == 'ready_for_dev':
-            if recommended_action_name != 'assign_worker':
-                return {
-                    'ok': False,
-                    'workflow_stage': workflow_stage,
-                    'reason': 'delivery_review_ready_for_dev_without_assign_worker',
-                    'details': 'Delivery review reported ready_for_dev, but the recommended TechLead action was not assign_worker.',
-                    'recommended_actions': recommended,
-                    'unattended_safe': unattended_safe,
-                }
-            if not recommended_team_worker:
-                return {
-                    'ok': False,
-                    'workflow_stage': workflow_stage,
-                    'reason': 'delivery_review_ready_for_dev_target_not_supported',
-                    'details': (
-                        'Delivery review recommended assign_worker, but the target role does not match an active '
-                        f'Team Worker Role in the project registry. Received target role: {recommended_target_role!r}.'
-                    ),
-                    'recommended_actions': recommended,
-                    'unattended_safe': unattended_safe,
-                }
-            branch_name = (
-                pr.get('headRefName')
-                or pending_delivery_review_packet.get('github_context', {}).get('branch')
-                or (delivery_payload.get('branch') or {}).get('name')
-                or f'issue-{issue_number}'
-            )
-            source_message_id = pending_delivery_review_packet.get('message_id')
-            source_assignment = delivery_payload.get('source_assignment_ref') or {}
-            source_packet_path = source_assignment.get('path')
-            return {
-                'ok': True,
-                'workflow_stage': workflow_stage,
-                'issue_number': issue_number,
-                'issue_url': issue.get('url'),
-                'pr_number': pr.get('number'),
-                'pr_url': pr.get('url'),
-                'branch': branch_name,
-                'target_role': recommended_team_worker.display_name,
-                'target_role_cli': recommended_team_worker.key,
-                'assignment_type': 'implement_authorized_slice',
-                'allowed_result_types': [
-                    'implemented_ready_for_qa',
-                    'blocked',
-                    'needs_clarification',
-                ],
-                'assignment_summary': (
-                    f'TechLead is routing Delivery Architect review packet {source_message_id} '
-                    f'for issue #{issue_number} to {recommended_team_worker.display_name} on branch {branch_name}.'
-                ),
-                'source_packet_message_id': source_message_id,
-                'source_packet_path': source_packet_path,
-                'source_packet_queue': 'fractal-core-architecture',
-                'source_packet_schema_type': pending_delivery_review_packet.get('schema_type'),
-                'issue': issue,
-                'pr': pr,
-                'recommended_actions': recommended,
-                'unattended_safe': unattended_safe,
-                'decision_reason': recommended_reason,
-            }
-        unsupported_reason_by_result_type = {
-            'narrow_scope': 'delivery_review_narrow_scope_requires_manual_techlead_decision',
-            'reject_scope': 'delivery_review_reject_scope_requires_manual_techlead_decision',
-            'request_reset': 'delivery_review_request_reset_requires_manual_techlead_decision',
-            'needs_authority_clarification': 'delivery_review_authority_clarification_requires_manual_techlead_decision',
-        }
-        return {
-            'ok': False,
-            'workflow_stage': workflow_stage,
-            'reason': unsupported_reason_by_result_type.get(
-                result_type,
-                'delivery_review_pending_requires_manual_techlead_decision',
-            ),
-            'details': (
-                'Delivery review packets are visible to TechLead, but this result type does not yet support '
-                f'automatic next-assignment derivation in this slice. result_type={result_type!r}, '
-                f'recommended_action={recommended_action_name!r}, target_role={recommended_target_role!r}.'
-            ),
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        delivery_review_service = DefaultTechLeadDeliveryReviewDecisionService()
+        delivery_review_request = _build_delivery_review_decision_request(
+            current_task=current_task,
+            issue=issue,
+            pr=pr,
+            source_packet=pending_delivery_review_packet,
+            repo_root=repo_root,
+        )
+        delivery_review_result = delivery_review_service.derive_delivery_review_decision(
+            delivery_review_request
+        )
+        return _delivery_review_result_to_context(
+            result=delivery_review_result,
+            issue=issue,
+            pr=pr,
+            recommended_actions=recommended,
+            unattended_safe=unattended_safe,
+        )
     return {
         'ok': False,
         'workflow_stage': workflow_stage,

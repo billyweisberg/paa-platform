@@ -254,9 +254,9 @@ It should not return ad hoc dicts that require the runtime shell to reconstruct 
 
 | activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
 |---|---|---:|---|---|---|---|
-| worker-review-routing-interface-contract | Author worker-review routing interface contract | 10 | artifact_construction | worker_review_routing_interface | service_interface | Interface exposes stable review-routing entrypoint and supported result contract. |
-| worker-review-routing-dto-models | Model worker-review routing DTOs | 20 | artifact_construction | worker_review_routing_models | dto | Request, summary, and result DTOs cover supported worker-result routing cases. |
-| worker-review-routing-default-service | Implement default worker-review routing service | 30 | artifact_construction | worker_review_routing_coordination_logic | service_implementation | Default service derives supported routing outcomes and fails closed for unsupported states. |
+| worker-review-routing-interface-contract | Author worker-review routing interface contract | 10 | contract-authoring | worker_review_routing_interface | service_interface | Interface exposes stable review-routing entrypoint and supported result contract. |
+| worker-review-routing-dto-models | Model worker-review routing DTOs | 20 | dto-materialization | worker_review_routing_models | dto | Request, summary, and result DTOs cover supported worker-result routing cases. |
+| worker-review-routing-default-service | Implement default worker-review routing service | 30 | service-implementation | worker_review_routing_coordination_logic | service_implementation | Default service derives supported routing outcomes and fails closed for unsupported states. |
 | worker-review-routing-validation-surface | Add worker-review routing validation surface | 40 | verification | worker_review_routing_verification_surface | test_module | Unit coverage proves supported outcomes and blocked-path behavior. |
 
 ## Activity Dependency Table
@@ -271,9 +271,9 @@ It should not return ad hoc dicts that require the runtime shell to reconstruct 
 
 | verification_surface | verification_kind | artifact_target | required_for_acceptance |
 |---|---|---|---|
-| techlead_worker_review_routing_unit_tests | unit-test | `tests/unit/test_techlead_worker_review_routing_service.py` | yes |
-| techlead_worker_review_routing_model_code_consistency | governed-proof | `python scripts/governance/paa_model_code_consistency.py --component TechLeadWorkerReviewRoutingService` | yes |
-| techlead_worker_review_routing_spec_model_consistency | governed-proof | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md` | yes |
+| techlead_worker_review_routing_unit_tests | unit-test | `tests/unit/test_techlead_worker_review_routing_service.py` | true |
+| techlead_worker_review_routing_model_code_consistency | governed-proof | `python scripts/governance/paa_model_code_consistency.py --component TechLeadWorkerReviewRoutingService` | true |
+| techlead_worker_review_routing_spec_model_consistency | governed-proof | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-22-techlead-worker-review-routing-service-component-spec.md` | true |
 
 ## 6. Primary Supported Outcomes
 

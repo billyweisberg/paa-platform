@@ -9,6 +9,91 @@ from paa_consumer import techlead
 
 
 class TechLeadSelfHostedTests(unittest.TestCase):
+    def test_derive_next_assignment_context_uses_service_for_delivery_review(self):
+        captured = {}
+        source_packet = {
+            'message_id': 'msg-456',
+            'schema_type': 'delivery_review_packet',
+            'queue_name': 'fractal-core-architecture',
+            'payload': {
+                'result_type': 'ready_for_dev',
+                'techlead_action_recommended': {
+                    'action': 'assign_worker',
+                    'target_role': 'Python Dev',
+                    'reason': 'Delivery Architect cleared the slice for Python implementation.',
+                },
+                'source_assignment_ref': {
+                    'path': '/tmp/delivery-review.json',
+                },
+            },
+        }
+
+        class _DeliveryReviewService:
+            def derive_delivery_review_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    recommended_target_role='Python Dev',
+                    recommended_next_decision='assign_worker',
+                    delivery_review_summary='Route the delivery review result to Python Dev.',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    recommended_action_name=request.recommended_action_name,
+                    recommended_target_role=request.recommended_target_role,
+                    resolved_team_worker_key=request.resolved_team_worker_key,
+                    resolved_team_worker_display_name=request.resolved_team_worker_display_name,
+                    source_packet_message_id=request.source_packet_message_id,
+                    source_packet_path=request.source_packet_path,
+                    source_packet_schema_type=request.source_packet_schema_type,
+                    summary=summary,
+                    recommended_actions=('assign_worker',),
+                    unattended_safe=True,
+                    reason=request.recommended_reason,
+                    details=None,
+                    metadata={'source_queue_name': 'fractal-core-architecture'},
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            target_role=None,
+        )
+
+        def _latest_packet_preview(_queues, _issue_number, schema_type=None, to_role=None):
+            if schema_type == 'delivery_review_packet' and to_role == 'techlead':
+                return source_packet
+            return None
+
+        with patch('paa_consumer.techlead.load_authority', return_value=({}, {'tasks': []})), \
+             patch('paa_consumer.techlead.github_repo_for_root', return_value='billyweisberg/paa-platform'), \
+             patch('paa_consumer.techlead.load_design_package', return_value={'package_id_external': 'pkg-1'}), \
+             patch('paa_consumer.techlead.resolve_issue_number_from_package', return_value=42), \
+             patch('paa_consumer.techlead.resolve_task_summary', return_value={'issue_number': 42, 'task_id': 'task-42'}), \
+             patch('paa_consumer.techlead.queue_state', return_value={}), \
+             patch('paa_consumer.techlead.latest_qa_packet', return_value=None), \
+             patch('paa_consumer.techlead.latest_packet_preview', side_effect=_latest_packet_preview), \
+             patch('paa_consumer.techlead.github_state', return_value=(
+                 {'number': 42, 'url': 'https://example.invalid/issues/42'},
+                 {'number': 77, 'url': 'https://example.invalid/pulls/77', 'headRefName': 'issue-42-delivery'},
+             )), \
+             patch('paa_consumer.techlead.derive_workflow', return_value=('techlead_delivery_review_pending', 'TechLead', [], [{'action': 'route_to_techlead'}], False)), \
+             patch('paa_consumer.techlead.team_worker_role_for_label', return_value=SimpleNamespace(display_name='Python Dev', key='python')), \
+             patch('paa_consumer.techlead.DefaultTechLeadDeliveryReviewDecisionService', return_value=_DeliveryReviewService()):
+            context = techlead.derive_next_assignment_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].delivery_review_result_type, 'ready_for_dev')
+        self.assertEqual(captured['request'].resolved_team_worker_key, 'python')
+        self.assertEqual(context['target_role_cli'], 'python')
+        self.assertEqual(context['source_packet_queue'], 'fractal-core-architecture')
+
     def test_derive_next_assignment_context_uses_service_for_explicit_team_worker(self):
         captured = {}
 
@@ -516,6 +601,57 @@ class TechLeadSelfHostedTests(unittest.TestCase):
         self.assertEqual(persisted['decision'], 'proof_only_closed')
         self.assertTrue(persisted['metadata_extra']['proof_only_closeout'])
         self.assertEqual(persisted['metadata_extra']['closeout_mode'], 'proof_only')
+
+    def test_derive_workflow_qa_pass_uses_acceptance_decision_service(self):
+        captured = {}
+        qa_packet = {
+            'message_id': 'qa-pass-1',
+            'verification_status': 'pass',
+            'path': '/tmp/qa-pass-1.json',
+            'recommended_action': {'merge_recommendation': 'accept_and_merge'},
+            'pr_number': 77,
+        }
+        queues = {
+            'fractal-core-python': {'preview': [], 'messages_ready': 0},
+            'fractal-core-qa': {'preview': [], 'messages_ready': 0},
+            'fractal-core-architecture': {'preview': [], 'messages_ready': 0},
+        }
+
+        class _AcceptanceService:
+            def derive_acceptance_decision(self, request):
+                captured['request'] = request
+                return SimpleNamespace(
+                    summary=SimpleNamespace(
+                        decision_supported=True,
+                        recommended_next_decision='prepare_merge',
+                        acceptance_allowed=True,
+                        closeout_allowed=False,
+                        decision_summary='Use the extracted acceptance decision service.',
+                        blocking_reasons=(),
+                    ),
+                    reason=None,
+                )
+
+        with patch(
+            'paa_consumer.techlead.DefaultTechLeadAcceptanceDecisionService',
+            return_value=_AcceptanceService(),
+        ):
+            stage, owner, escalations, recommended, unattended_safe = techlead.derive_workflow(
+                {'issue_number': 42, 'task_id': 'task-42', 'title': 'Issue #42', 'status': 'open'},
+                {'state': 'OPEN', 'comments': []},
+                {'number': 77, 'state': 'OPEN'},
+                qa_packet,
+                queues,
+            )
+
+        self.assertEqual(captured['request'].issue_number, 42)
+        self.assertEqual(captured['request'].workflow_stage, 'techlead_qa_review_pending')
+        self.assertEqual(captured['request'].qa_result_type, 'pass')
+        self.assertEqual(stage, 'techlead_qa_review_pending')
+        self.assertEqual(owner, 'TechLead')
+        self.assertFalse(unattended_safe)
+        self.assertEqual(escalations[0]['details']['acceptance_next_decision'], 'prepare_merge')
+        self.assertEqual(recommended[0]['reason'], 'Use the extracted acceptance decision service.')
 
 
 if __name__ == '__main__':

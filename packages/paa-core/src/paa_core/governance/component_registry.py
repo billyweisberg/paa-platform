@@ -7,6 +7,9 @@ from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RES
 from paa_core.services.techlead_acceptance_decision import (
     TECHLEAD_ACCEPTANCE_DECISION_SERVICE_METADATA,
 )
+from paa_core.services.techlead_delivery_review_decision import (
+    TECHLEAD_DELIVERY_REVIEW_DECISION_SERVICE_METADATA,
+)
 from paa_core.services.techlead_assignment_decision import (
     TECHLEAD_ASSIGNMENT_DECISION_SERVICE_METADATA,
 )
@@ -22,6 +25,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = (
     EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA,
     TECHLEAD_ACCEPTANCE_DECISION_SERVICE_METADATA,
     TECHLEAD_ASSIGNMENT_DECISION_SERVICE_METADATA,
+    TECHLEAD_DELIVERY_REVIEW_DECISION_SERVICE_METADATA,
     TECHLEAD_WORKER_REVIEW_ROUTING_SERVICE_METADATA,
     IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
 )
