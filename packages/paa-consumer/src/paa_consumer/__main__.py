@@ -12,6 +12,7 @@ from paa_core.runtime_paths import repo_root_from_cwd
 from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
 from paa_consumer.inbox import dispatch_techlead_packet, resolve_techlead_packet_queue, run_queue_command
+from paa_consumer.techlead_service_map import build_techlead_service_map
 from paa_consumer.runtime_guardrails import validate
 from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
@@ -164,6 +165,10 @@ def main() -> int:
     if args.command == 'automation-preflight':
         argv = ['automation-preflight', '--repo-root', args.repo_root or str(repo_root_from_cwd())]
         return techlead_main(argv + remainder)
+
+    if args.command == 'techlead-service-map':
+        print(json.dumps(build_techlead_service_map(), indent=2))
+        return 0
 
     if args.command == 'techlead-status':
         return techlead_main(['status', *remainder])

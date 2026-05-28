@@ -24,3 +24,8 @@
 - `src/paa_consumer/__main__.py`
 
 These files are intentionally skeletal so the first extraction wave has a stable runtime target.
+
+## Bootstrap CLI
+
+- `paa-consumer techlead-service-map`
+  - print the extracted TechLead service inventory and the remaining shell-owned pockets
