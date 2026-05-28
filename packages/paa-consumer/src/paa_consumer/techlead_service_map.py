@@ -16,12 +16,6 @@ TECHLEAD_EXTRACTED_SERVICE_NAMES: tuple[str, ...] = (
 
 TECHLEAD_SHELL_OWNERSHIP_POCKETS: tuple[dict[str, object], ...] = (
     {
-        'name': 'live_closed_closeout_context',
-        'status': 'remaining_business_logic',
-        'path': 'packages/paa-consumer/src/paa_consumer/techlead.py:3708',
-        'summary': 'Live closed lineage decision context remains inline while the extracted closeout service owns proof-only closeout only.',
-    },
-    {
         'name': 'terminal_lineage_override_policy',
         'status': 'remaining_business_logic',
         'path': 'packages/paa-consumer/src/paa_consumer/techlead.py:1180',

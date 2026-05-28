@@ -66,8 +66,8 @@ Primary downstream consumers:
 `TechLeadCloseoutDecisionService` derives closeout decision and terminal context for one active slice when QA has already passed and the runtime needs a stable closeout recommendation.
 
 Authority boundary:
-- owns proof-only closeout outcome classification
-- owns supported `proof_only_close_slice` recommendation derivation
+- owns proof-only and live closeout outcome classification for the supported slice
+- owns supported `proof_only_close_slice` and `close_slice` recommendation derivation
 - owns structured closeout decision outputs
 - does not own packet transport
 - does not own queue dispatch
@@ -77,9 +77,9 @@ Authority boundary:
 ## Ownership Boundary
 
 Owned responsibilities:
-- proof-only closeout outcome classification
-- supported `proof_only_close_slice` recommendation derivation
-- structured closeout decision outputs for supported proof-only terminal states
+- proof-only and live closeout outcome classification for the supported slice
+- supported `proof_only_close_slice` and `close_slice` recommendation derivation
+- structured closeout decision outputs for supported terminal states
 - fail-closed rejected-result derivation for unsupported or unsafe closeout paths
 
 ## Non-Ownership Boundary
@@ -93,7 +93,7 @@ Excluded responsibilities:
 - packet compilation
 - assignment decision derivation
 - worker-review routing derivation
-- acceptance and reroute decision derivation outside this terminal proof-only slice
+- acceptance and reroute decision derivation outside this terminal closeout slice
 - physical cleanup execution
 
 ## Collaborators
@@ -273,6 +273,8 @@ It should not return ad hoc dicts that require the runtime shell to reconstruct 
 
 - `decision_type = proof_only_closed` with `proof_only_mode = true` -> recommend `proof_only_close_slice`
 - `workflow_stage = proof_only_closed` with proof-only execution mode -> recommend `proof_only_close_slice`
+- `decision_type = closed` with `proof_only_mode = false` -> recommend `close_slice`
+- `workflow_stage = closed` with live closeout execution mode -> recommend `close_slice`
 
 ## 7. Non-Goals
 
@@ -281,7 +283,7 @@ It must not compile packets, mutate DB workflow truth, or perform merge / issue-
 
 ## Constraints And Non-Goals
 
-This service is constrained to proof-only closeout decision derivation only.
+This service is constrained to closeout decision derivation only.
 
 It must not:
 - perform packet transport

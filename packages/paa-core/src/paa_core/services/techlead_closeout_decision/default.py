@@ -22,10 +22,10 @@ class _NullStructuredLogger:
 
 
 class DefaultTechLeadCloseoutDecisionService:
-    """Derive supported proof-only closeout decisions from terminal QA-pass context."""
+    """Derive supported closeout decisions from terminal QA-pass context."""
 
-    _SUPPORTED_STAGES = frozenset({'proof_only_closed'})
-    _SUPPORTED_DECISION_TYPES = frozenset({'proof_only_closed'})
+    _SUPPORTED_STAGES = frozenset({'proof_only_closed', 'closed'})
+    _SUPPORTED_DECISION_TYPES = frozenset({'proof_only_closed', 'closed'})
     _SUPPORTED_SOURCE_SCHEMAS = frozenset({'qa_verification_packet'})
 
     def __init__(
@@ -98,20 +98,11 @@ class DefaultTechLeadCloseoutDecisionService:
                 notes=('fail-closed',),
             )
 
-        if not request.proof_only_mode:
-            return self._build_rejected_result(
-                request,
-                reason='proof_only_mode_required',
-                details='The current closeout decision slice only supports proof-only execution mode.',
-                blocking_reasons=('proof_only_mode_required',),
-                notes=('proof-only-required',),
-            )
-
         if source_schema is None or request.source_packet_path is None:
             return self._build_rejected_result(
                 request,
                 reason='missing_source_packet',
-                details='Proof-only closeout requires a resolved QA source packet reference.',
+                details='Closeout decision derivation requires a resolved QA source packet reference.',
                 blocking_reasons=('missing_source_packet',),
                 notes=('source-packet-required',),
             )
@@ -129,21 +120,10 @@ class DefaultTechLeadCloseoutDecisionService:
                 notes=('fail-closed',),
             )
 
-        summary = TechLeadCloseoutDecisionSummary(
-            decision_supported=True,
-            recommended_next_decision='proof_only_close_slice',
-            recommended_target_role='TechLead',
-            closeout_allowed=True,
-            closeout_decision_summary=(
-                f'TechLead may record proof-only closeout for issue #{request.issue_number} '
-                'without requiring merge or issue-close side effects.'
-            ),
-            blocking_reasons=(),
-            notes=('proof-only-closeout', 'qa-pass'),
-        )
+        summary = self._build_supported_summary(request)
         result = self._build_supported_result(request, summary=summary)
         self._logger.info(
-            'techlead_closeout_decision.derive_closeout_decision.proof_only_close_slice',
+            'techlead_closeout_decision.derive_closeout_decision.supported',
             issue_number=request.issue_number,
             workflow_stage=request.workflow_stage,
             decision_type=request.decision_type,
@@ -159,11 +139,48 @@ class DefaultTechLeadCloseoutDecisionService:
         normalized_stage = workflow_stage.strip()
         if normalized_stage not in self._SUPPORTED_STAGES:
             return False
-        if proof_only_mode is not True:
-            return False
         if decision_type is None:
-            return True
-        return decision_type.strip() in self._SUPPORTED_DECISION_TYPES
+            return (normalized_stage == 'proof_only_closed' and proof_only_mode is True) or (
+                normalized_stage == 'closed' and proof_only_mode is False
+            )
+        normalized_decision_type = decision_type.strip()
+        if normalized_decision_type not in self._SUPPORTED_DECISION_TYPES:
+            return False
+        if normalized_stage == 'proof_only_closed':
+            return normalized_decision_type == 'proof_only_closed' and proof_only_mode is True
+        if normalized_stage == 'closed':
+            return normalized_decision_type == 'closed' and proof_only_mode is False
+        return False
+
+    def _build_supported_summary(
+        self,
+        request: TechLeadCloseoutDecisionRequest,
+    ) -> TechLeadCloseoutDecisionSummary:
+        if request.proof_only_mode:
+            return TechLeadCloseoutDecisionSummary(
+                decision_supported=True,
+                recommended_next_decision='proof_only_close_slice',
+                recommended_target_role='TechLead',
+                closeout_allowed=True,
+                closeout_decision_summary=(
+                    f'TechLead may record proof-only closeout for issue #{request.issue_number} '
+                    'without requiring merge or issue-close side effects.'
+                ),
+                blocking_reasons=(),
+                notes=('proof-only-closeout', 'qa-pass'),
+            )
+        return TechLeadCloseoutDecisionSummary(
+            decision_supported=True,
+            recommended_next_decision='close_slice',
+            recommended_target_role='TechLead',
+            closeout_allowed=True,
+            closeout_decision_summary=(
+                f'TechLead may record live closeout for issue #{request.issue_number} '
+                'after the active slice reached merged or closed state.'
+            ),
+            blocking_reasons=(),
+            notes=('live-closeout', 'qa-pass'),
+        )
 
     def _build_supported_result(
         self,

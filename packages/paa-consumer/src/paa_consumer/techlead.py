@@ -3675,61 +3675,33 @@ def derive_decision_context(args) -> dict:
                 'details': 'closed decision emission requires an explicit source packet path or a resolved QA packet path.',
             }
         is_proof_only = args.decision_type == 'proof_only_closed'
-        if is_proof_only:
-            closeout_decision_service = DefaultTechLeadCloseoutDecisionService()
-            closeout_decision_request = _build_closeout_decision_request(
-                issue_number=issue_number,
-                issue_url=issue_url,
-                pr_number=pr_number,
-                pr_url=pr_url,
-                workflow_stage=workflow_stage,
-                decision_type=args.decision_type,
-                proof_only_mode=True,
-                source_packet_path=source_packet_path,
-                branch_name=branch_name,
-                canonical_branch=canonical_branch,
-            )
-            closeout_decision_result = closeout_decision_service.derive_closeout_decision(
-                closeout_decision_request
-            )
-            return _closeout_decision_result_to_context(
-                result=closeout_decision_result,
-                branch_name=branch_name,
-                canonical_branch=canonical_branch,
-                role_branch=role_branch,
-                recommended_actions=recommended,
-                unattended_safe=unattended_safe,
-                decision_type=args.decision_type,
-                superseded_branch=args.superseded_branch,
-                worktree_hint=args.worktree_hint,
-            )
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue_url,
-            'pr_number': pr_number,
-            'pr_url': pr_url,
-            'branch': branch_name,
-            'to_role': 'techlead',
-            'target_role_cli': None,
-            'decision_type': 'close_slice',
-            'decision_rationale': 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.',
-            'next_assignment_type': None,
-            'work_item_status_update_intent': 'accepted',
-            'canonical_branch': canonical_branch,
-            'role_branch': role_branch,
-            'branch_owner_role': 'TechLead',
-            'lineage_state': 'closed',
-            'lineage_action': 'closed',
-            'source_branch': canonical_branch,
-            'superseded_branch': args.superseded_branch,
-            'worktree_hint': args.worktree_hint,
-            'reset_reason': None,
-            'source_packet_path': source_packet_path,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        closeout_decision_service = DefaultTechLeadCloseoutDecisionService()
+        closeout_decision_request = _build_closeout_decision_request(
+            issue_number=issue_number,
+            issue_url=issue_url,
+            pr_number=pr_number,
+            pr_url=pr_url,
+            workflow_stage=workflow_stage,
+            decision_type=args.decision_type,
+            proof_only_mode=is_proof_only,
+            source_packet_path=source_packet_path,
+            branch_name=branch_name,
+            canonical_branch=canonical_branch,
+        )
+        closeout_decision_result = closeout_decision_service.derive_closeout_decision(
+            closeout_decision_request
+        )
+        return _closeout_decision_result_to_context(
+            result=closeout_decision_result,
+            branch_name=branch_name,
+            canonical_branch=canonical_branch,
+            role_branch=role_branch,
+            recommended_actions=recommended,
+            unattended_safe=unattended_safe,
+            decision_type=args.decision_type,
+            superseded_branch=args.superseded_branch,
+            worktree_hint=args.worktree_hint,
+        )
 
     return {
         'ok': False,

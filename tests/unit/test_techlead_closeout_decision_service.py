@@ -63,6 +63,34 @@ class TechLeadCloseoutDecisionServiceTests(unittest.TestCase):
         self.assertIn('issue #42', result.summary.closeout_decision_summary)
         self.assertEqual(result.summary.notes, ('proof-only-closeout', 'qa-pass'))
 
+    def test_live_closeout_returns_supported_decision(self) -> None:
+        request = TechLeadCloseoutDecisionRequest(
+            project_slug='paa-platform',
+            issue_number=42,
+            issue_url='https://example.test/issues/42',
+            pr_number=77,
+            pr_url='https://example.test/pulls/77',
+            workflow_stage='closed',
+            decision_type='closed',
+            proof_only_mode=False,
+            source_packet_schema_type='qa_verification_packet',
+            source_packet_message_id='msg-456',
+            source_packet_path='handoff/packet.json',
+            branch_name='issue-42-python',
+            canonical_branch='issue-42',
+        )
+
+        result = self.service.derive_closeout_decision(request)
+
+        self.assertTrue(result.ok)
+        self.assertTrue(result.summary.decision_supported)
+        self.assertEqual(result.summary.recommended_next_decision, 'close_slice')
+        self.assertEqual(result.summary.recommended_target_role, 'TechLead')
+        self.assertTrue(result.summary.closeout_allowed)
+        self.assertEqual(result.recommended_actions, ('close_slice',))
+        self.assertEqual(result.summary.notes, ('live-closeout', 'qa-pass'))
+        self.assertTrue(result.unattended_safe)
+
     def test_missing_issue_number_fails_closed(self) -> None:
         request = TechLeadCloseoutDecisionRequest(
             project_slug='paa-platform',
@@ -127,7 +155,7 @@ class TechLeadCloseoutDecisionServiceTests(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertEqual(result.reason, 'unsupported_source_packet_schema')
 
-    def test_proof_only_mode_required_fails_closed(self) -> None:
+    def test_proof_only_mode_false_for_proof_only_stage_fails_closed(self) -> None:
         request = TechLeadCloseoutDecisionRequest(
             project_slug='paa-platform',
             issue_number=42,
@@ -141,7 +169,7 @@ class TechLeadCloseoutDecisionServiceTests(unittest.TestCase):
         result = self.service.derive_closeout_decision(request)
 
         self.assertFalse(result.ok)
-        self.assertEqual(result.reason, 'proof_only_mode_required')
+        self.assertEqual(result.reason, 'unsupported_closeout_decision')
 
     def test_missing_source_packet_fails_closed(self) -> None:
         request = TechLeadCloseoutDecisionRequest(
@@ -207,6 +235,24 @@ class TechLeadCloseoutDecisionServiceTests(unittest.TestCase):
         self.assertTrue(result.metadata['proof_only_mode'])
         self.assertTrue(result.metadata['canonical_branch_supplied'])
 
+    def test_live_closeout_supported_result_carries_live_mode_metadata(self) -> None:
+        request = TechLeadCloseoutDecisionRequest(
+            project_slug='paa-platform',
+            issue_number=42,
+            workflow_stage='closed',
+            decision_type='closed',
+            proof_only_mode=False,
+            source_packet_schema_type='qa_verification_packet',
+            source_packet_path='handoff/packet.json',
+            metadata={'source_queue_name': 'fractal-core-qa'},
+        )
+
+        result = self.service.derive_closeout_decision(request)
+
+        self.assertTrue(result.ok)
+        self.assertFalse(result.metadata['proof_only_mode'])
+        self.assertEqual(result.summary.recommended_next_decision, 'close_slice')
+
     def test_rejected_result_carries_blocking_reasons_and_rejection_timestamp(self) -> None:
         request = TechLeadCloseoutDecisionRequest(
             project_slug='paa-platform',
@@ -245,6 +291,13 @@ class TechLeadCloseoutDecisionServiceTests(unittest.TestCase):
                 'closed',
                 'closed',
                 True,
+            )
+        )
+        self.assertTrue(
+            self.service.supports_closeout_decision(
+                'closed',
+                'closed',
+                False,
             )
         )
 

@@ -229,7 +229,28 @@ class TechLeadSelfHostedTests(unittest.TestCase):
         self.assertEqual(context['work_item_status_update_intent'], 'proof_only_closed')
 
 
-    def test_derive_decision_context_keeps_live_closeout_inline(self):
+    def test_derive_decision_context_uses_service_for_live_closeout(self):
+        captured = {}
+
+        class _CloseoutDecisionService:
+            def derive_closeout_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    recommended_next_decision='close_slice',
+                    closeout_decision_summary='Use the extracted closeout decision service for live closeout.',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    source_packet_path=request.source_packet_path,
+                    summary=summary,
+                )
+
         args = SimpleNamespace(
             repo_root=Path('/tmp/repo'),
             project_slug='fractal-core-python',
@@ -260,10 +281,13 @@ class TechLeadSelfHostedTests(unittest.TestCase):
             'source_packet_path': '/tmp/qa-packet.json',
         }
 
-        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view),              patch('paa_consumer.techlead.DefaultTechLeadCloseoutDecisionService', side_effect=AssertionError('closeout service should not handle live closed path in this slice')):
+        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view),              patch('paa_consumer.techlead.DefaultTechLeadCloseoutDecisionService', return_value=_CloseoutDecisionService()):
             context = techlead.derive_decision_context(args)
 
         self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].workflow_stage, 'closed')
+        self.assertEqual(captured['request'].decision_type, 'closed')
+        self.assertFalse(captured['request'].proof_only_mode)
         self.assertEqual(context['decision_type'], 'close_slice')
         self.assertEqual(context['work_item_status_update_intent'], 'accepted')
         self.assertEqual(context['source_packet_path'], '/tmp/qa-packet.json')

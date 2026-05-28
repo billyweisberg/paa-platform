@@ -33,7 +33,8 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertEqual(payload['extracted_service_count'], 7)
         self.assertEqual(payload['extracted_services'][0]['component_name'], 'TechLeadAssignmentDecisionService')
         remaining_names = {item['name'] for item in payload['remaining_shell_pockets']}
-        self.assertIn('live_closed_closeout_context', remaining_names)
+        self.assertIn('terminal_lineage_override_policy', remaining_names)
+        self.assertNotIn('live_closed_closeout_context', remaining_names)
 
 
 if __name__ == '__main__':
