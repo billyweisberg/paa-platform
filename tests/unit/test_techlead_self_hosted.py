@@ -9,6 +9,265 @@ from paa_consumer import techlead
 
 
 class TechLeadSelfHostedTests(unittest.TestCase):
+    def test_derive_decision_context_uses_service_for_reset_required(self):
+        captured = {}
+
+        class _ResetRecoveryService:
+            def derive_reset_recovery_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    recommended_next_decision='reset_branch',
+                    reset_recovery_summary='Use the extracted reset recovery decision service.',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    source_packet_path=request.source_packet_path,
+                    summary=summary,
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            brief_id_external='brief-1',
+            decision_type='reset_required',
+            source_packet_path=None,
+            canonical_branch=None,
+            role_branch=None,
+            superseded_branch=None,
+            worktree_hint=None,
+            reset_reason=None,
+        )
+
+        lineage_view = {
+            'ok': True,
+            'issue_number': 42,
+            'issue_url': 'https://example.invalid/issues/42',
+            'pr_number': 77,
+            'pr_url': 'https://example.invalid/pulls/77',
+            'workflow_stage': 'dev_reset_required',
+            'recommended_actions': [{'action': 'route_to_python_reset_branch'}],
+            'unattended_safe': False,
+            'lineage': {
+                'canonical_branch': 'issue-42',
+                'active_role_branch': 'issue-42-python',
+            },
+            'source_packet_path': '/tmp/qa-packet.json',
+        }
+
+        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view), \
+             patch('paa_consumer.techlead.load_authority', return_value=({}, {'tasks': []})), \
+             patch('paa_consumer.techlead.github_repo_for_root', return_value='billyweisberg/paa-platform'), \
+             patch('paa_consumer.techlead.load_design_package', return_value={'package_id_external': 'pkg-1'}), \
+             patch('paa_consumer.techlead.resolve_task_summary', return_value={'issue_number': 42, 'task_id': 'task-42'}), \
+             patch('paa_consumer.techlead.queue_state', return_value={}), \
+             patch('paa_consumer.techlead.latest_qa_packet', return_value={'pr_number': 77}), \
+             patch('paa_consumer.techlead.latest_packet_preview', return_value=None), \
+             patch('paa_consumer.techlead.github_state', return_value=(
+                 {'number': 42, 'url': 'https://example.invalid/issues/42'},
+                 {'number': 77, 'url': 'https://example.invalid/pulls/77', 'headRefName': 'issue-42-python'},
+             )), \
+             patch('paa_consumer.techlead.derive_workflow', return_value=(
+                 'dev_reset_required',
+                 'Python Dev',
+                 [{'event_type': 'reset_branch_required', 'summary': 'Reset the branch.', 'details': {'qa_packet_id': 'qa-1'}}],
+                 [{'action': 'route_to_python_reset_branch'}],
+                 False,
+             )), \
+             patch('paa_consumer.techlead.DefaultTechLeadResetRecoveryDecisionService', return_value=_ResetRecoveryService()):
+            context = techlead.derive_decision_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].workflow_stage, 'dev_reset_required')
+        self.assertEqual(captured['request'].lineage_state, 'reset_required')
+        self.assertEqual(captured['request'].reset_escalation_type, 'reset_branch_required')
+        self.assertEqual(context['decision_type'], 'reset_branch')
+        self.assertEqual(context['source_packet_path'], '/tmp/qa-packet.json')
+
+
+    def test_derive_decision_context_uses_service_for_superseded(self):
+        captured = {}
+
+        class _LineageDecisionService:
+            def derive_lineage_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    recommended_next_decision='supersede_branch_lineage',
+                    lineage_decision_summary='Use the extracted lineage decision service.',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    superseded_branch=request.superseded_branch,
+                    source_packet_path=request.source_packet_path,
+                    summary=summary,
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            brief_id_external='brief-1',
+            decision_type='superseded',
+            source_packet_path=None,
+            canonical_branch=None,
+            role_branch=None,
+            superseded_branch=None,
+            worktree_hint='stale-worktree',
+            reset_reason=None,
+        )
+
+        lineage_view = {
+            'ok': True,
+            'issue_number': 42,
+            'issue_url': 'https://example.invalid/issues/42',
+            'pr_number': 77,
+            'pr_url': 'https://example.invalid/pulls/77',
+            'workflow_stage': 'techlead_qa_review_pending',
+            'recommended_actions': [{'action': 'record_superseded_lineage'}],
+            'unattended_safe': False,
+            'lineage': {
+                'canonical_branch': 'issue-42',
+                'active_role_branch': 'issue-42-python',
+            },
+            'source_packet_path': '/tmp/qa-packet.json',
+        }
+
+        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view),              patch('paa_consumer.techlead.load_authority', return_value=({}, {'tasks': []})),              patch('paa_consumer.techlead.github_repo_for_root', return_value='billyweisberg/paa-platform'),              patch('paa_consumer.techlead.load_design_package', return_value={'package_id_external': 'pkg-1'}),              patch('paa_consumer.techlead.resolve_task_summary', return_value={'issue_number': 42, 'task_id': 'task-42'}),              patch('paa_consumer.techlead.queue_state', return_value={}),              patch('paa_consumer.techlead.latest_qa_packet', return_value={'pr_number': 77}),              patch('paa_consumer.techlead.latest_packet_preview', return_value=None),              patch('paa_consumer.techlead.github_state', return_value=(
+                 {'number': 42, 'url': 'https://example.invalid/issues/42'},
+                 {'number': 77, 'url': 'https://example.invalid/pulls/77', 'headRefName': 'issue-42-python'},
+             )),              patch('paa_consumer.techlead.derive_workflow', return_value=(
+                 'techlead_qa_review_pending',
+                 'TechLead',
+                 [{'event_type': 'qa_escalation_superseded', 'summary': 'A newer rework superseded the earlier QA escalation.', 'details': {'superseded_qa_packet_id': 'qa-older'}}],
+                 [{'action': 'record_superseded_lineage'}],
+                 False,
+             )),              patch('paa_consumer.techlead.DefaultTechLeadLineageDecisionService', return_value=_LineageDecisionService()):
+            context = techlead.derive_decision_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].workflow_stage, 'techlead_qa_review_pending')
+        self.assertEqual(captured['request'].lineage_state, 'superseded')
+        self.assertEqual(captured['request'].superseded_escalation_type, 'qa_escalation_superseded')
+        self.assertEqual(context['decision_type'], 'supersede_branch_lineage')
+        self.assertEqual(context['source_packet_path'], '/tmp/qa-packet.json')
+        self.assertEqual(context['superseded_branch'], 'issue-42-python')
+
+
+    def test_derive_decision_context_uses_service_for_proof_only_closeout(self):
+        captured = {}
+
+        class _CloseoutDecisionService:
+            def derive_closeout_decision(self, request):
+                captured['request'] = request
+                summary = SimpleNamespace(
+                    recommended_next_decision='proof_only_close_slice',
+                    closeout_decision_summary='Use the extracted closeout decision service.',
+                )
+                return SimpleNamespace(
+                    ok=True,
+                    workflow_stage=request.workflow_stage,
+                    issue_number=request.issue_number,
+                    issue_url=request.issue_url,
+                    pr_number=request.pr_number,
+                    pr_url=request.pr_url,
+                    branch_name=request.branch_name,
+                    source_packet_path=request.source_packet_path,
+                    summary=summary,
+                )
+
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            brief_id_external='brief-1',
+            decision_type='proof_only_closed',
+            source_packet_path=None,
+            canonical_branch=None,
+            role_branch=None,
+            superseded_branch='issue-42-python-old',
+            worktree_hint='proof-worktree',
+            reset_reason=None,
+        )
+
+        lineage_view = {
+            'ok': True,
+            'issue_number': 42,
+            'issue_url': 'https://example.invalid/issues/42',
+            'pr_number': 77,
+            'pr_url': 'https://example.invalid/pulls/77',
+            'workflow_stage': 'proof_only_closed',
+            'recommended_actions': [{'action': 'record_proof_only_closeout'}],
+            'unattended_safe': True,
+            'lineage': {
+                'canonical_branch': 'issue-42',
+                'active_role_branch': 'issue-42-python',
+            },
+            'source_packet_path': '/tmp/qa-packet.json',
+        }
+
+        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view),              patch('paa_consumer.techlead.DefaultTechLeadCloseoutDecisionService', return_value=_CloseoutDecisionService()):
+            context = techlead.derive_decision_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(captured['request'].workflow_stage, 'proof_only_closed')
+        self.assertEqual(captured['request'].decision_type, 'proof_only_closed')
+        self.assertTrue(captured['request'].proof_only_mode)
+        self.assertEqual(context['decision_type'], 'proof_only_close_slice')
+        self.assertEqual(context['source_packet_path'], '/tmp/qa-packet.json')
+        self.assertEqual(context['work_item_status_update_intent'], 'proof_only_closed')
+
+
+    def test_derive_decision_context_keeps_live_closeout_inline(self):
+        args = SimpleNamespace(
+            repo_root=Path('/tmp/repo'),
+            project_slug='fractal-core-python',
+            package_id_external='pkg-1',
+            brief_id_external='brief-1',
+            decision_type='closed',
+            source_packet_path=None,
+            canonical_branch=None,
+            role_branch=None,
+            superseded_branch=None,
+            worktree_hint='live-closeout-worktree',
+            reset_reason=None,
+        )
+
+        lineage_view = {
+            'ok': True,
+            'issue_number': 42,
+            'issue_url': 'https://example.invalid/issues/42',
+            'pr_number': 77,
+            'pr_url': 'https://example.invalid/pulls/77',
+            'workflow_stage': 'closed',
+            'recommended_actions': [{'action': 'record_live_closeout'}],
+            'unattended_safe': True,
+            'lineage': {
+                'canonical_branch': 'issue-42',
+                'active_role_branch': 'issue-42-python',
+            },
+            'source_packet_path': '/tmp/qa-packet.json',
+        }
+
+        with patch('paa_consumer.techlead.build_lineage_view', return_value=lineage_view),              patch('paa_consumer.techlead.DefaultTechLeadCloseoutDecisionService', side_effect=AssertionError('closeout service should not handle live closed path in this slice')):
+            context = techlead.derive_decision_context(args)
+
+        self.assertTrue(context['ok'])
+        self.assertEqual(context['decision_type'], 'close_slice')
+        self.assertEqual(context['work_item_status_update_intent'], 'accepted')
+        self.assertEqual(context['source_packet_path'], '/tmp/qa-packet.json')
+
     def test_derive_next_assignment_context_uses_service_for_delivery_review(self):
         captured = {}
         source_packet = {

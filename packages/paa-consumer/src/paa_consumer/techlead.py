@@ -31,9 +31,21 @@ from paa_core.services.techlead_acceptance_decision import (
     DefaultTechLeadAcceptanceDecisionService,
     TechLeadAcceptanceDecisionRequest,
 )
+from paa_core.services.techlead_closeout_decision import (
+    DefaultTechLeadCloseoutDecisionService,
+    TechLeadCloseoutDecisionRequest,
+)
 from paa_core.services.techlead_delivery_review_decision import (
     DefaultTechLeadDeliveryReviewDecisionService,
     TechLeadDeliveryReviewDecisionRequest,
+)
+from paa_core.services.techlead_reset_recovery_decision import (
+    DefaultTechLeadResetRecoveryDecisionService,
+    TechLeadResetRecoveryDecisionRequest,
+)
+from paa_core.services.techlead_lineage_decision import (
+    DefaultTechLeadLineageDecisionService,
+    TechLeadLineageDecisionRequest,
 )
 from paa_core.services.techlead_worker_review_routing import (
     DefaultTechLeadWorkerReviewRoutingService,
@@ -2883,6 +2895,256 @@ def _delivery_review_result_to_context(
     }
 
 
+def _build_reset_recovery_decision_request(
+    *,
+    issue_number: int,
+    issue_url: str | None,
+    pr_full: dict | None,
+    workflow_stage: str,
+    lineage_state: str,
+    reset_escalation: dict | None,
+    source_packet_path: str | None,
+    branch_name: str,
+    canonical_branch: str,
+    role_branch: str | None,
+) -> TechLeadResetRecoveryDecisionRequest:
+    reset_escalation_type = (reset_escalation or {}).get('event_type')
+    return TechLeadResetRecoveryDecisionRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        issue_url=issue_url,
+        pr_number=pr_full.get('number') if pr_full else None,
+        pr_url=pr_full.get('url') if pr_full else None,
+        workflow_stage=workflow_stage,
+        lineage_state=lineage_state,
+        reset_escalation_type=reset_escalation_type,
+        reset_escalation_summary=(reset_escalation or {}).get('summary'),
+        reset_escalation_details=(reset_escalation or {}).get('details'),
+        source_packet_schema_type='qa_verification_packet' if source_packet_path else None,
+        source_packet_message_id=(reset_escalation or {}).get('details', {}).get('qa_packet_id'),
+        source_packet_path=source_packet_path,
+        branch_name=branch_name,
+        metadata={
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+        },
+    )
+
+
+def _reset_recovery_result_to_context(
+    *,
+    result,
+    issue_number: int,
+    canonical_branch: str,
+    branch_name: str,
+    role_branch: str | None,
+    recommended_actions: list[dict] | None,
+    unattended_safe: bool,
+    reset_reason: str | None,
+    superseded_branch: str | None,
+    worktree_hint: str,
+) -> dict:
+    if not result.ok:
+        return {
+            'ok': False,
+            'workflow_stage': result.workflow_stage,
+            'reason': result.reason,
+            'details': result.details,
+        }
+    return {
+        'ok': True,
+        'workflow_stage': result.workflow_stage,
+        'issue_number': result.issue_number,
+        'issue_url': result.issue_url,
+        'pr_number': result.pr_number,
+        'pr_url': result.pr_url,
+        'branch': result.branch_name or branch_name,
+        'to_role': 'techlead',
+        'target_role_cli': 'python-team',
+        'decision_type': result.summary.recommended_next_decision,
+        'decision_rationale': reset_reason or result.summary.reset_recovery_summary,
+        'next_assignment_type': 'implement_authorized_slice',
+        'work_item_status_update_intent': 'blocked',
+        'canonical_branch': canonical_branch,
+        'role_branch': role_branch,
+        'branch_owner_role': 'TechLead',
+        'lineage_state': 'reset_required',
+        'lineage_action': 'reset',
+        'source_branch': canonical_branch,
+        'superseded_branch': superseded_branch,
+        'worktree_hint': worktree_hint,
+        'reset_reason': reset_reason or result.summary.reset_recovery_summary,
+        'source_packet_path': result.source_packet_path,
+        'recommended_actions': recommended_actions,
+        'unattended_safe': unattended_safe,
+    }
+
+
+
+
+def _build_lineage_decision_request(
+    *,
+    issue_number: int,
+    issue_url: str | None,
+    pr_full: dict | None,
+    workflow_stage: str,
+    lineage_state: str,
+    superseded_escalation: dict | None,
+    source_packet_path: str | None,
+    branch_name: str,
+    superseded_branch: str | None,
+    canonical_branch: str,
+    role_branch: str | None,
+) -> TechLeadLineageDecisionRequest:
+    superseded_escalation_type = (superseded_escalation or {}).get('event_type')
+    return TechLeadLineageDecisionRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        issue_url=issue_url,
+        pr_number=pr_full.get('number') if pr_full else None,
+        pr_url=pr_full.get('url') if pr_full else None,
+        workflow_stage=workflow_stage,
+        lineage_state=lineage_state,
+        superseded_escalation_type=superseded_escalation_type,
+        superseded_escalation_summary=(superseded_escalation or {}).get('summary'),
+        superseded_escalation_details=(superseded_escalation or {}).get('details'),
+        source_packet_schema_type='qa_verification_packet' if source_packet_path else None,
+        source_packet_message_id=(superseded_escalation or {}).get('details', {}).get('superseded_qa_packet_id'),
+        source_packet_path=source_packet_path,
+        branch_name=branch_name,
+        superseded_branch=superseded_branch,
+        metadata={
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+        },
+    )
+
+
+def _lineage_decision_result_to_context(
+    *,
+    result,
+    canonical_branch: str,
+    branch_name: str,
+    role_branch: str | None,
+    recommended_actions: list[dict] | None,
+    unattended_safe: bool,
+    worktree_hint: str | None,
+) -> dict:
+    if not result.ok:
+        return {
+            'ok': False,
+            'workflow_stage': result.workflow_stage,
+            'reason': result.reason,
+            'details': result.details,
+        }
+    return {
+        'ok': True,
+        'workflow_stage': result.workflow_stage,
+        'issue_number': result.issue_number,
+        'issue_url': result.issue_url,
+        'pr_number': result.pr_number,
+        'pr_url': result.pr_url,
+        'branch': result.branch_name or branch_name,
+        'to_role': 'techlead',
+        'target_role_cli': None,
+        'decision_type': result.summary.recommended_next_decision,
+        'decision_rationale': result.summary.lineage_decision_summary,
+        'next_assignment_type': None,
+        'work_item_status_update_intent': 'superseded',
+        'canonical_branch': canonical_branch,
+        'role_branch': role_branch,
+        'branch_owner_role': 'TechLead',
+        'lineage_state': 'superseded',
+        'lineage_action': 'superseded',
+        'source_branch': canonical_branch,
+        'superseded_branch': result.superseded_branch,
+        'worktree_hint': worktree_hint,
+        'reset_reason': None,
+        'source_packet_path': result.source_packet_path,
+        'recommended_actions': recommended_actions,
+        'unattended_safe': unattended_safe,
+    }
+
+
+
+def _build_closeout_decision_request(
+    *,
+    issue_number: int,
+    issue_url: str | None,
+    pr_number: int | None,
+    pr_url: str | None,
+    workflow_stage: str,
+    decision_type: str,
+    proof_only_mode: bool,
+    source_packet_path: str | None,
+    branch_name: str,
+    canonical_branch: str,
+) -> TechLeadCloseoutDecisionRequest:
+    return TechLeadCloseoutDecisionRequest(
+        project_slug=DEFAULT_PROJECT_SLUG,
+        issue_number=issue_number,
+        issue_url=issue_url,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        workflow_stage=workflow_stage,
+        decision_type=decision_type,
+        proof_only_mode=proof_only_mode,
+        source_packet_schema_type='qa_verification_packet' if source_packet_path else None,
+        source_packet_message_id=None,
+        source_packet_path=source_packet_path,
+        branch_name=branch_name,
+        canonical_branch=canonical_branch,
+    )
+
+
+def _closeout_decision_result_to_context(
+    *,
+    result,
+    branch_name: str,
+    canonical_branch: str,
+    role_branch: str | None,
+    recommended_actions: list[dict] | None,
+    unattended_safe: bool,
+    decision_type: str,
+    superseded_branch: str | None,
+    worktree_hint: str | None,
+) -> dict:
+    if not result.ok:
+        return {
+            'ok': False,
+            'workflow_stage': result.workflow_stage,
+            'reason': result.reason,
+            'details': result.details,
+        }
+    is_proof_only = decision_type == 'proof_only_closed'
+    return {
+        'ok': True,
+        'workflow_stage': result.workflow_stage,
+        'issue_number': result.issue_number,
+        'issue_url': result.issue_url,
+        'pr_number': result.pr_number,
+        'pr_url': result.pr_url,
+        'branch': result.branch_name or branch_name,
+        'to_role': 'techlead',
+        'target_role_cli': None,
+        'decision_type': result.summary.recommended_next_decision,
+        'decision_rationale': result.summary.closeout_decision_summary,
+        'next_assignment_type': None,
+        'work_item_status_update_intent': 'proof_only_closed' if is_proof_only else 'accepted',
+        'canonical_branch': canonical_branch,
+        'role_branch': role_branch,
+        'branch_owner_role': 'TechLead',
+        'lineage_state': 'closed',
+        'lineage_action': 'proof_only_closed' if is_proof_only else 'closed',
+        'source_branch': canonical_branch,
+        'superseded_branch': superseded_branch,
+        'worktree_hint': worktree_hint,
+        'reset_reason': None,
+        'source_packet_path': result.source_packet_path,
+        'recommended_actions': recommended_actions,
+        'unattended_safe': unattended_safe,
+    }
+
 def _resolve_worker_review_stage(
     *,
     worker_role: str,
@@ -3309,33 +3571,34 @@ def derive_decision_context(args) -> dict:
             }
         reset_reason = args.reset_reason or (reset_escalation or {}).get('summary') or 'TechLead determined the current lineage requires a clean reset.'
         superseded_branch = args.superseded_branch or role_branch or (branch_name if branch_name != canonical_branch else None)
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue_url,
-            'pr_number': pr_full.get('number') if pr_full else None,
-            'pr_url': pr_full.get('url') if pr_full else None,
-            'branch': branch_name,
-            'to_role': 'techlead',
-            'target_role_cli': 'python-team',
-            'decision_type': 'reset_branch',
-            'decision_rationale': reset_reason,
-            'next_assignment_type': 'implement_authorized_slice',
-            'work_item_status_update_intent': 'blocked',
-            'canonical_branch': canonical_branch,
-            'role_branch': role_branch,
-            'branch_owner_role': 'TechLead',
-            'lineage_state': 'reset_required',
-            'lineage_action': 'reset',
-            'source_branch': canonical_branch,
-            'superseded_branch': superseded_branch,
-            'worktree_hint': args.worktree_hint or f'issue-{issue_number}-dev',
-            'reset_reason': reset_reason,
-            'source_packet_path': source_packet_path,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        reset_recovery_service = DefaultTechLeadResetRecoveryDecisionService()
+        reset_recovery_request = _build_reset_recovery_decision_request(
+            issue_number=issue_number,
+            issue_url=issue_url,
+            pr_full=pr_full,
+            workflow_stage=workflow_stage,
+            lineage_state='reset_required',
+            reset_escalation=reset_escalation,
+            source_packet_path=source_packet_path,
+            branch_name=branch_name,
+            canonical_branch=canonical_branch,
+            role_branch=role_branch,
+        )
+        reset_recovery_result = reset_recovery_service.derive_reset_recovery_decision(
+            reset_recovery_request
+        )
+        return _reset_recovery_result_to_context(
+            result=reset_recovery_result,
+            issue_number=issue_number,
+            canonical_branch=canonical_branch,
+            branch_name=branch_name,
+            role_branch=role_branch,
+            recommended_actions=recommended,
+            unattended_safe=unattended_safe,
+            reset_reason=reset_reason,
+            superseded_branch=superseded_branch,
+            worktree_hint=args.worktree_hint or f'issue-{issue_number}-dev',
+        )
 
     if args.decision_type == 'superseded':
         _current, manifest = load_authority(repo_root)
@@ -3369,34 +3632,32 @@ def derive_decision_context(args) -> dict:
                 'details': 'superseded decision emission requires a source QA packet path.',
             }
         superseded_branch = args.superseded_branch or role_branch or (branch_name if branch_name != canonical_branch else canonical_branch)
-        rationale = args.reset_reason or superseded_escalation.get('summary') or 'TechLead is recording that the prior branch lineage has been superseded.'
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue_url,
-            'pr_number': pr_full.get('number') if pr_full else None,
-            'pr_url': pr_full.get('url') if pr_full else None,
-            'branch': branch_name,
-            'to_role': 'techlead',
-            'target_role_cli': None,
-            'decision_type': 'supersede_branch_lineage',
-            'decision_rationale': rationale,
-            'next_assignment_type': None,
-            'work_item_status_update_intent': 'superseded',
-            'canonical_branch': canonical_branch,
-            'role_branch': role_branch,
-            'branch_owner_role': 'TechLead',
-            'lineage_state': 'superseded',
-            'lineage_action': 'superseded',
-            'source_branch': canonical_branch,
-            'superseded_branch': superseded_branch,
-            'worktree_hint': args.worktree_hint,
-            'reset_reason': None,
-            'source_packet_path': source_packet_path,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
+        lineage_decision_service = DefaultTechLeadLineageDecisionService()
+        lineage_decision_request = _build_lineage_decision_request(
+            issue_number=issue_number,
+            issue_url=issue_url,
+            pr_full=pr_full,
+            workflow_stage=workflow_stage,
+            lineage_state='superseded',
+            superseded_escalation=superseded_escalation,
+            source_packet_path=source_packet_path,
+            branch_name=branch_name,
+            superseded_branch=superseded_branch,
+            canonical_branch=canonical_branch,
+            role_branch=role_branch,
+        )
+        lineage_decision_result = lineage_decision_service.derive_lineage_decision(
+            lineage_decision_request
+        )
+        return _lineage_decision_result_to_context(
+            result=lineage_decision_result,
+            canonical_branch=canonical_branch,
+            branch_name=branch_name,
+            role_branch=role_branch,
+            recommended_actions=recommended,
+            unattended_safe=unattended_safe,
+            worktree_hint=args.worktree_hint,
+        )
 
     if args.decision_type in {'closed', 'proof_only_closed'}:
         if pr_number is None and issue_url is None:
@@ -3414,6 +3675,34 @@ def derive_decision_context(args) -> dict:
                 'details': 'closed decision emission requires an explicit source packet path or a resolved QA packet path.',
             }
         is_proof_only = args.decision_type == 'proof_only_closed'
+        if is_proof_only:
+            closeout_decision_service = DefaultTechLeadCloseoutDecisionService()
+            closeout_decision_request = _build_closeout_decision_request(
+                issue_number=issue_number,
+                issue_url=issue_url,
+                pr_number=pr_number,
+                pr_url=pr_url,
+                workflow_stage=workflow_stage,
+                decision_type=args.decision_type,
+                proof_only_mode=True,
+                source_packet_path=source_packet_path,
+                branch_name=branch_name,
+                canonical_branch=canonical_branch,
+            )
+            closeout_decision_result = closeout_decision_service.derive_closeout_decision(
+                closeout_decision_request
+            )
+            return _closeout_decision_result_to_context(
+                result=closeout_decision_result,
+                branch_name=branch_name,
+                canonical_branch=canonical_branch,
+                role_branch=role_branch,
+                recommended_actions=recommended,
+                unattended_safe=unattended_safe,
+                decision_type=args.decision_type,
+                superseded_branch=args.superseded_branch,
+                worktree_hint=args.worktree_hint,
+            )
         return {
             'ok': True,
             'workflow_stage': workflow_stage,
@@ -3424,19 +3713,15 @@ def derive_decision_context(args) -> dict:
             'branch': branch_name,
             'to_role': 'techlead',
             'target_role_cli': None,
-            'decision_type': 'proof_only_close_slice' if is_proof_only else 'close_slice',
-            'decision_rationale': (
-                'TechLead is recording the proof slice as proof-only closed after QA pass without requiring live merge or issue closure.'
-                if is_proof_only
-                else 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.'
-            ),
+            'decision_type': 'close_slice',
+            'decision_rationale': 'TechLead is recording the branch lineage as closed after the active slice reached merged/closed state.',
             'next_assignment_type': None,
-            'work_item_status_update_intent': 'proof_only_closed' if is_proof_only else 'accepted',
+            'work_item_status_update_intent': 'accepted',
             'canonical_branch': canonical_branch,
             'role_branch': role_branch,
             'branch_owner_role': 'TechLead',
             'lineage_state': 'closed',
-            'lineage_action': 'proof_only_closed' if is_proof_only else 'closed',
+            'lineage_action': 'closed',
             'source_branch': canonical_branch,
             'superseded_branch': args.superseded_branch,
             'worktree_hint': args.worktree_hint,
