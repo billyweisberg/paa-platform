@@ -1,0 +1,207 @@
+Title: PAA CLI Business Object Ownership Map
+Doc-ID: paa-cli-business-object-ownership-map
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-30
+Last-Edited: 2026-05-30
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PAAOperatorCLI
+Domain: operator-cli
+Keywords: paa, cli, business-objects, ownership, host-surface, bridge, downstream, transitional
+Depends-On: 2026-05-30-paa-cli-object-model.md, 2026-05-30-paa-cli-service-injection-and-collaboration-table.md, 2026-05-30-paa-cli-component-relationships-and-dependency-graph-slice.md, 2026-05-13-paa-domain-object-model-and-oo-component-decomposition.md, 2026-05-17-implementation-plan-entity-design.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-30
+Summary: Defines the Stage 1 ownership map for PAA CLI business objects, distinguishing CLI-owned host objects, bridge-only objects, downstream primary-truth objects, and transitional return shapes that must not become permanent CLI truth.
+
+# PAA CLI Business Object Ownership Map
+
+## Purpose
+
+Define the ownership map for the business objects involved in the unified `paa` operator CLI.
+
+This note exists to answer the final Stage 1 object-boundary question for the CLI design package:
+- which objects are truly owned by the CLI host surface?
+- which objects are only bridge objects used to talk to downstream owners?
+- which objects are primary-truth objects already owned elsewhere in PAA?
+- which current transitional module return shapes must not become permanent public CLI truth?
+
+The goal is to prevent the CLI from becoming a new hybrid ownership zone.
+
+## Core Ownership Rule
+
+The CLI is a host surface and operator-facing coordination boundary.
+
+It may own:
+- invocation objects
+- command classification objects
+- rendering objects
+- environment-resolution objects
+- bridge request and bridge result shapes when needed for host-surface coordination
+
+It must not own:
+- workflow truth
+- queue truth
+- implementation-plan truth
+- acceptance truth
+- execution-package truth
+- worker-runtime truth
+- packet transport truth
+- repository persistence truth
+
+## Ownership Classes
+
+This note uses four ownership classes.
+
+### `cli_owned`
+Object is primarily owned by the unified CLI host surface.
+
+### `bridge_only`
+Object exists to translate between the CLI and a downstream owner but is not primary truth itself.
+
+### `downstream_primary_truth`
+Object is authoritative elsewhere in the PAA system and must stay owned there.
+
+### `transitional_shape`
+Object or return shape currently emerges from a module or script surface but should not become the stable public CLI contract.
+
+## CLI-Owned Object Table
+
+| object_name | ownership_class | current_owner | why_it_is_cli_owned | non-ownership warning |
+|---|---|---|---|---|
+| `OperatorCommandFamily` | `cli_owned` | CLI host surface | classifies top-level command namespaces | must not become a downstream policy object |
+| `OperatorCommandRegistration` | `cli_owned` | CLI host surface | controls discoverability and routing | must not absorb business behavior |
+| `OperatorCommand` | `cli_owned` | CLI host surface | normalizes the requested operator action | must not encode downstream domain truth |
+| `OperatorInvocationContext` | `cli_owned` | CLI host surface | captures per-invocation host context | is not workflow or queue state |
+| `OperatorCommandRequest` | `cli_owned` | CLI host surface | central normalized request object for CLI dispatch | must remain host-oriented, not domain-owned |
+| `OperatorCommandResult` | `cli_owned` | CLI host surface | central normalized response object for CLI output and exit-code handling | must not replace downstream result DTOs as their owner |
+| `OperatorFailure` | `cli_owned` | CLI host surface | normalizes blocking and failure outcomes for operators | must not absorb repository or workflow ownership |
+| `OperatorOutputMode` | `cli_owned` | CLI host surface | defines render format selection | presentation only |
+| `OutputSection` | `cli_owned` | CLI host surface | structures rendered output sections | presentation only |
+| `OutputTable` | `cli_owned` | CLI host surface | structures rendered terminal/export tables | presentation only |
+| `OutputMessage` | `cli_owned` | CLI host surface | structures narrative or summary output items | presentation only |
+| `EnvironmentBinding` | `cli_owned` | CLI host surface | normalizes required and optional environment values | not primary config truth |
+| `RepoContext` | `cli_owned` | CLI host surface | normalizes repo-local execution context | not execution-package truth |
+| `CommandCapability` | `cli_owned` | CLI host surface | classifies command risk and execution mode expectations | must not become an acceptance or workflow policy object |
+
+## Bridge-Only Object Table
+
+| object_name | ownership_class | current_owner | bridge_target | why_it_is_bridge_only |
+|---|---|---|---|---|
+| `AuthorityOperationRequest` | `bridge_only` | CLI host surface | authority runtime and future authority-tooling components | translates CLI invocation into authority operations without owning authority truth |
+| `DerivationOperationRequest` | `bridge_only` | CLI host surface | derivation services and current derivation modules | translates CLI invocation into derivation operations without owning plan truth |
+| `PlanningOperationRequest` | `bridge_only` | CLI host surface | `ImplementationPlanProgressService` and related planning owners | translates CLI invocation into planning operations without owning plan state |
+| `WorkerOperationRequest` | `bridge_only` | CLI host surface | current worker-facing shell modules and future worker controllers | carries worker-operation intent without owning runtime execution truth |
+| `QueueOperationRequest` | `bridge_only` | CLI host surface | current queue helpers and future queue runtime controller | carries queue-operation intent without owning queue or packet truth |
+| `VerificationOperationRequest` | `bridge_only` | CLI host surface | verification scripts, runtime guardrails, future verification subsystem | carries verification intent without owning evidence truth |
+| `AcceptanceOperationRequest` | `bridge_only` | CLI host surface | current acceptance shell paths and future governed acceptance/runtime controllers | carries acceptance intent without owning acceptance truth |
+| `ReportingOperationRequest` | `bridge_only` | CLI host surface | repository-backed reporting surfaces and future reporting subsystem | carries reporting intent without owning projected truth |
+| `OpsOperationRequest` | `bridge_only` | CLI host surface | runtime guardrails, install/bootstrap helpers, future ops subsystem | carries ops intent without owning operational truth |
+
+## Downstream Primary-Truth Object Table
+
+| object_name | ownership_class | current_owner | why_cli_must_not_own_it | allowed_cli_behavior |
+|---|---|---|---|---|
+| `Project` | `downstream_primary_truth` | PAA domain model | top-level namespace truth belongs to the domain model | reference and render |
+| `WorkItem` | `downstream_primary_truth` | PAA domain model | work-item lifecycle and identity truth belongs to the runtime/domain system | reference and render |
+| `Workflow` | `downstream_primary_truth` | workflow subsystem | authoritative lifecycle state must stay outside the CLI | request, inspect, render |
+| `WorkflowTransition` | `downstream_primary_truth` | workflow subsystem | transition history is not a CLI-owned record family | inspect and render |
+| `QueueClaim` | `downstream_primary_truth` | queue/runtime subsystem | queue-claim lifecycle belongs to runtime transport support state | inspect and request actions over it |
+| `HandoffPacket` | `downstream_primary_truth` | runtime/transport subsystem | packet truth is transport context, not CLI truth | inspect, validate, and route through adapters |
+| `HandoffRecord` | `downstream_primary_truth` | runtime-event subsystem | durable transport evidence belongs to runtime-event truth | inspect and render |
+| `AutomationRun` | `downstream_primary_truth` | runtime-event subsystem | execution history belongs to runtime truth and worker controllers | inspect and render |
+| `AcceptanceEvent` | `downstream_primary_truth` | acceptance/runtime subsystem | acceptance records are durable downstream truth | inspect and render |
+| `InstalledExecutionPackage` | `downstream_primary_truth` | execution-package subsystem | install truth belongs to execution-package ownership | inspect and resolve |
+| `PublishedExecutionPackage` | `downstream_primary_truth` | producer publication subsystem | publication truth belongs to publication/runtime package owners | inspect and render |
+| `ExecutionOverlay` | `downstream_primary_truth` | execution-package subsystem | overlay activation truth belongs to execution package ownership | inspect and render |
+| `ImplementationPlan` | `downstream_primary_truth` | planning subsystem | plan truth is a first-class planning object, not a CLI record | inspect, derive actions, render |
+| `ImplementationPlanActivity` | `downstream_primary_truth` | planning subsystem | activity truth belongs to implementation planning | inspect and render |
+| `ImplementationPlanArtifact` | `downstream_primary_truth` | planning subsystem | artifact-plan truth belongs to planning and target modeling | inspect and render |
+| `ImplementationPlanActivityDependency` | `downstream_primary_truth` | planning subsystem | dependency truth belongs to plan sequencing | inspect and render |
+| `ImplementationPlanVerificationSurface` | `downstream_primary_truth` | planning subsystem | verification-surface truth belongs to planning and proof design | inspect and render |
+| `ImplementationPlanApproval` | `downstream_primary_truth` | planning/governance subsystem | approval truth belongs downstream from planning review | inspect and render |
+| TechLead decision-service request/result DTO families | `downstream_primary_truth` | TechLead governed service family | those DTOs belong to their respective services and should stay stable independently of the CLI | inspect, map, and summarize |
+
+## Transitional Shape Warning Table
+
+| current_shape_source | ownership_class | current_owner | why_it_is_dangerous | required_rule |
+|---|---|---|---|---|
+| ad hoc dicts or print-oriented return shapes from producer modules | `transitional_shape` | producer module family | they can freeze incidental script structure into the future CLI contract | wrap in bridge adapters and normalize into `OperatorCommandResult` |
+| ad hoc dicts or print-oriented return shapes from consumer modules | `transitional_shape` | consumer module family | they can leak shell/runtime quirks into permanent CLI semantics | wrap in bridge adapters and normalize into `OperatorCommandResult` |
+| direct script stdout from governance proof scripts | `transitional_shape` | governance scripts | it is useful operationally but is not a stable object contract | capture, classify, and normalize before rendering |
+| direct shell-oriented output from `techlead.py` command surfaces | `transitional_shape` | consumer module family | it reflects transitional shell ownership and should not define the final CLI API | convert to bridge results, then normalize |
+| transient queue helper return values from `inbox.py` | `transitional_shape` | consumer module family | these may reflect current queue-helper assumptions instead of durable runtime contracts | treat as temporary adapter outputs only |
+
+## Ownership Boundary Table By CLI Node
+
+| cli_node | owned_objects | bridge_objects | downstream_primary_truth_objects |
+|---|---|---|---|
+| `PAAOperatorCLI` | `OperatorCommandRequest`, `OperatorCommandResult`, `OperatorFailure` | none directly | none directly |
+| `EnvironmentResolver` | `EnvironmentBinding`, `RepoContext` | none directly | may read execution-package or config context indirectly but does not own it |
+| `CommandRouter` | `OperatorCommandFamily`, `OperatorCommandRegistration`, `OperatorCommand` | none directly | none |
+| `CommandResultNormalizer` | normalized `OperatorCommandResult`, `OutputSection`, `OutputTable`, `OutputMessage` | may consume bridge results from family adapters | must not own downstream result DTOs |
+| `AuthorityCommandAdapter` | none primary | `AuthorityOperationRequest` | authority publication/install and source-authority truth remain downstream |
+| `DeriveCommandAdapter` | none primary | `DerivationOperationRequest` | `ImplementationPlan`, materialization, design-package, and brief truths remain downstream |
+| `PlanCommandAdapter` | none primary | `PlanningOperationRequest` | `ImplementationPlan*` truth remains downstream |
+| `WorkerCommandAdapter` | none primary | `WorkerOperationRequest` | workflow, queue, worker-runtime, and decision-service truths remain downstream |
+| `QueueCommandAdapter` | none primary | `QueueOperationRequest` | queue claims, packets, and runtime-event truths remain downstream |
+| `VerificationCommandAdapter` | none primary | `VerificationOperationRequest` | verification evidence and proof outputs remain downstream |
+| `AcceptanceCommandAdapter` | none primary | `AcceptanceOperationRequest` | workflow, acceptance, merge, and closeout truths remain downstream |
+| `ReportingCommandAdapter` | none primary | `ReportingOperationRequest` | repository-backed projections and durable runtime truths remain downstream |
+| `OpsCommandAdapter` | none primary | `OpsOperationRequest` | installation, guardrail, and runtime operational truths remain downstream |
+| `OutputRenderer` | final rendered `OutputSection`, `OutputTable`, `OutputMessage` ordering and formatting | none directly | never owns the structured payload or downstream truth |
+
+## Ownership Rules
+
+### Rule 1. CLI-owned objects are host-surface only
+If an object exists primarily to:
+- parse,
+- normalize,
+- route,
+- render, or
+- summarize
+
+then it is a good CLI-owned candidate.
+
+### Rule 2. Bridge objects must not become primary truth
+Bridge objects may be stable and important.
+But they must remain request/translation structures rather than durable truth owners.
+
+### Rule 3. Downstream truth must stay downstream
+If a downstream service, repository, or runtime subsystem already owns the truth object, the CLI should:
+- inspect it,
+- summarize it,
+- request operations over it,
+- or render it,
+
+but not redefine or absorb it.
+
+### Rule 4. Transitional shapes are migration hazards
+If a current producer or consumer command returns ad hoc shapes, those shapes must be considered migration hazards until they are normalized behind explicit bridge and result objects.
+
+### Rule 5. Rendering is not ownership of business truth
+The CLI may present almost any downstream object.
+That does not make the CLI its owner.
+
+## Practical Consequences
+
+This ownership map implies:
+1. the revised `PAAOperatorCLI` component spec should use the CLI-owned and bridge-only objects from this map rather than vague DTO language
+2. first-slice implementation should normalize current module-backed return shapes immediately instead of letting them leak into the public CLI surface
+3. future `TechLeadWorkerService`, `DevWorkerService`, `QAWorkerService`, and `QueuePacketRuntimeController` design work should preserve this ownership split so runtime controllers own runtime truth and the CLI remains a host surface
+
+## Design Conclusion
+
+The unified CLI is a real application boundary.
+But it is not a new system of record.
+
+Its job is to:
+- own invocation and rendering
+- normalize operator requests and results
+- coordinate with modeled owners
+- expose the methodology as an operable system
+
+Its job is not to absorb planning, runtime, queue, or acceptance truth into a new shell-centric object model.

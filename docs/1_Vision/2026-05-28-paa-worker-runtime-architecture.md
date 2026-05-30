@@ -1,0 +1,232 @@
+Title: PAA Worker Runtime Architecture
+Doc-ID: paa-worker-runtime-architecture
+Doc-Type: vision
+Status: active
+Lifecycle-Stage: vision
+Created: 2026-05-28
+Last-Edited: 2026-05-28
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PAAWorkerRuntime
+Domain: runtime-workers
+Keywords: paa, worker, runtime, queue, techlead, qa, dev, orchestration, agent-oriented-architecture, microsoft-agent-framework
+Depends-On: 2026-05-28-paa-authority-stack-and-operator-architecture.md
+Supersedes: 
+Superseded-By: 
+Canonical: true
+Review-After: 2026-06-25
+Owners: 
+Expires: 
+Issue: 
+PR: 
+Authority-Source: 
+Implementation-Status: 
+Summary: Defines the worker-runtime architecture for PAA, including role-based worker shells, injected services, queue orchestration boundaries, and bounded Microsoft Agent Framework execution for worker roles.
+
+# PAA Worker Runtime Architecture
+
+## Vision Marker
+
+This document is a Vision-layer authority document.
+
+It defines the intended runtime shape for PAA worker services.
+
+## Core Goal
+
+PAA worker services must become the runtime automation layer that executes authority-driven work through queue-based orchestration.
+
+The worker runtime must support at least:
+- TechLead / Architect-style orchestration workers
+- Dev execution worker-host programs
+- QA verification worker-host programs
+
+The runtime model is agent-oriented, not Codex-Automation-oriented.
+
+## Architectural Principle
+
+Workers should be thin orchestration shells around injected decision and lifecycle services.
+
+Workers should not become new monoliths.
+
+For model-driven roles, a worker should host one bounded agent run instead of embedding long-lived hidden automation state.
+
+### Worker shell ownership
+A worker shell should own:
+- queue receive / claim / ack behavior
+- packet parsing and validation
+- runtime context loading
+- dependency injection and service composition
+- agent creation and one-shot invocation wrapping where applicable
+- result normalization back into PAA packet/model truth
+- side-effect orchestration
+- retry and failure policy
+- runtime diagnostics and health reporting
+
+### Injected service ownership
+Injected services should own:
+- decision derivation
+- supported-path classification
+- structured DTO and result surfaces
+- fail-closed unsupported-path behavior
+- narrow policy logic that should be testable outside the runtime shell
+
+### Agent-host ownership
+An agent-host program should own only:
+- translating one claimed packet into a bounded agent context
+- creating one agent instance
+- invoking one run
+- collecting raw outputs
+- normalizing those outputs into deterministic result structures or packets
+
+An agent-host program must not become the authority system of record.
+
+## Initial Worker Families
+
+### `TechLeadWorkerService`
+Purpose:
+- act as the orchestration hub for assignment, review routing, acceptance, lineage, reset, delivery-review, and closeout decisions
+
+Runtime character:
+- deterministic controller
+- queue-driven orchestrator
+- primary policy hub
+- not the main LLM reasoning surface
+
+Expected collaborators:
+- assignment decision service
+- worker review routing service
+- acceptance decision service
+- delivery review decision service
+- reset recovery decision service
+- lineage decision service
+- closeout decision service
+- workflow / lifecycle services
+- packet emission and validation services
+- GitHub and queue adapters
+
+### `DevWorkerService`
+Purpose:
+- execute assigned implementation slices against code authority and brief/package truth through a bounded agent-host run
+
+Expected collaborators:
+- brief/package loaders
+- workspace preparation services
+- execution orchestration services
+- result packet assembler
+- local proof and test runners
+- Microsoft Agent Framework agent factory and run wrapper
+
+### `QAWorkerService`
+Purpose:
+- validate delivered slices against required checks and produce authoritative verification results through a bounded agent-host run when model reasoning is needed
+
+Expected collaborators:
+- verification services
+- proof collectors
+- parity/tolerance check runners when required
+- QA packet assembly services
+- Microsoft Agent Framework agent factory and run wrapper
+
+## Dispatch Model
+
+The first worker runtime should prefer:
+- packet-type-first dispatch
+- workflow-aware handler selection inside packet families
+
+This is easier to reason about than a purely stage-first global router.
+
+For Dev and QA roles, packet dispatch should terminate in:
+- one worker-host program
+- one context assembly pass
+- one agent invocation
+- one normalized result publication
+
+## Injection Model
+
+Prefer explicit constructor injection first.
+
+Reasons:
+- simpler to test
+- easier to audit dependencies
+- lower risk than introducing a large container too early
+
+A small container may be added later if the service graph becomes too repetitive.
+
+## Agent Execution Model
+
+Use Microsoft Agent Framework as the agent execution substrate for Dev and QA worker-host programs.
+
+Preferred model:
+1. claim one packet
+2. build bounded execution context
+3. create one agent instance
+4. invoke one run
+5. collect raw result
+6. normalize result into deterministic PAA structures
+7. publish result packet
+8. acknowledge or fail closed
+
+This preserves testability and isolates agent uncertainty from authority truth.
+
+## Runtime State Rules
+
+Workers must preserve the authority stack separation.
+
+They must distinguish:
+- source authority
+- operational authority
+- runtime execution state
+
+A worker may read all three, but it must not silently rewrite published authority from runtime state alone.
+
+Agent memory or framework state must not replace:
+- published authority
+- implementation-plan truth
+- queue packet truth
+- verification records
+
+## Failure Rules
+
+Workers must fail closed when:
+- required authority is missing
+- packet schema is invalid
+- queue packet and runtime context disagree materially
+- required service dependencies are unavailable
+- verification or acceptance preconditions are not satisfied
+- agent invocation fails or produces non-normalizable output
+
+## Observability Requirements
+
+Workers must surface:
+- queue identity
+- claimed packet identity
+- handler chosen
+- service decision result
+- emitted packet identity
+- final ack or rejection reason
+- retry or dead-letter reason
+- agent-host invocation boundary and normalized-result status
+
+## Near-Term Runtime Objective
+
+The first concrete worker implementation target should be:
+- `TechLeadWorkerService`
+
+Reason:
+- the decision layer for TechLead is now largely extracted and proven
+- it is the clearest hub-and-spoke runtime candidate
+- it provides the most leverage for automation
+
+The first downstream agent-host runtime targets should then be:
+- `DevWorkerService`
+- `QAWorkerService`
+
+## Non-Goals
+
+This document does not define:
+- concrete queue library selection
+- exact process-host implementation for Microsoft Agent Framework
+- exact deployment topology
+- exact process supervision strategy
+
+Those belong in Design and Build artifacts.
