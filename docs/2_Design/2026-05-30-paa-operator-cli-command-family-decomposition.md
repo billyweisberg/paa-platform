@@ -1,0 +1,206 @@
+Title: PAA Operator CLI Command Family Decomposition
+Doc-ID: paa-operator-cli-command-family-decomposition
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-30
+Last-Edited: 2026-05-30
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PAAOperatorCLI
+Domain: operator-cli
+Keywords: paa, cli, command-family, decomposition, lane, typer, adapters
+Depends-On: 2026-05-28-paa-cli-system-architecture.md, 2026-05-30-paa-methodology-execution-state-model.md, 2026-05-30-paa-methodology-lane-and-command-model.md, 2026-05-30-paa-cli-node-diagram.md, 2026-05-30-paa-cli-service-injection-and-collaboration-table.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-30
+Summary: Decomposes PAAOperatorCLI into lane-aware command families, host-support collaborators, and first-slice implementation bands so the real Typer CLI can be built without command-lane ambiguity.
+
+# PAA Operator CLI Command Family Decomposition
+
+## Purpose
+
+Define the internal command-family decomposition for `PAAOperatorCLI` after the methodology lane model was made explicit.
+
+This note answers:
+- which command families belong to which lane
+- which families are strongest for the first real implementation slice
+- which adapter surfaces should exist inside the CLI host boundary
+- which families should wait until downstream runtime controllers are more mature
+
+## Core Decision
+
+`PAAOperatorCLI` should not expose one ambiguous derivation bucket.
+
+Instead, its command-family decomposition should mirror methodology lanes and stable collaborator ownership.
+
+That means the CLI root should compose a stable host surface over a set of lane-aware command-family adapters.
+
+## Host Surface Decomposition
+
+The root CLI host remains responsible for:
+- environment resolution
+- command routing
+- result normalization
+- output rendering
+- command registration
+- structured diagnostics
+
+These stay shared across all command families.
+
+## Command Family Set
+
+### Authority lane families
+
+| command_family | lane | primary purpose | current owner strength |
+|---|---|---|---|
+| `authority` | `authority_derivation` | inspect, sync, lint, diff, and validate governed authority | medium |
+| `package` | `authority_derivation` | derive and inspect Stage 1 design-package truth | medium |
+| `readiness` | `authority_derivation` | evaluate and inspect derivation-entry readiness | medium |
+| `brief` | `authority_derivation` | assemble, target, review, and inspect coder-brief authority | medium |
+| `packet` | `authority_derivation` | prepare and inspect transport-ready execution authority | medium |
+
+### Component-realization lane families
+
+| command_family | lane | primary purpose | current owner strength |
+|---|---|---|---|
+| `component` | `component_realization` | materialize governed component specs, inspect progress, reconcile, derive next slice, and complete activities | strong |
+| `plan` | `component_realization` | inspect and project implementation-plan truth and dependency progress | strong |
+
+### Runtime-execution lane families
+
+| command_family | lane | primary purpose | current owner strength |
+|---|---|---|---|
+| `worker` | `runtime_execution` | run and inspect bounded worker-host invocations | weak-to-medium |
+| `queue` | `runtime_execution` | inspect, preview, claim, ack, and resend queue work | weak-to-medium |
+
+### Acceptance-closeout lane families
+
+| command_family | lane | primary purpose | current owner strength |
+|---|---|---|---|
+| `verify` | `acceptance_closeout` | run and inspect proof and verification flows | medium |
+| `accept` | `acceptance_closeout` | review, accept, reject, and close work transitions | weak-to-medium |
+| `report` | `acceptance_closeout` | project current methodology and runtime truth to operators | medium |
+
+### Cross-lane family
+
+| command_family | lane | primary purpose | current owner strength |
+|---|---|---|---|
+| `ops` | `cross_lane` | diagnose, reconcile, and repair environment or system state | medium |
+
+## Adapter Decomposition
+
+The CLI should expose one adapter surface per command family.
+
+### Stable adapter set
+- `AuthorityCommandAdapter`
+- `PackageCommandAdapter`
+- `ReadinessCommandAdapter`
+- `BriefCommandAdapter`
+- `PacketCommandAdapter`
+- `ComponentCommandAdapter`
+- `PlanCommandAdapter`
+- `WorkerCommandAdapter`
+- `QueueCommandAdapter`
+- `VerificationCommandAdapter`
+- `AcceptanceCommandAdapter`
+- `ReportingCommandAdapter`
+- `OpsCommandAdapter`
+
+## Adapter Strength Assessment
+
+### Strongest first-slice adapters
+
+These are the best initial implementation targets because modeled ownership is already strong and the command semantics are close to existing proofed producer surfaces.
+
+1. `ComponentCommandAdapter`
+2. `PlanCommandAdapter`
+
+Why:
+- they align directly to the component-realization loop we already proved
+- they consume stable implementation-plan progress and successor-derivation semantics
+- they support the immediate need to operate `PAAOperatorCLI` as a governed component
+
+### Second-band adapters
+
+These should follow after the first slice:
+1. `AuthorityCommandAdapter`
+2. `PackageCommandAdapter`
+3. `ReadinessCommandAdapter`
+4. `ReportingCommandAdapter`
+
+Why:
+- they are meaningful and operator-facing
+- they sit on real producer-side derivation authority
+- they still involve some transitional module-backed collaborators
+
+### Later adapters
+
+These should wait until more downstream controller boundaries are explicit:
+1. `BriefCommandAdapter`
+2. `PacketCommandAdapter`
+3. `VerificationCommandAdapter`
+4. `OpsCommandAdapter`
+5. `WorkerCommandAdapter`
+6. `QueueCommandAdapter`
+7. `AcceptanceCommandAdapter`
+
+Why:
+- they either depend on still-transitional runtime shells
+- or they should align with later methodology-execution pointer work before freezing their surface
+
+## First Real CLI Slice
+
+The first real implementation slice should not try to cover all command families.
+
+The first meaningful band should be:
+- `component`
+- `plan`
+
+And one operator-facing current-pointer projection should begin alongside them, likely under:
+- `report status`
+- or later `status` once the root grammar is settled
+
+## Initial Command Inventory For The First Slice
+
+### `paa component`
+Initial subcommands:
+- `materialize`
+- `progress`
+- `reconcile`
+- `next`
+
+### `paa plan`
+Initial subcommands:
+- `progress`
+- `inspect`
+
+### `paa report`
+Initial subcommands for the first pointer-friendly surface:
+- `status`
+
+Important rule:
+- the first `report status` surface may be transitional and project current truth from implementation-plan progress plus available bindings
+- it should later migrate to `MethodologyExecutionProjection` once that model is implemented
+
+## Boundary Impact On `PAAOperatorCLI`
+
+This decomposition implies that `PAAOperatorCLI` should make command-family adapters more explicit than a single generic `operator_cli_command_adapters` bucket.
+
+At minimum, the component spec should acknowledge:
+- authority-derivation adapter family
+- component-realization adapter family
+- runtime-execution adapter family
+- acceptance-closeout adapter family
+- cross-lane ops adapter family
+
+It does not necessarily require one realization file per family in the first slice, but it should make the family boundaries explicit.
+
+## Success Condition
+
+This decomposition is successful when:
+- the CLI grammar mirrors methodology lanes
+- the first implementation slice has a narrow and strong target set
+- the operator can tell which family is appropriate without internal repo knowledge
+- later command preflight can map command family to lane and current-step truth without redesigning the CLI root

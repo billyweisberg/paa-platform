@@ -9,8 +9,8 @@ Author: Billy Weisberg
 Repo: paa-platform
 Component: PAAOperatorCLI
 Domain: operator-cli
-Keywords: paa, cli, typer, operator, authority, derive, plan, worker, queue, verify, accept, report, ops
-Depends-On: 2026-05-28-paa-cli-system-architecture.md, 2026-05-28-paa-authority-stack-and-operator-architecture.md, 2026-05-28-paa-operator-system-implementation-plan.md, 2026-05-30-paa-cli-command-inventory-and-migration-map.md, 2026-05-30-paa-modeled-ownership-inventory.md, 2026-05-30-paa-cli-node-diagram.md, 2026-05-30-paa-cli-object-model.md, 2026-05-30-paa-cli-component-relationships-and-dependency-graph-slice.md, 2026-05-30-paa-cli-service-injection-and-collaboration-table.md, 2026-05-30-paa-cli-business-object-ownership-map.md
+Keywords: paa, cli, typer, operator, authority, package, readiness, brief, packet, plan, component, worker, queue, verify, accept, report, ops
+Depends-On: 2026-05-28-paa-cli-system-architecture.md, 2026-05-28-paa-authority-stack-and-operator-architecture.md, 2026-05-28-paa-operator-system-implementation-plan.md, 2026-05-30-paa-cli-command-inventory-and-migration-map.md, 2026-05-30-paa-modeled-ownership-inventory.md, 2026-05-30-paa-cli-node-diagram.md, 2026-05-30-paa-cli-object-model.md, 2026-05-30-paa-cli-component-relationships-and-dependency-graph-slice.md, 2026-05-30-paa-cli-service-injection-and-collaboration-table.md, 2026-05-30-paa-cli-business-object-ownership-map.md, 2026-05-30-paa-methodology-execution-state-model.md, 2026-05-30-paa-methodology-lane-and-command-model.md, 2026-05-30-paa-operator-cli-command-family-decomposition.md
 Supersedes:
 Superseded-By:
 Canonical: true
@@ -55,6 +55,9 @@ Read alongside:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-cli-component-relationships-and-dependency-graph-slice.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-cli-service-injection-and-collaboration-table.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-cli-business-object-ownership-map.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-execution-state-model.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-lane-and-command-model.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-operator-cli-command-family-decomposition.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/component-spec-template-materialization-bridge.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-27-component-realization-loop.md`
 
@@ -91,7 +94,7 @@ Authority boundary:
 - owns top-level command-family grammar and command registration
 - owns CLI host-surface objects such as command identity, invocation context, normalized command requests, normalized command results, failures, and render structures
 - owns operator-facing argument normalization and output-shape normalization
-- owns lifecycle-oriented command grouping across authority, derive, plan, worker, queue, verify, accept, report, and ops
+- owns lifecycle-oriented command grouping across authority-derivation, component-realization, runtime-execution, acceptance-closeout, and cross-lane ops families
 - owns fail-closed operator error surfacing when required authority or runtime context is missing
 - owns JSON and table output shaping for operator-safe command results
 - owns thin adapter dispatch into existing producer, consumer, and core capabilities
@@ -109,8 +112,12 @@ Owned responsibilities:
 - top-level `paa` command root
 - command-family registration for:
   - `authority`
-  - `derive`
+  - `package`
+  - `readiness`
+  - `brief`
+  - `packet`
   - `plan`
+  - `component`
   - `worker`
   - `queue`
   - `verify`
@@ -167,7 +174,7 @@ Excluded responsibilities:
 | operator_cli_command_router | implementation | family and subcommand dispatch over registered command adapters | PAAOperatorCLI |
 | operator_cli_result_normalization | implementation | normalization of adapter and collaborator outputs into stable CLI-owned result objects | PAAOperatorCLI |
 | operator_cli_output_rendering | implementation | JSON, table, and summary rendering of normalized command results | PAAOperatorCLI |
-| operator_cli_command_adapters | implementation | thin lifecycle-family adapters that translate normalized operator requests into governed services or transitional collaborators | PAAOperatorCLI |
+| operator_cli_command_adapters | implementation | thin lane-aware command-family adapters that translate normalized operator requests into governed services or transitional collaborators | PAAOperatorCLI |
 | operator_cli_typer_shell | implementation | Typer root application that composes host-support collaborators and registered command-family adapters | PAAOperatorCLI |
 | operator_cli_validation_surface | verification-surface | tests and governed proofs covering grammar stability, object ownership, fail-closed behavior, and command-to-owner mapping | PAAOperatorCLI |
 
@@ -204,7 +211,7 @@ It may observe or route to persistent truth through existing repositories and se
 During one invocation, the component may hold:
 - parsed argv and environment-derived options
 - normalized `OperatorCommand`, `OperatorInvocationContext`, and `OperatorCommandRequest` objects
-- selected command-family registration state
+- selected command-family registration state, including lane-aware family bindings
 - bridge-only operation request objects for the selected command family
 - structured `OperatorCommandResult`, `OperatorFailure`, `OutputSection`, `OutputTable`, and `OutputMessage` objects
 - formatting mode and output-buffer state
@@ -356,8 +363,12 @@ It should not require command adapters or tests to reconstruct meaning from ad h
 
 ### Required command-family adapter surfaces
 - authority command adapter surface
-- derive command adapter surface
+- package command adapter surface
+- readiness command adapter surface
+- brief command adapter surface
+- packet command adapter surface
 - plan command adapter surface
+- component command adapter surface
 - worker command adapter surface
 - queue command adapter surface
 - verification command adapter surface
@@ -399,8 +410,12 @@ If those become necessary, the component boundary should be reconsidered.
 ### Required interfaces
 - host-support interface set for environment resolution, routing, normalization, and rendering
 - authority command-adapter interface
-- derive command-adapter interface
+- package command-adapter interface
+- readiness command-adapter interface
+- brief command-adapter interface
+- packet command-adapter interface
 - plan command-adapter interface
+- component command-adapter interface
 - worker command-adapter interface
 - queue command-adapter interface
 - verification command-adapter interface
@@ -416,7 +431,7 @@ If those become necessary, the component boundary should be reconsidered.
 - command-family names must align with `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/1_Vision/2026-05-28-paa-cli-system-architecture.md`
 - the CLI must preserve fail-closed authority behavior
 - the first slice must consolidate existing capabilities rather than reimplement them from scratch
-- the first slice should start where modeled ownership is strongest, especially `plan` and `derive`, before worker and queue-heavy families
+- the first slice should start where modeled ownership is strongest, especially `component` and `plan`, before worker and queue-heavy families
 - command handlers must remain thin and delegate to modeled owners or adapters
 - JSON output must remain stable enough for automation consumers
 
@@ -439,7 +454,7 @@ If those become necessary, the component boundary should be reconsidered.
 | operator-cli-interface-contract | Implement operator CLI interface contract | 10 | contract-authoring | operator_cli_interface | service_interface | interface protocol exists and reflects CLI-owned versus bridge-only ownership boundaries |
 | operator-cli-dto-models | Implement operator CLI DTO and bridge request models | 20 | dto-materialization | operator_cli_models | dto | CLI-owned invocation/result/failure/output DTOs and bridge-only operation request DTOs exist and align to the ownership map |
 | operator-cli-host-support | Implement environment resolution, routing, normalization, and rendering host-support nodes | 30 | service-implementation | operator_cli_environment_resolution | service_implementation | host-support modules exist for environment resolution, routing, normalization, and rendering, and the root host composes them explicitly |
-| operator-cli-plan-and-derive-adapters | Implement first command-family adapters for `plan` and `derive` | 40 | service-implementation | operator_cli_command_adapters | service_implementation | the strongest governed adapter paths exist first and route through `ImplementationPlanProgressService` and `ImplementationPlanDerivationService` |
+| operator-cli-component-and-plan-adapters | Implement first command-family adapters for `component` and `plan` | 40 | service-implementation | operator_cli_command_adapters | service_implementation | the strongest governed adapter paths exist first and route through component materialization, implementation-plan progress, reconciliation, and next-slice derivation |
 | operator-cli-validation-surface | Implement operator CLI validation surface | 50 | verification | operator_cli_validation_surface | test_module | tests prove grammar stability, ownership boundaries, fail-closed behavior, host-support composition, and first-family adapter mapping |
 
 ## Activity Dependency Table
@@ -448,8 +463,8 @@ If those become necessary, the component boundary should be reconsidered.
 |---|---|---|
 | operator-cli-dto-models | operator-cli-interface-contract | hard |
 | operator-cli-host-support | operator-cli-dto-models | hard |
-| operator-cli-plan-and-derive-adapters | operator-cli-host-support | hard |
-| operator-cli-validation-surface | operator-cli-plan-and-derive-adapters | hard |
+| operator-cli-component-and-plan-adapters | operator-cli-host-support | hard |
+| operator-cli-validation-surface | operator-cli-component-and-plan-adapters | hard |
 
 ## Verification Surface Table
 
@@ -460,6 +475,6 @@ If those become necessary, the component boundary should be reconsidered.
 | operator_cli_command_grammar_tests | unit-test | `tests/unit/test_paa_operator_cli.py` | true |
 | operator_cli_host_support_tests | unit-test | `tests/unit/test_paa_operator_cli.py` | true |
 | operator_cli_ownership_boundary_tests | unit-test | `tests/unit/test_paa_operator_cli.py` | true |
-| operator_cli_plan_and_derive_adapter_tests | unit-test | `tests/unit/test_paa_operator_cli.py` | true |
+| operator_cli_component_and_plan_adapter_tests | unit-test | `tests/unit/test_paa_operator_cli.py` | true |
 | operator_cli_model_code_consistency | governance-proof | `scripts/governance/paa_model_code_consistency.py --component PAAOperatorCLI` | true |
 | operator_cli_spec_model_consistency | governance-proof | `scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-05-30-paa-operator-cli-component-spec.md` | true |
