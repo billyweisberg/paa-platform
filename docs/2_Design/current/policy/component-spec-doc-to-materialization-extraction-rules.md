@@ -84,6 +84,57 @@ It does not parse narrative sections for materialization truth.
 - do not infer missing rows from prose
 - do not infer missing columns from neighboring tables
 
+## Current Canonical Table Vocabulary
+
+The v1 extractor and materializer are intentionally narrower than the full design language.
+
+For active governed component-spec materialization, use these canonical values exactly.
+
+### `Component Elements Table.element_kind`
+
+Accepted active values:
+- `interface`
+- `dto`
+- `implementation`
+- `verification-surface`
+
+Important rule:
+- do not invent finer-grained element kinds such as `host-support` or `adapter`
+- if the design needs that distinction, keep it in narrative authority or add a governed vocabulary evolution slice first
+
+### `Plan Seed Table.plan_status`
+
+Current accepted active values are the implementation-plan authority-state vocabulary:
+- `draft_plan`
+- `approved_plan`
+- `superseded_plan`
+- `rejected_plan`
+- `active_plan`
+- `partially_realized_plan`
+- `completed_plan`
+- `blocked_plan`
+- `deferred_plan`
+
+Important rule:
+- despite the column name `plan_status`, the current v1 component-spec materializer maps this field into `paa.implementation_plans.authority_state`
+- do not use generic prose values such as `planned`
+- if this naming is refined later, update docs, extractor, and model together rather than introducing alias logic
+
+### `Activity Dependency Table.dependency_kind`
+
+Current accepted active value:
+- `hard`
+
+Important rule:
+- do not use project-scheduling terms such as `finish-to-start` in active component-spec materialization
+- if richer dependency semantics become necessary, evolve the canonical vocabulary intentionally across docs, tooling, and persisted model surfaces
+
+### `Verification Surface Table.required_for_acceptance`
+
+Accepted active values:
+- `true`
+- `false`
+
 ## Fail-Closed Rules
 
 The extractor must fail closed when:
@@ -94,6 +145,7 @@ The extractor must fail closed when:
 - an activity references an unknown `element_name`
 - a realization references an unknown `element_name`
 - an activity dependency references an unknown `activity_key`
+- a controlled-vocabulary field uses a non-canonical active value for the current extractor/materializer contract
 
 ## Reconciliation Rules
 
