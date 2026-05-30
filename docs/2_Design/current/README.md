@@ -23,6 +23,13 @@ Ask:
 - what is the next valid artifact?
 - what authority is missing and must be authored before implementation continues?
 
+Important current limitation:
+- the system still does not have one unified persisted methodology pointer for the full lifecycle
+- today, the operator still has to recover current position from several authority and runtime records
+- the design work that addresses this starts here:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-execution-state-model.md`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-lane-and-command-model.md`
+
 ## 2. Follow The Lifecycle
 
 PAA work moves through these stages:
@@ -269,6 +276,7 @@ For active component-spec materialization, the current extractor/materializer co
 
 Before running `materialize-component-spec`, verify that the spec uses the active canonical values documented in:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/component-spec-doc-to-materialization-extraction-rules.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/mappings/component-spec-section-to-model-mapping-table.md`
 
 The most common failure pattern is not bad architecture.
 It is using a reasonable but non-canonical table value such as:
@@ -280,6 +288,23 @@ If that happens, do not add ad hoc aliases casually.
 First decide whether:
 1. the existing canonical vocabulary is still correct and the spec should be normalized, or
 2. the canonical vocabulary is genuinely missing a needed distinction and should evolve intentionally across docs, tooling, and model truth
+
+### Current command-lane guardrail
+
+Until the unified methodology pointer exists, the operator should explicitly identify which lane is active before running mutating commands.
+
+The lane model is documented here:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-lane-and-command-model.md`
+
+Current lane families:
+1. `authority_derivation`
+2. `component_realization`
+3. `runtime_execution`
+4. `acceptance_closeout`
+
+Important future rule:
+- this should become automatic through persisted methodology-execution truth and CLI preflight
+- the operator should not need to remember the lane forever
 
 ## 11. Use Thin Slices
 

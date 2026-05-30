@@ -1,0 +1,318 @@
+Title: PAA Methodology Execution State Model
+Doc-ID: paa-methodology-execution-state-model
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-05-30
+Last-Edited: 2026-05-30
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PAAMethodologyExecution
+Domain: methodology-execution
+Keywords: paa, methodology, execution-state, lane, stage, step, pointer, workflow
+Depends-On: 2026-05-28-paa-authority-stack-and-operator-architecture.md, 2026-05-28-paa-cli-system-architecture.md, 2026-05-28-paa-worker-runtime-architecture.md, 2026-05-17-implementation-plan-entity-design.md, 2026-05-16-paa-producer-derivation-subsystem.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-30
+Summary: Defines the explicit persisted execution-state model that tracks the current methodology lane, stage, step, owner, and next valid transition across the full PAA lifecycle.
+
+# PAA Methodology Execution State Model
+
+## Purpose
+
+Define the missing primary-truth model for answering:
+- where is this work item in the PAA methodology?
+- which lane is active?
+- what is the current step?
+- who owns the next action?
+- what is blocked and why?
+
+This model exists because current truth is split across:
+- design packages
+- derivation-readiness results
+- implementation plans
+- coder briefs
+- packets
+- workflow state
+- runtime execution evidence
+
+That split is useful for local truth, but it is not sufficient as one operator-facing methodology pointer.
+
+## Problem
+
+Today, an operator or automation thread must infer the current methodology step by synthesizing several records and documents.
+
+That creates too much cognitive load and too much room for wrong command choice.
+
+The system needs one explicit state model that tracks the current methodology execution position while still preserving the specialized truth already owned by other records.
+
+## Core Decision
+
+PAA should add a distinct `MethodologyExecution` primary-truth family.
+
+This family should:
+- track the current methodology lane, stage, step, owner, and next valid action
+- point to the active authority and runtime records
+- provide the system pointer used by CLI, producer flows, and runtime controllers
+- not replace specialized truth owned by:
+  - design packages
+  - implementation plans
+  - workflow state
+  - coder briefs
+  - packets
+  - runtime evidence
+
+## Model Overview
+
+### Root record
+
+`MethodologyExecution`
+
+One record per active governed execution thread.
+
+A methodology execution thread is usually anchored to:
+- one project
+- one work item
+- optionally one component
+- optionally one design package
+- optionally one implementation plan
+
+### Supporting records
+
+`MethodologyExecutionEvent`
+- immutable transition history
+
+`MethodologyExecutionBinding`
+- explicit typed bindings to related authority or runtime records when many-to-one relationships are needed
+
+`MethodologyExecutionProjection`
+- operator-facing projection for CLI and dashboards
+
+## Primary Fields
+
+### `MethodologyExecution`
+
+Required fields:
+- `methodology_execution_id`
+- `project_id`
+- `work_item_id`
+- `lane`
+- `stage`
+- `step`
+- `status`
+- `current_owner_role`
+- `next_action_key`
+- `created_at`
+- `updated_at`
+
+Optional direct bindings:
+- `component_id`
+- `design_package_id`
+- `implementation_plan_id`
+- `coder_run_brief_id`
+- `packet_id`
+- `workflow_state_id`
+
+Context fields:
+- `blocked_reason`
+- `active_authority_ref`
+- `active_artifact_ref`
+- `metadata_json`
+
+### `MethodologyExecutionEvent`
+
+Fields:
+- `methodology_execution_event_id`
+- `methodology_execution_id`
+- `from_lane`
+- `to_lane`
+- `from_stage`
+- `to_stage`
+- `from_step`
+- `to_step`
+- `transition_kind`
+- `actor_role_id`
+- `actor_name`
+- `notes`
+- `evidence_json`
+- `created_at`
+
+## Lane Model
+
+The methodology pointer should always identify one active lane.
+
+Canonical initial lanes:
+- `authority_derivation`
+- `component_realization`
+- `runtime_execution`
+- `acceptance_closeout`
+
+### Lane meanings
+
+`authority_derivation`
+- upstream producer-side derivation from reviewed design authority through packet-ready execution authority
+
+`component_realization`
+- governed code-backed component realization through component-spec materialization, progress reconciliation, successor derivation, and slice execution
+
+`runtime_execution`
+- queue-driven or direct runtime execution for worker and controller roles such as TechLead, DevWorker, and QAWorker
+
+`acceptance_closeout`
+- post-verification decision, merge, issue close, handoff completion, and final terminal-state transitions
+
+## Stage Model
+
+Stages should be broad enough for system reporting but narrow enough to drive command preflight.
+
+Canonical initial stages:
+- `vision`
+- `design`
+- `stage1_package`
+- `derivation_readiness`
+- `implementation_plan_derivation`
+- `brief_assembly`
+- `brief_target_authoring`
+- `brief_review`
+- `packet_preparation`
+- `component_materialization`
+- `slice_execution`
+- `runtime_handoff`
+- `verification`
+- `acceptance`
+- `closed`
+
+## Step Model
+
+`step` is the operator-meaningful current action.
+
+Examples:
+- `derive_design_package`
+- `evaluate_derivation_readiness`
+- `derive_implementation_plan`
+- `assemble_coder_brief`
+- `author_brief_targets`
+- `review_coder_brief`
+- `prepare_architect_packet`
+- `materialize_component_spec`
+- `reconcile_component_plan_progress`
+- `derive_next_activity_bundle`
+- `run_worker_packet`
+- `inspect_queue_packet`
+- `review_verification_result`
+- `accept_slice`
+- `close_work_item`
+
+Important rule:
+- `step` should map directly to one command or bounded operator action
+- `step` should not be a vague narrative status
+
+## Status Model
+
+Canonical initial statuses:
+- `not_started`
+- `ready`
+- `active`
+- `blocked`
+- `waiting`
+- `completed`
+- `superseded`
+- `closed`
+
+`status` answers whether the current step is executable, in progress, waiting on another owner, or terminal.
+
+## Ownership Model
+
+`current_owner_role` should identify who owns the next transition.
+
+Canonical initial roles:
+- `Authority Architect`
+- `Delivery Architect`
+- `TechLead`
+- `Python Dev`
+- `QA`
+- `Operator`
+- `System`
+
+Important rule:
+- this is the owner of the current methodology transition, not necessarily the owner of every related runtime record
+
+## Relationship To Existing Truth
+
+### This model should point to existing truth
+
+It should point to and summarize:
+- `design_packages`
+- derivation-readiness result surfaces
+- `implementation_plans`
+- `implementation_plan_activities`
+- `coder_run_briefs`
+- `coder_brief_realization_targets`
+- workflow state
+- packets and queue claims
+- runtime evidence
+- acceptance events
+
+### This model should not replace existing truth
+
+It should not become the primary owner of:
+- implementation-plan activity state
+- workflow lifecycle state
+- queue transport truth
+- verification evidence detail
+- coder-brief body content
+- packet payload bodies
+
+## Transition Rules
+
+### Rule 1. One active lane at a time
+
+A methodology execution thread should expose one active lane at a time, even if multiple downstream records exist.
+
+### Rule 2. Step changes require an event
+
+When `lane`, `stage`, `step`, `status`, or `current_owner_role` changes, append a `MethodologyExecutionEvent`.
+
+### Rule 3. Preflight should use this model first
+
+Future CLI preflight should consult this model before running a command that mutates authority or runtime state.
+
+### Rule 4. TechLead does not own the whole pointer
+
+`TechLead` should own the runtime-execution subset only.
+
+The overall methodology pointer should be owned by this cross-lifecycle model.
+
+## Projection Requirements
+
+The model should support a stable operator-facing projection such as:
+- current lane
+- current stage
+- current step
+- current owner
+- current linked authority record
+- next valid action
+- blocked reason if any
+
+This projection should power future commands such as:
+- `paa status`
+- `paa next`
+- `paa explain`
+
+## Initial Non-Goals
+
+This design does not yet define:
+- exact DB DDL
+- exact service API
+- exact command grammar
+- migration path from all current state surfaces
+
+It defines the primary-truth model that the system is currently missing.
+
+## Success Condition
+
+This model is successful when:
+- the operator no longer has to infer the current methodology step from several unrelated records
+- the CLI can preflight commands against a persisted current-step pointer
+- worker and acceptance controllers can update a shared methodology-execution thread without taking ownership of unrelated lifecycle truth

@@ -63,6 +63,26 @@ The operator should think in terms of:
 - what slice passed or failed
 - what can be accepted safely
 
+## Methodology Pointer Direction
+
+The CLI should not permanently require the operator to infer:
+- which methodology lane is active
+- which step is current
+- which command family is valid next
+
+That inference burden is temporary.
+
+The long-term CLI architecture should read from persisted methodology-execution truth so the system can expose:
+- current lane
+- current stage
+- current step
+- next valid action
+- blocking reason
+
+Related downstream design authority:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-execution-state-model.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-lane-and-command-model.md`
+
 ## Top-Level Command Families
 
 ### `paa authority`
@@ -78,17 +98,39 @@ Includes:
 - vocabulary validation
 - source-authority checks
 
-### `paa derive`
+### `paa package`
 Purpose:
-- derive executable structured state from authority
+- derive and inspect Stage 1 design-package authority
 
 Includes:
-- materialize component spec
 - derive design package
+- inspect package truth
+
+### `paa readiness`
+Purpose:
+- evaluate and inspect derivation-entry readiness
+
+Includes:
 - evaluate derivation readiness
-- derive implementation plan
+- inspect readiness outcome
+
+### `paa brief`
+Purpose:
+- derive and review coder-brief authority
+
+Includes:
 - assemble coder brief
-- derive next activity bundle
+- author brief targets
+- review brief
+- inspect brief truth
+
+### `paa packet`
+Purpose:
+- prepare and inspect transport-ready execution authority
+
+Includes:
+- prepare architect packet
+- inspect packet truth
 
 ### `paa plan`
 Purpose:
@@ -100,7 +142,20 @@ Includes:
 - list activities
 - dependency graph views
 - blocked and deferred analysis
+- derive implementation plan from Stage 1 package
 - next-slice inspection
+
+### `paa component`
+Purpose:
+- realize governed code-backed components from component specs
+
+Includes:
+- materialize component spec
+- plan progress
+- reconcile progress
+- derive next activity bundle
+- complete one activity
+- inspect component realization state
 
 ### `paa worker`
 Purpose:
@@ -182,15 +237,23 @@ Includes:
 
 The CLI must unify producer and consumer capabilities without erasing their different runtime responsibilities.
 
-### Producer-aligned families
+### Authority-derivation lane families
 - `authority`
-- `derive`
+- `package`
+- `readiness`
+- `brief`
+- `packet`
 - `plan`
 - `report`
 
-### Consumer-aligned families
+### Component-realization lane families
+- `component`
+
+### Runtime-execution lane families
 - `worker`
 - `queue`
+
+### Acceptance-closeout lane families
 - `verify`
 - `accept`
 
@@ -215,6 +278,8 @@ The CLI must:
 4. align command outputs to authority and runtime models already present in PAA
 5. never hide authority gaps behind guessed defaults
 6. never treat raw agent output as accepted system truth until it has been normalized into PAA structures
+7. command-family selection should reflect methodology lane, not internal repo layout
+8. future command preflight should consult persisted methodology-execution truth before mutating state
 
 ## Initial Implementation Direction
 
@@ -223,6 +288,7 @@ The first real implementation should unify existing working command surfaces rat
 Immediate candidates to absorb:
 - current producer progress and next-slice commands
 - current authority sync and lint flows
+- current Stage 1 derivation and readiness flows
 - current consumer service-map and diagnostic commands
 - future worker-host dry-run and normalized-result inspection commands
 
