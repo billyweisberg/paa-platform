@@ -163,11 +163,12 @@ Excluded responsibilities:
 |---|---|---|---|
 | operator_cli_interface | interface | public application contract for invoking one normalized operator command request and receiving one normalized command result | PAAOperatorCLI |
 | operator_cli_models | dto | CLI-owned invocation, result, failure, output, and bridge request DTOs aligned to the CLI object model and ownership map | PAAOperatorCLI |
-| operator_cli_environment_resolution | host-support | repo-root, config, environment-binding, and invocation-context resolution support | PAAOperatorCLI |
-| operator_cli_command_router | host-support | family and subcommand dispatch over registered command adapters | PAAOperatorCLI |
-| operator_cli_result_normalization | host-support | normalization of adapter and collaborator outputs into stable CLI-owned result objects | PAAOperatorCLI |
-| operator_cli_output_rendering | host-support | JSON, table, and summary rendering of normalized command results | PAAOperatorCLI |
-| operator_cli_command_adapters | adapter-coordination | thin lifecycle-family adapters that translate normalized operator requests into governed services or transitional collaborators | PAAOperatorCLI |
+| operator_cli_environment_resolution | implementation | repo-root, config, environment-binding, and invocation-context resolution support | PAAOperatorCLI |
+| operator_cli_command_router | implementation | family and subcommand dispatch over registered command adapters | PAAOperatorCLI |
+| operator_cli_result_normalization | implementation | normalization of adapter and collaborator outputs into stable CLI-owned result objects | PAAOperatorCLI |
+| operator_cli_output_rendering | implementation | JSON, table, and summary rendering of normalized command results | PAAOperatorCLI |
+| operator_cli_command_adapters | implementation | thin lifecycle-family adapters that translate normalized operator requests into governed services or transitional collaborators | PAAOperatorCLI |
+| operator_cli_typer_shell | implementation | Typer root application that composes host-support collaborators and registered command-family adapters | PAAOperatorCLI |
 | operator_cli_validation_surface | verification-surface | tests and governed proofs covering grammar stability, object ownership, fail-closed behavior, and command-to-owner mapping | PAAOperatorCLI |
 
 ## Realizations Table
@@ -429,7 +430,7 @@ If those become necessary, the component boundary should be reconsidered.
 
 | plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
 |---|---|---|---|---|
-| plan-materialize-paa-operator-cli-proof-python | paa-platform-python | PAAOperatorCLI | python-package | planned |
+| plan-materialize-paa-operator-cli-proof-python | paa-platform-python | PAAOperatorCLI | python-package | active_plan |
 
 ## Activity Seed Table
 
@@ -443,12 +444,12 @@ If those become necessary, the component boundary should be reconsidered.
 
 ## Activity Dependency Table
 
-| predecessor_activity_key | successor_activity_key | dependency_kind |
+| activity_key | depends_on_activity_key | dependency_kind |
 |---|---|---|
-| operator-cli-interface-contract | operator-cli-dto-models | finish-to-start |
-| operator-cli-dto-models | operator-cli-host-support | finish-to-start |
-| operator-cli-host-support | operator-cli-plan-and-derive-adapters | finish-to-start |
-| operator-cli-plan-and-derive-adapters | operator-cli-validation-surface | finish-to-start |
+| operator-cli-dto-models | operator-cli-interface-contract | hard |
+| operator-cli-host-support | operator-cli-dto-models | hard |
+| operator-cli-plan-and-derive-adapters | operator-cli-host-support | hard |
+| operator-cli-validation-surface | operator-cli-plan-and-derive-adapters | hard |
 
 ## Verification Surface Table
 

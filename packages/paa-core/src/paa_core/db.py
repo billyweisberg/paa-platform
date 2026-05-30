@@ -112,12 +112,42 @@ def run_psql(sql: str, *, settings: DBSettings | None = None) -> str:
     if cfg.mode == 'docker_exec':
         if not cfg.container:
             raise RuntimeError('PAA DB docker_exec mode requires a container name')
-        cmd = ['docker', 'exec', '-i', cfg.container, 'psql', '-U', cfg.user, '-d', cfg.name, '-At', '-F', '	']
+        cmd = [
+            'docker',
+            'exec',
+            '-i',
+            cfg.container,
+            'psql',
+            '-v',
+            'ON_ERROR_STOP=1',
+            '-U',
+            cfg.user,
+            '-d',
+            cfg.name,
+            '-At',
+            '-F',
+            '	',
+        ]
         env = None
     elif cfg.mode == 'tcp':
         if not cfg.host or not cfg.port:
             raise RuntimeError('PAA DB tcp mode requires host and port')
-        cmd = ['psql', '-h', cfg.host, '-p', str(cfg.port), '-U', cfg.user, '-d', cfg.name, '-At', '-F', '	']
+        cmd = [
+            'psql',
+            '-v',
+            'ON_ERROR_STOP=1',
+            '-h',
+            cfg.host,
+            '-p',
+            str(cfg.port),
+            '-U',
+            cfg.user,
+            '-d',
+            cfg.name,
+            '-At',
+            '-F',
+            '	',
+        ]
         env = os.environ.copy()
         if cfg.password is not None:
             env['PGPASSWORD'] = cfg.password

@@ -188,7 +188,100 @@ Then use this order:
 9. repeat until the component is `fully_realized`
 10. wire the component into the runtime shell, worker controller, or CLI adapter
 
-## 10. Use Thin Slices
+## 10. Derivation Is Two Related Pipelines
+
+In practice, we use the word `derivation` for two different but connected flows.
+
+### A. Producer-side authority derivation
+
+This is the upstream flow that turns approved design authority into executable producer-side records and artifacts.
+
+Current governing runbooks:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-design-package-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/evaluate-derivation-readiness-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-implementation-plan-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/assemble-coder-brief-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/author-brief-targets-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/review-coder-brief-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/prepare-architect-packet-flow.md`
+
+The canonical order is:
+1. `derive-design-package`
+2. `evaluate-derivation-readiness`
+3. `derive-implementation-plan`
+4. `assemble-coder-brief`
+5. `author-brief-targets`
+6. `review-coder-brief`
+7. `prepare-architect-packet`
+
+Important rule:
+- do not skip the derivation-readiness gate
+- do not assemble briefs or packets from incomplete or unapproved design-package truth
+
+### B. Code-backed component realization derivation
+
+This is the downstream flow we used for the TechLead service family and are now using for `PAAOperatorCLI`.
+
+Current governing docs:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/component-spec-doc-to-materialization-extraction-rules.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/governed-code-backed-component-materialization-policy.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/component-slice-successor-derivation-policy.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/materialize-governed-code-backed-components-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/component-realization-loop.md`
+
+The canonical order is:
+1. `materialize-component-spec`
+2. `reconcile-implementation-plan-progress`
+3. `derive-next-activity-bundle`
+4. implement one thin slice
+5. verify
+6. mark complete
+7. repeat until `completed_plan` and `fully_realized`
+
+Important rule:
+- do not confuse component-spec materialization with Stage 1 design-package derivation
+- the first is for governed code-backed component realization
+- the second is for producer-side authority progression
+
+### Current derivation-authority audit
+
+The latest derivation authority we should actively rely on is:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-producer-derivation-subsystem.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-derivation-pipeline-validation.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/3_Plan/2026-05-16-paa-derivation-method-validation-plan.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-design-package-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/evaluate-derivation-readiness-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-implementation-plan-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/assemble-coder-brief-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/author-brief-targets-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/review-coder-brief-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/prepare-architect-packet-flow.md`
+
+Current audit conclusion:
+- the producer-side derivation path is real and governed
+- the code-backed component realization path is also real and governed
+- they are connected, but they are not the same loop
+- operator guidance should name which derivation lane is active before any command is run
+
+### Current materialization vocabulary guardrail
+
+For active component-spec materialization, the current extractor/materializer contract is intentionally narrow.
+
+Before running `materialize-component-spec`, verify that the spec uses the active canonical values documented in:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/current/policy/component-spec-doc-to-materialization-extraction-rules.md`
+
+The most common failure pattern is not bad architecture.
+It is using a reasonable but non-canonical table value such as:
+- a custom `element_kind`
+- a generic `plan_status` like `planned`
+- a scheduling-style `dependency_kind` like `finish-to-start`
+
+If that happens, do not add ad hoc aliases casually.
+First decide whether:
+1. the existing canonical vocabulary is still correct and the spec should be normalized, or
+2. the canonical vocabulary is genuinely missing a needed distinction and should evolve intentionally across docs, tooling, and model truth
+
+## 11. Use Thin Slices
 
 Do not implement a large component in one pass.
 
@@ -198,7 +291,7 @@ Preferred first slices are:
 3. default implementation
 4. validation surface
 
-## 11. Keep Authority, Model, And Runtime Separate
+## 12. Keep Authority, Model, And Runtime Separate
 
 Always distinguish:
 - source/domain authority
@@ -207,7 +300,7 @@ Always distinguish:
 
 Runtime state must not replace published authority.
 
-## 12. Fail Closed
+## 13. Fail Closed
 
 If the next required artifact is missing:
 1. stop
@@ -217,9 +310,29 @@ If the next required artifact is missing:
 
 Do not silently work around the process.
 
-## 13. Use The Existing PAA Tools
+## 14. Use The Existing PAA Tools
 
 Common commands:
+
+### Derive a Stage 1 design package
+```bash
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-design-package --design-package docs/2_Design/<stage1-package>.json
+```
+
+### Evaluate derivation readiness
+```bash
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer evaluate-derivation-readiness --design-package docs/2_Design/<stage1-package>.json
+```
+
+### Derive an implementation plan from a Stage 1 package
+```bash
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-implementation-plan --design-package docs/2_Design/<stage1-package>.json
+```
+
+### Assemble a coder brief
+```bash
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer assemble-coder-brief --design-package docs/2_Design/<stage1-package>.json
+```
 
 ### Materialize a component spec
 ```bash
@@ -251,7 +364,12 @@ python scripts/docs/paa_docs.py sync-current --root /Users/billyweisberg/Repos/b
 bash scripts/docs/lint_governed_docs.sh
 ```
 
-## 14. The Current Proven Loop
+## 15. The Current Proven Loops
+
+The proven producer-side derivation path is documented through:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-design-package-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/evaluate-derivation-readiness-flow.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/flows/derive-implementation-plan-flow.md`
 
 The proven component realization loop is documented here:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/current/overview/component-realization-loop.md`
