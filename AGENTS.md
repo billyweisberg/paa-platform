@@ -13,6 +13,91 @@ The implementation order is:
 5. expose that behavior through a CLI adapter
 6. retire or reduce any earlier proof-of-concept script
 
+## PAA Methodology Rule
+
+PAA work must follow the PAA methodology and lifecycle by default.
+
+Do not skip directly to code implementation when the task is really in:
+- `1_Vision`
+- `2_Design`
+- `3_Plan`
+- or a governed `4_Build` realization step
+
+Before implementing a new major capability, component, worker, CLI subsystem, or runtime controller, identify where the work currently sits in the lifecycle:
+1. `1_Vision`
+2. `2_Design`
+3. `3_Plan`
+4. `4_Build`
+5. `5_Test`
+6. `6_Deploy`
+7. `7_Monitor`
+
+Then follow the next valid authority step instead of inventing an ad hoc path.
+
+### Default lifecycle expectations
+
+For a new system area:
+1. check whether the vision already exists
+2. if not, create or update the `1_Vision` authority first
+3. derive the required `2_Design` artifact from that vision
+4. derive the required `3_Plan` implementation sequence from the design
+5. only then begin `4_Build` implementation work
+
+For a new PAA component:
+1. treat it as a governed component
+2. create or update its component spec under `docs/2_Design/`
+3. materialize it through the producer materialization path
+4. reconcile progress
+5. derive the next activity bundle
+6. implement one thin slice
+7. verify it
+8. mark the activity complete
+9. repeat until `fully_realized`
+
+### Required component-realization path
+
+When implementing a new governed component such as a service, repository, worker controller, or CLI subsystem, use the documented component realization loop:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-27-component-realization-loop.md`
+
+This is the default process for:
+- component specs
+- materialization
+- plan progress
+- successor-slice derivation
+- iterative thin-slice realization
+
+Do not bypass this loop by jumping straight from idea to code unless the user explicitly asks for a throwaway prototype.
+
+### Required authority sources before acting
+
+Before starting major work, inspect the smallest relevant current authority set first.
+
+Minimum expected checks:
+- `docs/1_Vision/current/`
+- `docs/2_Design/current/`
+- `docs/3_Plan/current/`
+- `docs/4_Build/current/`
+
+When the task is about the full PAA operator system, also inspect:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/1_Vision/current/overview/paa-authority-stack-and-operator-architecture.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/1_Vision/current/overview/paa-cli-system-architecture.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/1_Vision/current/overview/paa-worker-runtime-architecture.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/1_Vision/current/overview/paa-operator-system-implementation-plan.md`
+
+When the task is about creating a new component such as `TechLeadWorkerService`, default to:
+1. determine whether the next valid step is `2_Design`
+2. author the component spec
+3. only then move into materialization and implementation
+
+### Fail-closed methodology rule
+
+If the next authority artifact is missing, do not silently skip the methodology.
+
+Instead:
+1. state which lifecycle artifact is missing
+2. create or propose that artifact
+3. continue from the methodology, not around it
+
 ### Application-First Rule
 
 Treat current repo-local scripts as:
