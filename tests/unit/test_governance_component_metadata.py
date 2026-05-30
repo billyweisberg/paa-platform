@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
+sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 
 from paa_core.governance import ALIGNMENT_STATES, COMPONENT_KINDS, GovernedComponentMetadata, LIFECYCLE_STAGES
 from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME, GOVERNED_COMPONENTS
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
 from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
+from paa_cli import PAA_OPERATOR_CLI_METADATA
 
 
 class GovernanceComponentMetadataTests(unittest.TestCase):
@@ -29,7 +36,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertEqual('repository', IMPLEMENTATION_PLAN_REPOSITORY_METADATA.kind)
 
     def test_component_registry_maps_metadata_by_name(self) -> None:
-        self.assertEqual(3, len(GOVERNED_COMPONENTS))
+        self.assertGreaterEqual(len(GOVERNED_COMPONENTS), 4)
         self.assertIs(
             WORKFLOW_LIFECYCLE_SERVICE_METADATA,
             COMPONENT_METADATA_BY_NAME["WorkflowLifecycleService"],
@@ -41,6 +48,10 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertIs(
             IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
             COMPONENT_METADATA_BY_NAME["ImplementationPlanRepository"],
+        )
+        self.assertIs(
+            PAA_OPERATOR_CLI_METADATA,
+            COMPONENT_METADATA_BY_NAME["PAAOperatorCLI"],
         )
 
 

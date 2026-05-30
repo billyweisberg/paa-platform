@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Protocol
 
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
+
+from .models import OperatorCommandRequest, OperatorCommandResult
 
 
 class PAAOperatorCLI(Protocol):
@@ -15,7 +17,7 @@ class PAAOperatorCLI(Protocol):
         """Return the injected structured logger."""
         ...
 
-    def run_command(self, request: Any) -> Any:
+    def run_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         """Execute one normalized operator command request and return a structured result object."""
         ...
 

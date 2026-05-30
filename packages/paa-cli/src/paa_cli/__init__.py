@@ -3,6 +3,21 @@
 from paa_core.governance import GovernedComponentMetadata
 
 from .contracts import PAAOperatorCLI, StructuredLogger
+from .environment import EnvironmentResolutionInput, EnvironmentResolver
+from .command_adapters import ComponentCommandAdapter, PlanCommandAdapter
+from .normalization import CommandResultNormalizer
+from .rendering import OutputRenderer
+from .router import CommandRegistration, CommandRouter, OperatorCommandAdapter
+from .models import (
+    OperatorCommand,
+    OperatorCommandRequest,
+    OperatorCommandResult,
+    OperatorFailure,
+    OperatorInvocationContext,
+    OperatorOutputMessage,
+    OperatorOutputSection,
+    OperatorOutputTable,
+)
 
 PAA_OPERATOR_CLI_METADATA = GovernedComponentMetadata(
     name='PAAOperatorCLI',
@@ -23,6 +38,23 @@ PAA_OPERATOR_CLI_METADATA = GovernedComponentMetadata(
 )
 
 __all__ = [
+    'CommandRegistration',
+    'ComponentCommandAdapter',
+    'CommandResultNormalizer',
+    'CommandRouter',
+    'EnvironmentResolutionInput',
+    'EnvironmentResolver',
+    'OperatorCommand',
+    'OperatorCommandAdapter',
+    'OperatorCommandRequest',
+    'OperatorCommandResult',
+    'OperatorFailure',
+    'OperatorInvocationContext',
+    'OperatorOutputMessage',
+    'OperatorOutputSection',
+    'OperatorOutputTable',
+    'OutputRenderer',
+    'PlanCommandAdapter',
     'PAAOperatorCLI',
     'PAA_OPERATOR_CLI_METADATA',
     'StructuredLogger',
