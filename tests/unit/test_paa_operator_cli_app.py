@@ -5,13 +5,20 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock
 
+from typer.testing import CliRunner
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-producer' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 
 from paa_cli.app import build_app, build_default_cli
-from paa_cli.command_adapters import ComponentCommandAdapter, PlanCommandAdapter
+from paa_cli.command_adapters import (
+    ComponentCommandAdapter,
+    PlanCommandAdapter,
+    ReportCommandAdapter,
+    StatusCommandAdapter,
+)
 from paa_cli.models import (
     OperatorCommand,
     OperatorCommandRequest,
@@ -135,8 +142,8 @@ class _StubPreflightService:
             request=request,
             status_projection=projection,
             outcome=outcome,
-            ok=self.outcome_kind != 'blocked',
-            reason=None if self.outcome_kind != 'blocked' else 'preflight_blocked',
+            ok=self.outcome_kind not in {'blocked', 'redirect'},
+            reason=None if self.outcome_kind not in {'blocked', 'redirect'} else f'preflight_{self.outcome_kind}',
         )
 
 
@@ -149,6 +156,9 @@ class _StubLogger:
 
 
 class PAAOperatorCLIAppTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.runner = CliRunner()
+
     def _cli(self, *, preflight_service=None):
         from paa_cli.app import DefaultPAAOperatorCLI
         from paa_cli.environment import EnvironmentResolver
@@ -222,6 +232,80 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             methodology_execution_preflight_service=preflight_service,
         ), component_adapter
 
+    def _typer_cli(self, *, preflight_service=None):
+        from paa_cli.app import DefaultPAAOperatorCLI
+        from paa_cli.environment import EnvironmentResolver
+        from paa_cli.normalization import CommandResultNormalizer
+        from paa_cli.rendering import OutputRenderer
+
+        component_adapter = Mock(spec=ComponentCommandAdapter)
+        component_adapter.run.return_value = OperatorCommandResult(
+            command=OperatorCommand(command_family='component', command_name='progress'),
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Component Progress',
+                    messages=(OperatorOutputMessage(level='info', text='Component progress loaded.'),),
+                    tables=(
+                        OperatorOutputTable(
+                            title='Component Progress',
+                            columns=('field', 'value'),
+                            rows=(('plan_id', 'plan-1'), ('status', 'ready')),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        plan_adapter = Mock(spec=PlanCommandAdapter)
+        plan_adapter.run.return_value = OperatorCommandResult(
+            command=OperatorCommand(command_family='plan', command_name='progress'),
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Implementation Plan Progress',
+                    messages=(OperatorOutputMessage(level='info', text='Plan progress loaded.'),),
+                    tables=(
+                        OperatorOutputTable(
+                            title='Plan Progress Summary',
+                            columns=('field', 'value'),
+                            rows=(('plan_id', 'plan-1'), ('completion_ratio', '0.5')),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        router = CommandRouter(
+            (
+                CommandRegistration(command_family='component', adapter=component_adapter),
+                CommandRegistration(command_family='plan', adapter=plan_adapter),
+                CommandRegistration(
+                    command_family='status',
+                    adapter=StatusCommandAdapter(
+                        methodology_execution_projection_service=_StubProjectionService(),
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='report',
+                    adapter=ReportCommandAdapter(
+                        methodology_execution_projection_service=_StubProjectionService(),
+                    ),
+                ),
+            )
+        )
+        cli = DefaultPAAOperatorCLI(
+            logger=_StubLogger(),
+            environment_resolver=EnvironmentResolver(),
+            router=router,
+            normalizer=CommandResultNormalizer(),
+            renderer=OutputRenderer(),
+            methodology_execution_preflight_service=preflight_service,
+        )
+        return build_app(cli=cli), component_adapter, plan_adapter
+
     def test_build_default_cli_includes_methodology_pointer_services(self) -> None:
         cli = build_default_cli()
         self.assertTrue(cli.supports_command_family('status'))
@@ -259,6 +343,80 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
     def test_status_and_report_commands_are_available(self) -> None:
         app = build_app()
         self.assertIsNotNone(app)
+
+    def test_status_inspect_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            ['status', 'inspect', '--methodology-execution-id', 'exec-1', '--output', 'summary'],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('status:inspect', result.output)
+        self.assertIn('Ready to execute the next component activity.', result.output)
+
+    def test_report_next_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            ['report', 'next', '--methodology-execution-id', 'exec-1', '--output', 'summary'],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('report:next', result.output)
+        self.assertIn('execute_component_activity', result.output)
+        self.assertIn('Next recommended action', result.output)
+
+    def test_component_progress_is_blocked_by_preflight_in_live_typer_output(self) -> None:
+        app, component_adapter, _ = self._typer_cli(
+            preflight_service=_StubPreflightService(outcome_kind='blocked', reason='Blocked by preflight.'),
+        )
+
+        result = self.runner.invoke(
+            app,
+            [
+                'component',
+                'progress',
+                '--plan-id',
+                'plan-1',
+                '--methodology-execution-id',
+                'exec-1',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 2, msg=result.output)
+        self.assertIn('Methodology Preflight', result.output)
+        self.assertIn('Blocked by preflight.', result.output)
+        component_adapter.run.assert_not_called()
+
+    def test_plan_progress_redirects_when_preflight_rejects_lane_in_live_typer_output(self) -> None:
+        app, _, plan_adapter = self._typer_cli(
+            preflight_service=_StubPreflightService(
+                outcome_kind='redirect',
+                redirect_target='status.inspect',
+                reason='Use methodology status first.',
+            ),
+        )
+
+        result = self.runner.invoke(
+            app,
+            [
+                'plan',
+                'progress',
+                '--plan-id',
+                'plan-1',
+                '--methodology-execution-id',
+                'exec-1',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 2, msg=result.output)
+        self.assertIn('Methodology Preflight', result.output)
+        self.assertIn('Use methodology status first.', result.output)
+        self.assertIn('status.inspect', result.output)
+        plan_adapter.run.assert_not_called()
 
 
 if __name__ == '__main__':
