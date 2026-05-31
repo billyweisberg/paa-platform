@@ -13,6 +13,9 @@ from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME, G
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
 from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
 from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
+from paa_core.services.methodology_execution_projection import (
+    METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
+)
 from paa_core.services.methodology_execution_state import (
     METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
 )
@@ -28,6 +31,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
             IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
             METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
             METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
+            METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
         ):
             self.assertIsInstance(metadata, GovernedComponentMetadata)
             self.assertIn(metadata.kind, COMPONENT_KINDS)
@@ -40,6 +44,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertEqual('service', WORKFLOW_LIFECYCLE_SERVICE_METADATA.kind)
         self.assertEqual('service', EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA.kind)
         self.assertEqual('service', METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA.kind)
+        self.assertEqual('service', METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA.kind)
         self.assertEqual('repository', IMPLEMENTATION_PLAN_REPOSITORY_METADATA.kind)
         self.assertEqual('repository', METHODOLOGY_EXECUTION_REPOSITORY_METADATA.kind)
 
@@ -47,29 +52,33 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertGreaterEqual(len(GOVERNED_COMPONENTS), 6)
         self.assertIs(
             WORKFLOW_LIFECYCLE_SERVICE_METADATA,
-            COMPONENT_METADATA_BY_NAME["WorkflowLifecycleService"],
+            COMPONENT_METADATA_BY_NAME['WorkflowLifecycleService'],
         )
         self.assertIs(
             EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA,
-            COMPONENT_METADATA_BY_NAME["ExecutionPackageResolutionService"],
+            COMPONENT_METADATA_BY_NAME['ExecutionPackageResolutionService'],
         )
         self.assertIs(
             IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
-            COMPONENT_METADATA_BY_NAME["ImplementationPlanRepository"],
+            COMPONENT_METADATA_BY_NAME['ImplementationPlanRepository'],
         )
         self.assertIs(
             METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
-            COMPONENT_METADATA_BY_NAME["MethodologyExecutionRepository"],
+            COMPONENT_METADATA_BY_NAME['MethodologyExecutionRepository'],
         )
         self.assertIs(
             METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
-            COMPONENT_METADATA_BY_NAME["MethodologyExecutionStateService"],
+            COMPONENT_METADATA_BY_NAME['MethodologyExecutionStateService'],
+        )
+        self.assertIs(
+            METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
+            COMPONENT_METADATA_BY_NAME['MethodologyExecutionProjectionService'],
         )
         self.assertIs(
             PAA_OPERATOR_CLI_METADATA,
-            COMPONENT_METADATA_BY_NAME["PAAOperatorCLI"],
+            COMPONENT_METADATA_BY_NAME['PAAOperatorCLI'],
         )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
