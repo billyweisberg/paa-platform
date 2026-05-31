@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paa-cli"
+version = "0.1.0"
+description = "Unified operator CLI for the PAA platform."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["paa-core", "paa-producer", "typer>=0.12,<1.0"]
+
+[project.scripts]
+paa = "paa_cli.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

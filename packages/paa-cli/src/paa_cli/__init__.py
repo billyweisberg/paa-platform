@@ -4,6 +4,7 @@ from paa_core.governance import GovernedComponentMetadata
 
 from .contracts import PAAOperatorCLI, StructuredLogger
 from .environment import EnvironmentResolutionInput, EnvironmentResolver
+from .app import DefaultPAAOperatorCLI, NullStructuredLogger, build_app, build_default_cli, main
 from .command_adapters import ComponentCommandAdapter, PlanCommandAdapter
 from .normalization import CommandResultNormalizer
 from .rendering import OutputRenderer
@@ -38,10 +39,13 @@ PAA_OPERATOR_CLI_METADATA = GovernedComponentMetadata(
 )
 
 __all__ = [
+    'build_app',
+    'build_default_cli',
     'CommandRegistration',
     'ComponentCommandAdapter',
     'CommandResultNormalizer',
     'CommandRouter',
+    'DefaultPAAOperatorCLI',
     'EnvironmentResolutionInput',
     'EnvironmentResolver',
     'OperatorCommand',
@@ -54,8 +58,10 @@ __all__ = [
     'OperatorOutputSection',
     'OperatorOutputTable',
     'OutputRenderer',
+    'NullStructuredLogger',
     'PlanCommandAdapter',
     'PAAOperatorCLI',
     'PAA_OPERATOR_CLI_METADATA',
+    'main',
     'StructuredLogger',
 ]
