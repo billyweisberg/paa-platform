@@ -279,9 +279,9 @@ The repository should return stable typed repository DTOs and should not leak ad
 
 ## Verification Surface Table
 
-| verification_key | verification_kind | description |
-|---|---|---|
-| methodology_execution_repository_contract_test | unit-test | Repository contract and package metadata are published and stable. |
-| methodology_execution_repository_models_test | unit-test | DTOs and write specs preserve the intended persistence shapes. |
-| methodology_execution_repository_postgres_test | unit-test | Postgres adapter emits the expected SQL for the first supported operations. |
-| methodology_execution_repository_model_code_consistency | governance-check | Model/code consistency passes once the repository is realized. |
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| methodology_execution_repository_contract_test | unit-test | `tests/unit/test_methodology_execution_repository.py` | true |
+| methodology_execution_repository_models_test | unit-test | `tests/unit/test_methodology_execution_repository.py` | true |
+| methodology_execution_repository_postgres_test | unit-test | `tests/unit/test_methodology_execution_repository.py` | true |
+| methodology_execution_repository_model_code_consistency | governance-check | `scripts/governance/paa_model_code_consistency.py` | false |
