@@ -356,6 +356,19 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('status:inspect', result.output)
         self.assertIn('Ready to execute the next component activity.', result.output)
 
+    def test_status_next_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            ['status', 'next', '--methodology-execution-id', 'exec-1', '--output', 'summary'],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('status:next', result.output)
+        self.assertIn('execute_component_activity', result.output)
+        self.assertIn('Next recommended action', result.output)
+
     def test_report_next_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 
@@ -368,6 +381,19 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('report:next', result.output)
         self.assertIn('execute_component_activity', result.output)
         self.assertIn('Next recommended action', result.output)
+
+    def test_report_explain_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            ['report', 'explain', '--methodology-execution-id', 'exec-1', '--output', 'summary'],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('report:explain', result.output)
+        self.assertIn('The next component activity is ready to execute.', result.output)
+        self.assertIn('supported=true success=true exit_code=0', result.output)
 
     def test_component_progress_is_blocked_by_preflight_in_live_typer_output(self) -> None:
         app, component_adapter, _ = self._typer_cli(

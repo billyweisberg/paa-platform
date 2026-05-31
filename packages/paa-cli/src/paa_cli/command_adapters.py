@@ -290,8 +290,13 @@ class StatusCommandAdapter:
         self._projection_service = methodology_execution_projection_service
 
     def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
-        if request.command.command_name != 'inspect':
-            return _unsupported_command_result(request)
+        if request.command.command_name == 'inspect':
+            return self._inspect(request)
+        if request.command.command_name == 'next':
+            return self._next(request)
+        return _unsupported_command_result(request)
+
+    def _inspect(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         methodology_execution_id = request.arguments.get('methodology_execution_id')
         project_id = request.arguments.get('project_id')
         work_item_id = request.arguments.get('work_item_id')
@@ -340,6 +345,43 @@ class StatusCommandAdapter:
                     title='Methodology Status',
                     messages=(OperatorOutputMessage(level='info', text=projection.summary_text),),
                     tables=(_summary_table('Methodology Status Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
+
+    def _next(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        methodology_execution_id = request.arguments.get('methodology_execution_id')
+        if not methodology_execution_id:
+            return _missing_argument_result(request, 'methodology_execution_id')
+        projection = self._projection_service.get_next_action_projection(str(methodology_execution_id))
+        payload = {
+            'methodology_execution_id': projection.methodology_execution_id,
+            'recommended_next_action_key': projection.recommended_next_action_key,
+            'recommended_owner_role': projection.recommended_owner_role,
+            'lane': projection.lane,
+            'stage': projection.stage,
+            'step': projection.step,
+            'blocked_reason': projection.blocked_reason,
+            'implementation_plan_id': projection.implementation_plan_id,
+            'packet_id': projection.packet_id,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Methodology Next Action',
+                    messages=(
+                        OperatorOutputMessage(
+                            level='info',
+                            text=f"Next recommended action: {projection.recommended_next_action_key or 'none'}",
+                        ),
+                    ),
+                    tables=(_summary_table('Methodology Next Summary', payload),),
                     data=payload,
                 ),
             ),

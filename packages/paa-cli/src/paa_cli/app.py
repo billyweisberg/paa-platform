@@ -342,7 +342,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     )
     component_app = typer.Typer(help='Component-realization lane commands.', no_args_is_help=True)
     plan_app = typer.Typer(help='Implementation-plan inspection commands.', no_args_is_help=True)
-    status_app = typer.Typer(help='Methodology pointer status reads.', no_args_is_help=True)
+    status_app = typer.Typer(help='Methodology pointer status and next-action reads.', no_args_is_help=True)
     report_app = typer.Typer(help='Methodology pointer next/explain reads.', no_args_is_help=True)
 
     @component_app.command('materialize')
@@ -596,6 +596,26 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
                 work_item_id=work_item_id,
                 component_id=component_id,
             ),
+        )
+        raise typer.Exit(code=code)
+
+    @status_app.command('next')
+    def status_next(
+        methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='status',
+            command_name='next',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={'methodology_execution_id': methodology_execution_id},
         )
         raise typer.Exit(code=code)
 
