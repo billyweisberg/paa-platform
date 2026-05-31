@@ -12,6 +12,7 @@ PRODUCER_COMMANDS = (
     'derive-implementation-plan',
     'materialize-component-spec',
     'implementation-plan-progress',
+    'set-implementation-plan-activity-state',
     'derive-next-activity-bundle',
     'reconcile-implementation-plan-progress',
     'assemble-coder-brief',

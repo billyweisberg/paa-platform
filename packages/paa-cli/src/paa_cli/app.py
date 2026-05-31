@@ -246,6 +246,38 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+    @component_app.command('complete')
+    def component_complete(
+        plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
+        activity_key: str = typer.Option(..., '--activity-key', help='Implementation plan activity key.'),
+        completed_at: str | None = typer.Option(None, '--completed-at', help='Optional completion timestamp override.'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional JSON object merged into activity metadata.'),
+        no_reconcile: bool = typer.Option(False, '--no-reconcile', help='Skip automatic reconcile after completion.'),
+        no_next: bool = typer.Option(False, '--no-next', help='Skip automatic next-activity derivation after reconcile.'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='component',
+            command_name='complete',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={
+                'plan_id': plan_id,
+                'activity_key': activity_key,
+                **({'completed_at': completed_at} if completed_at else {}),
+                **({'metadata_json': metadata_json} if metadata_json else {}),
+                'no_reconcile': no_reconcile,
+                'no_next': no_next,
+            },
+        )
+        raise typer.Exit(code=code)
+
     @plan_app.command('progress')
     def plan_progress(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),

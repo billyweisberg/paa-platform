@@ -41,6 +41,26 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 2)
         self.assertIn('failure=no_next_activity', result.stdout)
 
+    def test_component_complete_renders_json_output(self) -> None:
+        with patch(
+            'paa_cli.command_adapters.set_implementation_plan_activity_state',
+            return_value={'ok': True, 'implementation_plan_id': 'plan-1', 'activity_key': 'dto-models', 'requested_state': 'completed'},
+        ), patch(
+            'paa_cli.command_adapters.reconcile_implementation_plan_progress',
+            return_value={'authority_state_summary': 'partially_realized_plan', 'next_activity_key': 'postgres-adapter'},
+        ), patch(
+            'paa_cli.command_adapters.derive_next_activity_bundle',
+            return_value={'ok': True, 'next_bundle_activity_keys': ['postgres-adapter'], 'bundle_kind': 'single_activity'},
+        ):
+            result = self.runner.invoke(
+                self.app,
+                ['component', 'complete', '--plan-id', 'plan-1', '--activity-key', 'dto-models', '--output', 'json'],
+            )
+        self.assertEqual(result.exit_code, 0)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['command_name'], 'complete')
+        self.assertTrue(payload['sections'][0]['data']['reconcile_performed'])
+
     def test_plan_inspect_renders_table_output(self) -> None:
         with patch('paa_cli.command_adapters.implementation_plan_progress', return_value={'implementation_plan_id': 'plan-1', 'authority_state_summary': 'active_plan'}):
             result = self.runner.invoke(self.app, ['plan', 'inspect', '--plan-id', 'plan-1'])

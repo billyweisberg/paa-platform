@@ -80,6 +80,51 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
         self.assertFalse(result.supported)
         self.assertEqual(result.failure.code, 'unsupported_command')
 
+    def test_component_complete_runs_mutation_reconcile_and_next(self) -> None:
+        request = OperatorCommandRequest(
+            command=OperatorCommand(command_family='component', command_name='complete'),
+            invocation_context=OperatorInvocationContext(),
+            arguments={'plan_id': 'plan-123', 'activity_key': 'dto-models'},
+        )
+        with patch(
+            'paa_cli.command_adapters.set_implementation_plan_activity_state',
+            return_value={'ok': True, 'implementation_plan_id': 'plan-123', 'activity_key': 'dto-models', 'requested_state': 'completed'},
+        ) as mock_mutate, patch(
+            'paa_cli.command_adapters.reconcile_implementation_plan_progress',
+            return_value={'authority_state_summary': 'partially_realized_plan', 'next_activity_key': 'postgres-adapter'},
+        ) as mock_reconcile, patch(
+            'paa_cli.command_adapters.derive_next_activity_bundle',
+            return_value={'ok': True, 'next_bundle_activity_keys': ['postgres-adapter'], 'bundle_kind': 'single_activity'},
+        ) as mock_next:
+            result = ComponentCommandAdapter().run(request)
+
+        self.assertTrue(result.success)
+        self.assertTrue(result.metadata['reconcile_performed'])
+        self.assertTrue(result.metadata['next_activity_derived'])
+        mock_mutate.assert_called_once()
+        mock_reconcile.assert_called_once_with(plan_id='plan-123')
+        mock_next.assert_called_once_with(plan_id='plan-123')
+
+    def test_component_complete_can_skip_followthrough(self) -> None:
+        request = OperatorCommandRequest(
+            command=OperatorCommand(command_family='component', command_name='complete'),
+            invocation_context=OperatorInvocationContext(),
+            arguments={'plan_id': 'plan-123', 'activity_key': 'dto-models', 'no_reconcile': True},
+        )
+        with patch(
+            'paa_cli.command_adapters.set_implementation_plan_activity_state',
+            return_value={'ok': True, 'implementation_plan_id': 'plan-123', 'activity_key': 'dto-models', 'requested_state': 'completed'},
+        ) as mock_mutate, patch(
+            'paa_cli.command_adapters.reconcile_implementation_plan_progress'
+        ) as mock_reconcile:
+            result = ComponentCommandAdapter().run(request)
+
+        self.assertTrue(result.success)
+        self.assertFalse(result.metadata['reconcile_performed'])
+        self.assertFalse(result.metadata['next_activity_derived'])
+        mock_mutate.assert_called_once()
+        mock_reconcile.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

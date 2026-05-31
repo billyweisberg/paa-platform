@@ -32,6 +32,9 @@ from paa_producer.implementation_plan_progress import (
     implementation_plan_progress,
     reconcile_implementation_plan_progress,
 )
+from paa_producer.implementation_plan_activity_state import (
+    set_implementation_plan_activity_state,
+)
 from paa_producer.obligation_loader import materialize_verification_obligations
 from paa_producer.publish import publish_from_project_config
 from paa_producer.smoke_test import run_smoke_test
@@ -254,6 +257,34 @@ def main() -> int:
         argp.add_argument('--plan-id', required=True)
         subargs = argp.parse_args(remainder)
         print(json.dumps(implementation_plan_progress(plan_id=subargs.plan_id), indent=2))
+        return 0
+
+    if args.command == 'set-implementation-plan-activity-state':
+        argp = argparse.ArgumentParser(
+            prog='paa-producer set-implementation-plan-activity-state',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--plan-id', required=True)
+        argp.add_argument('--activity-key', required=True)
+        argp.add_argument('--activity-state', required=True)
+        argp.add_argument('--blocking-reason')
+        argp.add_argument('--started-at')
+        argp.add_argument('--completed-at')
+        argp.add_argument('--metadata-json')
+        subargs = argp.parse_args(remainder)
+        try:
+            result = set_implementation_plan_activity_state(
+                plan_id=subargs.plan_id,
+                activity_key=subargs.activity_key,
+                activity_state=subargs.activity_state,
+                blocking_reason=subargs.blocking_reason,
+                started_at=subargs.started_at,
+                completed_at=subargs.completed_at,
+                metadata_json=subargs.metadata_json,
+            )
+        except ValueError as exc:
+            argp.error(str(exc))
+        print(json.dumps(result, indent=2))
         return 0
 
     if args.command == 'derive-next-activity-bundle':
