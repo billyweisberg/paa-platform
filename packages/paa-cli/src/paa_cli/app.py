@@ -12,7 +12,22 @@ except ImportError as exc:  # pragma: no cover - exercised only in missing-depen
 else:  # pragma: no branch
     _TYPER_IMPORT_ERROR = None
 
-from .command_adapters import ComponentCommandAdapter, PlanCommandAdapter
+from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
+from paa_core.services.methodology_execution_preflight import (
+    DefaultMethodologyExecutionPreflightService,
+    MethodologyExecutionPreflightRequest,
+)
+from paa_core.services.methodology_execution_projection import (
+    DefaultMethodologyExecutionProjectionService,
+)
+from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
+
+from .command_adapters import (
+    ComponentCommandAdapter,
+    PlanCommandAdapter,
+    ReportCommandAdapter,
+    StatusCommandAdapter,
+)
 from .contracts import PAAOperatorCLI, StructuredLogger
 from .environment import EnvironmentResolutionInput, EnvironmentResolver
 from .models import (
@@ -20,12 +35,16 @@ from .models import (
     OperatorCommandRequest,
     OperatorCommandResult,
     OperatorFailure,
+    OperatorOutputMessage,
+    OperatorOutputSection,
+    OperatorOutputTable,
 )
 from .normalization import CommandResultNormalizer
 from .rendering import OutputRenderer
 from .router import CommandRegistration, CommandRouter
 
 _OUTPUT_MODES: Final[tuple[str, ...]] = ('table', 'json', 'summary')
+_PREFLIGHTED_FAMILIES: Final[set[str]] = {'component', 'plan'}
 
 
 class NullStructuredLogger:
@@ -39,7 +58,7 @@ class NullStructuredLogger:
 
 
 class DefaultPAAOperatorCLI(PAAOperatorCLI):
-    """Concrete thin host over the realized component and plan command families."""
+    """Concrete thin host over realized command families and methodology pointer services."""
 
     def __init__(
         self,
@@ -49,12 +68,14 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
         router: CommandRouter,
         normalizer: CommandResultNormalizer,
         renderer: OutputRenderer,
+        methodology_execution_preflight_service: object | None = None,
     ) -> None:
         self._logger = logger
         self.environment_resolver = environment_resolver
         self.router = router
         self.normalizer = normalizer
         self.renderer = renderer
+        self.methodology_execution_preflight_service = methodology_execution_preflight_service
 
     @property
     def logger(self) -> StructuredLogger:
@@ -66,6 +87,15 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
             command_family=request.command.command_family,
             command_name=request.command.command_name,
         )
+        preflight_result = self._preflight_if_needed(request)
+        if preflight_result is not None and not preflight_result.success:
+            self.logger.warning(
+                'paa_cli.command.preflight_blocked',
+                command_family=request.command.command_family,
+                command_name=request.command.command_name,
+                failure_code=preflight_result.failure.code if preflight_result.failure else 'preflight_blocked',
+            )
+            return preflight_result
         try:
             raw_result = self.router.route(request)
         except KeyError:
@@ -81,6 +111,16 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
                 ),
             )
         result = self.normalizer.normalize(request.command, raw_result)
+        if preflight_result is not None and preflight_result.sections:
+            result = OperatorCommandResult(
+                command=result.command,
+                supported=result.supported,
+                success=result.success,
+                exit_code=result.exit_code,
+                sections=preflight_result.sections + result.sections,
+                failure=result.failure,
+                metadata={**preflight_result.metadata, **result.metadata},
+            )
         if result.failure is not None:
             self.logger.warning(
                 'paa_cli.command.failed',
@@ -103,19 +143,138 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
     def render_result(self, result: OperatorCommandResult, *, output_mode: str) -> str:
         return self.renderer.render(result, output_mode=output_mode)
 
+    def _preflight_if_needed(self, request: OperatorCommandRequest) -> OperatorCommandResult | None:
+        if request.command.command_family not in _PREFLIGHTED_FAMILIES:
+            return None
+        if self.methodology_execution_preflight_service is None:
+            return None
+        preflight_request = self._build_preflight_request(request)
+        if preflight_request is None:
+            return None
+        outcome_result = self.methodology_execution_preflight_service.evaluate_command(preflight_request)
+        payload = {
+            'methodology_execution_id': outcome_result.methodology_execution_id,
+            'outcome_kind': outcome_result.outcome.outcome_kind,
+            'rule_key': outcome_result.outcome.rule_key,
+            'redirect_target': outcome_result.outcome.redirect_target,
+            'recommended_next_action_key': outcome_result.outcome.recommended_next_action_key,
+            'reason': outcome_result.outcome.reason,
+            'details': outcome_result.outcome.details,
+        }
+        section = OperatorOutputSection(
+            title='Methodology Preflight',
+            messages=(OperatorOutputMessage(level='info', text=outcome_result.outcome.reason),),
+            tables=(
+                OperatorOutputTable(
+                    title='Methodology Preflight Summary',
+                    columns=('field', 'value'),
+                    rows=tuple((str(key), str(value)) for key, value in payload.items()),
+                ),
+            ),
+            data=payload,
+        )
+        if outcome_result.outcome.outcome_kind == 'blocked':
+            return OperatorCommandResult(
+                command=request.command,
+                supported=True,
+                success=False,
+                exit_code=2,
+                sections=(section,),
+                failure=OperatorFailure(
+                    code=outcome_result.reason or 'preflight_blocked',
+                    summary=outcome_result.outcome.reason,
+                    details=tuple(filter(None, [outcome_result.outcome.details])),
+                ),
+                metadata={'preflight': payload},
+            )
+        if outcome_result.outcome.outcome_kind == 'redirect':
+            return OperatorCommandResult(
+                command=request.command,
+                supported=True,
+                success=False,
+                exit_code=2,
+                sections=(section,),
+                failure=OperatorFailure(
+                    code='preflight_redirect',
+                    summary=outcome_result.outcome.reason,
+                    details=tuple(filter(None, [outcome_result.outcome.details])),
+                    metadata={'redirect_target': outcome_result.outcome.redirect_target},
+                ),
+                metadata={'preflight': payload},
+            )
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(section,),
+            metadata={'preflight': payload},
+        )
+
+    @staticmethod
+    def _build_preflight_request(
+        request: OperatorCommandRequest,
+    ) -> MethodologyExecutionPreflightRequest | None:
+        arguments = request.arguments
+        methodology_execution_id = _optional_string(arguments.get('methodology_execution_id'))
+        project_id = _optional_string(arguments.get('project_id'))
+        work_item_id = _optional_string(arguments.get('work_item_id'))
+        component_id = _optional_string(arguments.get('component_id'))
+        if methodology_execution_id is None and not (project_id and work_item_id):
+            return None
+        return MethodologyExecutionPreflightRequest(
+            methodology_execution_id=methodology_execution_id,
+            project_id=project_id,
+            work_item_id=work_item_id,
+            component_id=component_id,
+            command_family=request.command.command_family,
+            command_name=request.command.command_name,
+            command_arguments=dict(arguments),
+            metadata={'repo_root': request.invocation_context.repo_root},
+        )
+
 
 def build_default_cli() -> DefaultPAAOperatorCLI:
+    logger = NullStructuredLogger()
+    methodology_execution_repository = PostgresMethodologyExecutionRepository()
+    methodology_execution_state_service = DefaultMethodologyExecutionStateService(
+        methodology_execution_repository=methodology_execution_repository,
+        logger=logger,
+    )
+    methodology_execution_projection_service = DefaultMethodologyExecutionProjectionService(
+        methodology_execution_repository=methodology_execution_repository,
+        logger=logger,
+    )
+    methodology_execution_preflight_service = DefaultMethodologyExecutionPreflightService(
+        methodology_execution_repository=methodology_execution_repository,
+        methodology_execution_state_service=methodology_execution_state_service,
+        methodology_execution_projection_service=methodology_execution_projection_service,
+        logger=logger,
+    )
     return DefaultPAAOperatorCLI(
-        logger=NullStructuredLogger(),
+        logger=logger,
         environment_resolver=EnvironmentResolver(),
         router=CommandRouter(
             (
                 CommandRegistration(command_family='component', adapter=ComponentCommandAdapter()),
                 CommandRegistration(command_family='plan', adapter=PlanCommandAdapter()),
+                CommandRegistration(
+                    command_family='status',
+                    adapter=StatusCommandAdapter(
+                        methodology_execution_projection_service=methodology_execution_projection_service,
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='report',
+                    adapter=ReportCommandAdapter(
+                        methodology_execution_projection_service=methodology_execution_projection_service,
+                    ),
+                ),
             )
         ),
         normalizer=CommandResultNormalizer(),
         renderer=OutputRenderer(),
+        methodology_execution_preflight_service=methodology_execution_preflight_service,
     )
 
 
@@ -148,6 +307,25 @@ def _invoke(
     return result.exit_code
 
 
+def _pointer_arguments(
+    *,
+    methodology_execution_id: str | None,
+    project_id: str | None,
+    work_item_id: str | None,
+    component_id: str | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {}
+    if methodology_execution_id is not None:
+        payload['methodology_execution_id'] = methodology_execution_id
+    if project_id is not None:
+        payload['project_id'] = project_id
+    if work_item_id is not None:
+        payload['work_item_id'] = work_item_id
+    if component_id is not None:
+        payload['component_id'] = component_id
+    return payload
+
+
 def build_app(cli: DefaultPAAOperatorCLI | None = None):
     if typer is None:  # pragma: no cover - depends on host environment
         raise RuntimeError(
@@ -164,12 +342,18 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     )
     component_app = typer.Typer(help='Component-realization lane commands.', no_args_is_help=True)
     plan_app = typer.Typer(help='Implementation-plan inspection commands.', no_args_is_help=True)
+    status_app = typer.Typer(help='Methodology pointer status reads.', no_args_is_help=True)
+    report_app = typer.Typer(help='Methodology pointer next/explain reads.', no_args_is_help=True)
 
     @component_app.command('materialize')
     def component_materialize(
         spec: str = typer.Option(..., '--spec', help='Absolute or relative component spec path.'),
         project_slug: str | None = typer.Option(None, '--project-slug', help='Optional project slug override.'),
         repo_root: str | None = typer.Option(None, '--repo-root', help='Invocation repo root override.'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run', help='Resolve invocation context without mutating runtime state.'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict', help='Enable strict fail-closed handling.'),
@@ -182,7 +366,16 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'spec': spec, **({'project_slug': project_slug} if project_slug else {})},
+            arguments={
+                'spec': spec,
+                **({'project_slug': project_slug} if project_slug else {}),
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
         )
         raise typer.Exit(code=code)
 
@@ -190,6 +383,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     def component_progress(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
@@ -202,7 +399,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'plan_id': plan_id},
+            arguments={
+                'plan_id': plan_id,
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
         )
         raise typer.Exit(code=code)
 
@@ -210,6 +415,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     def component_reconcile(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
@@ -222,7 +431,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'plan_id': plan_id},
+            arguments={
+                'plan_id': plan_id,
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
         )
         raise typer.Exit(code=code)
 
@@ -230,6 +447,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     def component_next(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
@@ -242,7 +463,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'plan_id': plan_id},
+            arguments={
+                'plan_id': plan_id,
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
         )
         raise typer.Exit(code=code)
 
@@ -282,6 +511,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     def plan_progress(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
@@ -294,7 +527,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'plan_id': plan_id},
+            arguments={
+                'plan_id': plan_id,
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
         )
         raise typer.Exit(code=code)
 
@@ -302,6 +543,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     def plan_inspect(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
         output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
         dry_run: bool = typer.Option(False, '--dry-run'),
         strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
@@ -314,12 +559,90 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             output_mode=output,
             dry_run=dry_run,
             strict_mode=strict_mode,
-            arguments={'plan_id': plan_id},
+            arguments={
+                'plan_id': plan_id,
+                **_pointer_arguments(
+                    methodology_execution_id=methodology_execution_id,
+                    project_id=project_id,
+                    work_item_id=work_item_id,
+                    component_id=component_id,
+                ),
+            },
+        )
+        raise typer.Exit(code=code)
+
+    @status_app.command('inspect')
+    def status_inspect(
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='status',
+            command_name='inspect',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments=_pointer_arguments(
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+            ),
+        )
+        raise typer.Exit(code=code)
+
+    @report_app.command('next')
+    def report_next(
+        methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='report',
+            command_name='next',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={'methodology_execution_id': methodology_execution_id},
+        )
+        raise typer.Exit(code=code)
+
+    @report_app.command('explain')
+    def report_explain(
+        methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='report',
+            command_name='explain',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={'methodology_execution_id': methodology_execution_id},
         )
         raise typer.Exit(code=code)
 
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
+    app.add_typer(status_app, name='status')
+    app.add_typer(report_app, name='report')
     return app
 
 
@@ -327,6 +650,12 @@ def main() -> int:
     app = build_app()
     app(prog_name='paa')
     return 0
+
+
+def _optional_string(value: object | None) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 __all__ = ['DefaultPAAOperatorCLI', 'NullStructuredLogger', 'build_app', 'build_default_cli', 'main']

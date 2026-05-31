@@ -11,13 +11,13 @@ from paa_producer.component_spec_materializer import (
     DEFAULT_PROJECT_SLUG,
     materialize_component_spec,
 )
+from paa_producer.implementation_plan_activity_state import (
+    set_implementation_plan_activity_state,
+)
 from paa_producer.implementation_plan_progress import (
     derive_next_activity_bundle,
     implementation_plan_progress,
     reconcile_implementation_plan_progress,
-)
-from paa_producer.implementation_plan_activity_state import (
-    set_implementation_plan_activity_state,
 )
 
 from .models import (
@@ -38,8 +38,8 @@ def _missing_argument_result(request: OperatorCommandRequest, argument_name: str
         exit_code=2,
         failure=OperatorFailure(
             code='missing_argument',
-            summary=f"Missing required argument: {argument_name}",
-            details=(f"command={request.command.command_family}:{request.command.command_name}",),
+            summary=f'Missing required argument: {argument_name}',
+            details=(f'command={request.command.command_family}:{request.command.command_name}',),
         ),
     )
 
@@ -112,7 +112,7 @@ class ComponentCommandAdapter:
                     messages=(
                         OperatorOutputMessage(
                             level='info',
-                            text=f"Materialized {result.source_path}",
+                            text=f'Materialized {result.source_path}',
                         ),
                     ),
                     tables=(_summary_table('Materialization Summary', payload),),
@@ -145,7 +145,13 @@ class ComponentCommandAdapter:
             return _missing_argument_result(request, 'plan_id')
         payload = derive_next_activity_bundle(plan_id=str(plan_id))
         success = bool(payload.get('ok', False))
-        return self._result_from_payload(request, 'Component Next Activity', payload, success=success, exit_code=0 if success else 2)
+        return self._result_from_payload(
+            request,
+            'Component Next Activity',
+            payload,
+            success=success,
+            exit_code=0 if success else 2,
+        )
 
     def _complete(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         plan_id = request.arguments.get('plan_id')
@@ -277,10 +283,159 @@ class PlanCommandAdapter:
         )
 
 
-__all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter']
+class StatusCommandAdapter:
+    """Handle pointer-facing methodology status reads."""
+
+    def __init__(self, *, methodology_execution_projection_service: object) -> None:
+        self._projection_service = methodology_execution_projection_service
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name != 'inspect':
+            return _unsupported_command_result(request)
+        methodology_execution_id = request.arguments.get('methodology_execution_id')
+        project_id = request.arguments.get('project_id')
+        work_item_id = request.arguments.get('work_item_id')
+        component_id = request.arguments.get('component_id')
+        if methodology_execution_id:
+            projection = self._projection_service.get_status_projection(str(methodology_execution_id))
+        elif project_id and work_item_id:
+            projection = self._projection_service.find_status_projection(
+                str(project_id),
+                str(work_item_id),
+                _optional_string(component_id),
+            )
+            if projection is None:
+                return OperatorCommandResult(
+                    command=request.command,
+                    supported=True,
+                    success=False,
+                    exit_code=2,
+                    failure=OperatorFailure(
+                        code='missing_methodology_execution',
+                        summary='No methodology execution could be resolved for the supplied anchors.',
+                    ),
+                )
+        else:
+            return _missing_argument_result(request, 'methodology_execution_id or project_id/work_item_id')
+        payload = {
+            'methodology_execution_id': projection.methodology_execution_id,
+            'lane': projection.lane,
+            'stage': projection.stage,
+            'step': projection.step,
+            'status': projection.status,
+            'current_owner_role': projection.current_owner_role,
+            'next_action_key': projection.next_action_key,
+            'blocked_reason': projection.blocked_reason,
+            'component_id': projection.component_id,
+            'implementation_plan_id': projection.implementation_plan_id,
+            'summary_text': projection.summary_text,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Methodology Status',
+                    messages=(OperatorOutputMessage(level='info', text=projection.summary_text),),
+                    tables=(_summary_table('Methodology Status Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
+
+
+class ReportCommandAdapter:
+    """Handle pointer-facing next/explain reads."""
+
+    def __init__(self, *, methodology_execution_projection_service: object) -> None:
+        self._projection_service = methodology_execution_projection_service
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name == 'next':
+            return self._next(request)
+        if request.command.command_name == 'explain':
+            return self._explain(request)
+        return _unsupported_command_result(request)
+
+    def _next(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        methodology_execution_id = request.arguments.get('methodology_execution_id')
+        if not methodology_execution_id:
+            return _missing_argument_result(request, 'methodology_execution_id')
+        projection = self._projection_service.get_next_action_projection(str(methodology_execution_id))
+        payload = {
+            'methodology_execution_id': projection.methodology_execution_id,
+            'recommended_next_action_key': projection.recommended_next_action_key,
+            'recommended_owner_role': projection.recommended_owner_role,
+            'lane': projection.lane,
+            'stage': projection.stage,
+            'step': projection.step,
+            'blocked_reason': projection.blocked_reason,
+            'implementation_plan_id': projection.implementation_plan_id,
+            'packet_id': projection.packet_id,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Methodology Next Action',
+                    messages=(
+                        OperatorOutputMessage(
+                            level='info',
+                            text=f"Next recommended action: {projection.recommended_next_action_key or 'none'}",
+                        ),
+                    ),
+                    tables=(_summary_table('Methodology Next Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
+
+    def _explain(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        methodology_execution_id = request.arguments.get('methodology_execution_id')
+        if not methodology_execution_id:
+            return _missing_argument_result(request, 'methodology_execution_id')
+        projection = self._projection_service.explain_current_methodology_execution(str(methodology_execution_id))
+        payload = {
+            'methodology_execution_id': projection.methodology_execution_id,
+            'lane': projection.lane,
+            'stage': projection.stage,
+            'step': projection.step,
+            'status': projection.status,
+            'current_owner_role': projection.current_owner_role,
+            'transition_context': projection.transition_context,
+            'blocked_reason': projection.blocked_reason,
+            'explanation_summary': projection.explanation_summary,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Methodology Explain',
+                    messages=(
+                        OperatorOutputMessage(level='info', text=projection.explanation_summary),
+                    ),
+                    tables=(_summary_table('Methodology Explain Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
 
 
 def _optional_string(value: object | None) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+__all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter', 'ReportCommandAdapter', 'StatusCommandAdapter']
