@@ -266,7 +266,7 @@ The repository should return stable typed repository DTOs and should not leak ad
 |---|---|---:|---|---|---|---|
 | methodology-execution-repository-interface-contract | Author methodology execution repository contract | 10 | contract-authoring | methodology_execution_repository_interface | repository_interface | Repository interface exposes stable current-truth, event, binding, and projection-input operations. |
 | methodology-execution-repository-dto-models | Model methodology execution repository DTOs | 20 | dto-materialization | methodology_execution_repository_models | dto | Root, event, binding, and write-spec DTOs cover the first repository slice. |
-| methodology-execution-repository-postgres-adapter | Implement methodology execution Postgres repository | 30 | repository-implementation | methodology_execution_repository_postgres_adapter | service_implementation | Postgres adapter supports the first write and read operations over methodology execution current truth. |
+| methodology-execution-repository-postgres-adapter | Implement methodology execution Postgres repository | 30 | service-implementation | methodology_execution_repository_postgres_adapter | service_implementation | Postgres adapter supports the first write and read operations over methodology execution current truth. |
 | methodology-execution-repository-validation-surface | Add methodology execution repository validation surface | 40 | verification | methodology_execution_repository_verification_surface | test_module | Unit coverage proves supported repository operations and fail-closed persistence behavior. |
 
 ## Activity Dependency Table
