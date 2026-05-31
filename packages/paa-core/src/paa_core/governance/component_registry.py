@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
+from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
 from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
 
 try:
@@ -47,6 +48,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = tuple(
         TECHLEAD_RESET_RECOVERY_DECISION_SERVICE_METADATA,
         TECHLEAD_WORKER_REVIEW_ROUTING_SERVICE_METADATA,
         IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
+        METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
         PAA_OPERATOR_CLI_METADATA,
     )
     if metadata is not None

@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 from paa_core.governance import ALIGNMENT_STATES, COMPONENT_KINDS, GovernedComponentMetadata, LIFECYCLE_STAGES
 from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME, GOVERNED_COMPONENTS
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
+from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
 from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 from paa_cli import PAA_OPERATOR_CLI_METADATA
@@ -22,6 +23,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
             WORKFLOW_LIFECYCLE_SERVICE_METADATA,
             EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA,
             IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
+            METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
         ):
             self.assertIsInstance(metadata, GovernedComponentMetadata)
             self.assertIn(metadata.kind, COMPONENT_KINDS)
@@ -34,9 +36,10 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertEqual('service', WORKFLOW_LIFECYCLE_SERVICE_METADATA.kind)
         self.assertEqual('service', EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA.kind)
         self.assertEqual('repository', IMPLEMENTATION_PLAN_REPOSITORY_METADATA.kind)
+        self.assertEqual('repository', METHODOLOGY_EXECUTION_REPOSITORY_METADATA.kind)
 
     def test_component_registry_maps_metadata_by_name(self) -> None:
-        self.assertGreaterEqual(len(GOVERNED_COMPONENTS), 4)
+        self.assertGreaterEqual(len(GOVERNED_COMPONENTS), 5)
         self.assertIs(
             WORKFLOW_LIFECYCLE_SERVICE_METADATA,
             COMPONENT_METADATA_BY_NAME["WorkflowLifecycleService"],
@@ -48,6 +51,10 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertIs(
             IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
             COMPONENT_METADATA_BY_NAME["ImplementationPlanRepository"],
+        )
+        self.assertIs(
+            METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
+            COMPONENT_METADATA_BY_NAME["MethodologyExecutionRepository"],
         )
         self.assertIs(
             PAA_OPERATOR_CLI_METADATA,
