@@ -293,20 +293,20 @@ It should not return ad hoc dicts that require downstream shells to reconstruct 
 
 ## Activity Dependency Table
 
-| predecessor_activity_key | successor_activity_key | dependency_kind |
+| activity_key | depends_on_activity_key | dependency_kind |
 |---|---|---|
-| methodology-execution-state-service-interface-contract | methodology-execution-state-service-dto-models | hard |
-| methodology-execution-state-service-dto-models | methodology-execution-state-service-default-service | hard |
-| methodology-execution-state-service-default-service | methodology-execution-state-service-validation-surface | hard |
+| methodology-execution-state-service-dto-models | methodology-execution-state-service-interface-contract | hard |
+| methodology-execution-state-service-default-service | methodology-execution-state-service-dto-models | hard |
+| methodology-execution-state-service-validation-surface | methodology-execution-state-service-default-service | hard |
 
 ## Verification Surface Table
 
 | verification_surface | verification_kind | artifact_target | required_for_acceptance |
 |---|---|---|---|
-| methodology execution state service contract tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | yes |
-| methodology execution state service DTO tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | yes |
-| methodology execution state service transition behavior tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | yes |
-| methodology execution state service governed model/code consistency | governance-check | `scripts/governance/paa_model_code_consistency.py --component MethodologyExecutionStateService` | yes |
+| methodology execution state service contract tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | true |
+| methodology execution state service DTO tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | true |
+| methodology execution state service transition behavior tests | unit-test | `tests/unit/test_methodology_execution_state_service.py` | true |
+| methodology execution state service governed model/code consistency | governance-check | `scripts/governance/paa_model_code_consistency.py --component MethodologyExecutionStateService` | true |
 
 ## 6. First Slice Focus
 
