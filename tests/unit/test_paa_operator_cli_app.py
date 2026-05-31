@@ -239,25 +239,59 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_cli.rendering import OutputRenderer
 
         component_adapter = Mock(spec=ComponentCommandAdapter)
-        component_adapter.run.return_value = OperatorCommandResult(
-            command=OperatorCommand(command_family='component', command_name='progress'),
-            supported=True,
-            success=True,
-            exit_code=0,
-            sections=(
-                OperatorOutputSection(
-                    title='Component Progress',
-                    messages=(OperatorOutputMessage(level='info', text='Component progress loaded.'),),
-                    tables=(
-                        OperatorOutputTable(
-                            title='Component Progress',
-                            columns=('field', 'value'),
-                            rows=(('plan_id', 'plan-1'), ('status', 'ready')),
+        def component_run(request: OperatorCommandRequest) -> OperatorCommandResult:
+            if request.command.command_name == 'complete':
+                return OperatorCommandResult(
+                    command=OperatorCommand(command_family='component', command_name='complete'),
+                    supported=True,
+                    success=True,
+                    exit_code=0,
+                    sections=(
+                        OperatorOutputSection(
+                            title='Component Complete',
+                            messages=(OperatorOutputMessage(level='info', text='Activity completion command applied.'),),
+                            tables=(
+                                OperatorOutputTable(
+                                    title='Component Complete Summary',
+                                    columns=('field', 'value'),
+                                    rows=(
+                                        ('activity_key', 'activity-1'),
+                                        ('activity_state', 'completed'),
+                                        ('reconcile_performed', 'True'),
+                                        ('next_activity_derived', 'True'),
+                                    ),
+                                ),
+                            ),
+                            data={
+                                'activity_key': 'activity-1',
+                                'activity_state': 'completed',
+                                'reconcile_performed': True,
+                                'next_activity_derived': True,
+                                'next_activity_bundle': {'ok': True, 'next_bundle_activity_keys': ('next-1',)},
+                            },
+                        ),
+                    ),
+                )
+            return OperatorCommandResult(
+                command=OperatorCommand(command_family='component', command_name='progress'),
+                supported=True,
+                success=True,
+                exit_code=0,
+                sections=(
+                    OperatorOutputSection(
+                        title='Component Progress',
+                        messages=(OperatorOutputMessage(level='info', text='Component progress loaded.'),),
+                        tables=(
+                            OperatorOutputTable(
+                                title='Component Progress',
+                                columns=('field', 'value'),
+                                rows=(('plan_id', 'plan-1'), ('status', 'ready')),
+                            ),
                         ),
                     ),
                 ),
-            ),
-        )
+            )
+        component_adapter.run.side_effect = component_run
         plan_adapter = Mock(spec=PlanCommandAdapter)
         plan_adapter.run.return_value = OperatorCommandResult(
             command=OperatorCommand(command_family='plan', command_name='progress'),
@@ -394,6 +428,45 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('report:explain', result.output)
         self.assertIn('The next component activity is ready to execute.', result.output)
         self.assertIn('supported=true success=true exit_code=0', result.output)
+
+    def test_component_complete_renders_live_typer_output_with_default_followthrough(self) -> None:
+        app, component_adapter, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'component',
+                'complete',
+                '--plan-id',
+                'plan-1',
+                '--activity-key',
+                'activity-1',
+                '--output',
+                'summary',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('component:complete', result.output)
+        self.assertIn('Activity completion command applied.', result.output)
+        component_adapter.run.assert_called_once()
+
+    def test_component_help_surfaces_preflight_behavior(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['component', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('preflight can allow, warn, block, or redirect execution', result.output)
+
+    def test_report_next_help_marks_status_next_as_preferred_surface(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['report', 'next', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('Compatibility alias for', result.output)
+        self.assertIn('status next', result.output)
 
     def test_component_progress_is_blocked_by_preflight_in_live_typer_output(self) -> None:
         app, component_adapter, _ = self._typer_cli(

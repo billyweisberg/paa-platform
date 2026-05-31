@@ -335,15 +335,34 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
 
     cli = cli or build_default_cli()
     app = typer.Typer(
-        help='Unified operator CLI for the PAA methodology.',
+        help=(
+            'Unified operator CLI for the PAA methodology. '
+            'Mutating component/plan commands may be preflight-blocked or redirected '
+            'when methodology pointer anchors are supplied.'
+        ),
         no_args_is_help=True,
         add_completion=False,
         pretty_exceptions_enable=False,
     )
-    component_app = typer.Typer(help='Component-realization lane commands.', no_args_is_help=True)
-    plan_app = typer.Typer(help='Implementation-plan inspection commands.', no_args_is_help=True)
+    component_app = typer.Typer(
+        help=(
+            'Component-realization lane commands. When methodology anchors are supplied, '
+            'preflight can allow, warn, block, or redirect execution.'
+        ),
+        no_args_is_help=True,
+    )
+    plan_app = typer.Typer(
+        help=(
+            'Implementation-plan inspection commands. When methodology anchors are supplied, '
+            'preflight can allow, block, or redirect execution before plan reads run.'
+        ),
+        no_args_is_help=True,
+    )
     status_app = typer.Typer(help='Methodology pointer status and next-action reads.', no_args_is_help=True)
-    report_app = typer.Typer(help='Methodology pointer next/explain reads.', no_args_is_help=True)
+    report_app = typer.Typer(
+        help='Methodology pointer explain reads plus compatibility aliases for older report commands.',
+        no_args_is_help=True,
+    )
 
     @component_app.command('materialize')
     def component_materialize(
@@ -379,7 +398,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @component_app.command('progress')
+    @component_app.command(
+        'progress',
+        help='Load component plan progress. With methodology anchors, preflight may block or redirect this command.',
+    )
     def component_progress(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
@@ -411,7 +433,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @component_app.command('reconcile')
+    @component_app.command(
+        'reconcile',
+        help='Reconcile component plan progress. With methodology anchors, preflight may block or redirect this command.',
+    )
     def component_reconcile(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
@@ -443,7 +468,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @component_app.command('next')
+    @component_app.command(
+        'next',
+        help='Derive the next component activity bundle. With methodology anchors, preflight may block or redirect this command.',
+    )
     def component_next(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
@@ -475,7 +503,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @component_app.command('complete')
+    @component_app.command(
+        'complete',
+        help='Mark a component activity complete, then reconcile and derive next by default.',
+    )
     def component_complete(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         activity_key: str = typer.Option(..., '--activity-key', help='Implementation plan activity key.'),
@@ -507,7 +538,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @plan_app.command('progress')
+    @plan_app.command(
+        'progress',
+        help='Load implementation-plan progress. With methodology anchors, preflight may block or redirect this command.',
+    )
     def plan_progress(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
@@ -539,7 +573,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @plan_app.command('inspect')
+    @plan_app.command(
+        'inspect',
+        help='Inspect implementation-plan state. With methodology anchors, preflight may block or redirect this command.',
+    )
     def plan_inspect(
         plan_id: str = typer.Option(..., '--plan-id', help='Implementation plan id.'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
@@ -619,7 +656,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    @report_app.command('next')
+    @report_app.command(
+        'next',
+        help='Compatibility alias for `paa status next`.',
+    )
     def report_next(
         methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
