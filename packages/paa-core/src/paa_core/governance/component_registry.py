@@ -40,6 +40,9 @@ from paa_core.services.techlead_assignment_decision import (
 from paa_core.services.techlead_worker_review_routing import (
     TECHLEAD_WORKER_REVIEW_ROUTING_SERVICE_METADATA,
 )
+from paa_core.services.techlead_worker import (
+    TECHLEAD_WORKER_SERVICE_METADATA,
+)
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 
 from .component_metadata import GovernedComponentMetadata
@@ -56,6 +59,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = tuple(
         TECHLEAD_LINEAGE_DECISION_SERVICE_METADATA,
         TECHLEAD_RESET_RECOVERY_DECISION_SERVICE_METADATA,
         TECHLEAD_WORKER_REVIEW_ROUTING_SERVICE_METADATA,
+        TECHLEAD_WORKER_SERVICE_METADATA,
         IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
