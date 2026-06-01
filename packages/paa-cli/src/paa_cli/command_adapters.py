@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import json
 
 from paa_producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
@@ -56,6 +57,29 @@ def _unsupported_command_result(request: OperatorCommandRequest) -> OperatorComm
             details=(request.command.command_name,),
         ),
     )
+
+
+def _invalid_argument_result(request: OperatorCommandRequest, argument_name: str, details: str) -> OperatorCommandResult:
+    return OperatorCommandResult(
+        command=request.command,
+        supported=True,
+        success=False,
+        exit_code=2,
+        failure=OperatorFailure(
+            code='invalid_argument',
+            summary=f'Invalid argument: {argument_name}',
+            details=(details,),
+        ),
+    )
+
+
+def _optional_json_object(value: object | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    parsed = json.loads(str(value))
+    if not isinstance(parsed, dict):
+        raise ValueError('JSON value must decode to an object.')
+    return parsed
 
 
 def _summary_table(title: str, payload: dict[str, Any]) -> OperatorOutputTable:
@@ -480,4 +504,141 @@ def _optional_string(value: object | None) -> str | None:
     return str(value)
 
 
-__all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter', 'ReportCommandAdapter', 'StatusCommandAdapter']
+__all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter', 'QueueCommandAdapter', 'ReportCommandAdapter', 'StatusCommandAdapter', 'WorkerCommandAdapter']
+
+
+class QueueCommandAdapter:
+    """Handle queue-facing preview commands over the runtime controller."""
+
+    def __init__(self, *, queue_packet_runtime_controller: object) -> None:
+        self._runtime_controller = queue_packet_runtime_controller
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name == 'preview':
+            return self._preview(request)
+        return _unsupported_command_result(request)
+
+    def _preview(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        queue_name = request.arguments.get('queue_name')
+        if not queue_name:
+            return _missing_argument_result(request, 'queue_name')
+        packet_schema_type = request.arguments.get('packet_schema_type')
+        if not packet_schema_type:
+            return _missing_argument_result(request, 'packet_schema_type')
+        try:
+            packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
+        except ValueError as exc:
+            return _invalid_argument_result(request, 'packet_payload_json', str(exc))
+        runtime_request = self._runtime_controller.handle_packet.__annotations__.get('request')
+        del runtime_request
+        from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
+
+        result = self._runtime_controller.handle_packet(
+            QueuePacketRuntimeRequest(
+                queue_name=str(queue_name),
+                packet_schema_type=str(packet_schema_type),
+                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
+                packet_path=_optional_string(request.arguments.get('packet_path')),
+                packet_payload=packet_payload,
+                runtime_mode='dry_run' if bool(request.invocation_context.dry_run) else 'live',
+                actor_name=_optional_string(request.arguments.get('actor_name')),
+                host_name=_optional_string(request.arguments.get('host_name')),
+                metadata={'repo_root': request.invocation_context.repo_root},
+            )
+        )
+        payload = {
+            'queue_name': result.request.queue_name,
+            'packet_schema_type': result.request.packet_schema_type,
+            'packet_message_id': result.request.packet_message_id,
+            'target_worker_host': result.dispatch_summary.target_worker_host,
+            'dispatch_supported': result.dispatch_summary.dispatch_supported,
+            'reason': result.reason,
+            'normalized_queue_side_effect_summary': result.normalized_queue_side_effect_summary,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=result.ok,
+            exit_code=0 if result.ok else 2,
+            sections=(
+                OperatorOutputSection(
+                    title='Queue Preview',
+                    messages=(OperatorOutputMessage(level='info', text='Queue packet preview completed.'),),
+                    tables=(_summary_table('Queue Preview Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            failure=None if result.ok else OperatorFailure(
+                code=result.reason or 'queue_preview_failed',
+                summary=result.details or 'Queue packet preview failed.',
+                details=tuple(result.dispatch_summary.blocking_reasons),
+            ),
+            metadata=dict(payload),
+        )
+
+
+class WorkerCommandAdapter:
+    """Handle worker-facing dispatch commands over the runtime controller."""
+
+    def __init__(self, *, queue_packet_runtime_controller: object) -> None:
+        self._runtime_controller = queue_packet_runtime_controller
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name == 'dispatch':
+            return self._dispatch(request)
+        return _unsupported_command_result(request)
+
+    def _dispatch(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        queue_name = request.arguments.get('queue_name')
+        if not queue_name:
+            return _missing_argument_result(request, 'queue_name')
+        packet_schema_type = request.arguments.get('packet_schema_type')
+        if not packet_schema_type:
+            return _missing_argument_result(request, 'packet_schema_type')
+        try:
+            packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
+        except ValueError as exc:
+            return _invalid_argument_result(request, 'packet_payload_json', str(exc))
+        from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
+
+        result = self._runtime_controller.handle_packet(
+            QueuePacketRuntimeRequest(
+                queue_name=str(queue_name),
+                packet_schema_type=str(packet_schema_type),
+                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
+                packet_path=_optional_string(request.arguments.get('packet_path')),
+                packet_payload=packet_payload,
+                runtime_mode='dry_run' if bool(request.invocation_context.dry_run) else 'live',
+                actor_name=_optional_string(request.arguments.get('actor_name')),
+                host_name=_optional_string(request.arguments.get('host_name')),
+                metadata={'repo_root': request.invocation_context.repo_root},
+            )
+        )
+        payload = {
+            'queue_name': result.request.queue_name,
+            'packet_schema_type': result.request.packet_schema_type,
+            'target_worker_host': result.dispatch_summary.target_worker_host,
+            'dispatch_supported': result.dispatch_summary.dispatch_supported,
+            'reason': result.reason,
+            'normalized_queue_side_effect_summary': result.normalized_queue_side_effect_summary,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=result.ok,
+            exit_code=0 if result.ok else 2,
+            sections=(
+                OperatorOutputSection(
+                    title='Worker Dispatch',
+                    messages=(OperatorOutputMessage(level='info', text='Worker dispatch preview completed.'),),
+                    tables=(_summary_table('Worker Dispatch Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            failure=None if result.ok else OperatorFailure(
+                code=result.reason or 'worker_dispatch_failed',
+                summary=result.details or 'Worker dispatch failed.',
+                details=tuple(result.dispatch_summary.blocking_reasons),
+            ),
+            metadata=dict(payload),
+        )

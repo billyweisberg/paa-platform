@@ -13,6 +13,15 @@ else:  # pragma: no branch
     _TYPER_IMPORT_ERROR = None
 
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
+from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
+from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
+from paa_core.services.techlead_assignment_decision import DefaultTechLeadAssignmentDecisionService
+from paa_core.services.techlead_closeout_decision import DefaultTechLeadCloseoutDecisionService
+from paa_core.services.techlead_delivery_review_decision import DefaultTechLeadDeliveryReviewDecisionService
+from paa_core.services.techlead_lineage_decision import DefaultTechLeadLineageDecisionService
+from paa_core.services.techlead_reset_recovery_decision import DefaultTechLeadResetRecoveryDecisionService
+from paa_core.services.techlead_worker import DefaultTechLeadWorkerService
+from paa_core.services.techlead_worker_review_routing import DefaultTechLeadWorkerReviewRoutingService
 from paa_core.services.methodology_execution_preflight import (
     DefaultMethodologyExecutionPreflightService,
     MethodologyExecutionPreflightRequest,
@@ -25,8 +34,10 @@ from paa_core.services.methodology_execution_state import DefaultMethodologyExec
 from .command_adapters import (
     ComponentCommandAdapter,
     PlanCommandAdapter,
+    QueueCommandAdapter,
     ReportCommandAdapter,
     StatusCommandAdapter,
+    WorkerCommandAdapter,
 )
 from .contracts import PAAOperatorCLI, StructuredLogger
 from .environment import EnvironmentResolutionInput, EnvironmentResolver
@@ -234,6 +245,27 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
         )
 
 
+class _JsonFileQueuePacketReader:
+    def read_packet(self, packet_reference: object) -> object:
+        import json
+        from pathlib import Path
+
+        path = Path(str(packet_reference)).expanduser().resolve()
+        return json.loads(path.read_text())
+
+
+class _UnsupportedWorkerHost:
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def handle_packet(self, request: object) -> object:
+        raise RuntimeError(f'{self._name} is not composed for this CLI slice.')
+
+    def supports_packet_schema_type(self, packet_schema_type: str) -> bool:
+        del packet_schema_type
+        return False
+
+
 def build_default_cli() -> DefaultPAAOperatorCLI:
     logger = NullStructuredLogger()
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
@@ -249,6 +281,28 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
         methodology_execution_repository=methodology_execution_repository,
         methodology_execution_state_service=methodology_execution_state_service,
         methodology_execution_projection_service=methodology_execution_projection_service,
+        logger=logger,
+    )
+    techlead_worker_service = DefaultTechLeadWorkerService(
+        methodology_execution_repository=methodology_execution_repository,
+        methodology_execution_state_service=methodology_execution_state_service,
+        methodology_execution_projection_service=methodology_execution_projection_service,
+        methodology_execution_preflight_service=methodology_execution_preflight_service,
+        techlead_assignment_decision_service=DefaultTechLeadAssignmentDecisionService(logger=logger),
+        techlead_worker_review_routing_service=DefaultTechLeadWorkerReviewRoutingService(logger=logger),
+        techlead_acceptance_decision_service=DefaultTechLeadAcceptanceDecisionService(logger=logger),
+        techlead_delivery_review_decision_service=DefaultTechLeadDeliveryReviewDecisionService(logger=logger),
+        techlead_reset_recovery_decision_service=DefaultTechLeadResetRecoveryDecisionService(logger=logger),
+        techlead_lineage_decision_service=DefaultTechLeadLineageDecisionService(logger=logger),
+        techlead_closeout_decision_service=DefaultTechLeadCloseoutDecisionService(logger=logger),
+        logger=logger,
+    )
+    queue_packet_runtime_controller = DefaultQueuePacketRuntimeController(
+        techlead_worker_service=techlead_worker_service,
+        dev_worker_service=_UnsupportedWorkerHost('DevWorkerService'),
+        qa_worker_service=_UnsupportedWorkerHost('QAWorkerService'),
+        queue_packet_reader=_JsonFileQueuePacketReader(),
+        queue_packet_delivery_adapter=None,
         logger=logger,
     )
     return DefaultPAAOperatorCLI(
@@ -268,6 +322,18 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
                     command_family='report',
                     adapter=ReportCommandAdapter(
                         methodology_execution_projection_service=methodology_execution_projection_service,
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='queue',
+                    adapter=QueueCommandAdapter(
+                        queue_packet_runtime_controller=queue_packet_runtime_controller,
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='worker',
+                    adapter=WorkerCommandAdapter(
+                        queue_packet_runtime_controller=queue_packet_runtime_controller,
                     ),
                 ),
             )
@@ -363,6 +429,8 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         help='Methodology pointer explain reads plus compatibility aliases for older report commands.',
         no_args_is_help=True,
     )
+    queue_app = typer.Typer(help='Queue packet preview surfaces over the runtime controller.', no_args_is_help=True)
+    worker_app = typer.Typer(help='Worker dispatch preview surfaces over the runtime controller.', no_args_is_help=True)
 
     @component_app.command('materialize')
     def component_materialize(
@@ -679,6 +747,75 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+
+    @queue_app.command('preview')
+    def queue_preview(
+        queue_name: str = typer.Option(..., '--queue-name'),
+        packet_schema_type: str = typer.Option(..., '--packet-schema-type'),
+        packet_message_id: str | None = typer.Option(None, '--packet-message-id'),
+        packet_path: str | None = typer.Option(None, '--packet-path'),
+        packet_payload_json: str | None = typer.Option(None, '--packet-payload-json'),
+        actor_name: str | None = typer.Option(None, '--actor-name'),
+        host_name: str | None = typer.Option(None, '--host-name'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(True, '--dry-run/--live', help='Preview the queue packet without queue side effects.'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='queue',
+            command_name='preview',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={
+                'queue_name': queue_name,
+                'packet_schema_type': packet_schema_type,
+                **({'packet_message_id': packet_message_id} if packet_message_id else {}),
+                **({'packet_path': packet_path} if packet_path else {}),
+                **({'packet_payload_json': packet_payload_json} if packet_payload_json else {}),
+                **({'actor_name': actor_name} if actor_name else {}),
+                **({'host_name': host_name} if host_name else {}),
+            },
+        )
+        raise typer.Exit(code=code)
+
+    @worker_app.command('dispatch')
+    def worker_dispatch(
+        queue_name: str = typer.Option(..., '--queue-name'),
+        packet_schema_type: str = typer.Option(..., '--packet-schema-type'),
+        packet_message_id: str | None = typer.Option(None, '--packet-message-id'),
+        packet_path: str | None = typer.Option(None, '--packet-path'),
+        packet_payload_json: str | None = typer.Option(None, '--packet-payload-json'),
+        actor_name: str | None = typer.Option(None, '--actor-name'),
+        host_name: str | None = typer.Option(None, '--host-name'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(True, '--dry-run/--live', help='Dispatch the packet through the runtime controller in dry-run mode.'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='worker',
+            command_name='dispatch',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={
+                'queue_name': queue_name,
+                'packet_schema_type': packet_schema_type,
+                **({'packet_message_id': packet_message_id} if packet_message_id else {}),
+                **({'packet_path': packet_path} if packet_path else {}),
+                **({'packet_payload_json': packet_payload_json} if packet_payload_json else {}),
+                **({'actor_name': actor_name} if actor_name else {}),
+                **({'host_name': host_name} if host_name else {}),
+            },
+        )
+        raise typer.Exit(code=code)
+
     @report_app.command('explain')
     def report_explain(
         methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
@@ -703,6 +840,8 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')
     app.add_typer(report_app, name='report')
+    app.add_typer(queue_app, name='queue')
+    app.add_typer(worker_app, name='worker')
     return app
 
 

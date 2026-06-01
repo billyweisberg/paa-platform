@@ -16,8 +16,10 @@ from paa_cli.app import build_app, build_default_cli
 from paa_cli.command_adapters import (
     ComponentCommandAdapter,
     PlanCommandAdapter,
+    QueueCommandAdapter,
     ReportCommandAdapter,
     StatusCommandAdapter,
+    WorkerCommandAdapter,
 )
 from paa_cli.models import (
     OperatorCommand,
@@ -145,6 +147,36 @@ class _StubPreflightService:
             ok=self.outcome_kind not in {'blocked', 'redirect'},
             reason=None if self.outcome_kind not in {'blocked', 'redirect'} else f'preflight_{self.outcome_kind}',
         )
+
+
+
+
+class _StubQueuePacketRuntimeController:
+    def handle_packet(self, request):
+        from paa_core.services.queue_packet_runtime_controller import (
+            QueuePacketDispatchSummary,
+            QueuePacketRuntimeResult,
+        )
+        return QueuePacketRuntimeResult(
+            request=request,
+            dispatch_summary=QueuePacketDispatchSummary(
+                handler_key='techlead-worker-dispatch',
+                packet_schema_type=request.packet_schema_type,
+                target_worker_host='TechLeadWorkerService',
+                dispatch_supported=True,
+                queue_side_effect_required=False,
+                ack_required=False,
+                blocking_reasons=(),
+                notes=('dry-run-only',),
+            ),
+            selected_worker_result=None,
+            normalized_queue_side_effect_summary='Dry run only: no queue send or ack side effects executed.',
+            ok=True,
+            dry_run=True,
+        )
+
+    def supports_packet_schema_type(self, packet_schema_type: str) -> bool:
+        return packet_schema_type == 'worker_result_packet'
 
 
 class _StubLogger:
@@ -328,6 +360,18 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                         methodology_execution_projection_service=_StubProjectionService(),
                     ),
                 ),
+                CommandRegistration(
+                    command_family='queue',
+                    adapter=QueueCommandAdapter(
+                        queue_packet_runtime_controller=_StubQueuePacketRuntimeController(),
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='worker',
+                    adapter=WorkerCommandAdapter(
+                        queue_packet_runtime_controller=_StubQueuePacketRuntimeController(),
+                    ),
+                ),
             )
         )
         cli = DefaultPAAOperatorCLI(
@@ -373,6 +417,10 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.failure.code, 'preflight_redirect')
         component_adapter.run.assert_not_called()
+
+    def test_queue_and_worker_commands_are_available(self) -> None:
+        app = build_app()
+        self.assertIsNotNone(app)
 
     def test_status_and_report_commands_are_available(self) -> None:
         app = build_app()
@@ -450,6 +498,54 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('component:complete', result.output)
         self.assertIn('Activity completion command applied.', result.output)
         component_adapter.run.assert_called_once()
+
+    def test_queue_preview_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'queue',
+                'preview',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-payload-json',
+                '{\"methodology_execution_id\": \"exec-1\"}',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"command_family\": \"queue\"', result.output)
+        self.assertIn('Queue packet preview completed.', result.output)
+        self.assertIn('TechLeadWorkerService', result.output)
+
+    def test_worker_dispatch_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'worker',
+                'dispatch',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-payload-json',
+                '{\"methodology_execution_id\": \"exec-1\"}',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"command_family\": \"worker\"', result.output)
+        self.assertIn('Worker dispatch preview completed.', result.output)
+        self.assertIn('TechLeadWorkerService', result.output)
 
     def test_component_help_surfaces_preflight_behavior(self) -> None:
         app, _, _ = self._typer_cli()
