@@ -25,6 +25,7 @@ from paa_core.services.methodology_execution_state import (
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 from paa_core.services.techlead_worker import TECHLEAD_WORKER_SERVICE_METADATA
 from paa_core.services.packet_context_assembly import PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA
+from paa_core.services.dev_worker import DEV_WORKER_SERVICE_METADATA
 from paa_cli import PAA_OPERATOR_CLI_METADATA
 
 
@@ -40,6 +41,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
             METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
             TECHLEAD_WORKER_SERVICE_METADATA,
             PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
+            DEV_WORKER_SERVICE_METADATA,
         ):
             self.assertIsInstance(metadata, GovernedComponentMetadata)
             self.assertIn(metadata.kind, COMPONENT_KINDS)
@@ -56,6 +58,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertEqual('service', METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA.kind)
         self.assertEqual('service', TECHLEAD_WORKER_SERVICE_METADATA.kind)
         self.assertEqual('service', PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA.kind)
+        self.assertEqual('service', DEV_WORKER_SERVICE_METADATA.kind)
         self.assertEqual('repository', IMPLEMENTATION_PLAN_REPOSITORY_METADATA.kind)
         self.assertEqual('repository', METHODOLOGY_EXECUTION_REPOSITORY_METADATA.kind)
 
@@ -96,6 +99,10 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertIs(
             PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
             COMPONENT_METADATA_BY_NAME['PacketContextAssemblyService'],
+        )
+        self.assertIs(
+            DEV_WORKER_SERVICE_METADATA,
+            COMPONENT_METADATA_BY_NAME['DevWorkerService'],
         )
         self.assertIs(
             PAA_OPERATOR_CLI_METADATA,
