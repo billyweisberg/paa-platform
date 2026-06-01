@@ -339,3 +339,52 @@ before live send, ack, reset, closeout, or multi-packet routing is widened.
 | techlead-worker-dto-models | techlead-worker-interface-contract | hard |
 | techlead-worker-default-service | techlead-worker-dto-models | hard |
 | techlead-worker-validation-surface | techlead-worker-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| techlead worker service contract tests | unit-test | `tests/unit/test_techlead_worker_service.py` | true |
+| techlead worker service DTO tests | unit-test | `tests/unit/test_techlead_worker_service.py` | true |
+| techlead worker service dry-run orchestration tests | unit-test | `tests/unit/test_techlead_worker_service.py` | true |
+| techlead worker service governed model/code consistency | governance-check | `scripts/governance/paa_model_code_consistency.py --component TechLeadWorkerService` | true |
+
+## 6. First Slice Focus
+
+The first governed realization slice should support:
+- load one claimed `worker_result_packet`
+- resolve one methodology execution context by explicit execution id or anchors
+- derive one supported worker-review routing recommendation through `TechLeadWorkerReviewRoutingService`
+- return one structured dry-run dispatch summary
+- fail closed for unsupported packet families or unresolved execution context
+
+The first slice does not need to support:
+- live packet send
+- queue ack or requeue
+- delivery-review packet handling
+- reset, lineage, acceptance, or closeout orchestration
+- Dev or QA bounded agent invocation
+
+## 7. Failure Modes
+
+This service must fail closed for:
+- missing or invalid packet schema type
+- missing required packet identity or payload fields for the supported slice
+- unresolved methodology execution context
+- unsupported packet family
+- unsupported runtime mode
+- extracted decision service returning an unsupported or unsafe recommendation
+- methodology transition failure when a supported slice requires state update
+- packet validation or emission collaborator failure when live mode is later enabled
+
+Blocked or unsupported outcomes should return structured reasons rather than ad hoc shell-facing exceptions unless an injected dependency fails unexpectedly.
+
+## 8. Acceptance Rule
+
+This component is acceptable for the first governed MVP slice when:
+- the service interface and DTOs are stable and governed
+- one `worker_result_packet` dry-run path is implemented end to end
+- extracted TechLead worker-review routing is composed through the new runtime host
+- blocked outcomes are structured and fail closed
+- unit coverage proves supported and unsupported packet-handling behavior
+- model/code consistency passes for `TechLeadWorkerService`
