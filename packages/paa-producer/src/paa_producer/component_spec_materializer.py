@@ -153,6 +153,29 @@ def _clear_existing_plan_activity_truth(plan_id: str) -> None:
         run_psql(statement)
 
 
+def _assert_no_consumer_context_collision(
+    *,
+    plan_repo: PostgresImplementationPlanRepository,
+    design_package_id: str,
+    consumer_context_key: str,
+    expected_plan_id_external: str,
+    expected_component_id: str,
+) -> None:
+    record = plan_repo.get_implementation_plan_for_design_package(design_package_id, consumer_context_key)
+    if record is None:
+        return
+    if (
+        record.plan_id_external == expected_plan_id_external
+        or record.primary_component_id == expected_component_id
+    ):
+        return
+    raise RuntimeError(
+        'Component-spec materialization consumer_context_key collision: '
+        f"{consumer_context_key!r} for design package {design_package_id!r} is already bound to "
+        f"plan_id_external={record.plan_id_external!r}. Use a distinct consumer_context_key for this governed component plan."
+    )
+
+
 def _target_module(target_path: str) -> str:
     return Path(target_path).name
 
@@ -176,9 +199,16 @@ def materialize_component_spec(
     )
     anchor_plan = _anchor_plan(design_package_id, project_id, anchor_consumer_context_key)
     component_id = _ensure_component_row(project_id, seed)
+    _assert_no_consumer_context_collision(
+        plan_repo=plan_repo,
+        design_package_id=design_package_id,
+        consumer_context_key=seed.plan_seed.consumer_context_key,
+        expected_plan_id_external=seed.plan_seed.plan_name,
+        expected_component_id=component_id,
+    )
 
     existing_plan_id = _query_optional_scalar(
-        f"SELECT implementation_plan_id::text FROM paa.implementation_plans WHERE plan_id_external = {sql_literal(seed.plan_seed.plan_name)} LIMIT 1;"
+        f"SELECT implementation_plan_id::text FROM paa.implementation_plans WHERE project_id = {sql_literal(project_id)}::uuid AND plan_id_external = {sql_literal(seed.plan_seed.plan_name)} LIMIT 1;"
     )
     if existing_plan_id is not None:
         _clear_existing_plan_activity_truth(existing_plan_id)
@@ -281,9 +311,9 @@ def materialize_component_spec(
         )
     )
 
-    plan_record = plan_repo.get_implementation_plan_for_design_package(
-        design_package_id,
-        seed.plan_seed.consumer_context_key,
+    plan_record = plan_repo.get_implementation_plan_by_external(
+        project_id,
+        seed.plan_seed.plan_name,
     )
     if plan_record is None:
         raise RuntimeError('Failed to resolve materialized component-spec implementation plan.')

@@ -31,8 +31,9 @@ class ComponentSpecMaterializerTests(unittest.TestCase):
             'activity_keys': ('k',),
         })()
         with patch('paa_producer.component_spec_materializer.extract_component_spec_materialization_seed') as mock_extract, \
-             patch('paa_producer.component_spec_materializer._query_scalar', side_effect=['project-1', 'pkg-1', 'component-1']) as mock_scalar, \
+             patch('paa_producer.component_spec_materializer._query_scalar', side_effect=['project-1', 'pkg-1']) as mock_scalar, \
              patch('paa_producer.component_spec_materializer._anchor_plan') as mock_anchor, \
+             patch('paa_producer.component_spec_materializer._ensure_component_row', return_value='component-1'), \
              patch('paa_producer.component_spec_materializer._query_optional_scalar', return_value=None), \
              patch('paa_producer.component_spec_materializer._element_id', return_value='element-1'), \
              patch('paa_producer.component_spec_materializer._realization_id', return_value='realization-1'), \
@@ -56,7 +57,8 @@ class ComponentSpecMaterializerTests(unittest.TestCase):
                 'authority_version_id': 'auth-1',
             })()
             mock_plan_repo = mock_plan_repo_cls.return_value
-            mock_plan_repo.get_implementation_plan_for_design_package.return_value = type('PlanRecord', (), {
+            mock_plan_repo.get_implementation_plan_for_design_package.return_value = None
+            mock_plan_repo.get_implementation_plan_by_external.return_value = type('PlanRecord', (), {
                 'implementation_plan_id': 'plan-1',
                 'plan_id_external': 'plan-ext',
                 'consumer_context_key': 'python',
@@ -66,6 +68,40 @@ class ComponentSpecMaterializerTests(unittest.TestCase):
         self.assertEqual(result.implementation_plan_id, 'plan-1')
         self.assertEqual(result.plan_id_external, 'plan-ext')
         self.assertEqual(mock_scalar.call_count >= 2, True)
+
+    def test_materialize_component_spec_fails_closed_on_consumer_context_collision(self) -> None:
+        with patch('paa_producer.component_spec_materializer.extract_component_spec_materialization_seed') as mock_extract, \
+             patch('paa_producer.component_spec_materializer._query_scalar', side_effect=['project-1', 'pkg-1']), \
+             patch('paa_producer.component_spec_materializer._anchor_plan') as mock_anchor, \
+             patch('paa_producer.component_spec_materializer._ensure_component_row', return_value='component-1'), \
+             patch('paa_producer.component_spec_materializer.PostgresImplementationPlanRepository') as mock_plan_repo_cls, \
+             patch('paa_producer.component_spec_materializer.PostgresComponentDesignRepository'):
+            mock_extract.return_value = type('Seed', (), {
+                'source_path': 'spec.md',
+                'component_identity': type('Identity', (), {'component_name': 'QueueClaimRuntimeService', 'system_layer': 'application-services', 'tier': 'runtime', 'status': 'active'})(),
+                'component_elements': (),
+                'realizations': (),
+                'plan_seed': type('PlanSeed', (), {'plan_name': 'plan-materialize-queue-claim-runtime-service-proof-python', 'consumer_context_key': 'governance-materialization-python-queue-runtime', 'plan_status': 'draft_plan'})(),
+                'activity_seeds': (),
+                'activity_dependencies': (),
+                'verification_surfaces': (),
+            })()
+            mock_anchor.return_value = type('PlanRecord', (), {
+                'implementation_plan_id': 'anchor-plan',
+                'work_item_id': 'work-1',
+                'spec_fragment_id': 'spec-1',
+                'implementation_target_id': 'target-1',
+                'authority_version_id': 'auth-1',
+            })()
+            mock_plan_repo = mock_plan_repo_cls.return_value
+            mock_plan_repo.get_implementation_plan_for_design_package.return_value = type('PlanRecord', (), {
+                'implementation_plan_id': 'plan-old',
+                'plan_id_external': 'plan-materialize-queue-packet-runtime-controller-proof-python',
+                'primary_component_id': 'different-component',
+            })()
+
+            with self.assertRaisesRegex(RuntimeError, 'consumer_context_key collision'):
+                materialize_component_spec(spec_path=Path('spec.md'))
 
     def test_cli_materialize_component_spec_outputs_json(self) -> None:
         stdout = io.StringIO()

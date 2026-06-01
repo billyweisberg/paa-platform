@@ -293,22 +293,42 @@ The CLI should host it.
 The runtime controller should consume it.
 Neither should recreate queue preview or claim normalization locally.
 
-## 10. Build Seed
+## Plan Seed Table
 
-### Plan Seed Table
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-queue-claim-runtime-service-proof-python | governance-materialization-python-queue-claim-runtime | QueueClaimRuntimeService | python-runtime-service | draft_plan |
 
-| activity_key | description | depends_on | exit_criteria |
-|---|---|---|---|
-| `queue-claim-runtime-interface-contract` | define queue intake service and collaborator contracts |  | interface exports exist and focused contract tests pass |
-| `queue-claim-runtime-dto-models` | define queue intake DTOs and typed result surfaces | `queue-claim-runtime-interface-contract` | request/result DTOs exist and model tests pass |
-| `queue-claim-runtime-default-service` | implement preview and claim normalization for the first supported slice | `queue-claim-runtime-dto-models` | supported behavior and fail-closed tests pass |
-| `queue-claim-runtime-validation-surface` | prove governed validation and consistency for the service | `queue-claim-runtime-default-service` | consistency checks and focused validation pass |
+## Activity Seed Table
 
-### Verification Surface Table
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---:|---|---|---|---|
+| queue-claim-runtime-interface-contract | Author queue claim runtime service interface contract | 10 | contract-authoring | queue_claim_runtime_service_interface | service_interface | Interface exposes stable queue preview and claim entrypoints plus supported intake contract. |
+| queue-claim-runtime-dto-models | Model queue claim runtime service DTOs | 20 | dto-materialization | queue_claim_runtime_service_models | dto | Request, preview-summary, claim-summary, and result DTOs cover the first supported queue intake slice. |
+| queue-claim-runtime-default-service | Implement default queue claim runtime service | 30 | service-implementation | queue_claim_runtime_service_logic | service_implementation | Default service previews or claims the supported architecture-queue packet slice and fails closed for blocked intake. |
+| queue-claim-runtime-validation-surface | Add queue claim runtime service validation surface | 40 | verification | queue_claim_runtime_service_verification_surface | test_module | Unit coverage proves supported queue preview/claim intake and blocked-path behavior. |
 
-| verification_target | verification_kind | command_hint |
+## Activity Dependency Table
+
+| activity_key | depends_on_activity_key | dependency_kind |
 |---|---|---|
-| `queue_claim_runtime_service_interface` | unit | `python -m unittest tests.unit.test_queue_claim_runtime_service` |
-| `queue_claim_runtime_service_models` | unit | `python -m unittest tests.unit.test_queue_claim_runtime_service_models` |
-| `queue_claim_runtime_service_logic` | unit | `python -m unittest tests.unit.test_queue_claim_runtime_service` |
-| `queue_claim_runtime_service_spec_alignment` | consistency | `python scripts/governance/paa_component_spec_model_consistency.py --spec docs/2_Design/2026-06-01-queue-claim-runtime-service-component-spec.md` |
+| queue-claim-runtime-dto-models | queue-claim-runtime-interface-contract | hard |
+| queue-claim-runtime-default-service | queue-claim-runtime-dto-models | hard |
+| queue-claim-runtime-validation-surface | queue-claim-runtime-default-service | hard |
+
+## Verification Surface Table
+
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
+|---|---|---|---|
+| queue claim runtime service unit tests | unit-test | `tests/unit/test_queue_claim_runtime_service.py` | true |
+| queue claim runtime service spec-to-model consistency | consistency-check | `scripts/governance/paa_component_spec_model_consistency.py` | true |
+| queue claim runtime service model-to-code consistency | consistency-check | `scripts/governance/paa_model_code_consistency.py` | true |
+
+## Acceptance Criteria
+
+The component is acceptable when:
+- one `worker_result_packet` can be previewed deterministically from `fractal-core-architecture`
+- one `worker_result_packet` can be claimed deterministically from `fractal-core-architecture`
+- queue preview and claim normalization are explicit and testable outside CLI hosts
+- unsupported or missing queue intake fails closed with structured reasons
+- unit coverage and governed consistency checks pass
