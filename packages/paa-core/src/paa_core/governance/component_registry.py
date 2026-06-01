@@ -58,6 +58,9 @@ from paa_core.services.queue_packet_runtime_controller import (
 from paa_core.services.queue_claim_runtime import (
     QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
 )
+from paa_core.services.packet_reference_resolution import (
+    PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
+)
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 
 from .component_metadata import GovernedComponentMetadata
@@ -80,6 +83,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = tuple(
         QA_WORKER_SERVICE_METADATA,
         QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA,
         QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
+        PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
         IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,

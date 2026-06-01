@@ -29,6 +29,7 @@ from paa_core.services.dev_worker import DEV_WORKER_SERVICE_METADATA
 from paa_core.services.qa_worker import QA_WORKER_SERVICE_METADATA
 from paa_core.services.queue_packet_runtime_controller import QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA
 from paa_core.services.queue_claim_runtime import QUEUE_CLAIM_RUNTIME_SERVICE_METADATA
+from paa_core.services.packet_reference_resolution import PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA
 from paa_cli import PAA_OPERATOR_CLI_METADATA
 
 
@@ -48,6 +49,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
             QA_WORKER_SERVICE_METADATA,
             QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA,
             QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
+            PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
         ):
             self.assertIsInstance(metadata, GovernedComponentMetadata)
             self.assertIn(metadata.kind, COMPONENT_KINDS)
@@ -68,6 +70,7 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertEqual('service', QA_WORKER_SERVICE_METADATA.kind)
         self.assertEqual('service', QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA.kind)
         self.assertEqual('service', QUEUE_CLAIM_RUNTIME_SERVICE_METADATA.kind)
+        self.assertEqual('service', PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA.kind)
         self.assertEqual('repository', IMPLEMENTATION_PLAN_REPOSITORY_METADATA.kind)
         self.assertEqual('repository', METHODOLOGY_EXECUTION_REPOSITORY_METADATA.kind)
 
@@ -124,6 +127,10 @@ class GovernanceComponentMetadataTests(unittest.TestCase):
         self.assertIs(
             QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
             COMPONENT_METADATA_BY_NAME['QueueClaimRuntimeService'],
+        )
+        self.assertIs(
+            PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
+            COMPONENT_METADATA_BY_NAME['PacketReferenceResolutionService'],
         )
         self.assertIs(
             PAA_OPERATOR_CLI_METADATA,
