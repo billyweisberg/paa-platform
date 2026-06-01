@@ -99,6 +99,15 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual(result.preview_summary.packet_message_id, 'msg-1')
+        self.assertIsNone(result.preview_summary.packet_reference)
+        self.assertEqual(
+            result.normalized_packet_envelope,
+            {
+                'packet_message_id': 'msg-1',
+                'packet_schema_type': 'worker_result_packet',
+                'packet_reference': None,
+            },
+        )
         self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-1'})
         self.assertIsNone(result.claim_summary)
 
@@ -121,8 +130,37 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual(result.claim_summary.claim_id, 'claim-99')
+        self.assertIsNone(result.claim_summary.packet_reference)
         self.assertEqual(claim_state.calls[0]['packet_message_id'], 'msg-2')
         self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-2'})
+
+    def test_assemble_queue_intake_supports_pointer_only_packet_reference(self) -> None:
+        packet = {
+            'packet_message_id': 'msg-5',
+            'packet_schema_type': 'worker_result_packet',
+            'packet_path': 'packets/worker-result.json',
+            'packet_reference': 'packets/worker-result.json',
+        }
+        service = self._build_service(preview_result=packet)
+
+        result = service.assemble_queue_intake(
+            QueueClaimRuntimeRequest(
+                queue_name='fractal-core-architecture',
+                intake_mode='preview',
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.preview_summary.packet_reference, 'packets/worker-result.json')
+        self.assertEqual(
+            result.normalized_packet_envelope,
+            {
+                'packet_message_id': 'msg-5',
+                'packet_schema_type': 'worker_result_packet',
+                'packet_reference': 'packets/worker-result.json',
+            },
+        )
+        self.assertIsNone(result.normalized_packet_payload)
 
     def test_assemble_queue_intake_fails_closed_for_unsupported_intake_mode(self) -> None:
         service = self._build_service()

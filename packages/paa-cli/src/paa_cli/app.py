@@ -13,6 +13,7 @@ else:  # pragma: no branch
     _TYPER_IMPORT_ERROR = None
 
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
+from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
 from paa_core.services.techlead_assignment_decision import DefaultTechLeadAssignmentDecisionService
@@ -269,6 +270,7 @@ class _UnsupportedWorkerHost:
 def build_default_cli() -> DefaultPAAOperatorCLI:
     logger = NullStructuredLogger()
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
+    runtime_event_repository = PostgresRuntimeEventRepository()
     methodology_execution_state_service = DefaultMethodologyExecutionStateService(
         methodology_execution_repository=methodology_execution_repository,
         logger=logger,
@@ -328,12 +330,16 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
                     command_family='queue',
                     adapter=QueueCommandAdapter(
                         queue_packet_runtime_controller=queue_packet_runtime_controller,
+                        queue_packet_reader=_JsonFileQueuePacketReader(),
+                        runtime_event_repository=runtime_event_repository,
                     ),
                 ),
                 CommandRegistration(
                     command_family='worker',
                     adapter=WorkerCommandAdapter(
                         queue_packet_runtime_controller=queue_packet_runtime_controller,
+                        queue_packet_reader=_JsonFileQueuePacketReader(),
+                        runtime_event_repository=runtime_event_repository,
                     ),
                 ),
             )

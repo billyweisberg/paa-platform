@@ -21,6 +21,8 @@ from paa_producer.implementation_plan_progress import (
     reconcile_implementation_plan_progress,
 )
 
+from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
+
 from .models import (
     OperatorCommandRequest,
     OperatorCommandResult,
@@ -85,6 +87,70 @@ def _optional_json_object(value: object | None) -> dict[str, Any] | None:
 def _summary_table(title: str, payload: dict[str, Any]) -> OperatorOutputTable:
     rows = tuple((str(key), str(value)) for key, value in payload.items())
     return OperatorOutputTable(title=title, columns=('field', 'value'), rows=rows)
+
+
+class _RequestBoundQueueTransportAdapter:
+    def __init__(
+        self,
+        *,
+        packet_message_id: str | None,
+        packet_payload: dict[str, Any] | None,
+        packet_path: str | None,
+        queue_name: str,
+        packet_schema_type: str,
+        queue_packet_reader: object | None,
+        runtime_event_repository: object | None = None,
+    ) -> None:
+        self._packet_message_id = packet_message_id
+        self._packet_payload = packet_payload
+        self._packet_path = packet_path
+        self._queue_name = queue_name
+        self._packet_schema_type = packet_schema_type
+        self._queue_packet_reader = queue_packet_reader
+        self._runtime_event_repository = runtime_event_repository
+
+    def preview_queue(self, queue_name: str, *, limit: int = 1) -> object:
+        del limit
+        if queue_name != self._queue_name:
+            return None
+        return self._resolve_packet()
+
+    def claim_next_packet(self, queue_name: str, *, claimant_name: str | None = None) -> object:
+        del claimant_name
+        if queue_name != self._queue_name:
+            return None
+        return self._resolve_packet()
+
+    def _resolve_packet(self) -> object:
+        if self._packet_message_id and self._runtime_event_repository is not None:
+            queue_message = self._runtime_event_repository.get_queue_message_by_external(self._packet_message_id)
+            if queue_message is None or queue_message.queue_name != self._queue_name:
+                return None
+            return {
+                'packet_message_id': queue_message.message_id_external or queue_message.queue_message_id,
+                'packet_schema_type': queue_message.schema_type,
+                'packet_reference': queue_message.message_id_external or queue_message.queue_message_id,
+            }
+        if self._packet_payload is not None:
+            return {
+                'packet_message_id': None,
+                'packet_schema_type': self._packet_schema_type,
+                'packet_reference': 'debug:inline-packet-payload',
+                'packet_payload': self._packet_payload,
+            }
+        if self._packet_path:
+            return {
+                'packet_message_id': None,
+                'packet_schema_type': self._packet_schema_type,
+                'packet_path': self._packet_path,
+                'packet_reference': self._packet_path,
+            }
+        return None
+
+
+class _PassthroughPacketEnvelopeValidator:
+    def validate_packet_envelope(self, packet: object) -> object:
+        return {'ok': packet is not None}
 
 
 class ComponentCommandAdapter:
@@ -510,8 +576,20 @@ __all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter', 'QueueCommandAdapter
 class QueueCommandAdapter:
     """Handle queue-facing preview commands over the runtime controller."""
 
-    def __init__(self, *, queue_packet_runtime_controller: object) -> None:
+    def __init__(
+        self,
+        *,
+        queue_packet_runtime_controller: object,
+        queue_packet_reader: object | None = None,
+        packet_envelope_validator: object | None = None,
+        queue_claim_state_adapter: object | None = None,
+        runtime_event_repository: object | None = None,
+    ) -> None:
         self._runtime_controller = queue_packet_runtime_controller
+        self._queue_packet_reader = queue_packet_reader
+        self._packet_envelope_validator = packet_envelope_validator
+        self._queue_claim_state_adapter = queue_claim_state_adapter
+        self._runtime_event_repository = runtime_event_repository
 
     def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         if request.command.command_name == 'preview':
@@ -525,35 +603,23 @@ class QueueCommandAdapter:
         packet_schema_type = request.arguments.get('packet_schema_type')
         if not packet_schema_type:
             return _missing_argument_result(request, 'packet_schema_type')
-        try:
-            packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
-        except ValueError as exc:
-            return _invalid_argument_result(request, 'packet_payload_json', str(exc))
-        runtime_request = self._runtime_controller.handle_packet.__annotations__.get('request')
-        del runtime_request
-        from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
-
-        result = self._runtime_controller.handle_packet(
-            QueuePacketRuntimeRequest(
-                queue_name=str(queue_name),
-                packet_schema_type=str(packet_schema_type),
-                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
-                packet_path=_optional_string(request.arguments.get('packet_path')),
-                packet_payload=packet_payload,
-                runtime_mode='dry_run' if bool(request.invocation_context.dry_run) else 'live',
-                actor_name=_optional_string(request.arguments.get('actor_name')),
-                host_name=_optional_string(request.arguments.get('host_name')),
-                metadata={'repo_root': request.invocation_context.repo_root},
-            )
+        result = self._assemble_queue_preview(
+            request,
+            queue_name=str(queue_name),
+            packet_schema_type=str(packet_schema_type),
         )
+        if isinstance(result, OperatorCommandResult):
+            return result
         payload = {
             'queue_name': result.request.queue_name,
-            'packet_schema_type': result.request.packet_schema_type,
-            'packet_message_id': result.request.packet_message_id,
-            'target_worker_host': result.dispatch_summary.target_worker_host,
-            'dispatch_supported': result.dispatch_summary.dispatch_supported,
+            'packet_schema_type': result.preview_summary.packet_schema_type if result.preview_summary else None,
+            'packet_message_id': result.preview_summary.packet_message_id if result.preview_summary else None,
+            'packet_reference': result.preview_summary.packet_reference if result.preview_summary else None,
+            'preview_supported': result.preview_summary.preview_supported if result.preview_summary else False,
+            'claim_supported': result.preview_summary.claim_supported if result.preview_summary else False,
             'reason': result.reason,
-            'normalized_queue_side_effect_summary': result.normalized_queue_side_effect_summary,
+            'normalized_packet_envelope': result.normalized_packet_envelope,
+            'normalized_packet_payload': result.normalized_packet_payload,
         }
         return OperatorCommandResult(
             command=request.command,
@@ -571,17 +637,68 @@ class QueueCommandAdapter:
             failure=None if result.ok else OperatorFailure(
                 code=result.reason or 'queue_preview_failed',
                 summary=result.details or 'Queue packet preview failed.',
-                details=tuple(result.dispatch_summary.blocking_reasons),
+                details=tuple(result.preview_summary.blocking_reasons) if result.preview_summary else (),
             ),
             metadata=dict(payload),
+        )
+
+    def _assemble_queue_preview(
+        self,
+        request: OperatorCommandRequest,
+        *,
+        queue_name: str,
+        packet_schema_type: str,
+    ) -> object:
+        try:
+            packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
+        except ValueError as exc:
+            return _invalid_argument_result(request, 'packet_payload_json', str(exc))
+        service = DefaultQueueClaimRuntimeService(
+            queue_transport_adapter=_RequestBoundQueueTransportAdapter(
+                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
+                packet_payload=packet_payload,
+                packet_path=_optional_string(request.arguments.get('packet_path')),
+                queue_name=queue_name,
+                packet_schema_type=packet_schema_type,
+                queue_packet_reader=self._queue_packet_reader,
+                runtime_event_repository=self._runtime_event_repository,
+            ),
+            packet_envelope_validator=self._packet_envelope_validator or _PassthroughPacketEnvelopeValidator(),
+            queue_claim_state_adapter=self._queue_claim_state_adapter,
+        )
+        return service.assemble_queue_intake(
+            QueueClaimRuntimeRequest(
+                queue_name=queue_name,
+                intake_mode='preview',
+                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
+                packet_schema_type=packet_schema_type,
+                claimant_name=_optional_string(request.arguments.get('actor_name')),
+                host_name=_optional_string(request.arguments.get('host_name')),
+                metadata={'repo_root': request.invocation_context.repo_root},
+            ),
         )
 
 
 class WorkerCommandAdapter:
     """Handle worker-facing dispatch commands over the runtime controller."""
 
-    def __init__(self, *, queue_packet_runtime_controller: object) -> None:
+    def __init__(
+        self,
+        *,
+        queue_packet_runtime_controller: object,
+        queue_packet_reader: object | None = None,
+        packet_envelope_validator: object | None = None,
+        queue_claim_state_adapter: object | None = None,
+        runtime_event_repository: object | None = None,
+    ) -> None:
         self._runtime_controller = queue_packet_runtime_controller
+        self._queue_adapter = QueueCommandAdapter(
+            queue_packet_runtime_controller=queue_packet_runtime_controller,
+            queue_packet_reader=queue_packet_reader,
+            packet_envelope_validator=packet_envelope_validator,
+            queue_claim_state_adapter=queue_claim_state_adapter,
+            runtime_event_repository=runtime_event_repository,
+        )
 
     def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         if request.command.command_name == 'dispatch':
@@ -595,19 +712,32 @@ class WorkerCommandAdapter:
         packet_schema_type = request.arguments.get('packet_schema_type')
         if not packet_schema_type:
             return _missing_argument_result(request, 'packet_schema_type')
-        try:
-            packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
-        except ValueError as exc:
-            return _invalid_argument_result(request, 'packet_payload_json', str(exc))
+        queue_claim_result = self._queue_adapter._assemble_queue_preview(
+            request,
+            queue_name=str(queue_name),
+            packet_schema_type=str(packet_schema_type),
+        )
+        if isinstance(queue_claim_result, OperatorCommandResult):
+            return queue_claim_result
         from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
 
         result = self._runtime_controller.handle_packet(
             QueuePacketRuntimeRequest(
                 queue_name=str(queue_name),
                 packet_schema_type=str(packet_schema_type),
-                packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
-                packet_path=_optional_string(request.arguments.get('packet_path')),
-                packet_payload=packet_payload,
+                packet_message_id=(
+                    queue_claim_result.preview_summary.packet_message_id
+                    if queue_claim_result.preview_summary
+                    else _optional_string(request.arguments.get('packet_message_id'))
+                ),
+                packet_path=(
+                    str(queue_claim_result.preview_summary.packet_reference)
+                    if queue_claim_result.preview_summary
+                    and queue_claim_result.preview_summary.packet_reference
+                    and _optional_string(request.arguments.get('packet_path'))
+                    else None
+                ),
+                packet_payload=queue_claim_result.normalized_packet_payload,
                 runtime_mode='dry_run' if bool(request.invocation_context.dry_run) else 'live',
                 actor_name=_optional_string(request.arguments.get('actor_name')),
                 host_name=_optional_string(request.arguments.get('host_name')),
@@ -617,6 +747,8 @@ class WorkerCommandAdapter:
         payload = {
             'queue_name': result.request.queue_name,
             'packet_schema_type': result.request.packet_schema_type,
+            'packet_message_id': result.request.packet_message_id,
+            'packet_path': result.request.packet_path,
             'target_worker_host': result.dispatch_summary.target_worker_host,
             'dispatch_supported': result.dispatch_summary.dispatch_supported,
             'reason': result.reason,

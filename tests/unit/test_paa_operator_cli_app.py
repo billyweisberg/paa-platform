@@ -157,6 +157,26 @@ class _StubQueuePacketRuntimeController:
             QueuePacketDispatchSummary,
             QueuePacketRuntimeResult,
         )
+        if request.packet_payload is None and request.packet_path is None:
+            return QueuePacketRuntimeResult(
+                request=request,
+                dispatch_summary=QueuePacketDispatchSummary(
+                    handler_key='packet-payload-resolution',
+                    packet_schema_type=request.packet_schema_type,
+                    target_worker_host='TechLeadWorkerService',
+                    dispatch_supported=False,
+                    queue_side_effect_required=False,
+                    ack_required=False,
+                    blocking_reasons=('missing_packet_payload',),
+                    notes=('fail-closed', 'packet-payload-required'),
+                ),
+                selected_worker_result=None,
+                normalized_queue_side_effect_summary=None,
+                ok=False,
+                reason='missing_packet_payload',
+                details='The supported dry-run controller slice requires packet payload or a readable packet path.',
+                dry_run=True,
+            )
         return QueuePacketRuntimeResult(
             request=request,
             dispatch_summary=QueuePacketDispatchSummary(
@@ -177,6 +197,30 @@ class _StubQueuePacketRuntimeController:
 
     def supports_packet_schema_type(self, packet_schema_type: str) -> bool:
         return packet_schema_type == 'worker_result_packet'
+
+
+class _StubRuntimeEventRepository:
+    def get_queue_message_by_external(self, message_id_external: str):
+        from paa_core.repositories.runtime_event import QueueMessageRecord
+
+        if message_id_external != 'msg-1':
+            return None
+        return QueueMessageRecord(
+            queue_message_id='queue-message-1',
+            handoff_id='handoff-1',
+            queue_name='fractal-core-architecture',
+            schema_type='worker_result_packet',
+            message_id_external='msg-1',
+            correlation_key='corr-1',
+            payload={},
+            status='sent',
+            sent_at=None,
+            claimed_at=None,
+            acknowledged_at=None,
+            metadata={},
+            created_at=None,
+            updated_at=None,
+        )
 
 
 class _StubLogger:
@@ -364,12 +408,14 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                     command_family='queue',
                     adapter=QueueCommandAdapter(
                         queue_packet_runtime_controller=_StubQueuePacketRuntimeController(),
+                        runtime_event_repository=_StubRuntimeEventRepository(),
                     ),
                 ),
                 CommandRegistration(
                     command_family='worker',
                     adapter=WorkerCommandAdapter(
                         queue_packet_runtime_controller=_StubQueuePacketRuntimeController(),
+                        runtime_event_repository=_StubRuntimeEventRepository(),
                     ),
                 ),
             )
@@ -521,7 +567,57 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn('\"command_family\": \"queue\"', result.output)
         self.assertIn('Queue packet preview completed.', result.output)
-        self.assertIn('TechLeadWorkerService', result.output)
+        self.assertIn('\"packet_schema_type\": \"worker_result_packet\"', result.output)
+        self.assertIn('\"preview_supported\": true', result.output)
+        self.assertIn('\"packet_reference\": \"debug:inline-packet-payload\"', result.output)
+
+    def test_queue_preview_prefers_minimal_packet_reference_when_packet_path_is_provided(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'queue',
+                'preview',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-path',
+                'packets/worker-result.json',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"packet_reference\": \"packets/worker-result.json\"', result.output)
+        self.assertIn('\"normalized_packet_envelope\"', result.output)
+        self.assertIn('\"normalized_packet_payload\": null', result.output)
+
+    def test_queue_preview_uses_runtime_event_message_pointer_when_packet_message_id_is_provided(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'queue',
+                'preview',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-message-id',
+                'msg-1',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"packet_message_id\": \"msg-1\"', result.output)
+        self.assertIn('\"packet_reference\": \"msg-1\"', result.output)
+        self.assertIn('\"normalized_packet_payload\": null', result.output)
 
     def test_worker_dispatch_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
@@ -546,6 +642,52 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('\"command_family\": \"worker\"', result.output)
         self.assertIn('Worker dispatch preview completed.', result.output)
         self.assertIn('TechLeadWorkerService', result.output)
+
+    def test_worker_dispatch_reuses_queue_claim_path_for_packet_path_input(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'worker',
+                'dispatch',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-path',
+                'packets/worker-result.json',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"packet_path\": \"packets/worker-result.json\"', result.output)
+        self.assertIn('\"target_worker_host\": \"TechLeadWorkerService\"', result.output)
+
+    def test_worker_dispatch_from_message_pointer_fails_closed_until_payload_resolution_exists(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'worker',
+                'dispatch',
+                '--queue-name',
+                'fractal-core-architecture',
+                '--packet-schema-type',
+                'worker_result_packet',
+                '--packet-message-id',
+                'msg-1',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 2, msg=result.output)
+        self.assertIn('\"packet_message_id\": \"msg-1\"', result.output)
+        self.assertIn('\"reason\": \"missing_packet_payload\"', result.output)
 
     def test_component_help_surfaces_preflight_behavior(self) -> None:
         app, _, _ = self._typer_cli()

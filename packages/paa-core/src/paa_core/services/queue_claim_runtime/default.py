@@ -131,6 +131,8 @@ class DefaultQueueClaimRuntimeService:
 
         packet_message_id = self._packet_message_id(packet)
         packet_schema_type = self._packet_schema_type(packet)
+        packet_reference = self._packet_reference(packet)
+        normalized_envelope = self._normalized_envelope(packet)
         normalized_payload = self._normalized_payload(packet)
         if packet_schema_type != self._SUPPORTED_PACKET_SCHEMA_TYPE:
             return self._build_blocked_result(
@@ -151,6 +153,7 @@ class DefaultQueueClaimRuntimeService:
             queue_name=request.queue_name,
             packet_message_id=packet_message_id,
             packet_schema_type=packet_schema_type,
+            packet_reference=packet_reference,
             preview_supported=True,
             claim_supported=True,
             blocking_reasons=(),
@@ -168,6 +171,7 @@ class DefaultQueueClaimRuntimeService:
                 'claimant_name': request.claimant_name,
                 'packet_message_id': packet_message_id,
                 'packet_schema_type': packet_schema_type,
+                'packet_reference': packet_reference,
             }
             claim_result = (
                 self.queue_claim_state_adapter.record_claim(claim_record)
@@ -180,6 +184,7 @@ class DefaultQueueClaimRuntimeService:
                 claim_id=str(claim_id) if claim_id is not None else None,
                 claimant_name=request.claimant_name,
                 packet_message_id=packet_message_id,
+                packet_reference=packet_reference,
                 claim_supported=True,
                 blocking_reasons=(),
                 notes=('claimed',),
@@ -190,6 +195,7 @@ class DefaultQueueClaimRuntimeService:
             request=request,
             preview_summary=preview_summary,
             claim_summary=claim_summary,
+            normalized_packet_envelope=normalized_envelope,
             normalized_packet_payload=normalized_payload,
             ok=True,
             metadata=metadata,
@@ -232,6 +238,24 @@ class DefaultQueueClaimRuntimeService:
         value = packet.get('packet_schema_type')
         return value if isinstance(value, str) and value else None
 
+
+    @staticmethod
+    def _packet_reference(packet: object) -> str | None:
+        if not isinstance(packet, dict):
+            return None
+        value = packet.get('packet_path') or packet.get('packet_reference')
+        return value if isinstance(value, str) and value else None
+
+    @staticmethod
+    def _normalized_envelope(packet: object) -> dict[str, Any] | None:
+        if not isinstance(packet, dict):
+            return None
+        return {
+            'packet_message_id': DefaultQueueClaimRuntimeService._packet_message_id(packet),
+            'packet_schema_type': DefaultQueueClaimRuntimeService._packet_schema_type(packet),
+            'packet_reference': DefaultQueueClaimRuntimeService._packet_reference(packet),
+        }
+
     @staticmethod
     def _normalized_payload(packet: object) -> dict[str, Any] | None:
         if not isinstance(packet, dict):
@@ -239,7 +263,7 @@ class DefaultQueueClaimRuntimeService:
         payload = packet.get('packet_payload')
         if isinstance(payload, dict):
             return payload
-        return packet if isinstance(packet, dict) else None
+        return None
 
     def _build_blocked_result(
         self,
@@ -263,6 +287,7 @@ class DefaultQueueClaimRuntimeService:
             queue_name=request.queue_name,
             packet_message_id=request.packet_message_id,
             packet_schema_type=request.packet_schema_type,
+            packet_reference=None,
             preview_supported=preview_supported,
             claim_supported=claim_supported,
             blocking_reasons=blocking_reasons,
@@ -275,6 +300,7 @@ class DefaultQueueClaimRuntimeService:
                 claim_id=None,
                 claimant_name=request.claimant_name,
                 packet_message_id=request.packet_message_id,
+                packet_reference=None,
                 claim_supported=claim_supported,
                 blocking_reasons=blocking_reasons,
                 notes=notes,
@@ -283,6 +309,7 @@ class DefaultQueueClaimRuntimeService:
             request=request,
             preview_summary=preview_summary,
             claim_summary=claim_summary,
+            normalized_packet_envelope=None,
             normalized_packet_payload=None,
             ok=False,
             reason=reason,

@@ -22,6 +22,7 @@ class QueuePacketPreviewSummary:
     queue_name: str
     packet_message_id: str | None
     packet_schema_type: str | None
+    packet_reference: str | None
     preview_supported: bool
     claim_supported: bool
     blocking_reasons: tuple[str, ...]
@@ -34,6 +35,7 @@ class QueuePacketClaimSummary:
     claim_id: str | None
     claimant_name: str | None
     packet_message_id: str | None
+    packet_reference: str | None
     claim_supported: bool
     blocking_reasons: tuple[str, ...]
     notes: tuple[str, ...]
@@ -44,6 +46,7 @@ class QueueClaimRuntimeResult:
     request: QueueClaimRuntimeRequest
     preview_summary: QueuePacketPreviewSummary | None
     claim_summary: QueuePacketClaimSummary | None
+    normalized_packet_envelope: dict[str, Any] | None
     normalized_packet_payload: dict[str, Any] | None
     ok: bool
     reason: str | None = None
