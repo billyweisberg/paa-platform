@@ -49,6 +49,9 @@ from paa_core.services.packet_context_assembly import (
 from paa_core.services.dev_worker import (
     DEV_WORKER_SERVICE_METADATA,
 )
+from paa_core.services.qa_worker import (
+    QA_WORKER_SERVICE_METADATA,
+)
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 
 from .component_metadata import GovernedComponentMetadata
@@ -68,6 +71,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = tuple(
         TECHLEAD_WORKER_SERVICE_METADATA,
         PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
         DEV_WORKER_SERVICE_METADATA,
+        QA_WORKER_SERVICE_METADATA,
         IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,

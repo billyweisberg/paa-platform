@@ -278,43 +278,50 @@ The first slice fails closed for:
 - blocked packet-context assembly
 - non-normalizable verification results
 
-## 7. Verification Surface
+This is intentionally narrow.
 
-The governed validation surface must prove:
-- supported `qa_verification_packet` dry-run handling
-- fail-closed unsupported packet-schema handling
-- fail-closed unsupported runtime-mode handling
-- fail-closed blocked packet-context assembly handling
-- governed component registry visibility
-- component spec/model consistency
-- model/code consistency
-- compile success for the service package and focused tests
+It proves:
+- packet-to-context expansion reuse for QA verification work
+- bounded verification-host composition
+- normalized QA verification output shape
+- fail-closed verification-host behavior before live publish and broader agent integration
 
-## 8. Activity Table
+## Plan Seed Table
 
-| activity_key | sequence_order | activity_name | scope_summary | primary_artifact_targets | completion_signal |
-|---|---:|---|---|---|---|
-| `qa-worker-interface-contract` | 10 | interface contract | define the QA worker service interface, collaborator contracts, and package metadata surface | `packages/paa-core/src/paa_core/services/qa_worker/contracts.py`; `packages/paa-core/src/paa_core/services/qa_worker/__init__.py` | runtime contract, collaborators, and governed metadata are defined and importable |
-| `qa-worker-dto-models` | 20 | dto models | define typed request, verification summary, and orchestration result DTOs for the first QA slice | `packages/paa-core/src/paa_core/services/qa_worker/models.py`; `packages/paa-core/src/paa_core/services/qa_worker/contracts.py`; `packages/paa-core/src/paa_core/services/qa_worker/__init__.py` | DTOs are stable and the contract references typed request/result surfaces |
-| `qa-worker-default-service` | 30 | default service | implement the first supported dry-run QA verification orchestration path over packet context, verification runner, and packet assembler collaborators | `packages/paa-core/src/paa_core/services/qa_worker/default.py`; `packages/paa-core/src/paa_core/services/qa_worker/__init__.py`; `tests/unit/test_qa_worker_service.py` | first supported QA verification path works and unsupported or blocked cases fail closed |
-| `qa-worker-validation-surface` | 40 | validation surface | prove governed metadata, consistency, compile success, and supported QA verification behavior | `tests/unit/test_qa_worker_service.py`; `tests/unit/test_governance_component_metadata.py`; consistency scripts | governed proof surfaces pass and the component can be marked fully realized |
+| plan_name | consumer_context_key | primary_component_name | implementation_target_kind | plan_status |
+|---|---|---|---|---|
+| plan-materialize-qa-worker-service-proof-python | governance-materialization-python-qa-worker | QAWorkerService | python-runtime-service | draft_plan |
 
-## 9. Activity Dependency Table
+## Activity Seed Table
+
+| activity_key | activity_name | sequence | activity_kind | element_name | realization_kind | done_definition |
+|---|---|---:|---|---|---|---|
+| qa-worker-interface-contract | Author QA worker service interface contract | 10 | contract-authoring | qa_worker_service_interface | service_interface | Interface exposes stable dry-run and live packet-handling entrypoints plus supported verification contract. |
+| qa-worker-dto-models | Model QA worker service DTOs | 20 | dto-materialization | qa_worker_service_models | dto | Request, verification-summary, and result DTOs cover the supported first QA verification slice. |
+| qa-worker-default-service | Implement default QA worker service | 30 | service-implementation | qa_worker_service_logic | service_implementation | Default service handles the supported QA dry-run path, composes packet-context assembly, and fails closed for unsupported packets. |
+| qa-worker-validation-surface | Add QA worker service validation surface | 40 | verification | qa_worker_service_verification_surface | test_module | Unit coverage proves supported QA dry-run handling and blocked-path behavior. |
+
+## Activity Dependency Table
 
 | activity_key | depends_on_activity_key | dependency_kind |
 |---|---|---|
-| `qa-worker-dto-models` | `qa-worker-interface-contract` | requires |
-| `qa-worker-default-service` | `qa-worker-dto-models` | requires |
-| `qa-worker-validation-surface` | `qa-worker-default-service` | requires |
+| qa-worker-dto-models | qa-worker-interface-contract | hard |
+| qa-worker-default-service | qa-worker-dto-models | hard |
+| qa-worker-validation-surface | qa-worker-default-service | hard |
 
-## 10. Verification Surface Table
+## Verification Surface Table
 
-| verification_key | verification_scope | required_for_acceptance | verification_artifacts |
+| verification_surface | verification_kind | artifact_target | required_for_acceptance |
 |---|---|---|---|
-| `qa-worker-interface-contract-tests` | interface contract and metadata exposure | true | `tests/unit/test_qa_worker_service.py` |
-| `qa-worker-dto-models-tests` | DTO model shapes and typed result surfaces | true | `tests/unit/test_qa_worker_service.py` |
-| `qa-worker-default-service-tests` | supported QA dry-run orchestration and fail-closed blocked paths | true | `tests/unit/test_qa_worker_service.py` |
-| `qa-worker-governance-metadata-tests` | governed component registry visibility and metadata integrity | true | `tests/unit/test_governance_component_metadata.py` |
-| `qa-worker-component-spec-model-consistency` | governed spec/model consistency | true | `scripts/governance/paa_component_spec_model_consistency.py` |
-| `qa-worker-model-code-consistency` | governed model/code consistency | true | `scripts/governance/paa_model_code_consistency.py` |
-| `qa-worker-compile-check` | compile safety for service package and focused tests | true | `python -m py_compile` |
+| qa worker service unit tests | unit-test | `tests/unit/test_qa_worker_service.py` | true |
+| qa worker service spec-to-model consistency | consistency-check | `scripts/governance/paa_component_spec_model_consistency.py` | true |
+| qa worker service model-to-code consistency | consistency-check | `scripts/governance/paa_model_code_consistency.py` | true |
+
+## Acceptance Criteria
+
+The component is acceptable when:
+- one `qa_verification_packet` can be handled deterministically for the first supported QA runtime slice
+- `PacketContextAssemblyService` is the sole packet-context expansion path for the supported slice
+- the verification runner boundary is explicit and testable
+- unsupported or missing context fails closed with structured reasons
+- unit coverage and governed consistency checks pass
