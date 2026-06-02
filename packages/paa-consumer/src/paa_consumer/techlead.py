@@ -69,6 +69,10 @@ from paa_core.services.runtime_role_bridge import (
     RuntimeRoleResultAssistRequest,
     RuntimeRoleReturnBridgeRequest,
 )
+from paa_core.services.runtime_decision_bridge import (
+    DefaultRuntimeDecisionBridgeService,
+    RuntimeDecisionBridgeRequest,
+)
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_display_name,
@@ -3750,110 +3754,38 @@ def emit_decision(args):
     context = derive_decision_context(args)
     if not context.get('ok'):
         return context
-    output_stem = args.decision_type.replace('_', '-')
-    output_path = args.output or (repo_reports_dir(repo_root) / f'techlead-decision.issue{context["issue_number"]}.{output_stem}.json')
-    review_output_path = args.review_output or (repo_reports_dir(repo_root) / f'techlead-decision.issue{context["issue_number"]}.{output_stem}.md')
-    output_path = output_path.resolve()
-    review_output_path = review_output_path.resolve()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    review_output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    auth_script = repo_auth_script(repo_root)
-    auth_current = repo_auth_current(repo_root)
-    queue_script = repo_queue_script(repo_root)
-    compile_cmd = [
-        str(auth_script),
-        'authority',
-        'materialize-techlead-decision-packet',
-        '--manifest', str(auth_current),
-        '--project-slug', args.project_slug,
-        '--package-id-external', args.package_id_external,
-        '--brief-id-external', args.brief_id_external,
-        '--repo', github_repo_for_root(repo_root),
-        '--issue-number', str(context['issue_number']),
-        '--issue-url', str(context['issue_url']),
-        '--pr-number', str(context['pr_number']),
-        '--pr-url', str(context['pr_url']),
-        '--branch', str(context['branch']),
-        '--canonical-branch', str(context['canonical_branch']),
-        '--to-role', context['to_role'],
-        '--decision-type', context['decision_type'],
-        '--decision-rationale', context['decision_rationale'],
-        '--work-item-status-update-intent', context['work_item_status_update_intent'],
-        '--source-packet-path', str(context['source_packet_path']),
-        '--branch-owner-role', context['branch_owner_role'],
-        '--lineage-state', context['lineage_state'],
-        '--lineage-action', context['lineage_action'],
-        '--source-branch', context['source_branch'],
-        '--output', str(output_path),
-        '--review-output', str(review_output_path),
-        '--persist-db',
-    ]
-    if context.get('pr_number') is None or context.get('pr_url') is None:
-        return {
-            'ok': False,
-            'workflow_stage': context['workflow_stage'],
-            'reason': 'decision_missing_pr_context',
-            'details': 'TechLead decision emission requires PR context in this slice.',
-        }
-    if context.get('target_role_cli'):
-        compile_cmd.extend(['--target-role', context['target_role_cli']])
-    if context.get('next_assignment_type'):
-        compile_cmd.extend(['--next-assignment-type', context['next_assignment_type']])
-    if context.get('role_branch'):
-        compile_cmd.extend(['--role-branch', str(context['role_branch'])])
-    if context.get('superseded_branch'):
-        compile_cmd.extend(['--superseded-branch', str(context['superseded_branch'])])
-    if context.get('worktree_hint'):
-        compile_cmd.extend(['--worktree-hint', str(context['worktree_hint'])])
-    if context.get('reset_reason'):
-        compile_cmd.extend(['--reset-reason', context['reset_reason']])
-
-    compile_result = run_json(compile_cmd)
-    validate_cmd = [
-        str(queue_script),
-        'techlead-validate-packet',
-        '--message-file', str(output_path),
-    ]
-    validate_code, validate_result, validate_error = run_json_with_errors(validate_cmd)
-    result = {
-        'ok': validate_code == 0,
-        'workflow_stage': context['workflow_stage'],
-        'derived_decision': {
-            'decision_type': context['decision_type'],
-            'lineage_state': context['lineage_state'],
-            'lineage_action': context['lineage_action'],
-            'target_role': context.get('target_role_cli'),
-        },
-        'package_id_external': args.package_id_external,
-        'brief_id_external': args.brief_id_external,
-        'output_path': str(output_path),
-        'review_output_path': str(review_output_path),
-        'message_id': compile_result.get('message_id'),
-        'automation_run_id': compile_result.get('automation_run_id'),
-        'resolved_queue': validate_result.get('resolved_queue') if validate_result else None,
-        'sent': False,
-        'compile': compile_result,
-        'validate': validate_result,
-        'source_packet_path': context.get('source_packet_path'),
-    }
-    if validate_code != 0:
-        result['error'] = validate_error
-        return result
-    if args.send:
-        send_cmd = [
-            str(queue_script),
-            'techlead-send-packet',
-            '--repo-root', str(repo_root),
-            '--message-file', str(output_path),
-        ]
-        send_code, send_result, send_error = run_json_with_errors(send_cmd)
-        result['send'] = send_result
-        result['sent'] = send_code == 0 and bool(send_result and send_result.get('ok'))
-        if send_code != 0:
-            result['ok'] = False
-            result['error'] = send_error
-    return result
+    return DefaultRuntimeDecisionBridgeService().emit_decision(
+        RuntimeDecisionBridgeRequest(
+            repo_root=repo_root,
+            project_slug=args.project_slug,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            issue_number=context['issue_number'],
+            issue_url=context['issue_url'],
+            pr_number=context['pr_number'],
+            pr_url=context['pr_url'],
+            branch=context['branch'],
+            canonical_branch=context['canonical_branch'],
+            to_role=context['to_role'],
+            decision_type=context['decision_type'],
+            decision_rationale=context['decision_rationale'],
+            work_item_status_update_intent=context['work_item_status_update_intent'],
+            source_packet_path=context['source_packet_path'],
+            branch_owner_role=context['branch_owner_role'],
+            lineage_state=context['lineage_state'],
+            lineage_action=context['lineage_action'],
+            workflow_stage=context.get('workflow_stage'),
+            target_role_cli=context.get('target_role_cli'),
+            next_assignment_type=context.get('next_assignment_type'),
+            role_branch=context.get('role_branch'),
+            superseded_branch=context.get('superseded_branch'),
+            worktree_hint=context.get('worktree_hint'),
+            reset_reason=context.get('reset_reason'),
+            output_path=args.output,
+            review_output_path=args.review_output,
+            send=bool(args.send),
+        )
+    )
 
 
 def closeout_qa_pass(args):
