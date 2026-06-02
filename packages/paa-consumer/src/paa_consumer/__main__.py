@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from paa_core.install import install_consumer_runtime
@@ -19,9 +20,59 @@ from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
 
 
+_LEGACY_TECHLEAD_SHELL_COMMANDS = frozenset(
+    {
+        'automation-preflight',
+        'techlead-status',
+        'techlead-emit-next-assignment',
+        'techlead-lineage',
+        'techlead-prepare-role-branch',
+        'techlead-prepare-role-worktree',
+        'techlead-handoff-to-role-worktree',
+        'techlead-inspect-role-worktree',
+        'techlead-worktree-ownership',
+        'techlead-worktree-stale',
+        'techlead-reset-required',
+        'techlead-reset-cleanup',
+        'techlead-superseded-cleanup',
+        'techlead-closed-cleanup',
+        'techlead-role-entry',
+        'techlead-role-result-assist',
+        'techlead-role-return',
+        'techlead-emit-decision',
+        'techlead-closeout-qa-pass',
+        'techlead-accept-and-merge',
+    }
+)
+
+
+def _legacy_shell_allowed(args: argparse.Namespace) -> bool:
+    return bool(args.allow_legacy_techlead_shell) or os.environ.get('PAA_ALLOW_LEGACY_TECHLEAD_SHELL') == '1'
+
+
+def _print_legacy_shell_block(command: str) -> None:
+    print(json.dumps(
+        {
+            'ok': False,
+            'command': command,
+            'reason': 'legacy_techlead_shell_disabled',
+            'details': 'Legacy techlead.py shell commands are disabled by default. Use runtime hosts and queue commands instead, or opt in explicitly with --allow-legacy-techlead-shell.',
+            'suggested_runtime_commands': [
+                'techlead-runtime',
+                'dev-runtime',
+                'qa-runtime',
+                'queue-check',
+                'queue-purge',
+            ],
+        },
+        indent=2,
+    ))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog='paa-consumer', allow_abbrev=False)
     parser.add_argument('command', nargs='?', default='help')
+    parser.add_argument('--allow-legacy-techlead-shell', action='store_true')
     parser.add_argument('--repo-root')
     parser.add_argument('--package-root')
     parser.add_argument('--project-pack')
@@ -34,7 +85,12 @@ def main() -> int:
     if args.command == 'help':
         print('paa-consumer')
         print('commands:', ', '.join(CONSUMER_COMMANDS))
+        print('legacy-techlead-shell: disabled by default; opt in with --allow-legacy-techlead-shell')
         return 0
+
+    if args.command in _LEGACY_TECHLEAD_SHELL_COMMANDS and not _legacy_shell_allowed(args):
+        _print_legacy_shell_block(args.command)
+        return 2
 
     if args.command in {'install-consumer-runtime', 'update-consumer-runtime'}:
         if not args.repo_root:

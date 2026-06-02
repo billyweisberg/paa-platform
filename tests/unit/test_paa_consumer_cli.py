@@ -102,6 +102,23 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(mock_run.call_args[0][1], ['purge', '--queue', 'paa-techlead'])
 
+    def test_legacy_techlead_shell_command_is_blocked_by_default(self) -> None:
+        buffer = io.StringIO()
+        with patch('sys.stdout', buffer), patch('sys.argv', ['paa-consumer', 'techlead-status']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 2)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(payload['reason'], 'legacy_techlead_shell_disabled')
+
+    def test_legacy_techlead_shell_command_can_be_explicitly_allowed(self) -> None:
+        with patch('paa_consumer.__main__.techlead_main', return_value=0) as mock_legacy, \
+             patch('sys.argv', ['paa-consumer', '--allow-legacy-techlead-shell', 'techlead-status']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        mock_legacy.assert_called_once_with(['status'])
+
 
 if __name__ == '__main__':
     unittest.main()
