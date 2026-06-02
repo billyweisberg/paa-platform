@@ -245,6 +245,8 @@ def normalize_role_name(raw_role: Optional[str]) -> Optional[str]:
 
 
 def route_policy_for_schema(schema_type: Optional[str]) -> set[tuple[str, str]] | None:
+    if schema_type is None:
+        return None
     if schema_type == "worker_result_packet":
         return team_worker_result_route_pairs()
     if schema_type == "techlead_assignment_packet":
@@ -565,7 +567,7 @@ def cmd_ensure_topology(args):
     result = {
         "ok": True,
         "management_status": status,
-        "rabbitmq_version": overview.get("rabbitmq_version"),
+        "rabbitmq_version": overview.get("rabbitmq_version") if isinstance(overview, dict) else None,
         "exchange": exchange,
         "queues": queues,
         "state_dir": str(root),
@@ -580,10 +582,14 @@ def cmd_check(args):
     root, source, _ = ensure_state_dirs()
     client = RabbitMQManagementClient(user=args.user, password=args.password, host=args.host, port=args.port, vhost=args.vhost)
     _, queue_data = client.queue(args.queue)
+    if not isinstance(queue_data, dict):
+        queue_data = {}
     preview = []
     preview_probe_ran = args.preview > 0
     if args.preview > 0:
         _, messages = client.get_messages(args.queue, count=args.preview, ackmode="ack_requeue_true")
+        if not isinstance(messages, list):
+            messages = []
         for msg in messages:
             payload = msg.get("payload")
             try:
@@ -656,12 +662,13 @@ def cmd_send(args):
     client = RabbitMQManagementClient(user=args.user, password=args.password, host=args.host, port=args.port, vhost=args.vhost)
     exchange = _resolved_runtime_exchange(args)
     _, result = client.publish(exchange, args.queue, message)
-    if result.get("routed"):
+    routed = result.get("routed") if isinstance(result, dict) else False
+    if routed:
         persist_packet_compilation_for_send_message(message, message_file=args.message_file)
         persist_send_event(message, args.queue, publish_result=result, exchange=exchange)
         persist_slice_result(message)
         persist_qa_verification(message)
-    print(json.dumps({"ok": bool(result.get("routed")), "queue": args.queue, "message_id": message["message_id"], "schema_type": message["schema_type"]}, indent=2))
+    print(json.dumps({"ok": bool(routed), "queue": args.queue, "message_id": message["message_id"], "schema_type": message["schema_type"]}, indent=2))
 
 
 def cmd_claim_next(args):
@@ -760,7 +767,8 @@ def cmd_requeue(args):
     claim["requeue_result"] = deepcopy(result)
     save_json(path, claim)
     update_queue_message_status((claim.get("original_envelope") or {}).get("message_id"), "requeued", "requeued", "updated_at")
-    print(json.dumps({"ok": bool(result.get("routed")), "claim_id": args.claim_id, "status": claim["status"], "queue": claim["queue"], "state_dir": claim.get("state_dir")}, indent=2))
+    routed = result.get("routed") if isinstance(result, dict) else False
+    print(json.dumps({"ok": bool(routed), "claim_id": args.claim_id, "status": claim["status"], "queue": claim["queue"], "state_dir": claim.get("state_dir")}, indent=2))
 
 
 def build_parser():

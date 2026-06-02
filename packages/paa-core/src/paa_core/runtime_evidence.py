@@ -120,7 +120,7 @@ def persist_qa_verification(message: dict):
         agent_name='QA Agent',
         role_name='QA',
         decision=decision,
-        notes=decision_notes,
+        notes=decision_notes or '',
         metadata={
             "packet_id": message.get("message_id"),
             "verification_status": verification_status,

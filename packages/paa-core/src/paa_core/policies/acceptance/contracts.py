@@ -16,6 +16,7 @@ class AcceptancePolicy(Protocol):
         context: AcceptanceEvaluationContext,
     ) -> AcceptanceDecision:
         """Return an allow/deny acceptance decision for one workflow result context."""
+        ...
 
 
 __all__ = ['AcceptancePolicy']

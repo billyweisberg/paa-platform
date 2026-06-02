@@ -20,6 +20,7 @@ class WorkflowTransitionPolicy(Protocol):
         context: WorkflowTransitionEvaluationContext,
     ) -> WorkflowTransitionDecision:
         """Return an allow/deny decision for one proposed workflow transition."""
+        ...
 
 
 __all__ = ['WorkflowTransitionPolicy']

@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import threading
-from typing import Any
+from typing import Any, cast
+
+from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 
 
 @dataclass(frozen=True)
@@ -74,7 +76,7 @@ class RuntimeSupervisor:
 
         def _run_host(spec: RuntimeSupervisorHostSpec) -> None:
             try:
-                host = self._hosts[spec.host_key]
+                host = cast(Any, self._hosts[spec.host_key])
                 kwargs = {
                     'intake_mode': spec.intake_mode,
                     spec.emit_flag_name: spec.emit_flag_value,
@@ -115,7 +117,7 @@ def build_techlead_runtime_host(
     *,
     actor_name: str = 'TechLead Agent',
     host_name: str = 'techlead-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ):
     from paa_core.techlead_runtime_host import build_techlead_runtime_host as _build
 
@@ -127,7 +129,7 @@ def build_dev_runtime_host(
     *,
     actor_name: str = 'Dev Agent',
     host_name: str = 'dev-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ):
     from paa_core.dev_runtime_host import build_dev_runtime_host as _build
 
@@ -139,7 +141,7 @@ def build_qa_runtime_host(
     *,
     actor_name: str = 'QA Agent',
     host_name: str = 'qa-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ):
     from paa_core.qa_runtime_host import build_qa_runtime_host as _build
 
@@ -155,7 +157,7 @@ def build_runtime_supervisor(
     techlead_host_name: str = 'techlead-runtime-host',
     dev_host_name: str = 'dev-runtime-host',
     qa_host_name: str = 'qa-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ) -> RuntimeSupervisor:
     resolved_repo_root = repo_root.expanduser().resolve()
     return RuntimeSupervisor(

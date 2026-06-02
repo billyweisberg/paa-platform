@@ -20,6 +20,7 @@ class ResetRecoveryPolicy(Protocol):
         context: ResetRecoveryEvaluationContext,
     ) -> ResetRecoveryDecision:
         """Return reset or repair guidance for one workflow state context."""
+        ...
 
 
 __all__ = ['ResetRecoveryPolicy']

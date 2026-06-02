@@ -65,7 +65,7 @@ class DefaultAutomationPreflightService:
             )
             claim_match = any(
                 claim.get('queue') == self._queue_name_by_key(resolved_repo_root, 'techlead')
-                and normalize_role_name(claim.get('to_role')) == 'TechLead'
+                and normalize_role_name(_role_string(claim.get('to_role'))) == 'TechLead'
                 for claim in active_claims
             )
             should_invoke_model = bool(queue_candidates or claim_match)
@@ -92,7 +92,8 @@ class DefaultAutomationPreflightService:
             )
             claim_match = any(
                 claim.get('queue') == gate.queue_name
-                and normalize_role_name(claim.get('to_role')) == normalize_role_name(gate.to_role)
+                and normalize_role_name(_role_string(claim.get('to_role')))
+                == normalize_role_name(gate.to_role)
                 for claim in active_claims
             )
             should_invoke_model = bool(queue_candidates or claim_match)
@@ -220,12 +221,15 @@ class DefaultAutomationPreflightService:
         for current_queue_name, queue_data in queues.items():
             if queue_name and current_queue_name != queue_name:
                 continue
-            preview = queue_data.get('preview') or []
+            preview_value = queue_data.get('preview')
+            preview = preview_value if isinstance(preview_value, list) else []
             for item in preview:
+                if not isinstance(item, dict):
+                    continue
                 payload = item.get('payload_preview') or {}
                 if not isinstance(payload, dict):
                     continue
-                payload_to_role = normalize_role_name(payload.get('to_role'))
+                payload_to_role = normalize_role_name(_role_string(payload.get('to_role')))
                 if normalized_to_role and payload_to_role != normalized_to_role:
                     continue
                 if schema_types and payload.get('schema_type') not in schema_types:
@@ -286,6 +290,10 @@ class DefaultAutomationPreflightService:
         if schema_type == 'slice_result_packet':
             return 'techlead_worker_review_pending'
         return 'queue_work_detected'
+
+
+def _role_string(value: object) -> str | None:
+    return value if isinstance(value, str) else None
 
 
 __all__ = ['AutomationPreflightRoleGate', 'DefaultAutomationPreflightService']

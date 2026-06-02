@@ -8,31 +8,62 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from paa_core.claim_ledger import FileQueueClaimLedgerRepository, utc_now
 from paa_core.config import load_unified_runtime_project_config
-from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
+from paa_core.policies.deployment_capability import DeploymentCapabilityPolicy, DefaultDeploymentCapabilityPolicy
 from paa_core.queue_transport import DEFAULT_EXCHANGE, RabbitMQManagementClient, build_default_management_client
-from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
+from paa_core.repositories.execution_package import ExecutionPackageRepository, PostgresExecutionPackageRepository
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
 from paa_core.services.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
+    ExecutionPackageGap,
+    ExecutionPackageResolutionService,
+    ExecutionPackageResolutionView,
 )
+from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
 from paa_core.services.packet_context_assembly import DefaultPacketContextAssemblyService
 from paa_core.services.packet_reference_resolution import (
     DefaultPacketReferenceResolutionService,
     PacketReferenceResolutionRequest,
+    PacketReferenceResolutionService,
 )
-from paa_core.services.qa_worker import DefaultQAWorkerService, QAWorkerRequest
-from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
+from paa_core.services.qa_worker import DefaultQAWorkerService, QAWorkerRequest, QAWorkerResult, QAWorkerService
+from paa_core.services.queue_claim_runtime import (
+    DefaultQueueClaimRuntimeService,
+    QueueClaimRuntimeRequest,
+    QueueClaimRuntimeResult,
+    QueueClaimRuntimeService,
+)
 
 from paa_core.runtime_packet_dispatch import dispatch_packet
+
+JsonDict = dict[str, Any]
+
+
+class _QueueClaimLifecycleAdapterProtocol(Protocol):
+    def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
+        ...
+
+    def requeue_claim(self, claim_id: str) -> dict[str, object]:
+        ...
+
+
+class _VerificationPublisherProtocol(Protocol):
+    def publish_verification_result(
+        self,
+        *,
+        worker_result: QAWorkerResult,
+        source_packet_message_id: str | None,
+        source_packet_path: str | None,
+    ) -> dict[str, Any] | None:
+        ...
 
 
 class _NullStructuredLogger:
@@ -46,12 +77,12 @@ class _NullStructuredLogger:
 class _JsonFilePacketArtifactReader:
     def read_packet_payload(self, packet_path: str) -> dict[str, object]:
         path = Path(packet_path).expanduser().resolve()
-        payload = json.loads(path.read_text())
+        payload: object = json.loads(path.read_text())
         if isinstance(payload, dict):
             inner_payload = payload.get('payload')
             if isinstance(inner_payload, dict):
-                return inner_payload
-            return payload
+                return cast(dict[str, object], inner_payload)
+            return cast(dict[str, object], payload)
         return {'packet_payload': payload}
 
 
@@ -59,13 +90,13 @@ class _QueueTransportAdapter:
     def __init__(self, *, client: RabbitMQManagementClient) -> None:
         self._client = client
 
-    def preview_queue(self, queue_name: str, *, limit: int = 1) -> object:
+    def preview_queue(self, queue_name: str, *, limit: int = 1) -> JsonDict | None:
         _, messages = self._client.get_messages(queue_name, count=limit, ackmode='ack_requeue_true')
         if not messages:
             return None
         return self._normalize_broker_message(messages[0])
 
-    def claim_next_packet(self, queue_name: str, *, claimant_name: str | None = None) -> object:
+    def claim_next_packet(self, queue_name: str, *, claimant_name: str | None = None) -> JsonDict | None:
         del claimant_name
         _, messages = self._client.get_messages(queue_name, count=1, ackmode='ack_requeue_false')
         if not messages:
@@ -73,7 +104,7 @@ class _QueueTransportAdapter:
         return self._normalize_broker_message(messages[0])
 
     @staticmethod
-    def _normalize_broker_message(message: dict[str, Any]) -> dict[str, Any] | None:
+    def _normalize_broker_message(message: dict[str, Any]) -> JsonDict | None:
         payload = message.get('payload')
         parsed = json.loads(payload) if isinstance(payload, str) else payload
         if not isinstance(parsed, dict):
@@ -94,7 +125,7 @@ class _QueueClaimStateAdapter:
         self._claim_ledger_repository = claim_ledger_repository
         self._runtime_event_repository = runtime_event_repository
 
-    def record_claim(self, claim_record: object) -> object:
+    def record_claim(self, claim_record: object) -> dict[str, object]:
         if not isinstance(claim_record, dict):
             return {'claim_id': None}
         record = self._claim_ledger_repository.record_claim({
@@ -136,7 +167,8 @@ class _QueueClaimLifecycleAdapter:
         claim['status'] = 'done'
         claim['acked_at'] = utc_now()
         self._claim_ledger_repository.update_claim(path, claim)
-        message_id = (claim.get('original_envelope') or {}).get('message_id')
+        envelope = claim.get('original_envelope')
+        message_id = envelope.get('message_id') if isinstance(envelope, dict) else None
         if isinstance(message_id, str) and message_id:
             self._runtime_event_repository.update_queue_message_status_by_external(
                 message_id_external=message_id,
@@ -149,12 +181,14 @@ class _QueueClaimLifecycleAdapter:
     def requeue_claim(self, claim_id: str) -> dict[str, object]:
         path, claim = self._claim_ledger_repository.load_claim(claim_id)
         envelope = claim.get('original_envelope')
+        if not isinstance(envelope, dict):
+            return {'ok': False, 'claim_id': claim_id, 'status': 'invalid', 'reason': 'missing_original_envelope'}
         _, result = self._client.publish(self._exchange, claim['queue'], envelope)
         claim['status'] = 'requeued'
         claim['requeued_at'] = utc_now()
-        claim['requeue_result'] = dict(result)
+        claim['requeue_result'] = result if isinstance(result, dict) else {}
         self._claim_ledger_repository.update_claim(path, claim)
-        message_id = (claim.get('original_envelope') or {}).get('message_id')
+        message_id = envelope.get('message_id')
         if isinstance(message_id, str) and message_id:
             self._runtime_event_repository.update_queue_message_status_by_external(
                 message_id_external=message_id,
@@ -162,19 +196,22 @@ class _QueueClaimLifecycleAdapter:
                 handoff_status='requeued',
                 timestamp_field='updated_at',
             )
-        return {'ok': bool(result.get('routed')), 'claim_id': claim_id, 'status': claim['status']}
+        routed = result.get('routed') if isinstance(result, dict) else False
+        return {'ok': bool(routed), 'claim_id': claim_id, 'status': claim['status']}
 
 
 class _PassthroughPacketEnvelopeValidator:
-    def validate_packet_envelope(self, packet: object) -> object:
+    def validate_packet_envelope(self, packet: object) -> dict[str, bool]:
         return {'ok': packet is not None}
 
 
 class _DefaultQAVerificationRunner:
-    def run_qa_verification(self, context: object) -> object:
-        packet_payload = getattr(context, 'packet_payload', None) or {}
+    def run_qa_verification(self, context: object) -> JsonDict:
+        packet_payload = getattr(context, 'packet_payload', None)
+        if not isinstance(packet_payload, dict):
+            packet_payload = {}
         issue_number = packet_payload.get('issue_number')
-        return {
+        return cast(JsonDict, {
             'verification_status': 'pass',
             'verification_scope': {
                 'issue_number': issue_number,
@@ -195,7 +232,7 @@ class _DefaultQAVerificationRunner:
                 'merge_recommendation': 'accept_and_merge',
                 'next_role': 'techlead',
             },
-        }
+        })
 
 
 class _DefaultQAVerificationPacketAssembler:
@@ -208,9 +245,46 @@ class _RepoExecutionPackageResolutionAdapter:
         self._service = service
         self._repo_root = repo_root
 
-    def resolve_execution_context_for_surface(self, execution_surface_key: str, request=None):
+    @property
+    def repository(self) -> ExecutionPackageRepository:
+        return self._service.repository
+
+    @property
+    def capability_policy(self) -> DeploymentCapabilityPolicy:
+        return self._service.capability_policy
+
+    @property
+    def logger(self) -> StructuredLogger:
+        return self._service.logger
+
+    def resolve_execution_context(
+        self,
+        request: ExecutionPackageResolutionRequest,
+    ) -> ExecutionPackageResolutionView:
+        merged_request = request
+        if request.repo_root_path is None:
+            merged_request = ExecutionPackageResolutionRequest(
+                execution_surface_key=request.execution_surface_key,
+                execution_surface_type=request.execution_surface_type,
+                repo_root_path=self._repo_root,
+                runtime_root_path=request.runtime_root_path,
+                work_item_id=request.work_item_id,
+                coder_run_brief_id=request.coder_run_brief_id,
+                consumer_context_key=request.consumer_context_key,
+                required_surface_types=request.required_surface_types,
+                required_artifact_refs=request.required_artifact_refs,
+                required_overlay_keys=request.required_overlay_keys,
+                metadata=dict(request.metadata or {}) if request.metadata else None,
+            )
+        return self._service.resolve_execution_context(merged_request)
+
+    def resolve_execution_context_for_surface(
+        self,
+        execution_surface_key: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
         del execution_surface_key
-        merged_request = None
+        merged_request: ExecutionPackageResolutionRequest | None = None
         if request is not None:
             merged_request = ExecutionPackageResolutionRequest(
                 execution_surface_key=None,
@@ -227,6 +301,26 @@ class _RepoExecutionPackageResolutionAdapter:
             )
         return self._service.resolve_execution_context_for_repo_root(self._repo_root, merged_request)
 
+    def resolve_execution_context_for_repo_root(
+        self,
+        repo_root_path: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
+        return self._service.resolve_execution_context_for_repo_root(repo_root_path, request)
+
+    def resolve_execution_context_for_runtime_root(
+        self,
+        runtime_root_path: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
+        return self._service.resolve_execution_context_for_runtime_root(runtime_root_path, request)
+
+    def detect_execution_package_gaps(
+        self,
+        request: ExecutionPackageResolutionRequest,
+    ) -> tuple[ExecutionPackageGap, ...]:
+        return self._service.detect_execution_package_gaps(request)
+
 
 class _QAVerificationPublisher:
     def __init__(self, *, repo_root: Path, project_slug: str, github_repo: str) -> None:
@@ -237,7 +331,7 @@ class _QAVerificationPublisher:
     def publish_verification_result(
         self,
         *,
-        worker_result: object,
+        worker_result: QAWorkerResult,
         source_packet_message_id: str | None,
         source_packet_path: str | None,
     ) -> dict[str, Any] | None:
@@ -246,7 +340,7 @@ class _QAVerificationPublisher:
 
         request = worker_result.request
         payload = request.packet_payload or {}
-        packet_output = worker_result.verification_result or {}
+        packet_output = worker_result.verification_result if isinstance(worker_result.verification_result, dict) else {}
         source_packet = self._read_source_packet(source_packet_path)
 
         issue_number = payload.get('issue_number')
@@ -404,14 +498,14 @@ class QARuntimeHost:
         self,
         *,
         queue_name: str,
-        queue_claim_runtime_service: object,
-        queue_claim_lifecycle_adapter: object | None,
-        packet_reference_resolution_service: object,
-        qa_worker_service: object,
-        verification_publisher: object | None,
+        queue_claim_runtime_service: QueueClaimRuntimeService,
+        queue_claim_lifecycle_adapter: _QueueClaimLifecycleAdapterProtocol | None,
+        packet_reference_resolution_service: PacketReferenceResolutionService,
+        qa_worker_service: QAWorkerService,
+        verification_publisher: _VerificationPublisherProtocol | None,
         actor_name: str,
         host_name: str,
-        logger: object | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         self._queue_name = queue_name
         self._queue_claim_runtime_service = queue_claim_runtime_service
@@ -538,7 +632,7 @@ class QARuntimeHost:
             return self._queue_claim_lifecycle_adapter.acknowledge_claim(claim_id)
         return self._queue_claim_lifecycle_adapter.requeue_claim(claim_id)
 
-    def _claim_with_retry(self, *, intake_mode: str) -> object:
+    def _claim_with_retry(self, *, intake_mode: str) -> QueueClaimRuntimeResult:
         attempts = 3 if intake_mode == 'claim_next' else 1
         retry_delay_seconds = 0.75
         last_result = None
@@ -562,10 +656,10 @@ class QARuntimeHost:
             if getattr(last_result, 'reason', None) != 'missing_queue_packet' or attempt >= attempts:
                 return last_result
             time.sleep(retry_delay_seconds)
-        return last_result
+        return cast(QueueClaimRuntimeResult, last_result)
 
     @staticmethod
-    def _resolved_packet_message_id(claim_result: object) -> str | None:
+    def _resolved_packet_message_id(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_message_id')
@@ -584,7 +678,7 @@ class QARuntimeHost:
         return None
 
     @staticmethod
-    def _resolved_packet_reference(claim_result: object) -> str | None:
+    def _resolved_packet_reference(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_reference')
@@ -603,7 +697,7 @@ class QARuntimeHost:
         return None
 
     @staticmethod
-    def _resolved_packet_schema_type(claim_result: object) -> str | None:
+    def _resolved_packet_schema_type(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_schema_type')
@@ -676,7 +770,7 @@ def build_qa_runtime_host(
     *,
     actor_name: str = 'QA Agent',
     host_name: str = 'qa-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ) -> QARuntimeHost:
     resolved_repo_root = repo_root.expanduser().resolve()
     runtime_logger = logger if logger is not None else _NullStructuredLogger()

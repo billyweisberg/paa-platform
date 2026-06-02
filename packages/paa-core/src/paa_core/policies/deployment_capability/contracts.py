@@ -20,6 +20,7 @@ class DeploymentCapabilityPolicy(Protocol):
         context: DeploymentCapabilityContext,
     ) -> DeploymentCapabilityDecision:
         """Return an allow/deny decision for the requested deployment capability set."""
+        ...
 
 
 __all__ = ['DeploymentCapabilityPolicy']

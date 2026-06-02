@@ -202,6 +202,8 @@ def normalize_role_name(raw_role: Optional[str]) -> Optional[str]:
 
 
 def route_policy_for_schema(schema_type: Optional[str]) -> set[tuple[str, str]] | None:
+    if schema_type is None:
+        return None
     if schema_type == "worker_result_packet":
         return team_worker_result_route_pairs()
     if schema_type == "techlead_assignment_packet":

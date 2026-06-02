@@ -20,6 +20,7 @@ class ImplementationPlanDerivationService(Protocol):
 
     def derive_plan(self, request: ImplementationPlanDerivationRequest) -> ImplementationPlanDerivationResult:
         """Derive one implementation plan and optionally persist it."""
+        ...
 
 
 __all__ = ['ImplementationPlanDerivationService', 'StructuredLogger']

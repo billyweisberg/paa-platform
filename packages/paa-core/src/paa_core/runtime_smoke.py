@@ -24,8 +24,15 @@ def run_runtime_smoke_test(
     queue_admin = queue_admin_service or DefaultRuntimeQueueAdminService()
 
     runtime = validate_runtime_install(repo_root, expected_branch=expected_branch)
-    if not runtime.get('ok'):
-        errors.extend(str(item) for item in runtime.get('errors', ()))
+    runtime_ok = bool(runtime.get('ok'))
+    runtime_errors = runtime.get('errors')
+    if not runtime_ok:
+        if isinstance(runtime_errors, list):
+            errors.extend(str(item) for item in runtime_errors)
+        elif isinstance(runtime_errors, tuple):
+            errors.extend(str(item) for item in runtime_errors)
+        elif runtime_errors is not None:
+            errors.append(str(runtime_errors))
 
     supervisor = runtime_supervisor_status(repo_root)
     queue_reports: dict[str, object] = {}
@@ -34,7 +41,11 @@ def run_runtime_smoke_test(
         for queue_name in resolved_repo_runtime_queue_topology(repo_root).queue_names.values():
             report = queue_admin.check(repo_root=repo_root, queue=queue_name, preview=0)
             queue_reports[queue_name] = report
-            queue_depths[queue_name] = report.get('messages_ready') if isinstance(report, dict) else None
+            if isinstance(report, dict):
+                messages_ready = report.get('messages_ready')
+                queue_depths[queue_name] = messages_ready if isinstance(messages_ready, int) else None
+            else:
+                queue_depths[queue_name] = None
     except Exception as exc:  # pragma: no cover - defensive smoke path
         errors.append(f'queue/report failed: {exc}')
 
@@ -48,7 +59,7 @@ def run_runtime_smoke_test(
         'errors': errors,
         'queues': queue_reports,
         'queue_depths': queue_depths,
-        'unattended_safe': bool(runtime.get('ok')) and bool(supervisor.get('running')) and not errors,
+        'unattended_safe': runtime_ok and bool(supervisor.get('running')) and not errors,
         'authority_status': 'installed' if runtime.get('authority_version') else 'missing',
     }
     if output_path:
