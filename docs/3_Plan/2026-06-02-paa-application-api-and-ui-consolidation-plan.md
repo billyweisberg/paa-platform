@@ -1,0 +1,320 @@
+Title: PAA Application API and UI Consolidation Plan
+Doc-ID: paa-application-api-ui-consolidation-plan
+Doc-Type: plan
+Status: active
+Lifecycle-Stage: plan
+Created: 2026-06-02
+Last-Edited: 2026-06-02
+Author: Billy Weisberg
+Repo: paa-platform
+Component: ApplicationAPIConsolidation
+Domain: application-architecture
+Keywords: paa, fastapi, typer, web ui, application service, dto, api, architecture
+Depends-On: 2026-06-02-paa-target-package-map.md, 2026-06-02-unified-runtime-consolidation-plan.md, 2026-05-30-paa-operator-cli-component-spec.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-30
+Summary: Defines the next architecture move for PAA: create explicit application service contracts, DTO contracts, and a FastAPI runtime gateway before doing the larger internal package relocation.
+
+# PAA Application API and UI Consolidation Plan
+
+## Decision
+
+Do not start with package moves.
+
+Start with application boundaries:
+1. internal application service interfaces
+2. request/response DTO contracts
+3. a Typer-facing operator service API
+4. a FastAPI runtime API
+5. only then move modules into the final package map
+
+This order prevents another file-shuffle that leaves the system shape ambiguous.
+
+## Why This Order
+
+Package moves without stable service and data boundaries do not improve architecture.
+They only move confusion around.
+
+The real target is a system with:
+- one CLI host
+- one HTTP runtime gateway
+- one future web UI
+- one shared application-service layer
+- one shared set of DTO contracts
+
+That means the host surfaces must be adapters over application services, not ad hoc callers of internal modules.
+
+## Required Host Surfaces
+
+The target system has three host surfaces.
+
+### 1. Typer CLI host
+Purpose:
+- local operator UI
+- scripting surface
+- admin and inspection surface
+
+Rule:
+- Typer calls application services only
+- Typer does not call low-level runtime helpers directly
+
+### 2. FastAPI runtime gateway
+Purpose:
+- stable network API for runtime orchestration and runtime administration
+- backend surface for future browser UI
+- remote-safe automation surface
+
+Rule:
+- FastAPI routers call application services only
+- FastAPI routers do not contain workflow or queue orchestration logic
+
+### 3. Web app UI
+Purpose:
+- browser-based operator and runtime UX
+- status, workflow, queue, execution, and review views
+
+Rule:
+- the web app talks to FastAPI
+- the web app does not call repositories directly
+- the web app does not recreate runtime orchestration logic in frontend code
+
+## The Two APIs We Need
+
+### API A. Internal application service API
+This is not HTTP.
+It is the in-process service boundary used by both Typer and FastAPI.
+
+Owns:
+- orchestration entrypoints
+- admin operations
+- service contracts
+- DTO contracts
+
+Examples:
+- `QueueAdminService`
+- `RuntimeSupervisorService`
+- `RuntimeHostService`
+- `RuntimeDispatchService`
+- `RuntimeStatusService`
+- `AuthorityInstallService`
+- `RuntimeValidationService`
+- `RuntimeReportService`
+- `AutomationPreflightService`
+
+### API B. External HTTP runtime API
+This is the FastAPI surface.
+
+Owns:
+- request routing
+- response serialization
+- dependency injection for host/runtime services
+- auth and transport concerns
+
+Examples:
+- `POST /runtime/supervisor/start`
+- `POST /runtime/supervisor/stop`
+- `GET /runtime/supervisor/status`
+- `GET /runtime/supervisor/logs`
+- `POST /runtime/queues/{queue}/claim-next`
+- `POST /runtime/queues/{queue}/send`
+- `POST /runtime/packets/dispatch`
+- `GET /runtime/status/report`
+- `POST /runtime/workflow/acceptance`
+
+The web UI should treat this HTTP API as its backend contract.
+
+## Target Structure
+
+```text
+packages/
+  paa-cli/
+    src/paa_cli/
+      app.py
+      router.py
+      command_adapters.py
+      rendering.py
+      normalization.py
+      environment.py
+      models.py
+      contracts.py
+
+  paa-core/
+    src/paa_core/
+      application/
+        contracts/
+          queue_admin.py
+          runtime_admin.py
+          runtime_dispatch.py
+          runtime_status.py
+          authority_install.py
+          runtime_validation.py
+          runtime_report.py
+          automation_preflight.py
+        dto/
+          queue.py
+          runtime.py
+          authority.py
+          status.py
+          workflow.py
+        services/
+          queue_admin.py
+          runtime_admin.py
+          runtime_dispatch.py
+          runtime_status.py
+          authority_install.py
+          runtime_validation.py
+          runtime_report.py
+          automation_preflight.py
+
+      api/
+        runtime/
+          app.py
+          dependencies.py
+          routers/
+            supervisor.py
+            queues.py
+            packets.py
+            workflow.py
+            status.py
+            reports.py
+
+      runtime/
+        hosts/
+        control/
+        transport/
+        workflow/
+        bridges/
+        workers/
+        packets/
+        support/
+
+      producer/
+      repositories/
+      policies/
+      governance/
+      domain/
+```
+
+## Architectural Rules
+
+### Rule 1. UI hosts do not own business logic
+Applies to:
+- Typer
+- FastAPI
+- web app frontend
+
+### Rule 2. Application services are the only orchestration entrypoints
+If a host surface needs to:
+- start the supervisor
+- claim a queue message
+- dispatch a packet
+- generate a runtime status report
+- run preflight
+- install or validate runtime
+
+it should call an application service, not a low-level helper directly.
+
+### Rule 3. DTO contracts are explicit and shared
+Do not let:
+- raw dicts
+- ad hoc JSON shapes
+- router-local payload construction
+
+become the de facto API.
+
+Define request and response contracts explicitly.
+
+### Rule 4. FastAPI is an adapter, not a new runtime core
+Do not recreate:
+- `techlead.py`
+- queue orchestration
+- workflow logic
+- packet routing logic
+
+inside FastAPI routers.
+
+### Rule 5. Package relocation follows API stabilization
+Create the service and DTO seams first.
+Then move code into the target package map.
+
+## Execution Order
+
+### Phase 1. Create the application layer skeleton
+Create:
+- `paa_core.application.contracts`
+- `paa_core.application.dto`
+- `paa_core.application.services`
+
+Initial service contracts:
+- `QueueAdminService`
+- `RuntimeSupervisorService`
+- `RuntimeHostService`
+- `RuntimeDispatchService`
+- `RuntimeStatusService`
+- `AuthorityInstallService`
+- `RuntimeValidationService`
+- `AutomationPreflightService`
+
+### Phase 2. Wrap current direct Typer calls
+Replace direct Typer calls to:
+- queue admin functions
+- runtime supervisor functions
+- runtime host builders
+- runtime install/validate helpers
+- report helpers
+
+with calls into the application services.
+
+Goal:
+- `paa_cli` becomes a thin host over `paa_core.application`
+
+### Phase 3. Define the FastAPI runtime gateway
+Create:
+- `paa_core.api.runtime.app`
+- router modules
+- dependency providers
+
+First HTTP slices:
+- supervisor control
+- queue admin
+- packet dispatch
+- runtime status/report
+
+Goal:
+- a real network API over the same application services used by Typer
+
+### Phase 4. Package relocation
+After Phases 1-3 are in place:
+- move runtime modules into `paa_core.runtime.*`
+- move producer modules into `paa_core.producer.*`
+- update imports and host composition
+
+Goal:
+- file layout matches the stabilized architecture instead of leading it
+
+### Phase 5. Web UI readiness
+After FastAPI is stable:
+- define the web app's backend contract against the runtime API
+- ensure status/report/workflow payloads are browser-usable
+- keep frontend logic out of orchestration
+
+## First Concrete Slice
+
+Start here:
+1. define `QueueAdminService` contract and DTOs
+2. define `RuntimeSupervisorService` contract and DTOs
+3. implement them over existing `paa_core` runtime/queue modules
+4. switch Typer queue and runtime commands to those services
+
+This is the correct first slice because it consolidates the direct calls without needing the full HTTP layer yet.
+
+## Proof Condition
+
+This plan is complete when:
+1. Typer commands call application services, not direct helpers
+2. FastAPI runtime routes call the same application services
+3. the future web UI has one backend target: FastAPI
+4. runtime orchestration logic lives in `paa_core`, not in any host surface
+5. package layout matches those stabilized boundaries

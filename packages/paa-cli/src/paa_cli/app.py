@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Final
 
@@ -14,23 +15,31 @@ except ImportError as exc:  # pragma: no cover - exercised only in missing-depen
 else:  # pragma: no branch
     _TYPER_IMPORT_ERROR = None
 
+from paa_core.application.dto.queue import (
+    QueueCheckRequest,
+    QueueClaimActionRequest,
+    QueueClaimNextRequest,
+    QueueListClaimsRequest,
+    QueuePacketFileRequest,
+    QueuePurgeRequest,
+    QueueRepoRootRequest,
+    QueueSendRequest,
+    QueueValidateRequest,
+)
+from paa_core.application.dto.runtime import (
+    RuntimeHostRunRequest,
+    RuntimeLogsRequest,
+    RuntimeStatusRequest,
+    RuntimeSupervisorRequest,
+)
+from paa_core.application.services import (
+    DefaultQueueAdminApplicationService,
+    DefaultRuntimeAdminApplicationService,
+)
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.install import install_authority_package, install_runtime_support
-from paa_core.runtime_control import (
-    restart_runtime_supervisor,
-    runtime_supervisor_logs,
-    runtime_supervisor_status,
-    start_runtime_supervisor,
-    stop_runtime_supervisor,
-)
-from paa_core.runtime_hosts import (
-    build_dev_runtime_host,
-    build_qa_runtime_host,
-    build_runtime_supervisor,
-    build_techlead_runtime_host,
-)
 from paa_core.runtime_smoke import run_runtime_smoke_test
 from paa_core.runtime_guardrails import validate_runtime_install
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
@@ -86,6 +95,19 @@ _PREFLIGHTED_FAMILIES: Final[set[str]] = {'component', 'plan'}
 
 def _build_runtime_queue_admin_service() -> DefaultRuntimeQueueAdminService:
     return DefaultRuntimeQueueAdminService()
+
+
+def _build_queue_admin_application_service() -> DefaultQueueAdminApplicationService:
+    return DefaultQueueAdminApplicationService(queue_admin=_build_runtime_queue_admin_service())
+
+
+def _build_runtime_admin_application_service() -> DefaultRuntimeAdminApplicationService:
+    return DefaultRuntimeAdminApplicationService()
+
+
+def _emit_json_result(result: object) -> None:
+    payload = asdict(result) if is_dataclass(result) else result
+    typer.echo(json.dumps(payload, indent=2))
 
 
 def _build_automation_preflight_service() -> DefaultAutomationPreflightService:
@@ -922,18 +944,18 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _build_runtime_queue_admin_service().ensure_topology(repo_root=resolved_repo_root)
-        typer.echo(json.dumps(result, indent=2))
-        code = 0 if result.get('ok') else 1
-        raise typer.Exit(code=code)
+        result = _build_queue_admin_application_service().ensure_topology(QueueRepoRootRequest(repo_root=resolved_repo_root))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('state-info')
     def queue_state_info(
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        typer.echo(json.dumps(_build_runtime_queue_admin_service().state_info(repo_root=resolved_repo_root), indent=2))
-        raise typer.Exit(code=0)
+        result = _build_queue_admin_application_service().state_info(QueueRepoRootRequest(repo_root=resolved_repo_root))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('check')
     def queue_check(
@@ -942,17 +964,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        typer.echo(
-            json.dumps(
-                _build_runtime_queue_admin_service().check(
-                    repo_root=resolved_repo_root,
-                    queue=queue,
-                    preview=preview,
-                ),
-                indent=2,
-            )
+        result = _build_queue_admin_application_service().check(
+            QueueCheckRequest(repo_root=resolved_repo_root, queue=queue, preview=preview)
         )
-        raise typer.Exit(code=0)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('purge')
     def queue_purge(
@@ -960,10 +976,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         queue: str | None = typer.Option(None, '--queue'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _build_runtime_queue_admin_service().purge(repo_root=resolved_repo_root, queue=queue)
-        typer.echo(json.dumps(result, indent=2))
-        code = 0 if result.get('ok') else 1
-        raise typer.Exit(code=code)
+        result = _build_queue_admin_application_service().purge(
+            QueuePurgeRequest(repo_root=resolved_repo_root, queue=queue)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('validate')
     def queue_validate(
@@ -971,10 +988,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         del repo_root
-        result = _build_runtime_queue_admin_service().validate(message_file=Path(message_file).resolve())
-        typer.echo(json.dumps(result, indent=2))
-        code = 0 if result.get('ok') else 1
-        raise typer.Exit(code=code)
+        result = _build_queue_admin_application_service().validate(
+            QueueValidateRequest(message_file=Path(message_file).resolve())
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('send')
     def queue_send(
@@ -983,14 +1001,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _build_runtime_queue_admin_service().send(
-            repo_root=resolved_repo_root,
-            queue=queue,
-            message_file=Path(message_file).resolve(),
+        result = _build_queue_admin_application_service().send(
+            QueueSendRequest(repo_root=resolved_repo_root, queue=queue, message_file=Path(message_file).resolve())
         )
-        typer.echo(json.dumps(result, indent=2))
-        code = 0 if result.get('ok') else 1
-        raise typer.Exit(code=code)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('claim-next')
     def queue_claim_next(
@@ -999,13 +1014,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result, code = _build_runtime_queue_admin_service().claim_next(
-            repo_root=resolved_repo_root,
-            queue=queue,
-            claimed_by=claimed_by,
+        result = _build_queue_admin_application_service().claim_next(
+            QueueClaimNextRequest(repo_root=resolved_repo_root, queue=queue, claimed_by=claimed_by)
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=code)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('list-claims')
     def queue_list_claims(
@@ -1014,17 +1027,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         status: str | None = typer.Option(None, '--status'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        typer.echo(
-            json.dumps(
-                _build_runtime_queue_admin_service().list_claims(
-                    repo_root=resolved_repo_root,
-                    queue=queue,
-                    status=status,
-                ),
-                indent=2,
-            )
+        result = _build_queue_admin_application_service().list_claims(
+            QueueListClaimsRequest(repo_root=resolved_repo_root, queue=queue, status=status)
         )
-        raise typer.Exit(code=0)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('ack')
     def queue_ack(
@@ -1032,10 +1039,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _build_runtime_queue_admin_service().ack(repo_root=resolved_repo_root, claim_id=claim_id)
-        typer.echo(json.dumps(result, indent=2))
-        code = 0 if result.get('ok') else 1
-        raise typer.Exit(code=code)
+        result = _build_queue_admin_application_service().ack(
+            QueueClaimActionRequest(repo_root=resolved_repo_root, claim_id=claim_id)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('requeue')
     def queue_requeue(
@@ -1043,9 +1051,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result, code = _build_runtime_queue_admin_service().requeue(repo_root=resolved_repo_root, claim_id=claim_id)
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=code)
+        result = _build_queue_admin_application_service().requeue(
+            QueueClaimActionRequest(repo_root=resolved_repo_root, claim_id=claim_id)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('validate-packet')
     def queue_validate_packet(
@@ -1053,12 +1063,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result, code = _build_runtime_queue_admin_service().validate_packet(
-            repo_root=resolved_repo_root,
-            message_file=Path(message_file).resolve(),
+        result = _build_queue_admin_application_service().validate_packet(
+            QueuePacketFileRequest(repo_root=resolved_repo_root, message_file=Path(message_file).resolve())
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=code)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @queue_app.command('send-packet')
     def queue_send_packet(
@@ -1066,12 +1075,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result, code = _build_runtime_queue_admin_service().send_packet(
-            repo_root=resolved_repo_root,
-            message_file=Path(message_file).resolve(),
+        result = _build_queue_admin_application_service().send_packet(
+            QueuePacketFileRequest(repo_root=resolved_repo_root, message_file=Path(message_file).resolve())
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=code)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @worker_app.command('dispatch')
     def worker_dispatch(
@@ -1118,17 +1126,19 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        supervisor = build_runtime_supervisor(resolved_repo_root)
-        result = supervisor.run(
-            intake_mode=intake_mode,
-            emit_next_assignment=emit_next_assignment,
-            emit_worker_result=emit_worker_result,
-            emit_verification=emit_verification,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
+        result = _build_runtime_admin_application_service().run_supervisor(
+            RuntimeSupervisorRequest(
+                repo_root=resolved_repo_root,
+                intake_mode=intake_mode,
+                emit_next_assignment=emit_next_assignment,
+                emit_worker_result=emit_worker_result,
+                emit_verification=emit_verification,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+            )
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('start')
     def runtime_start(
@@ -1141,34 +1151,36 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = start_runtime_supervisor(
-            resolved_repo_root,
-            intake_mode=intake_mode,
-            emit_next_assignment=emit_next_assignment,
-            emit_worker_result=emit_worker_result,
-            emit_verification=emit_verification,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
+        result = _build_runtime_admin_application_service().start_supervisor(
+            RuntimeSupervisorRequest(
+                repo_root=resolved_repo_root,
+                intake_mode=intake_mode,
+                emit_next_assignment=emit_next_assignment,
+                emit_worker_result=emit_worker_result,
+                emit_verification=emit_verification,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+            )
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('stop')
     def runtime_stop(
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = stop_runtime_supervisor(resolved_repo_root)
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        result = _build_runtime_admin_application_service().stop_supervisor(RuntimeStatusRequest(repo_root=resolved_repo_root))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('status')
     def runtime_status(
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = runtime_supervisor_status(resolved_repo_root)
-        typer.echo(json.dumps(result, indent=2))
+        result = _build_runtime_admin_application_service().supervisor_status(RuntimeStatusRequest(repo_root=resolved_repo_root))
+        _emit_json_result(result.payload)
 
     @runtime_app.command('logs')
     def runtime_logs(
@@ -1176,7 +1188,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         lines: int = typer.Option(200, '--lines'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        output = runtime_supervisor_logs(resolved_repo_root, lines=lines)
+        output = _build_runtime_admin_application_service().supervisor_logs(
+            RuntimeLogsRequest(repo_root=resolved_repo_root, lines=lines)
+        )
         if output:
             typer.echo(output)
 
@@ -1191,17 +1205,19 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = restart_runtime_supervisor(
-            resolved_repo_root,
-            intake_mode=intake_mode,
-            emit_next_assignment=emit_next_assignment,
-            emit_worker_result=emit_worker_result,
-            emit_verification=emit_verification,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
+        result = _build_runtime_admin_application_service().restart_supervisor(
+            RuntimeSupervisorRequest(
+                repo_root=resolved_repo_root,
+                intake_mode=intake_mode,
+                emit_next_assignment=emit_next_assignment,
+                emit_worker_result=emit_worker_result,
+                emit_verification=emit_verification,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+            )
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('techlead')
     def runtime_techlead(
@@ -1214,18 +1230,19 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_techlead_runtime_host(
-            resolved_repo_root,
-            actor_name=actor_name,
-            host_name=host_name,
+        result = _build_runtime_admin_application_service().run_techlead_host(
+            RuntimeHostRunRequest(
+                repo_root=resolved_repo_root,
+                actor_name=actor_name,
+                host_name=host_name,
+                intake_mode=intake_mode,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+                emit_next_assignment=emit_next_assignment,
+            )
         )
-        result = host.run_loop(
-            intake_mode=intake_mode,
-            emit_next_assignment=emit_next_assignment,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
-        )
-        typer.echo(json.dumps(result, indent=2))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('dev')
     def runtime_dev(
@@ -1238,18 +1255,19 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_dev_runtime_host(
-            resolved_repo_root,
-            actor_name=actor_name,
-            host_name=host_name,
+        result = _build_runtime_admin_application_service().run_dev_host(
+            RuntimeHostRunRequest(
+                repo_root=resolved_repo_root,
+                actor_name=actor_name,
+                host_name=host_name,
+                intake_mode=intake_mode,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+                emit_worker_result=emit_worker_result,
+            )
         )
-        result = host.run_loop(
-            intake_mode=intake_mode,
-            emit_worker_result=emit_worker_result,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
-        )
-        typer.echo(json.dumps(result, indent=2))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @runtime_app.command('qa')
     def runtime_qa(
@@ -1262,18 +1280,19 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_qa_runtime_host(
-            resolved_repo_root,
-            actor_name=actor_name,
-            host_name=host_name,
+        result = _build_runtime_admin_application_service().run_qa_host(
+            RuntimeHostRunRequest(
+                repo_root=resolved_repo_root,
+                actor_name=actor_name,
+                host_name=host_name,
+                intake_mode=intake_mode,
+                max_iterations=max_iterations,
+                poll_interval_seconds=poll_interval_seconds,
+                emit_verification=emit_verification,
+            )
         )
-        result = host.run_loop(
-            intake_mode=intake_mode,
-            emit_verification=emit_verification,
-            max_iterations=max_iterations,
-            poll_interval_seconds=poll_interval_seconds,
-        )
-        typer.echo(json.dumps(result, indent=2))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @report_app.command('explain')
     def report_explain(

@@ -1,0 +1,453 @@
+Title: PAA Target Package Map
+Doc-ID: paa-target-package-map
+Doc-Type: design-note
+Status: active
+Lifecycle-Stage: design
+Created: 2026-06-02
+Last-Edited: 2026-06-02
+Author: Billy Weisberg
+Repo: paa-platform
+Component: PAAPackageTopology
+Domain: package-architecture
+Keywords: paa, package map, architecture, object-oriented, runtime, cli, producer, core
+Depends-On: 2026-05-28-paa-cli-system-architecture.md, 2026-05-28-paa-worker-runtime-architecture.md, 2026-05-30-paa-operator-cli-component-spec.md, 2026-06-02-unified-runtime-consolidation-plan.md
+Supersedes:
+Superseded-By:
+Canonical: true
+Review-After: 2026-06-30
+Summary: Defines the target package layout for the coherent object-oriented PAA system as a two-package model: one user-facing CLI package and one unified system package grouped by domain responsibility, with explicit application-service and HTTP API layers that support CLI, FastAPI, and future web UI hosts.
+
+# PAA Target Package Map
+
+## Purpose
+
+Define the target package structure for the live PAA system.
+
+This is not a file-move inventory.
+This is the intended object model at package and subpackage level.
+
+The package map should answer:
+- what is a host surface
+- what is an application-service surface
+- what is an external API surface
+- what is application/runtime orchestration
+- what is domain policy
+- what is persistence
+- what is transport
+- what is producer-only authority logic
+- what is deprecated residue
+
+## Top-Level Package Roles
+
+### `paa_cli`
+User-facing operator host.
+
+Owns:
+- Typer command grammar
+- operator argument normalization
+- rendering
+- output shaping
+- command-family registration
+- thin dispatch into `paa_core.application`
+
+Does not own:
+- runtime business logic
+- queue transport
+- workflow truth
+- worker behavior
+- producer derivation rules
+- HTTP API behavior
+
+### `paa_core`
+Unified system package.
+
+Owns:
+- application service interfaces and DTO contracts
+- HTTP API routers and FastAPI host composition
+- producer-side authority and package derivation
+- runtime hosts and runtime control
+- queue transport and claim state
+- packet dispatch and context assembly
+- workflow lifecycle and methodology state
+- worker application services
+- runtime bridges and worktree flows
+- repositories
+- policies
+- governance metadata and consistency logic
+
+Does not own:
+- Typer CLI surface
+- browser frontend UI
+
+### `paa_consumer`
+Deprecated compatibility package.
+
+Target state:
+- no business ownership
+- no runtime ownership
+- no host ownership
+- removable after final deprecation window
+
+## Target Package Map
+
+```text
+packages/
+  paa-cli/
+    src/paa_cli/
+      app.py
+      router.py
+      command_adapters.py
+      rendering.py
+      normalization.py
+      environment.py
+      models.py
+      contracts.py
+
+  paa-core/
+    src/paa_core/
+      application/
+        contracts/
+          queue_admin.py
+          runtime_admin.py
+          runtime_dispatch.py
+          runtime_status.py
+          authority_install.py
+        dto/
+          queue.py
+          runtime.py
+          authority.py
+          status.py
+        services/
+          queue_admin.py
+          runtime_admin.py
+          runtime_dispatch.py
+          runtime_status.py
+          authority_install.py
+          automation_preflight.py
+
+      api/
+        runtime/
+          app.py
+          dependencies.py
+          routers/
+            supervisor.py
+            queues.py
+            packets.py
+            workflow.py
+            status.py
+
+      runtime/
+        hosts/
+          techlead.py
+          dev.py
+          qa.py
+          supervisor.py
+        control/
+          supervisor.py
+          bootstrap.py
+          smoke.py
+        transport/
+          rabbitmq.py
+          queue_admin.py
+          claim_ledger.py
+          packet_dispatch.py
+          packet_envelope.py
+        workflow/
+          lifecycle.py
+          state.py
+          transitions.py
+          methodology.py
+        bridges/
+          assignment.py
+          assignment_context.py
+          decision.py
+          acceptance.py
+          closeout.py
+          lineage.py
+          status_report.py
+          role_bridge.py
+          worktree.py
+          workflow.py
+        workers/
+          techlead.py
+          dev.py
+          qa.py
+        packets/
+          context_assembly.py
+          reference_resolution.py
+        support/
+          config.py
+          runtime_paths.py
+          runtime_guardrails.py
+          runtime_evidence.py
+          install.py
+          readiness.py
+
+      producer/
+        authority_runtime.py
+        architect_packet_preparer.py
+        design_package_deriver.py
+        coder_brief_assembler.py
+        implementation_plan_deriver.py
+        implementation_plan_progress.py
+        publish.py
+        issue_loader.py
+        obligation_loader.py
+        smoke.py
+
+      policies/
+        acceptance/
+        deployment_capability/
+        projection_freshness/
+        reset_recovery/
+        routing/
+        workflow_transition/
+
+      repositories/
+        component_design/
+        execution_package/
+        implementation_plan/
+        methodology_execution/
+        runtime_event/
+        runtime_identity/
+        workflow_state/
+
+      governance/
+        component_registry.py
+        component_metadata.py
+        component_spec_materialization.py
+        model_code_consistency.py
+        projection_code_consistency.py
+        runtime_evidence_model_consistency.py
+
+      domain/
+        core/
+        authority_taxonomy/
+
+      sql/
+
+  paa-consumer/
+    src/paa_consumer/
+      __main__.py
+      __init__.py
+```
+
+## UI And API Layers
+
+The target host stack is:
+
+```text
+Typer CLI
+  -> paa_core.application services
+
+FastAPI runtime gateway
+  -> paa_core.application services
+
+Web app frontend
+  -> FastAPI runtime gateway
+```
+
+The web app should not:
+- call repositories directly
+- call runtime hosts directly
+- reproduce workflow/orchestration logic in frontend code
+
+The CLI should not:
+- call low-level queue/runtime helpers directly
+- bypass application service contracts
+
+The FastAPI layer should be:
+- thin controller/adapter code
+- request/response validation
+- dependency injection and auth hooks
+- no orchestration logic in routers
+
+## Meaning Of The New Layers
+
+### `paa_core.application.contracts`
+Owns the internal service interfaces used by host surfaces.
+
+Examples:
+- `QueueAdminService`
+- `RuntimeSupervisorService`
+- `RuntimeHostService`
+- `RuntimeDispatchService`
+- `RuntimeStatusService`
+- `AuthorityInstallService`
+
+### `paa_core.application.dto`
+Owns request/response contracts shared across host surfaces.
+
+These DTOs define:
+- CLI-to-service payloads
+- service-to-HTTP payloads
+- stable shapes for future web UI consumption
+
+### `paa_core.application.services`
+Owns concrete application-layer orchestration.
+
+These services coordinate:
+- runtime hosts
+- queue transport
+- workflow services
+- repositories
+- runtime support infrastructure
+
+### `paa_core.api.runtime`
+Owns the external HTTP runtime API.
+
+This is the future network-facing gateway for:
+- browser UI
+- remote operator tools
+- automation that should not shell into the CLI
+
+It is not a second business-logic layer.
+It is an adapter over `paa_core.application.services`.
+
+## Mapping From Current Structure
+
+### Keep as `paa_cli`
+Current files already belong in the correct top-level package:
+- `packages/paa-cli/src/paa_cli/app.py`
+- `packages/paa-cli/src/paa_cli/router.py`
+- `packages/paa-cli/src/paa_cli/command_adapters.py`
+- `packages/paa-cli/src/paa_cli/rendering.py`
+- `packages/paa-cli/src/paa_cli/normalization.py`
+
+### Fold `paa_producer` into `paa_core.producer`
+The current top-level producer package should not remain a separate first-class system package.
+
+Producer logic is part of the same application/system boundary and should become an internal subsystem under `paa_core.producer`.
+
+### Introduce `application` and `api` before broad package moves
+The next structural move should not be raw file relocation.
+
+First:
+- define application contracts
+- define DTO contracts
+- wrap current direct calls behind application services
+- add FastAPI runtime adapters over those same services
+
+After those boundaries exist:
+- move modules into the target runtime/producer subpackages
+
+### Refine within `paa_core`
+The main remaining improvement is internal organization inside `paa_core`.
+The current package is functionally correct but still too broad at the root.
+
+#### Move into `paa_core.runtime.hosts`
+Current:
+- `packages/paa-core/src/paa_core/techlead_runtime_host.py`
+- `packages/paa-core/src/paa_core/dev_runtime_host.py`
+- `packages/paa-core/src/paa_core/qa_runtime_host.py`
+- `packages/paa-core/src/paa_core/runtime_hosts.py`
+
+#### Move into `paa_core.runtime.control`
+Current:
+- `packages/paa-core/src/paa_core/runtime_control.py`
+- `packages/paa-core/src/paa_core/runtime_smoke.py`
+
+#### Move into `paa_core.runtime.transport`
+Current:
+- `packages/paa-core/src/paa_core/queue_transport.py`
+- `packages/paa-core/src/paa_core/claim_ledger.py`
+- `packages/paa-core/src/paa_core/runtime_packet_dispatch.py`
+- `packages/paa-core/src/paa_core/packet_envelope.py`
+- `packages/paa-core/src/paa_core/services/runtime_queue_admin.py`
+
+#### Move into `paa_core.runtime.support`
+Current:
+- `packages/paa-core/src/paa_core/config.py`
+- `packages/paa-core/src/paa_core/runtime_paths.py`
+- `packages/paa-core/src/paa_core/runtime_guardrails.py`
+- `packages/paa-core/src/paa_core/runtime_evidence.py`
+- `packages/paa-core/src/paa_core/handoff_runtime.py`
+
+Note:
+- `handoff_runtime.py` should continue shrinking until it is either deleted or reduced to a compatibility shell around transport/support modules.
+
+#### Move into `paa_core.runtime.bridges`
+Current files already extracted, but should be grouped together under runtime bridges:
+- `packages/paa-core/src/paa_core/services/runtime_acceptance.py`
+- `packages/paa-core/src/paa_core/services/runtime_assignment_bridge.py`
+- `packages/paa-core/src/paa_core/services/runtime_assignment_context.py`
+- `packages/paa-core/src/paa_core/services/runtime_closeout.py`
+- `packages/paa-core/src/paa_core/services/runtime_decision_bridge.py`
+- `packages/paa-core/src/paa_core/services/runtime_lineage.py`
+- `packages/paa-core/src/paa_core/services/runtime_role_bridge.py`
+- `packages/paa-core/src/paa_core/services/runtime_status_report.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py`
+- `packages/paa-core/src/paa_core/services/runtime_worktree.py`
+
+#### Keep worker application services grouped as workers
+Current:
+- `packages/paa-core/src/paa_core/services/techlead_worker/`
+- `packages/paa-core/src/paa_core/services/dev_worker/`
+- `packages/paa-core/src/paa_core/services/qa_worker/`
+
+#### Keep packet services grouped as packets
+Current:
+- `packages/paa-core/src/paa_core/services/packet_context_assembly/`
+- `packages/paa-core/src/paa_core/services/packet_reference_resolution/`
+
+#### Keep workflow/methodology services grouped as workflow
+Current:
+- `packages/paa-core/src/paa_core/services/workflow_lifecycle/`
+- `packages/paa-core/src/paa_core/services/methodology_execution_preflight/`
+- `packages/paa-core/src/paa_core/services/methodology_execution_projection/`
+- `packages/paa-core/src/paa_core/services/methodology_execution_state/`
+
+## Structural Rules
+
+### Rule 1. No user-facing logic outside `paa_cli`
+If an operator types a command, the surface belongs to `paa_cli`.
+
+### Rule 2. No runtime logic outside `paa_core`
+If the code participates in queue-driven execution, host orchestration, workflow transition, packet routing, or runtime persistence, it belongs in `paa_core`.
+
+### Rule 3. No producer logic outside `paa_core.producer`
+If the code derives or publishes authority/package artifacts, it belongs in `paa_core.producer` unless it is a shared policy or shared repository concern.
+
+### Rule 4. `paa_consumer` is removable residue
+Do not add new files there.
+Do not restore ownership there.
+
+### Rule 5. Organize `paa_core` by domain responsibility, not by history
+Do not keep throwing unrelated modules into the root of `paa_core`.
+Prefer grouped subpackages under:
+- `runtime.hosts`
+- `runtime.control`
+- `runtime.transport`
+- `runtime.bridges`
+- `runtime.workers`
+- `runtime.workflow`
+- `runtime.packets`
+- `runtime.support`
+
+## Immediate Refactor Sequence
+
+1. Create `paa_core.runtime` subpackages.
+2. Move root-level runtime host/control/transport/support modules into them.
+3. Move extracted `runtime_*` services under `paa_core.runtime.bridges`.
+4. Move worker/methodology/packet modules under the corresponding runtime subpackages where appropriate.
+5. Update imports.
+6. Run the full runtime-host and CLI proof again.
+
+## Non-Goals
+
+This package map does not require:
+- changing the public `paa` CLI grammar
+- changing packet schemas
+- changing queue names
+- changing DB schema
+
+This is an internal package-ownership correction.
+
+## Acceptance Condition
+
+The target package map is realized when:
+1. `paa_cli` remains the only user-facing CLI package.
+2. `paa_core` owns all runtime, producer, and business orchestration.
+3. producer logic lives under `paa_core.producer`, not a separate top-level package.
+4. `paa_consumer` contains no live system logic and can be deleted without changing runtime behavior.
+5. `paa_core` internal layout reflects runtime and producer domain ownership instead of historical extraction order.
