@@ -139,6 +139,29 @@ class PacketContextAssemblyServiceTests(unittest.TestCase):
         self.assertEqual(result.assembly_summary.resolved_capabilities, ('packet-read', 'qa-runtime'))
         self.assertEqual(resolution_service.surface_requests[0][0], 'qa')
 
+    def test_assemble_packet_context_supports_techlead_assignment_packet_for_dev(self) -> None:
+        projection_service = _FakeProjectionService(_status_projection())
+        resolution_service = _FakeExecutionPackageResolutionService(_dev_resolution_view())
+        service = self._build_service(
+            projection_service=projection_service,
+            resolution_service=resolution_service,
+        )
+
+        result = service.assemble_packet_context(
+            PacketContextAssemblyRequest(
+                packet_schema_type='techlead_assignment_packet',
+                methodology_execution_id='exec-123',
+                runtime_surface='dev',
+                packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.assembly_summary.context_kind, 'dev_assignment_execution')
+        self.assertEqual(result.assembly_summary.required_capabilities, ('packet-read', 'dev-runtime'))
+        self.assertEqual(result.assembly_summary.resolved_capabilities, ('packet-read', 'dev-runtime'))
+        self.assertEqual(resolution_service.surface_requests[0][0], 'dev')
+
     def test_assemble_packet_context_fails_closed_for_missing_execution_id(self) -> None:
         service = self._build_service()
 
@@ -334,6 +357,35 @@ def _qa_resolution_view() -> ExecutionPackageResolutionView:
             missing_capabilities=(),
             blocking_reasons=(),
             satisfied_capabilities=('packet-read', 'qa-runtime'),
+            notes=(),
+            metadata={},
+        ),
+        warnings=(),
+        gaps=(),
+        metadata={},
+    )
+
+
+def _dev_resolution_view() -> ExecutionPackageResolutionView:
+    return ExecutionPackageResolutionView(
+        execution_surface_key='dev',
+        execution_surface_type='worker_runtime',
+        execution_package_install_id='install-dev-123',
+        package_name='paa-authority',
+        package_version='1.0.0',
+        authority_version_id='authority-123',
+        active_overlay_keys=(),
+        manifest_path='/runtime/manifest.json',
+        package_metadata_path='/runtime/package-metadata.json',
+        docs_root_path='/runtime/docs',
+        artifacts_root_path='/runtime/artifacts',
+        repo_root_path='/repo',
+        runtime_root_path='/runtime',
+        capability_summary=ExecutionPackageCapabilitySummary(
+            allowed=True,
+            missing_capabilities=(),
+            blocking_reasons=(),
+            satisfied_capabilities=('packet-read', 'dev-runtime'),
             notes=(),
             metadata={},
         ),

@@ -11,7 +11,7 @@ from paa_core import handoff_runtime
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
-from paa_consumer.hosts import build_qa_runtime_host, build_techlead_runtime_host
+from paa_consumer.hosts import build_dev_runtime_host, build_qa_runtime_host, build_techlead_runtime_host
 from paa_consumer.inbox import dispatch_techlead_packet, resolve_techlead_packet_queue, run_queue_command
 from paa_consumer.techlead_service_map import build_techlead_service_map
 from paa_consumer.runtime_guardrails import validate
@@ -197,6 +197,36 @@ def main() -> int:
             host.run_loop(
                 intake_mode=subargs.intake_mode,
                 emit_next_assignment=subargs.emit_next_assignment,
+                max_iterations=subargs.max_iterations,
+                poll_interval_seconds=subargs.poll_interval_seconds,
+            ),
+            indent=2,
+        ))
+        return 0
+
+    if args.command == 'dev-runtime':
+        argp = argparse.ArgumentParser(
+            prog='paa-consumer dev-runtime',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', type=Path, default=args.repo_root)
+        argp.add_argument('--actor-name', default='Dev Agent')
+        argp.add_argument('--host-name', default='dev-runtime-host')
+        argp.add_argument('--intake-mode', choices=['preview', 'claim_next'], default='preview')
+        argp.add_argument('--emit-worker-result', action='store_true')
+        argp.add_argument('--max-iterations', type=int, default=1)
+        argp.add_argument('--poll-interval-seconds', type=float, default=5.0)
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
+        host = build_dev_runtime_host(
+            repo_root,
+            actor_name=subargs.actor_name,
+            host_name=subargs.host_name,
+        )
+        print(json.dumps(
+            host.run_loop(
+                intake_mode=subargs.intake_mode,
+                emit_worker_result=subargs.emit_worker_result,
                 max_iterations=subargs.max_iterations,
                 poll_interval_seconds=subargs.poll_interval_seconds,
             ),

@@ -189,11 +189,14 @@ def team_worker_display_to_cli_map(repo_root: Path | None = None) -> dict[str, s
 
 
 def team_worker_result_route_pairs(repo_root: Path | None = None) -> set[tuple[str, str]]:
-    return {(role.display_name, "TechLead") for role in active_team_worker_roles(repo_root=repo_root)}
+    pairs = {(role.display_name, "TechLead") for role in active_team_worker_roles(repo_root=repo_root)}
+    pairs.add(("Dev", "TechLead"))
+    return pairs
 
 
 def techlead_assignment_route_pairs(repo_root: Path | None = None) -> set[tuple[str, str]]:
     pairs = {("TechLead", "Delivery Architect"), ("TechLead", "QA")}
+    pairs.add(("TechLead", "Dev"))
     pairs.update({("TechLead", role.display_name) for role in active_team_worker_roles(repo_root=repo_root)})
     return pairs
 

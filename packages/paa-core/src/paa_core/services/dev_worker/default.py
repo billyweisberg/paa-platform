@@ -109,7 +109,7 @@ class DefaultDevWorkerService:
 
         packet_context_result = self.packet_context_assembly_service.assemble_packet_context(
             PacketContextAssemblyRequest(
-                packet_schema_type='worker_result_packet',
+                packet_schema_type='techlead_assignment_packet',
                 packet_message_id=request.packet_message_id,
                 packet_path=request.packet_path,
                 packet_payload=request.packet_payload,
@@ -117,7 +117,7 @@ class DefaultDevWorkerService:
                 project_id=request.project_id,
                 work_item_id=request.work_item_id,
                 component_id=request.component_id,
-                runtime_surface='techlead',
+                runtime_surface='dev',
                 actor_name=request.actor_name,
                 host_name=request.host_name,
                 metadata=request.metadata,

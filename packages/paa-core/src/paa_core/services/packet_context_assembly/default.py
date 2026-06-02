@@ -42,6 +42,10 @@ class DefaultPacketContextAssemblyService:
             'required_capabilities': ('packet-read', 'qa-runtime'),
             'context_kind': 'qa_assignment_execution',
         },
+        ('techlead_assignment_packet', 'dev'): {
+            'required_capabilities': ('packet-read', 'dev-runtime'),
+            'context_kind': 'dev_assignment_execution',
+        },
     }
 
     def __init__(

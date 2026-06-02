@@ -20,6 +20,7 @@ CONSUMER_COMMANDS = (
     'techlead-status',
     'techlead-service-map',
     'techlead-runtime',
+    'dev-runtime',
     'qa-runtime',
     'techlead-emit-next-assignment',
     'techlead-lineage',
