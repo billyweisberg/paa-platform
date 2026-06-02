@@ -99,6 +99,14 @@ def main() -> int:
             parser.error('queue-check requires --repo-root and --queue')
         return run_queue_command(Path(args.repo_root).resolve(), ['check', '--queue', args.queue, *remainder])
 
+    if args.command == 'queue-purge':
+        if not args.repo_root:
+            parser.error('queue-purge requires --repo-root')
+        argv = ['purge']
+        if args.queue:
+            argv += ['--queue', args.queue]
+        return run_queue_command(Path(args.repo_root).resolve(), argv + remainder)
+
     if args.command == 'queue-validate':
         if not args.repo_root or not args.message_file:
             parser.error('queue-validate requires --repo-root and --message-file')

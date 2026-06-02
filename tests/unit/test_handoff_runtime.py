@@ -10,6 +10,7 @@ from paa_core.handoff_runtime import (
     _resolved_runtime_exchange,
     _resolved_runtime_queues,
     cmd_claim_next,
+    cmd_purge,
     cmd_send,
     lookup_packet_compilation_run,
     packet_compiler_agent_name_for_message,
@@ -158,6 +159,27 @@ class HandoffRuntimeTests(unittest.TestCase):
         printed = mock_print.call_args[0][0]
         self.assertIn('"ok": false', printed.lower())
         self.assertIn('queue message payload must decode to an object envelope', printed)
+
+    def test_cmd_purge_uses_resolved_runtime_queues_when_queue_not_provided(self):
+        args = SimpleNamespace(
+            user='guest',
+            password='guest',
+            host='127.0.0.1',
+            port=15672,
+            vhost='/',
+            queue=None,
+            repo_root=str(Path(__file__).resolve().parents[2]),
+            queues=list(DEFAULT_QUEUES),
+        )
+        fake_client = SimpleNamespace(purge_queue=lambda queue: ({}, None))
+        with patch('paa_core.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
+             patch('builtins.print') as mock_print:
+            cmd_purge(args)
+        printed = mock_print.call_args[0][0]
+        self.assertIn('"queue_count": 3', printed)
+        self.assertIn('paa-techlead', printed)
+        self.assertIn('paa-dev', printed)
+        self.assertIn('paa-qa', printed)
 
 
 if __name__ == '__main__':

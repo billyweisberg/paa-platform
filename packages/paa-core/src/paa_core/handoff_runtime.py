@@ -1108,6 +1108,11 @@ class RabbitMQManagementClient:
         }
         return self._request("POST", f"/queues/{vhost}/{qname}/get", body)
 
+    def purge_queue(self, queue):
+        vhost = urllib.parse.quote(self.vhost, safe="")
+        qname = urllib.parse.quote(queue, safe="")
+        return self._request("DELETE", f"/queues/{vhost}/{qname}/contents")
+
 
 def load_json(path):
     with open(path, "r", encoding="utf-8") as fh:
@@ -1319,6 +1324,20 @@ def cmd_check(args):
     print(json.dumps(result, indent=2))
 
 
+def cmd_purge(args):
+    client = RabbitMQManagementClient(user=args.user, password=args.password, host=args.host, port=args.port, vhost=args.vhost)
+    queues = [args.queue] if args.queue else _resolved_runtime_queues(args)
+    purged = []
+    for queue in queues:
+        client.purge_queue(queue)
+        purged.append(queue)
+    print(json.dumps({
+        "ok": True,
+        "purged_queues": purged,
+        "queue_count": len(purged),
+    }, indent=2))
+
+
 def cmd_validate(args):
     message = load_json(args.message_file)
     errors = validate_envelope(message, require_authority=True)
@@ -1467,6 +1486,10 @@ def build_parser():
     p.add_argument("--queue", required=True)
     p.add_argument("--preview", type=int, default=1)
     p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("purge")
+    p.add_argument("--queue")
+    p.set_defaults(func=cmd_purge)
 
     p = sub.add_parser("validate")
     p.add_argument("--message-file", required=True)

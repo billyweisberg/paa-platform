@@ -8,6 +8,7 @@ CONSUMER_COMMANDS = (
     'queue-state-info',
     'queue-ensure-topology',
     'queue-check',
+    'queue-purge',
     'queue-validate',
     'queue-send',
     'techlead-validate-packet',

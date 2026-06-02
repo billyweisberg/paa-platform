@@ -94,6 +94,14 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertTrue(payload['emit_verification'])
         self.assertEqual(payload['iteration_count'], 2)
 
+    def test_queue_purge_routes_to_shared_queue_runtime(self) -> None:
+        with patch('paa_consumer.__main__.run_queue_command', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', '--queue', 'paa-techlead', 'queue-purge']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(mock_run.call_args[0][1], ['purge', '--queue', 'paa-techlead'])
+
 
 if __name__ == '__main__':
     unittest.main()
