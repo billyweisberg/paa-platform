@@ -117,7 +117,7 @@ def build_techlead_runtime_host(
     host_name: str = 'techlead-runtime-host',
     logger: object | None = None,
 ):
-    from paa_consumer.hosts.techlead_runtime import build_techlead_runtime_host as _build
+    from paa_core.techlead_runtime_host import build_techlead_runtime_host as _build
 
     return _build(repo_root.expanduser().resolve(), actor_name=actor_name, host_name=host_name, logger=logger)
 
@@ -129,7 +129,7 @@ def build_dev_runtime_host(
     host_name: str = 'dev-runtime-host',
     logger: object | None = None,
 ):
-    from paa_consumer.hosts.dev_runtime import build_dev_runtime_host as _build
+    from paa_core.dev_runtime_host import build_dev_runtime_host as _build
 
     return _build(repo_root.expanduser().resolve(), actor_name=actor_name, host_name=host_name, logger=logger)
 
@@ -141,7 +141,7 @@ def build_qa_runtime_host(
     host_name: str = 'qa-runtime-host',
     logger: object | None = None,
 ):
-    from paa_consumer.hosts.qa_runtime import build_qa_runtime_host as _build
+    from paa_core.qa_runtime_host import build_qa_runtime_host as _build
 
     return _build(repo_root.expanduser().resolve(), actor_name=actor_name, host_name=host_name, logger=logger)
 
