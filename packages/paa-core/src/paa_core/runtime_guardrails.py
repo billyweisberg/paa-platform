@@ -56,7 +56,3 @@ def validate_runtime_install(repo_root: Path, *, expected_branch: str | None = N
 
 def validate_current_runtime_install() -> dict[str, object]:
     return validate_runtime_install(repo_root_from_cwd())
-
-
-validate_consumer_runtime = validate_runtime_install
-validate_current_consumer_runtime = validate_current_runtime_install

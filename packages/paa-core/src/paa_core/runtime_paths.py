@@ -105,6 +105,3 @@ def resolved_repo_runtime_queue_topology(repo_root: Path) -> RuntimeQueueTopolog
     """Return repo queue topology with PAA defaults applied."""
 
     return normalize_runtime_queue_topology(repo_runtime_queue_topology(repo_root))
-
-
-repo_consumer_bin = repo_runtime_cli_bin

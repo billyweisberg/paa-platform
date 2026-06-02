@@ -180,9 +180,9 @@ Goal:
 
 Required outcome:
 - neutral names for install, guardrail, config, and runtime helpers
-- old names removed or confined to short-lived compatibility aliases during refactor only
+- historical consumer-named aliases removed from active code
 
-Examples:
+Completed removals:
 - `install_consumer_runtime(...)`
 - `validate_consumer_runtime(...)`
 - `load_consumer_project_config(...)`

@@ -236,13 +236,6 @@ def runtime_queue_name_for_role(
         return None
     return runtime_queue_name_by_key(queue_key, topology=topology)
 
-
-ConsumerProjectConfig = RuntimeProjectConfig
-ProducerConsumerProjectConfig = UnifiedRuntimeProjectConfig
-load_consumer_project_config = load_runtime_project_config
-load_producer_consumer_project_config = load_unified_runtime_project_config
-
-
 def runtime_queue_name_for_schema(
     schema_type: str | None,
     *,

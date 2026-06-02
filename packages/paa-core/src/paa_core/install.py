@@ -362,10 +362,6 @@ def install_runtime_support(repo_root: Path, project_pack: str = DEFAULT_PROJECT
     )
     return result
 
-
-install_consumer_runtime = install_runtime_support
-
-
 def install_authority_package(repo_root: Path, package_root: Path, authority_install_root: Path | None = None) -> AuthorityInstallResult:
     """Install a published authority package into a consumer repo runtime root."""
 
