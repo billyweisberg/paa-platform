@@ -400,68 +400,27 @@ def persist_qa_verification(message: dict):
         decision = "blocked"
         decision_notes = f"QA blocked packet {message.get('message_id')} for issue #{issue_number}: {finding_summary}"
 
-    sql = f"""
-    WITH project AS (
-      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
-    ), work_item AS (
-      SELECT wi.work_item_id
-      FROM paa.work_items wi
-      JOIN project p ON p.project_id = wi.project_id
-      WHERE wi.issue_number = {sql_literal(issue_number)}
-      LIMIT 1
-    ), qa_agent AS (
-      SELECT a.agent_id
-      FROM paa.agents a
-      JOIN project p ON p.project_id = a.project_id
-      WHERE a.name = 'Fractal Core QA Automation'
-      LIMIT 1
-    ), qa_role AS (
-      SELECT r.role_id
-      FROM paa.roles r
-      JOIN project p ON p.project_id = r.project_id
-      WHERE r.name = 'QA'
-      LIMIT 1
-    ), verification AS (
-      SELECT vo.verification_id
-      FROM paa.verification_obligations vo
-      JOIN work_item wi ON wi.work_item_id = vo.work_item_id
-      WHERE vo.verification_type = 'qa_review'::paa.verification_type
-      ORDER BY vo.verification_key
-      LIMIT 1
-    ), inserted_evidence AS (
-      INSERT INTO paa.evidence (
-        project_id,
-        work_item_id,
-        verification_id,
-        captured_by_agent_id,
-        result,
-        summary,
-        artifact_location,
-        metadata_json,
-        captured_at
-      )
-      SELECT
-        project.project_id,
-        work_item.work_item_id,
-        verification.verification_id,
-        qa_agent.agent_id,
-        {sql_literal(evidence_result)}::paa.evidence_result,
-        {sql_literal(summary)},
-        {sql_literal(artifact_location)},
-        {sql_literal(metadata_json)}::jsonb,
-        {sql_literal(message.get("created_at"))}::timestamptz
-      FROM project, work_item, verification, qa_agent
-      WHERE NOT EXISTS (
-        SELECT 1 FROM paa.evidence ev
-        WHERE ev.work_item_id = work_item.work_item_id
-          AND ev.artifact_location = {sql_literal(artifact_location)}
-      )
-      RETURNING evidence_id
-    )
-    SELECT 1;
-    """
+    repo = PostgresRuntimeEventRepository()
     try:
-        run_psql(sql)
+        resolved = repo.resolve_verification_obligation(
+            project_slug=project_slug,
+            issue_number=issue_number,
+            verification_type='qa_review',
+        )
+        if resolved is None:
+            return
+        _verification_key, verification_id = resolved
+        repo.record_evidence_if_missing(
+            project_slug=project_slug,
+            issue_number=issue_number,
+            verification_id=verification_id,
+            agent_name='QA Agent',
+            result=evidence_result,
+            summary=summary,
+            artifact_location=artifact_location,
+            metadata=json.loads(metadata_json),
+            captured_at=message.get("created_at"),
+        )
     except Exception as exc:
         print(json.dumps({"warning": f"failed to persist QA evidence to PAA: {str(exc)}"}), file=sys.stderr)
         return
@@ -476,56 +435,17 @@ def persist_qa_verification(message: dict):
         "branch": github_context.get("branch"),
         "recommended_action": payload.get("recommended_action"),
     })
-    sql = f"""
-    WITH project AS (
-      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
-    ), work_item AS (
-      SELECT wi.work_item_id
-      FROM paa.work_items wi
-      JOIN project p ON p.project_id = wi.project_id
-      WHERE wi.issue_number = {sql_literal(issue_number)}
-      LIMIT 1
-    ), qa_agent AS (
-      SELECT a.agent_id
-      FROM paa.agents a
-      JOIN project p ON p.project_id = a.project_id
-      WHERE a.name = 'Fractal Core QA Automation'
-      LIMIT 1
-    ), qa_role AS (
-      SELECT r.role_id
-      FROM paa.roles r
-      JOIN project p ON p.project_id = r.project_id
-      WHERE r.name = 'QA'
-      LIMIT 1
-    )
-    INSERT INTO paa.acceptance_events (
-      project_id,
-      work_item_id,
-      accepted_by_agent_id,
-      accepted_by_role_id,
-      decision,
-      notes,
-      metadata_json,
-      created_at
-    )
-    SELECT
-      project.project_id,
-      work_item.work_item_id,
-      qa_agent.agent_id,
-      qa_role.role_id,
-      {sql_literal(decision)}::paa.acceptance_decision,
-      {sql_literal(decision_notes)},
-      {sql_literal(decision_meta)}::jsonb,
-      {sql_literal(message.get("created_at"))}::timestamptz
-    FROM project, work_item, qa_agent, qa_role
-    WHERE NOT EXISTS (
-      SELECT 1 FROM paa.acceptance_events ae
-      WHERE ae.work_item_id = work_item.work_item_id
-        AND ae.notes = {sql_literal(decision_notes)}
-    );
-    """
     try:
-        run_psql(sql)
+        repo.record_acceptance_event_if_missing(
+            project_slug=project_slug,
+            issue_number=issue_number,
+            agent_name='QA Agent',
+            role_name='QA',
+            decision=decision,
+            notes=decision_notes,
+            metadata=json.loads(decision_meta),
+            created_at=message.get("created_at"),
+        )
     except Exception as exc:
         print(json.dumps({"warning": f"failed to persist QA escalation event to PAA: {str(exc)}"}), file=sys.stderr)
 
@@ -613,39 +533,28 @@ def persist_slice_result(message: dict):
 
     github_context = message.get("github_context") or {}
     github_validation = validation.get("github") or {}
+    repo = PostgresRuntimeEventRepository()
     for check in normalized_checks:
         command = check.get("command") or ""
         result_text = check.get("result") or ""
         suffix = slice_result_verification_key(command)
         if suffix is None:
             continue
-        lookup_sql = f"""
-        WITH project AS (
-          SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
-        ), work_item AS (
-          SELECT wi.work_item_id
-          FROM paa.work_items wi
-          JOIN project p ON p.project_id = wi.project_id
-          WHERE wi.issue_number = {sql_literal(issue_number)}
-          LIMIT 1
-        )
-        SELECT vo.verification_key, vo.verification_id
-        FROM paa.verification_obligations vo
-        JOIN work_item wi ON wi.work_item_id = vo.work_item_id
-        WHERE vo.verification_key LIKE {sql_literal(f'%{suffix}')}
-        LIMIT 1;
-        """
         try:
-            resolved = run_psql(lookup_sql).strip()
+            resolved = repo.resolve_verification_obligation(
+                project_slug=project_slug,
+                issue_number=issue_number,
+                verification_key_suffix=suffix,
+            )
         except Exception as exc:
             print(json.dumps({"warning": f"failed to resolve Dev verification key in PAA for suffix {suffix}: {str(exc)}"}), file=sys.stderr)
             continue
         if not resolved:
             continue
-        verification_key, verification_id = resolved.split("\t", 1)
+        verification_key, verification_id = resolved
         summary = f"Dev packet {message.get('message_id')} recorded {suffix}: {result_text}"
         artifact_location = f"dev-packet:{message.get('message_id')}:{verification_key}"
-        metadata_json = json.dumps({
+        metadata = {
             "packet_id": message.get("message_id"),
             "schema_type": schema_type,
             "command": command,
@@ -654,53 +563,19 @@ def persist_slice_result(message: dict):
             "github_validation": github_validation,
             "result_summary": payload.get("result_summary") or payload.get("implementation_summary"),
             "packet_artifacts": payload.get("artifacts"),
-        })
-        sql = f"""
-        WITH project AS (
-          SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
-        ), work_item AS (
-          SELECT wi.work_item_id
-          FROM paa.work_items wi
-          JOIN project p ON p.project_id = wi.project_id
-          WHERE wi.issue_number = {sql_literal(issue_number)}
-          LIMIT 1
-        ), dev_agent AS (
-          SELECT a.agent_id
-          FROM paa.agents a
-          JOIN project p ON p.project_id = a.project_id
-          WHERE a.name = 'Python Team Automation'
-          LIMIT 1
-        )
-        INSERT INTO paa.evidence (
-          project_id,
-          work_item_id,
-          verification_id,
-          captured_by_agent_id,
-          result,
-          summary,
-          artifact_location,
-          metadata_json,
-          captured_at
-        )
-        SELECT
-          project.project_id,
-          work_item.work_item_id,
-          {sql_literal(verification_id)},
-          dev_agent.agent_id,
-          {sql_literal(evidence_result_from_text(result_text))}::paa.evidence_result,
-          {sql_literal(summary)},
-          {sql_literal(artifact_location)},
-          {sql_literal(metadata_json)}::jsonb,
-          {sql_literal(message.get("created_at"))}::timestamptz
-        FROM project, work_item, dev_agent
-        WHERE NOT EXISTS (
-          SELECT 1 FROM paa.evidence ev
-          WHERE ev.work_item_id = work_item.work_item_id
-            AND ev.artifact_location = {sql_literal(artifact_location)}
-        );
-        """
+        }
         try:
-            run_psql(sql)
+            repo.record_evidence_if_missing(
+                project_slug=project_slug,
+                issue_number=issue_number,
+                verification_id=verification_id,
+                agent_name='Dev Agent',
+                result=evidence_result_from_text(result_text),
+                summary=summary,
+                artifact_location=artifact_location,
+                metadata=metadata,
+                captured_at=message.get("created_at"),
+            )
         except Exception as exc:
             print(json.dumps({"warning": f"failed to persist Dev evidence to PAA for {verification_key}: {str(exc)}"}), file=sys.stderr)
 
@@ -708,32 +583,13 @@ def persist_slice_result(message: dict):
 def update_queue_message_status(message_id: Optional[str], queue_status: str, handoff_status: str, timestamp_field: str):
     if not message_id:
         return
-    timestamp = utc_now()
-    sql = f"""
-    WITH target AS (
-      SELECT qm.queue_message_id, qm.handoff_id
-      FROM paa.queue_messages qm
-      WHERE qm.message_id_external = {sql_literal(message_id)}
-      LIMIT 1
-    ), updated_message AS (
-      UPDATE paa.queue_messages qm
-      SET status = {sql_literal(queue_status)}::paa.queue_message_status,
-          {timestamp_field} = {sql_literal(timestamp)}::timestamptz,
-          updated_at = now()
-      FROM target
-      WHERE qm.queue_message_id = target.queue_message_id
-      RETURNING qm.handoff_id
-    )
-    UPDATE paa.handoffs h
-    SET status = {sql_literal(handoff_status)}::paa.handoff_status,
-        claimed_at = CASE WHEN {sql_literal(handoff_status)} = 'claimed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.claimed_at END,
-        acknowledged_at = CASE WHEN {sql_literal(handoff_status)} = 'completed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.acknowledged_at END,
-        closed_at = CASE WHEN {sql_literal(handoff_status)} = 'completed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.closed_at END
-      FROM updated_message
-      WHERE h.handoff_id = updated_message.handoff_id;
-    """
     try:
-        run_psql(sql)
+        PostgresRuntimeEventRepository().update_queue_message_status_by_external(
+            message_id_external=message_id,
+            queue_status=queue_status,
+            handoff_status=handoff_status,
+            timestamp_field=timestamp_field,
+        )
     except Exception as exc:
         print(json.dumps({"warning": f"failed to update handoff status in PAA: {str(exc)}"}), file=sys.stderr)
 

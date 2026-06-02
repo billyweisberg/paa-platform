@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from paa_core.db import DBSettings, execute_sql, query_json_rows, query_scalar, sql_literal
+from paa_core.db import DBSettings, execute_sql, query_all_rows, query_json_rows, query_scalar, sql_literal
 
 from .models import (
     AcceptanceEventRecord,
@@ -283,6 +283,203 @@ WHERE NOT EXISTS (SELECT 1 FROM existing);
 """
         execute_sql(sql, settings=self._settings)
         return self.get_queue_message_by_external(resolved_message_id)
+
+    def update_queue_message_status_by_external(
+        self,
+        *,
+        message_id_external: str,
+        queue_status: str,
+        handoff_status: str,
+        timestamp_field: str,
+    ) -> None:
+        timestamp = self._utc_now()
+        sql = f"""
+WITH target AS (
+  SELECT qm.queue_message_id, qm.handoff_id
+  FROM paa.queue_messages qm
+  WHERE qm.message_id_external = {sql_literal(message_id_external)}
+  LIMIT 1
+), updated_message AS (
+  UPDATE paa.queue_messages qm
+  SET status = {sql_literal(queue_status)}::paa.queue_message_status,
+      {timestamp_field} = {sql_literal(timestamp)}::timestamptz,
+      updated_at = now()
+  FROM target
+  WHERE qm.queue_message_id = target.queue_message_id
+  RETURNING qm.handoff_id
+)
+UPDATE paa.handoffs h
+SET status = {sql_literal(handoff_status)}::paa.handoff_status,
+    claimed_at = CASE WHEN {sql_literal(handoff_status)} = 'claimed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.claimed_at END,
+    acknowledged_at = CASE WHEN {sql_literal(handoff_status)} = 'completed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.acknowledged_at END,
+    closed_at = CASE WHEN {sql_literal(handoff_status)} = 'completed' THEN {sql_literal(timestamp)}::timestamptz ELSE h.closed_at END
+  FROM updated_message
+  WHERE h.handoff_id = updated_message.handoff_id;
+"""
+        execute_sql(sql, settings=self._settings)
+
+    def resolve_verification_obligation(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        verification_key_suffix: str | None = None,
+        verification_type: str | None = None,
+    ) -> tuple[str, str] | None:
+        where_clause = ''
+        if verification_key_suffix:
+            where_clause = f"vo.verification_key LIKE {sql_literal(f'%{verification_key_suffix}')}"
+        elif verification_type:
+            where_clause = f"vo.verification_type = {sql_literal(verification_type)}::paa.verification_type"
+        else:
+            return None
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
+), work_item AS (
+  SELECT wi.work_item_id
+  FROM paa.work_items wi
+  JOIN project p ON p.project_id = wi.project_id
+  WHERE wi.issue_number = {sql_literal(issue_number)}
+  LIMIT 1
+)
+SELECT vo.verification_key, vo.verification_id::text
+FROM paa.verification_obligations vo
+JOIN work_item wi ON wi.work_item_id = vo.work_item_id
+WHERE {where_clause}
+ORDER BY vo.verification_key
+LIMIT 1;
+"""
+        rows = query_all_rows(sql, settings=self._settings)
+        if not rows:
+            return None
+        verification_key, verification_id = rows[0]
+        if not verification_key or not verification_id:
+            return None
+        return str(verification_key), str(verification_id)
+
+    def record_evidence_if_missing(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        verification_id: str,
+        agent_name: str,
+        result: str,
+        summary: str,
+        artifact_location: str,
+        metadata: dict[str, object],
+        captured_at: str | None,
+    ) -> None:
+        metadata_json = json.dumps(metadata, sort_keys=True)
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
+), work_item AS (
+  SELECT wi.work_item_id
+  FROM paa.work_items wi
+  JOIN project p ON p.project_id = wi.project_id
+  WHERE wi.issue_number = {sql_literal(issue_number)}
+  LIMIT 1
+), agent AS (
+  SELECT a.agent_id
+  FROM paa.agents a
+  JOIN project p ON p.project_id = a.project_id
+  WHERE a.name = {sql_literal(agent_name)}
+  LIMIT 1
+)
+INSERT INTO paa.evidence (
+  project_id,
+  work_item_id,
+  verification_id,
+  captured_by_agent_id,
+  result,
+  summary,
+  artifact_location,
+  metadata_json,
+  captured_at
+)
+SELECT
+  project.project_id,
+  work_item.work_item_id,
+  {sql_literal(verification_id)}::uuid,
+  agent.agent_id,
+  {sql_literal(result)}::paa.evidence_result,
+  {sql_literal(summary)},
+  {sql_literal(artifact_location)},
+  {sql_literal(metadata_json)}::jsonb,
+  {sql_literal(captured_at)}::timestamptz
+FROM project, work_item, agent
+WHERE NOT EXISTS (
+  SELECT 1 FROM paa.evidence ev
+  WHERE ev.work_item_id = work_item.work_item_id
+    AND ev.artifact_location = {sql_literal(artifact_location)}
+);
+"""
+        execute_sql(sql, settings=self._settings)
+
+    def record_acceptance_event_if_missing(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        agent_name: str,
+        role_name: str,
+        decision: str,
+        notes: str,
+        metadata: dict[str, object],
+        created_at: str | None,
+    ) -> None:
+        metadata_json = json.dumps(metadata, sort_keys=True)
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
+), work_item AS (
+  SELECT wi.work_item_id
+  FROM paa.work_items wi
+  JOIN project p ON p.project_id = wi.project_id
+  WHERE wi.issue_number = {sql_literal(issue_number)}
+  LIMIT 1
+), agent AS (
+  SELECT a.agent_id
+  FROM paa.agents a
+  JOIN project p ON p.project_id = a.project_id
+  WHERE a.name = {sql_literal(agent_name)}
+  LIMIT 1
+), role AS (
+  SELECT r.role_id
+  FROM paa.roles r
+  JOIN project p ON p.project_id = r.project_id
+  WHERE r.name = {sql_literal(role_name)}
+  LIMIT 1
+)
+INSERT INTO paa.acceptance_events (
+  project_id,
+  work_item_id,
+  accepted_by_agent_id,
+  accepted_by_role_id,
+  decision,
+  notes,
+  metadata_json,
+  created_at
+)
+SELECT
+  project.project_id,
+  work_item.work_item_id,
+  agent.agent_id,
+  role.role_id,
+  {sql_literal(decision)}::paa.acceptance_decision,
+  {sql_literal(notes)},
+  {sql_literal(metadata_json)}::jsonb,
+  {sql_literal(created_at)}::timestamptz
+FROM project, work_item, agent, role
+WHERE NOT EXISTS (
+  SELECT 1 FROM paa.acceptance_events ae
+  WHERE ae.work_item_id = work_item.work_item_id
+    AND ae.notes = {sql_literal(notes)}
+);
+"""
+        execute_sql(sql, settings=self._settings)
 
     def get_handoff(self, handoff_id: str) -> HandoffRecord | None:
         sql = f"""

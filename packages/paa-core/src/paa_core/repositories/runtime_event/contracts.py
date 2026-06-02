@@ -50,6 +50,55 @@ class RuntimeEventRepository(Protocol):
     ) -> QueueMessageRecord | None:
         """Persist one queue send/handoff record for one outbound packet."""
 
+    def update_queue_message_status_by_external(
+        self,
+        *,
+        message_id_external: str,
+        queue_status: str,
+        handoff_status: str,
+        timestamp_field: str,
+    ) -> None:
+        """Update one queue message and linked handoff status by stable external message id."""
+
+    def resolve_verification_obligation(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        verification_key_suffix: str | None = None,
+        verification_type: str | None = None,
+    ) -> tuple[str, str] | None:
+        """Resolve one verification obligation by issue and either key suffix or verification type."""
+
+    def record_evidence_if_missing(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        verification_id: str,
+        agent_name: str,
+        result: str,
+        summary: str,
+        artifact_location: str,
+        metadata: dict[str, object],
+        captured_at: str | None,
+    ) -> None:
+        """Persist one evidence row when the artifact location has not already been recorded."""
+
+    def record_acceptance_event_if_missing(
+        self,
+        *,
+        project_slug: str,
+        issue_number: int,
+        agent_name: str,
+        role_name: str,
+        decision: str,
+        notes: str,
+        metadata: dict[str, object],
+        created_at: str | None,
+    ) -> None:
+        """Persist one acceptance event when an equivalent notes record does not already exist."""
+
     def get_handoff(self, handoff_id: str) -> HandoffRecord | None:
         """Return one handoff by primary id."""
 
