@@ -78,6 +78,10 @@ from paa_core.services.runtime_assignment_bridge import (
     DefaultRuntimeAssignmentBridgeService,
     RuntimeAssignmentBridgeRequest,
 )
+from paa_core.services.runtime_assignment_context import (
+    DefaultRuntimeAssignmentContextService,
+    RuntimeAssignmentContextRequest,
+)
 from paa_core.services.runtime_closeout import (
     DefaultRuntimeCloseoutService,
     RuntimeQaCloseoutRequest,
@@ -3208,167 +3212,31 @@ def _resolve_worker_review_stage(
 
 
 def derive_next_assignment_context(args) -> dict:
-    repo_root = args.repo_root.resolve()
-    current, manifest = load_authority(repo_root)
-    github_repo = github_repo_for_root(repo_root)
-    package = load_design_package(args.project_slug, args.package_id_external)
-    issue_number = resolve_issue_number_from_package(package, args.package_id_external, args.project_slug)
-    current_task = resolve_task_summary(manifest, package, issue_number)
-    queues = queue_state(repo_root)
-    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-    fallback_packet = latest_packet_preview(queues, issue_number)
-    issue, pr = github_state(
-        issue_number,
-        github_repo,
-        fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
-        fallback_task=current_task,
-        fallback_packet=fallback_packet,
-    )
-    workflow_stage, owner_role, _escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
-    pending_dev_packet = latest_packet_preview(
-        queues,
-        issue_number,
-        schema_type='slice_result_packet',
-        to_role='techlead',
-    )
-    pending_worker_packet = latest_packet_preview(
-        queues,
-        issue_number,
-        schema_type='worker_result_packet',
-        to_role='techlead',
-    )
-    pending_delivery_review_packet = latest_packet_preview(
-        queues,
-        issue_number,
-        schema_type='delivery_review_packet',
-        to_role='techlead',
-    )
-    assignment_decision_service = DefaultTechLeadAssignmentDecisionService()
-    explicit_team_worker = team_worker_role_for_cli(args.target_role, repo_root=repo_root) if args.target_role else None
-    if args.target_role == 'delivery-architect':
-        if not pr:
-            return {
-                'ok': False,
-                'workflow_stage': workflow_stage,
-                'reason': 'explicit_delivery_architect_emission_requires_active_pr',
-                'details': 'No PR was available from GitHub state for the selected issue, so Delivery Architect emission could not derive PR context.',
-            }
-        branch_name = pr.get('headRefName') or f'issue-{issue_number}'
-        return {
-            'ok': True,
-            'workflow_stage': workflow_stage,
-            'issue_number': issue_number,
-            'issue_url': issue.get('url'),
-            'pr_number': pr.get('number'),
-            'pr_url': pr.get('url'),
-            'branch': branch_name,
-            'target_role': 'Delivery Architect',
-            'target_role_cli': 'delivery-architect',
-            'assignment_type': 'delivery_architecture_review',
-            'allowed_result_types': [
-                'ready_for_dev',
-                'narrow_scope',
-                'reject_scope',
-            ],
-            'assignment_summary': (
-                f'TechLead is explicitly issuing a Delivery Architect review assignment for issue #{issue_number} '
-                f'on branch {branch_name}.'
-            ),
-            'source_packet_message_id': None,
-            'source_packet_path': None,
-            'source_packet_queue': None,
-            'issue': issue,
-            'pr': pr,
-            'recommended_actions': recommended,
-            'unattended_safe': unattended_safe,
-        }
-    if explicit_team_worker:
-        if not pr:
-            return {
-                'ok': False,
-                'workflow_stage': workflow_stage,
-                'reason': 'explicit_team_worker_emission_requires_active_pr',
-                'details': (
-                    'No PR was available from GitHub state for the selected issue, so '
-                    f'{explicit_team_worker.display_name} emission could not derive PR context.'
-                ),
-            }
-        request = _build_assignment_decision_request(
-            issue_number=issue_number,
-            issue=issue,
-            pr=pr,
-            workflow_stage=workflow_stage,
-            source_packet=None,
-            explicit_target_role=args.target_role,
+    return DefaultRuntimeAssignmentContextService(
+        load_authority=load_authority,
+        github_repo_resolver=github_repo_for_root,
+        load_design_package=load_design_package,
+        resolve_issue_number_from_package=resolve_issue_number_from_package,
+        resolve_task_summary=resolve_task_summary,
+        queue_state_loader=queue_state,
+        qa_packet_loader=latest_qa_packet,
+        reports_dir_resolver=repo_reports_dir,
+        packet_preview_loader=latest_packet_preview,
+        github_state_loader=github_state,
+        workflow_deriver=derive_workflow,
+        team_worker_role_for_cli=team_worker_role_for_cli,
+        team_worker_role_for_label=team_worker_role_for_label,
+        normalize_role_name=handoff_runtime.normalize_role_name,
+        assignment_decision_service=DefaultTechLeadAssignmentDecisionService(),
+        delivery_review_decision_service=DefaultTechLeadDeliveryReviewDecisionService(),
+    ).derive_next_assignment_context(
+        RuntimeAssignmentContextRequest(
+            repo_root=args.repo_root.resolve(),
             project_slug=args.project_slug,
-            recommended_actions=recommended,
+            package_id_external=args.package_id_external,
+            target_role=getattr(args, 'target_role', None),
         )
-        result = assignment_decision_service.derive_assignment_decision(request)
-        context = _assignment_result_to_context(result=result, issue=issue, pr=pr)
-        context['branch'] = pr.get('headRefName') or f'issue-{issue_number}'
-        return context
-    if workflow_stage in {'techlead_dev_review_pending', 'techlead_worker_review_pending'} and (pending_dev_packet or pending_worker_packet):
-        if not pr:
-            return {
-                'ok': False,
-                'workflow_stage': workflow_stage,
-                'reason': 'dev_review_pending_but_no_pr_context',
-                'details': 'A Dev result packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
-            }
-        source_packet = pending_worker_packet or pending_dev_packet
-        request = _build_assignment_decision_request(
-            issue_number=issue_number,
-            issue=issue,
-            pr=pr,
-            workflow_stage=workflow_stage,
-            source_packet=source_packet,
-            explicit_target_role=None,
-            project_slug=args.project_slug,
-            recommended_actions=recommended,
-        )
-        result = assignment_decision_service.derive_assignment_decision(request)
-        context = _assignment_result_to_context(result=result, issue=issue, pr=pr)
-        context['branch'] = pr.get('headRefName') or f'issue-{issue_number}'
-        return context
-    if workflow_stage == 'techlead_delivery_review_pending' and pending_delivery_review_packet:
-        if not pr:
-            return {
-                'ok': False,
-                'workflow_stage': workflow_stage,
-                'reason': 'delivery_review_pending_but_no_pr_context',
-                'details': 'A Delivery Architect review packet is waiting for TechLead, but no PR context could be derived from GitHub state.',
-                'recommended_actions': recommended,
-                'unattended_safe': unattended_safe,
-            }
-        delivery_review_service = DefaultTechLeadDeliveryReviewDecisionService()
-        delivery_review_request = _build_delivery_review_decision_request(
-            current_task=current_task,
-            issue=issue,
-            pr=pr,
-            source_packet=pending_delivery_review_packet,
-            repo_root=repo_root,
-        )
-        delivery_review_result = delivery_review_service.derive_delivery_review_decision(
-            delivery_review_request
-        )
-        return _delivery_review_result_to_context(
-            result=delivery_review_result,
-            issue=issue,
-            pr=pr,
-            recommended_actions=recommended,
-            unattended_safe=unattended_safe,
-        )
-    return {
-        'ok': False,
-        'workflow_stage': workflow_stage,
-        'reason': 'no_supported_emission_available',
-        'details': (
-            f'Current workflow stage {workflow_stage!r} does not support next-assignment emission in this slice. '
-            'Only techlead_worker_review_pending/techlead_dev_review_pending -> QA and explicit Team Worker Role or Delivery Architect emission are supported.'
-        ),
-        'recommended_actions': recommended,
-        'unattended_safe': unattended_safe,
-    }
+    )
 
 
 def emit_next_assignment(args):
