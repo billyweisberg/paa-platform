@@ -6,8 +6,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from paa_core.services.techlead_assignment_decision import TechLeadAssignmentDecisionRequest
-from paa_core.services.techlead_delivery_review_decision import TechLeadDeliveryReviewDecisionRequest
+from paa_core.services.techlead_assignment_decision import (
+    TechLeadAssignmentDecisionRequest,
+    TechLeadAssignmentDecisionResult,
+)
+from paa_core.services.techlead_delivery_review_decision import (
+    TechLeadDeliveryReviewDecisionRequest,
+    TechLeadDeliveryReviewDecisionResult,
+)
+from paa_core.team_worker_roles import TeamWorkerRole
 
 
 @dataclass(frozen=True)
@@ -33,8 +40,8 @@ class DefaultRuntimeAssignmentContextService:
         packet_preview_loader: Callable[..., dict[str, Any] | None],
         github_state_loader: Callable[..., tuple[dict[str, Any], dict[str, Any] | None]],
         workflow_deriver: Callable[[dict[str, Any] | None, dict[str, Any], dict[str, Any] | None, dict[str, Any] | None, dict[str, Any]], tuple[str, str, list[dict[str, Any]], list[dict[str, Any]], bool]],
-        team_worker_role_for_cli: Callable[[str, Path | None], Any],
-        team_worker_role_for_label: Callable[[str, Path | None], Any],
+        team_worker_role_for_cli: Callable[[str | None, Path | None], TeamWorkerRole | None],
+        team_worker_role_for_label: Callable[[str | None, Path | None], TeamWorkerRole | None],
         normalize_role_name: Callable[[str | None], str | None],
         assignment_decision_service,
         delivery_review_decision_service,
@@ -86,7 +93,7 @@ class DefaultRuntimeAssignmentContextService:
             queues, issue_number, schema_type='delivery_review_packet', to_role='techlead'
         )
 
-        explicit_team_worker = self._team_worker_role_for_cli(request.target_role, repo_root=repo_root) if request.target_role else None
+        explicit_team_worker = self._team_worker_role_for_cli(request.target_role, repo_root) if request.target_role else None
         if request.target_role == 'delivery-architect':
             if not pr:
                 return {
@@ -239,11 +246,20 @@ class DefaultRuntimeAssignmentContextService:
             source_packet_queue_name=source_packet.get('queue_name') if source_packet else None,
             source_packet_path=source_packet.get('path') if source_packet else None,
             explicit_target_role=explicit_target_role,
-            recommended_actions=tuple(recommended_actions or ()),
+            recommended_actions=tuple(
+                str(item.get('action_type'))
+                for item in (recommended_actions or ())
+                if isinstance(item, dict) and item.get('action_type')
+            ) or None,
         )
 
     @staticmethod
-    def _assignment_result_to_context(*, result, issue: dict[str, Any], pr: dict[str, Any] | None) -> dict[str, Any]:
+    def _assignment_result_to_context(
+        *,
+        result: TechLeadAssignmentDecisionResult,
+        issue: dict[str, Any],
+        pr: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         summary = result.summary
         context = {
             'ok': result.ok,
@@ -294,7 +310,7 @@ class DefaultRuntimeAssignmentContextService:
             recommended_target_role = None
             recommended_reason = None
         normalized_target_role = self._normalize_role_name(recommended_target_role)
-        team_worker = self._team_worker_role_for_label(normalized_target_role, repo_root=repo_root)
+        team_worker = self._team_worker_role_for_label(normalized_target_role, repo_root)
         branch_name = (
             (pr or {}).get('headRefName')
             or source_packet.get('github_context', {}).get('branch')
@@ -328,7 +344,7 @@ class DefaultRuntimeAssignmentContextService:
     @staticmethod
     def _delivery_review_result_to_context(
         *,
-        result,
+        result: TechLeadDeliveryReviewDecisionResult,
         issue: dict[str, Any] | None,
         pr: dict[str, Any] | None,
         recommended_actions: list[dict[str, Any]] | None,

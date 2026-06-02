@@ -15,6 +15,7 @@ from paa_core.repositories.implementation_plan import (
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 
 from .models import (
+    ActivityProgressClassification,
     ActivityProgressDetail,
     ComponentRealizationState,
     ImplementationPlanProgressRequest,
@@ -282,7 +283,7 @@ class DefaultImplementationPlanProgressService:
         self,
         activity: ImplementationPlanActivityRecord,
         missing_required_verification: tuple[str, ...],
-    ) -> str:
+    ) -> ActivityProgressClassification:
         state = activity.activity_state
         if state in self._CANCELLED_ACTIVITY_STATES:
             return 'deferred'

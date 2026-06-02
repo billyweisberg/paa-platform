@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 from paa_core.repositories.implementation_plan import (
     ImplementationPlanActivityDependencyUpsertSpec,
@@ -172,38 +173,40 @@ class DefaultImplementationPlanDerivationService:
 
     @staticmethod
     def _ephemeral_plan_record(request: ImplementationPlanDerivationRequest):
-        return type('EphemeralImplementationPlanRecord', (), {
-            'implementation_plan_id': '00000000-0000-0000-0000-000000000000',
-            'project_id': request.plan.project_id,
-            'work_item_id': request.plan.work_item_id,
-            'design_package_id': request.plan.design_package_id,
-            'spec_fragment_id': request.plan.spec_fragment_id,
-            'implementation_target_id': request.plan.implementation_target_id,
-            'authority_version_id': request.plan.authority_version_id,
-            'primary_component_id': request.plan.primary_component_id,
-            'plan_id_external': request.plan.plan_id_external,
-            'schema_version': request.plan.schema_version,
-            'consumer_context_key': request.plan.consumer_context_key,
-            'plan_title': request.plan.plan_title,
-            'plan_kind': request.plan.plan_kind,
-            'status': request.plan.status,
-            'authority_state': request.plan.authority_state,
-            'authority_state_updated_at': None,
-            'plan': request.plan.plan or {},
-            'build_sequence': request.plan.build_sequence or {},
-            'touch_surfaces': request.plan.touch_surfaces or {},
-            'protected_constraints': request.plan.protected_constraints or {},
-            'verification_plan': request.plan.verification_plan or {},
-            'provenance': request.plan.provenance or {},
-            'metadata': request.plan.metadata or {},
-            'created_by_role_id': request.plan.created_by_role_id,
-            'created_by_agent_id': request.plan.created_by_agent_id,
-            'approved_at': request.plan.approved_at,
-            'activated_at': request.plan.activated_at,
-            'completed_at': request.plan.completed_at,
-            'created_at': None,
-            'updated_at': None,
-        })()
+        from paa_core.repositories.implementation_plan import ImplementationPlanRecord
+
+        return cast(ImplementationPlanRecord, ImplementationPlanRecord(
+            implementation_plan_id='00000000-0000-0000-0000-000000000000',
+            project_id=request.plan.project_id,
+            work_item_id=request.plan.work_item_id,
+            design_package_id=request.plan.design_package_id,
+            spec_fragment_id=request.plan.spec_fragment_id,
+            implementation_target_id=request.plan.implementation_target_id,
+            authority_version_id=request.plan.authority_version_id,
+            primary_component_id=request.plan.primary_component_id,
+            plan_id_external=request.plan.plan_id_external,
+            schema_version=request.plan.schema_version,
+            consumer_context_key=request.plan.consumer_context_key,
+            plan_title=request.plan.plan_title,
+            plan_kind=request.plan.plan_kind,
+            status=request.plan.status,
+            authority_state=request.plan.authority_state,
+            authority_state_updated_at=None,
+            plan=request.plan.plan or {},
+            build_sequence=request.plan.build_sequence or {},
+            touch_surfaces=request.plan.touch_surfaces or {},
+            protected_constraints=request.plan.protected_constraints or {},
+            verification_plan=request.plan.verification_plan or {},
+            provenance=request.plan.provenance or {},
+            metadata=request.plan.metadata or {},
+            created_by_role_id=request.plan.created_by_role_id,
+            created_by_agent_id=request.plan.created_by_agent_id,
+            approved_at=request.plan.approved_at,
+            activated_at=request.plan.activated_at,
+            completed_at=request.plan.completed_at,
+            created_at=None,
+            updated_at=None,
+        ))
 
     def _log_info(self, event: str, **fields: object) -> None:
         info = getattr(self._logger, 'info', None)

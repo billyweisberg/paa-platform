@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import subprocess
-from typing import Any
+from typing import Any, Callable, cast
 
 from paa_core.runtime_packet_dispatch import resolve_packet_queue
 from paa_core.runtime_paths import repo_authority_manifest_path, repo_producer_bin
@@ -45,8 +45,8 @@ class DefaultRuntimeAssignmentBridgeService:
         self,
         *,
         queue_admin_service: DefaultRuntimeQueueAdminService | None = None,
-        authority_manifest_resolver=None,
-        producer_bin_resolver=None,
+        authority_manifest_resolver: Callable[[Path], Path] | None = None,
+        producer_bin_resolver: Callable[[Path], Path] | None = None,
     ) -> None:
         self._queue_admin_service = queue_admin_service or DefaultRuntimeQueueAdminService()
         self._authority_manifest_resolver = authority_manifest_resolver or repo_authority_manifest_path
@@ -167,7 +167,9 @@ class DefaultRuntimeAssignmentBridgeService:
         )
 
     def acknowledge_source_assignment(self, *, repo_root: Path, message_id: str, queue_name: str, claimed_by: str) -> dict[str, Any]:
-        claims = self._queue_admin_service.list_claims(repo_root=repo_root, queue=queue_name, status='claimed').get('claims', [])
+        claims_result = self._queue_admin_service.list_claims(repo_root=repo_root, queue=queue_name, status='claimed')
+        raw_claims = claims_result.get('claims', [])
+        claims = cast(list[dict[str, Any]], raw_claims if isinstance(raw_claims, list) else [])
         matching_claims = [claim for claim in claims if claim.get('message_id') == message_id]
         if len(matching_claims) > 1:
             return {
