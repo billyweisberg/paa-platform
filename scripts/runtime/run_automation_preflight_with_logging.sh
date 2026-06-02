@@ -64,7 +64,7 @@ REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 RUNTIME_SCRIPTS="$REPO_ROOT/.codex/paa/scripts/runtime"
 BOOTSTRAP="$RUNTIME_SCRIPTS/bootstrap_automation_logging.sh"
 EVENT_HELPER="$RUNTIME_SCRIPTS/log_automation_event.py"
-CONSUMER="$REPO_ROOT/.codex/paa/bin/paa-consumer"
+PAA_CLI="$REPO_ROOT/.codex/paa/bin/paa"
 
 set -- \
   --repo-root "$REPO_ROOT" \
@@ -88,7 +88,7 @@ EXPORTS="$($BOOTSTRAP "$@")"
 # shellcheck disable=SC1090
 eval "$EXPORTS"
 
-PREFLIGHT_OUTPUT="$($CONSUMER automation-preflight --repo-root "$REPO_ROOT" --target-role "$TARGET_ROLE" 2>>"$PAA_AUTOMATION_STDERR_LOG")"
+PREFLIGHT_OUTPUT="$($PAA_CLI ops automation-preflight --repo-root "$REPO_ROOT" --target-role "$TARGET_ROLE" 2>>"$PAA_AUTOMATION_STDERR_LOG")"
 printf '%s\n' "$PREFLIGHT_OUTPUT" > "$PAA_AUTOMATION_RUN_DIR/preflight.json"
 printf '%s\n' "$PREFLIGHT_OUTPUT" >> "$PAA_AUTOMATION_STDOUT_LOG"
 

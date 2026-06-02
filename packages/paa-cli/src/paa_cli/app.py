@@ -110,6 +110,12 @@ def _consumer_techlead_service_map_module():
     return consumer_techlead_service_map
 
 
+def _consumer_techlead_module():
+    from paa_consumer import techlead as consumer_techlead
+
+    return consumer_techlead
+
+
 class NullStructuredLogger:
     """Default logger used until the richer methodology pointer surfaces arrive."""
 
@@ -1360,6 +1366,17 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
         typer.echo(json.dumps(_consumer_runtime_guardrails_module().validate(resolved_repo_root), indent=2))
+
+    @ops_app.command('automation-preflight')
+    def ops_automation_preflight(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        target_role: str = typer.Option(..., '--target-role'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        exit_code = _consumer_techlead_module().main(
+            ['automation-preflight', '--repo-root', str(resolved_repo_root), '--target-role', target_role],
+        )
+        raise typer.Exit(code=exit_code)
 
     @verify_app.command('consumer-smoke')
     def verify_consumer_smoke(

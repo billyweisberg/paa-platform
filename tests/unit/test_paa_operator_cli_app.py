@@ -890,6 +890,22 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         fake_inbox.dispatch_packet.assert_called_once_with(ROOT, ROOT / 'packet.json')
 
+    def test_ops_automation_preflight_uses_consumer_techlead_module(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_techlead = Mock()
+        fake_techlead.main.return_value = 0
+
+        with unittest.mock.patch('paa_cli.app._consumer_techlead_module', return_value=fake_techlead):
+            result = self.runner.invoke(
+                app,
+                ['ops', 'automation-preflight', '--repo-root', str(ROOT), '--target-role', 'techlead'],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        fake_techlead.main.assert_called_once_with(
+            ['automation-preflight', '--repo-root', str(ROOT), '--target-role', 'techlead'],
+        )
+
     def test_role_add_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 

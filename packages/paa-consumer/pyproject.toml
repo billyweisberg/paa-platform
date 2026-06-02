@@ -10,9 +10,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["paa-core"]
 
-[project.scripts]
-paa-consumer = "paa_consumer.__main__:main"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 

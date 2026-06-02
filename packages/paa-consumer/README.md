@@ -1,6 +1,6 @@
 # paa-consumer
 
-`paa-consumer` is the consumer-side install bundle for project execution repos such as:
+`paa-consumer` is an internal consumer-side package bundle for project execution repos such as:
 
 - `billyweisberg/fractal-core-python`
 
@@ -25,7 +25,12 @@
 
 These files are intentionally skeletal so the first extraction wave has a stable runtime target.
 
-## Bootstrap CLI
+## User-facing CLI
 
-- `paa-consumer techlead-service-map`
-  - print the extracted TechLead service inventory and the remaining shell-owned pockets
+Use the unified `paa` CLI for operator/runtime commands.
+
+Examples:
+
+- `paa report techlead-service-map`
+- `paa runtime start`
+- `paa queue ensure-topology`
