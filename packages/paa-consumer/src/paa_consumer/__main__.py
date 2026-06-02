@@ -56,13 +56,13 @@ def _print_legacy_shell_block(command: str) -> None:
             'ok': False,
             'command': command,
             'reason': 'legacy_techlead_shell_disabled',
-            'details': 'Legacy techlead.py shell commands are disabled by default. Use runtime hosts and queue commands instead, or opt in explicitly with --allow-legacy-techlead-shell.',
+            'details': 'Legacy techlead.py shell commands are disabled by default. Use paa runtime and paa queue commands instead, or opt in explicitly with --allow-legacy-techlead-shell.',
             'suggested_runtime_commands': [
-                'techlead-runtime',
-                'dev-runtime',
-                'qa-runtime',
-                'queue-check',
-                'queue-purge',
+                'paa runtime techlead',
+                'paa runtime dev',
+                'paa runtime qa',
+                'paa queue check',
+                'paa queue purge',
             ],
         },
         indent=2,
@@ -112,7 +112,7 @@ def main() -> int:
     if args.command == 'help':
         print('paa-consumer')
         print('commands:', ', '.join(CONSUMER_COMMANDS))
-        print('legacy-techlead-shell: disabled by default; opt in with --allow-legacy-techlead-shell')
+        print('compatibility-shim: runtime control belongs to `paa`; legacy techlead shell is disabled by default')
         return 0
 
     if args.command in _LEGACY_TECHLEAD_SHELL_COMMANDS and not _legacy_shell_allowed(args):

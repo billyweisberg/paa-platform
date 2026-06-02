@@ -48,10 +48,10 @@ Foreground launcher:
 Primary CLI control surface:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-start --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-status --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-logs --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-stop --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_cli runtime start --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_cli runtime status --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_cli runtime logs --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_cli runtime stop --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
 ```
 
 Thin wrapper:
@@ -83,7 +83,7 @@ Bounded proof run:
 Managed bounded run:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-restart --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform --max-iterations 3
+PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_cli runtime restart --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform --max-iterations 3
 ```
 
 The scripts assume:

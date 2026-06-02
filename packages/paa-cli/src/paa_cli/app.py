@@ -77,6 +77,12 @@ def _runtime_supervisor_control_module():
     return runtime_supervisor_control
 
 
+def _consumer_inbox_module():
+    from paa_consumer import inbox as consumer_inbox
+
+    return consumer_inbox
+
+
 class NullStructuredLogger:
     """Default logger used until the richer methodology pointer surfaces arrive."""
 
@@ -897,6 +903,35 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
                 **({'host_name': host_name} if host_name else {}),
             },
         )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('ensure-topology')
+    def queue_ensure_topology(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['ensure-topology'])
+        raise typer.Exit(code=code)
+
+    @queue_app.command('check')
+    def queue_check(
+        queue: str = typer.Option(..., '--queue'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['check', '--queue', queue])
+        raise typer.Exit(code=code)
+
+    @queue_app.command('purge')
+    def queue_purge(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        queue: str | None = typer.Option(None, '--queue'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        argv = ['purge']
+        if queue:
+            argv.extend(['--queue', queue])
+        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, argv)
         raise typer.Exit(code=code)
 
     @worker_app.command('dispatch')

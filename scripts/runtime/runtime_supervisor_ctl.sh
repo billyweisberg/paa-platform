@@ -17,19 +17,19 @@ shift
 
 case "${command}" in
   start)
-    exec python -m paa_consumer runtime-supervisor-start --repo-root "${REPO_ROOT}" "$@"
+    exec python -m paa_cli runtime start --repo-root "${REPO_ROOT}" "$@"
     ;;
   stop)
-    exec python -m paa_consumer runtime-supervisor-stop --repo-root "${REPO_ROOT}" "$@"
+    exec python -m paa_cli runtime stop --repo-root "${REPO_ROOT}" "$@"
     ;;
   status)
-    exec python -m paa_consumer runtime-supervisor-status --repo-root "${REPO_ROOT}" "$@"
+    exec python -m paa_cli runtime status --repo-root "${REPO_ROOT}" "$@"
     ;;
   restart)
-    exec python -m paa_consumer runtime-supervisor-restart --repo-root "${REPO_ROOT}" "$@"
+    exec python -m paa_cli runtime restart --repo-root "${REPO_ROOT}" "$@"
     ;;
   logs)
-    exec python -m paa_consumer runtime-supervisor-logs --repo-root "${REPO_ROOT}" "$@"
+    exec python -m paa_cli runtime logs --repo-root "${REPO_ROOT}" "$@"
     ;;
   *)
     echo "unknown command: ${command}" >&2
