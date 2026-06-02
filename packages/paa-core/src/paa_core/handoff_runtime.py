@@ -1355,7 +1355,11 @@ def cmd_claim_next(args):
     msg = messages[0]
     payload = msg.get("payload")
     parsed = json.loads(payload) if isinstance(payload, str) else payload
-    errors = validate_envelope(parsed, require_authority=False)
+    if not isinstance(parsed, dict):
+        parsed = {}
+        errors = ["queue message payload must decode to an object envelope"]
+    else:
+        errors = validate_envelope(parsed, require_authority=False)
     if errors:
         claim_id = str(uuid.uuid4())
         record = {

@@ -9,6 +9,7 @@ from paa_core.handoff_runtime import (
     DEFAULT_QUEUES,
     _resolved_runtime_exchange,
     _resolved_runtime_queues,
+    cmd_claim_next,
     cmd_send,
     lookup_packet_compilation_run,
     packet_compiler_agent_name_for_message,
@@ -134,6 +135,29 @@ class HandoffRuntimeTests(unittest.TestCase):
         self.assertEqual(result['trigger_type'], 'packet_compilation:worker_result_packet')
         self.assertIsNone(result['package_id_external'])
         self.assertIsNone(result['brief_id_external'])
+
+    def test_cmd_claim_next_records_invalid_claim_when_broker_payload_is_not_an_object(self):
+        args = SimpleNamespace(
+            user='guest',
+            password='guest',
+            host='127.0.0.1',
+            port=15672,
+            vhost='/',
+            queue='paa-techlead',
+            claimed_by='TechLead Agent',
+        )
+        fake_client = SimpleNamespace(get_messages=lambda queue, count=1, ackmode='ack_requeue_false': ({}, [{'payload': 'null'}]))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch('paa_core.handoff_runtime.ensure_state_dirs', return_value=(root, 'test', root)), \
+                 patch('paa_core.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
+                 patch('builtins.print') as mock_print:
+                with self.assertRaises(SystemExit) as exc:
+                    cmd_claim_next(args)
+        self.assertEqual(exc.exception.code, 1)
+        printed = mock_print.call_args[0][0]
+        self.assertIn('"ok": false', printed.lower())
+        self.assertIn('queue message payload must decode to an object envelope', printed)
 
 
 if __name__ == '__main__':
