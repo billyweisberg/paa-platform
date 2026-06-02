@@ -14,20 +14,7 @@ TECHLEAD_EXTRACTED_SERVICE_NAMES: tuple[str, ...] = (
     'TechLeadCloseoutDecisionService',
 )
 
-TECHLEAD_SHELL_OWNERSHIP_POCKETS: tuple[dict[str, object], ...] = (
-    {
-        'name': 'terminal_lineage_override_policy',
-        'status': 'remaining_business_logic',
-        'path': 'packages/paa-consumer/src/paa_consumer/techlead.py:1180',
-        'summary': 'Terminal lineage override still interprets proof-only-closed and fully closed merged state at shell level.',
-    },
-    {
-        'name': 'workflow_framing_and_escalation_synthesis',
-        'status': 'mixed_orchestration',
-        'path': 'packages/paa-consumer/src/paa_consumer/techlead.py:1536',
-        'summary': 'derive_workflow still performs packet-precedence framing and escalation synthesis around the extracted services.',
-    },
-)
+TECHLEAD_SHELL_OWNERSHIP_POCKETS: tuple[dict[str, object], ...] = ()
 
 
 def build_techlead_service_map() -> dict[str, object]:
@@ -45,12 +32,12 @@ def build_techlead_service_map() -> dict[str, object]:
             }
         )
     return {
-        'techlead_shell_status': 'mostly_shell',
+        'techlead_shell_status': 'retired',
         'extracted_service_count': len(services),
         'extracted_services': services,
         'remaining_shell_pockets': list(TECHLEAD_SHELL_OWNERSHIP_POCKETS),
         'next_bootstrap_recommendation': (
-            'Keep the runtime host thin and route new decision commands through extracted services before touching queue or GitHub orchestration.'
+            'Keep the runtime host thin and route new decision commands through extracted services and runtime hosts.'
         ),
     }
 

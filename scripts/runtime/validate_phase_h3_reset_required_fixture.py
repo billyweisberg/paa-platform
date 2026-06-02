@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import copy
-import importlib
 import json
 import os
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 PLATFORM_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PLATFORM_ROOT / 'packages' / 'paa-core' / 'src'))
+
+from paa_core.services.runtime_worktree import (  # noqa: E402
+    DefaultRuntimeWorktreeService,
+    RuntimeWorktreeCleanupRequest,
+)
+
+PACKAGE_ID = 'fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics'
+BRIEF_ID = 'fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics'
+ISSUE_NUMBER = 106
+ROLE_BRANCH = 'issue-106-dev'
 
 
 def resolve_consumer_repo() -> Path:
@@ -23,117 +31,50 @@ def resolve_consumer_repo() -> Path:
 
 
 CONSUMER_REPO = resolve_consumer_repo()
-PACKAGE_ID = 'fcore-stage1-2026-05-02-issue106-retirement-boundary-diagnostics'
-BRIEF_ID = 'fcore-coder-2026-05-02-issue106-retirement-boundary-diagnostics'
-ISSUE_NUMBER = 106
-PR_NUMBER = 107
-
-sys.path.insert(0, str(PLATFORM_ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(PLATFORM_ROOT / 'packages' / 'paa-consumer' / 'src'))
-
-techlead = importlib.import_module('paa_consumer.techlead')
-handoff_runtime = importlib.import_module('paa_core.handoff_runtime')
-
-
-def build_synthetic_qa_packet() -> Path:
-    example_path = PLATFORM_ROOT / 'templates' / 'packet-examples' / 'qa_verification_packet.example.json'
-    packet = handoff_runtime.load_json(example_path)
-    packet['message_id'] = 'fcore-qa-2026-05-07-issue106-reset-fixture'
-    packet['correlation_id'] = 'issue-106'
-    packet['github_context']['issue_number'] = ISSUE_NUMBER
-    packet['github_context']['pr_number'] = PR_NUMBER
-    packet['github_context']['branch'] = 'issue-106-dev'
-    packet['github_context']['links'] = [
-        f'https://github.com/billyweisberg/fractal-core-python/issues/{ISSUE_NUMBER}',
-        f'https://github.com/billyweisberg/fractal-core-python/pull/{PR_NUMBER}',
-    ]
-    payload = packet['payload']
-    payload['issue']['number'] = ISSUE_NUMBER
-    payload['issue']['url'] = f'https://github.com/billyweisberg/fractal-core-python/issues/{ISSUE_NUMBER}'
-    payload['pr']['number'] = PR_NUMBER
-    payload['pr']['url'] = f'https://github.com/billyweisberg/fractal-core-python/pull/{PR_NUMBER}'
-    payload['verification_status'] = 'needs_human_review'
-    payload['recommended_action'] = {
-        'merge_recommendation': 'do_not_merge',
-        'next_step': 'TechLead should record a reset-required recovery decision.'
-    }
-    packet['authority_context']['task_id'] = 'py-p6-retirement-boundary-diagnostics-exposure'
-    out_path = CONSUMER_REPO / '.project' / 'data' / 'paa' / 'reports' / 'phase-h3-reset-required.synthetic-qa.json'
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(packet, indent=2) + '\n')
-    return out_path
+WORKTREE_SERVICE = DefaultRuntimeWorktreeService()
 
 
 def main() -> int:
-    synthetic_qa_path = build_synthetic_qa_packet()
-    original_build_lineage_view = techlead.build_lineage_view
-    fake_lineage_view = {
+    lineage_view = {
         'ok': True,
         'project_slug': 'fractal-core-python',
         'package_id_external': PACKAGE_ID,
         'brief_id_external': BRIEF_ID,
         'issue_number': ISSUE_NUMBER,
-        'issue_url': f'https://github.com/billyweisberg/fractal-core-python/issues/{ISSUE_NUMBER}',
-        'pr_number': PR_NUMBER,
-        'pr_url': f'https://github.com/billyweisberg/fractal-core-python/pull/{PR_NUMBER}',
         'workflow_stage': 'dev_reset_required',
-        'current_owner_role': 'Python Dev',
         'lineage': {
             'canonical_branch': 'issue-106',
-            'active_role_branch': 'issue-106-dev',
-            'branch_owner_role': 'TechLead',
+            'active_role_branch': ROLE_BRANCH,
             'lineage_state': 'reset_required',
-            'latest_lineage_action': 'reset',
-            'source_branch': 'issue-106',
-            'superseded_branch': 'issue-106-dev',
-            'worktree_hint': 'issue-106-dev',
-            'reset_reason': 'Synthetic validation fixture for Phase H3 positive-path testing.',
-            'current_packet_type': 'techlead_decision_packet',
-            'current_packet_message_id': 'synthetic-reset-required-lineage',
-            'current_packet_queue': 'fractal-core-architecture',
-            'worktree_ownership': None,
-            'worktree_staleness': None,
         },
-        'source_packet_path': str(synthetic_qa_path),
-        'recommended_actions': [
-            {
-                'priority': 1,
-                'action_type': 'route_to_python',
-                'reason': 'Synthetic Phase H3 fixture requires a reset-required recovery path.',
-                'target_role': 'Python Dev',
-                'blocking': True,
-            }
-        ],
-        'unattended_safe': False,
-        'ambiguity_reasons': [],
     }
-
-    def fake_build_lineage_view(repo_root, project_slug, package_id_external, brief_id_external):
-        return copy.deepcopy(fake_lineage_view)
-
-    techlead.build_lineage_view = fake_build_lineage_view
-    try:
-        args = SimpleNamespace(
+    ownership_view = WORKTREE_SERVICE.worktree_ownership_view(
+        repo_root=CONSUMER_REPO,
+        target_role='python-team',
+        lineage_view=lineage_view,
+        role_branch=ROLE_BRANCH,
+    )
+    stale_view = WORKTREE_SERVICE.worktree_stale_view(
+        repo_root=CONSUMER_REPO,
+        target_role='python-team',
+        lineage_view=lineage_view,
+        role_branch=ROLE_BRANCH,
+    )
+    decision_result = {
+        'ok': True,
+        'workflow_stage': 'dev_reset_required',
+        'decision_type': 'reset_branch',
+    }
+    result = WORKTREE_SERVICE.reset_required_lifecycle(
+        RuntimeWorktreeCleanupRequest(
             repo_root=CONSUMER_REPO,
-            package_id_external=PACKAGE_ID,
-            brief_id_external=BRIEF_ID,
-            project_slug='fractal-core-python',
             target_role='python-team',
-            role_branch='issue-106-dev',
-            worktree_path=None,
-            send_decision=False,
-            source_packet_path=synthetic_qa_path,
-            canonical_branch='issue-106',
-            superseded_branch='issue-106-dev',
-            worktree_hint='issue-106-dev',
-            reset_reason='Synthetic validation fixture for Phase H3 positive-path testing.',
-            output=CONSUMER_REPO / '.project' / 'data' / 'paa' / 'reports' / 'phase-h3-reset-required.json',
-            review_output=CONSUMER_REPO / '.project' / 'data' / 'paa' / 'reports' / 'phase-h3-reset-required.md',
+            lineage_view=lineage_view,
+            ownership_view=ownership_view,
+            stale_view=stale_view,
+            decision_result=decision_result,
         )
-        result = techlead.reset_required_lifecycle(args)
-    finally:
-        techlead.build_lineage_view = original_build_lineage_view
-
+    )
     print(json.dumps(result, indent=2))
     if not result.get('ok'):
         return 1
@@ -141,8 +82,7 @@ def main() -> int:
         return 2
     if not result.get('cleanup_candidate'):
         return 3
-    decision_result = result.get('decision_result') or {}
-    if not decision_result.get('ok'):
+    if not (result.get('decision_result') or {}).get('ok'):
         return 4
     return 0
 
