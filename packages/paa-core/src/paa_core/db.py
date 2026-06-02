@@ -29,6 +29,7 @@ DB_PROFILES = {
         port=55433,
         name='paa_dev',
         user='paa',
+        password='paadevpass',
     ),
     'paa_dev_docker': DBSettings(
         mode='docker_exec',
@@ -37,6 +38,7 @@ DB_PROFILES = {
         port=55433,
         name='paa_dev',
         user='paa',
+        password='paadevpass',
     ),
     'paa_dev_host': DBSettings(
         mode='tcp',
@@ -45,6 +47,7 @@ DB_PROFILES = {
         port=55433,
         name='paa_dev',
         user='paa',
+        password='paadevpass',
     ),
     'agenthub_paa_dev_legacy': DBSettings(
         mode='docker_exec',

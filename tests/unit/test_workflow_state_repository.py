@@ -17,8 +17,8 @@ from paa_core.repositories.workflow_state import (  # noqa: E402
 class WorkflowStateRepositoryTests(unittest.TestCase):
     def test_get_workflow_state_for_work_item_parses_row(self) -> None:
         repo = PostgresWorkflowStateRepository()
-        output = '{"workflow_state_id":"ws-1","project_id":"proj-1","work_item_id":"work-1","authority_version_id":"auth-1","design_package_id":"pkg-1","coder_run_brief_id":"brief-1","workflow_stage":"qa_assignment_pending","current_owner_role_id":"role-qa","lineage_state":"awaiting_result","blocking_reason_code":null,"blocking_reason_text":null,"terminal_decision":"none","state_consistency":"consistent","current_issue_number":42,"current_pr_number":43,"canonical_branch":"main","active_role_branch":"issue-42-qa","active_handoff_id":"handoff-1","active_queue_message_id":"qm-1","active_message_id_external":"msg-1","active_assignment_role_id":"role-qa","active_result_role_id":null,"active_queue_claim_id":"claim-1","state_entered_at":"2026-05-17T12:00:00+00:00","last_transition_at":"2026-05-17T12:10:00+00:00","closed_at":null,"metadata":{"proof":true},"created_at":"2026-05-17T12:00:00+00:00","updated_at":"2026-05-17T12:10:00+00:00"}'
-        with patch('paa_core.repositories.workflow_state.postgres.run_psql', return_value=output):
+        output = {"workflow_state_id":"ws-1","project_id":"proj-1","work_item_id":"work-1","authority_version_id":"auth-1","design_package_id":"pkg-1","coder_run_brief_id":"brief-1","workflow_stage":"qa_assignment_pending","current_owner_role_id":"role-qa","lineage_state":"awaiting_result","blocking_reason_code":None,"blocking_reason_text":None,"terminal_decision":"none","state_consistency":"consistent","current_issue_number":42,"current_pr_number":43,"canonical_branch":"main","active_role_branch":"issue-42-qa","active_handoff_id":"handoff-1","active_queue_message_id":"qm-1","active_message_id_external":"msg-1","active_assignment_role_id":"role-qa","active_result_role_id":None,"active_queue_claim_id":"claim-1","state_entered_at":"2026-05-17T12:00:00+00:00","last_transition_at":"2026-05-17T12:10:00+00:00","closed_at":None,"metadata":{"proof":True},"created_at":"2026-05-17T12:00:00+00:00","updated_at":"2026-05-17T12:10:00+00:00"}
+        with patch('paa_core.repositories.workflow_state.postgres.query_json_rows', return_value=[output]):
             row = repo.get_workflow_state_for_work_item('work-1')
 
         self.assertIsNotNone(row)
@@ -29,10 +29,10 @@ class WorkflowStateRepositoryTests(unittest.TestCase):
 
     def test_list_workflow_transitions_for_work_item_parses_rows(self) -> None:
         repo = PostgresWorkflowStateRepository()
-        output = '\n'.join([
-            '{"workflow_transition_id":"wt-1","workflow_state_id":"ws-1","project_id":"proj-1","work_item_id":"work-1","transition_type":"assignment_emitted","transition_status":"applied","from_workflow_stage":"worker_assignment_pending","to_workflow_stage":"worker_execution_in_progress","from_owner_role_id":"role-techlead","to_owner_role_id":"role-worker","reason_code":null,"reason_text":"Assigned to worker","source_handoff_id":"handoff-1","source_queue_message_id":"qm-1","source_queue_claim_id":null,"source_message_id_external":"msg-1","source_packet_schema_type":"techlead_assignment_packet","source_role_id":"role-techlead","source_transition_input_id":null,"result_handoff_id":null,"result_queue_message_id":null,"result_queue_claim_id":null,"result_message_id_external":null,"result_packet_schema_type":null,"result_role_id":null,"performed_by_role_id":"role-techlead","performed_by_agent_id":"agent-1","automation_run_id":"run-1","error_code":null,"error_details":null,"transition_requested_at":"2026-05-17T12:00:00+00:00","transition_applied_at":"2026-05-17T12:00:01+00:00","metadata":{"phase":"assign"},"created_at":"2026-05-17T12:00:01+00:00"}'
-        ])
-        with patch('paa_core.repositories.workflow_state.postgres.run_psql', return_value=output):
+        output = [{
+            "workflow_transition_id":"wt-1","workflow_state_id":"ws-1","project_id":"proj-1","work_item_id":"work-1","transition_type":"assignment_emitted","transition_status":"applied","from_workflow_stage":"worker_assignment_pending","to_workflow_stage":"worker_execution_in_progress","from_owner_role_id":"role-techlead","to_owner_role_id":"role-worker","reason_code":None,"reason_text":"Assigned to worker","source_handoff_id":"handoff-1","source_queue_message_id":"qm-1","source_queue_claim_id":None,"source_message_id_external":"msg-1","source_packet_schema_type":"techlead_assignment_packet","source_role_id":"role-techlead","source_transition_input_id":None,"result_handoff_id":None,"result_queue_message_id":None,"result_queue_claim_id":None,"result_message_id_external":None,"result_packet_schema_type":None,"result_role_id":None,"performed_by_role_id":"role-techlead","performed_by_agent_id":"agent-1","automation_run_id":"run-1","error_code":None,"error_details":None,"transition_requested_at":"2026-05-17T12:00:00+00:00","transition_applied_at":"2026-05-17T12:00:01+00:00","metadata":{"phase":"assign"},"created_at":"2026-05-17T12:00:01+00:00"
+        }]
+        with patch('paa_core.repositories.workflow_state.postgres.query_json_rows', return_value=output):
             rows = repo.list_workflow_transitions_for_work_item('work-1')
 
         self.assertEqual(len(rows), 1)
@@ -41,8 +41,8 @@ class WorkflowStateRepositoryTests(unittest.TestCase):
 
     def test_get_active_queue_claim_for_message_parses_row(self) -> None:
         repo = PostgresWorkflowStateRepository()
-        output = '{"queue_claim_id":"claim-1","queue_message_id":"qm-1","handoff_id":"handoff-1","project_id":"proj-1","work_item_id":"work-1","claimed_by_role_id":"role-worker","claimed_by_agent_id":"agent-1","claim_attempt_source":"role_preflight","claim_status":"active","ack_outcome":"none","release_reason_code":null,"release_reason_text":null,"claimed_at":"2026-05-17T12:05:00+00:00","lease_expires_at":"2026-05-17T12:10:00+00:00","released_at":null,"acked_at":null,"metadata":{"queue":"python"},"created_at":"2026-05-17T12:05:00+00:00"}'
-        with patch('paa_core.repositories.workflow_state.postgres.run_psql', return_value=output):
+        output = {"queue_claim_id":"claim-1","queue_message_id":"qm-1","handoff_id":"handoff-1","project_id":"proj-1","work_item_id":"work-1","claimed_by_role_id":"role-worker","claimed_by_agent_id":"agent-1","claim_attempt_source":"role_preflight","claim_status":"active","ack_outcome":"none","release_reason_code":None,"release_reason_text":None,"claimed_at":"2026-05-17T12:05:00+00:00","lease_expires_at":"2026-05-17T12:10:00+00:00","released_at":None,"acked_at":None,"metadata":{"queue":"python"},"created_at":"2026-05-17T12:05:00+00:00"}
+        with patch('paa_core.repositories.workflow_state.postgres.query_json_rows', return_value=[output]):
             row = repo.get_active_queue_claim_for_message('qm-1')
 
         self.assertIsNotNone(row)

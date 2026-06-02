@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from paa_core.db import DBSettings, query_json_rows, run_psql, sql_literal
