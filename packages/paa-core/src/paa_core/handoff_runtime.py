@@ -14,10 +14,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from paa_core import claim_ledger as claim_ledger_helpers
+from paa_core import packet_envelope as packet_envelope_helpers
+from paa_core import queue_transport as queue_transport_helpers
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE
 from paa_core.db import run_psql as shared_run_psql
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime_paths import repo_root_from_cwd, resolved_repo_runtime_queue_topology
+from paa_core.runtime_evidence import persist_qa_verification as shared_persist_qa_verification
+from paa_core.runtime_evidence import persist_slice_result as shared_persist_slice_result
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     techlead_assignment_route_pairs,
@@ -194,7 +199,7 @@ PAYLOAD_REQUIRED_BY_SCHEMA = {
 
 
 def utc_now():
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return claim_ledger_helpers.utc_now()
 
 
 def sql_literal(value):
@@ -359,95 +364,10 @@ def lookup_packet_compilation_run(message: dict) -> Optional[dict]:
 
 
 def persist_qa_verification(message: dict):
-    if message.get("schema_type") != "qa_verification_packet":
-        return
-    project_slug = project_slug_from_message(message)
-    issue_number = issue_number_from_message(message)
-    github_context = message.get("github_context") or {}
-    payload = message.get("payload") or {}
-    verification_status = payload.get("verification_status")
-    if issue_number is None or verification_status is None:
-        return
-
-    if verification_status == "pass":
-        evidence_result = "pass"
-    elif verification_status == "needs_human_review":
-        evidence_result = "warning"
-    else:
-        evidence_result = "fail"
-
-    findings = payload.get("findings") or []
-    finding_summary = findings[0] if findings else f"QA verdict {verification_status} for issue #{issue_number}."
-    summary = f"QA packet {message.get('message_id')} reported {verification_status}: {finding_summary}"
-    artifact_location = f"qa-packet:{message.get('message_id')}"
-    metadata_json = json.dumps({
-        "packet_id": message.get("message_id"),
-        "schema_type": message.get("schema_type"),
-        "verification_status": verification_status,
-        "github_context": github_context,
-        "technical_scope_checks": payload.get("technical_scope_checks"),
-        "protected_path_checks": payload.get("protected_path_checks"),
-        "artifact_checks": payload.get("artifact_checks"),
-        "recommended_action": payload.get("recommended_action"),
-        "findings": findings,
-    })
-    decision = None
-    decision_notes = None
-    if verification_status == "needs_human_review":
-        decision = "needs_human_review"
-        decision_notes = f"QA escalated packet {message.get('message_id')} for issue #{issue_number}: {finding_summary}"
-    elif verification_status == "fail":
-        decision = "blocked"
-        decision_notes = f"QA blocked packet {message.get('message_id')} for issue #{issue_number}: {finding_summary}"
-
-    repo = PostgresRuntimeEventRepository()
     try:
-        resolved = repo.resolve_verification_obligation(
-            project_slug=project_slug,
-            issue_number=issue_number,
-            verification_type='qa_review',
-        )
-        if resolved is None:
-            return
-        _verification_key, verification_id = resolved
-        repo.record_evidence_if_missing(
-            project_slug=project_slug,
-            issue_number=issue_number,
-            verification_id=verification_id,
-            agent_name='QA Agent',
-            result=evidence_result,
-            summary=summary,
-            artifact_location=artifact_location,
-            metadata=json.loads(metadata_json),
-            captured_at=message.get("created_at"),
-        )
+        return shared_persist_qa_verification(message)
     except Exception as exc:
         print(json.dumps({"warning": f"failed to persist QA evidence to PAA: {str(exc)}"}), file=sys.stderr)
-        return
-
-    if decision is None:
-        return
-
-    decision_meta = json.dumps({
-        "packet_id": message.get("message_id"),
-        "verification_status": verification_status,
-        "pr_number": github_context.get("pr_number"),
-        "branch": github_context.get("branch"),
-        "recommended_action": payload.get("recommended_action"),
-    })
-    try:
-        repo.record_acceptance_event_if_missing(
-            project_slug=project_slug,
-            issue_number=issue_number,
-            agent_name='QA Agent',
-            role_name='QA',
-            decision=decision,
-            notes=decision_notes,
-            metadata=json.loads(decision_meta),
-            created_at=message.get("created_at"),
-        )
-    except Exception as exc:
-        print(json.dumps({"warning": f"failed to persist QA escalation event to PAA: {str(exc)}"}), file=sys.stderr)
 
 
 def slice_result_verification_key(command: str) -> Optional[str]:
@@ -477,107 +397,10 @@ def evidence_result_from_text(result_text: str) -> str:
 
 
 def persist_slice_result(message: dict):
-    schema_type = message.get("schema_type")
-    if schema_type not in {"slice_result_packet", "worker_result_packet"}:
-        return
-    project_slug = project_slug_from_message(message)
-    issue_number = issue_number_from_message(message)
-    payload = message.get("payload") or {}
-    validation = payload.get("validation") or {}
-    local_checks = validation.get("local") or []
-    if issue_number is None:
-        return
-    normalized_checks = []
-    if schema_type == "worker_result_packet":
-        validation_summary = payload.get("validation_summary") or []
-        if isinstance(validation_summary, list):
-            for entry in validation_summary:
-                if not isinstance(entry, str):
-                    continue
-                lowered = entry.lower()
-                inferred_result = entry if any(token in lowered for token in ("pass", "warn", "fail")) else "pass"
-                normalized_checks.append({
-                    "command": entry,
-                    "result": inferred_result,
-                })
-    elif isinstance(local_checks, list) and local_checks:
-        normalized_checks = local_checks
-    else:
-        commands = validation.get("commands") or []
-        command_map = {}
-        if isinstance(commands, list):
-            for command in commands:
-                if not isinstance(command, str):
-                    continue
-                suffix = slice_result_verification_key(command)
-                if suffix and suffix not in command_map:
-                    command_map[suffix] = command
-        field_to_suffix = {
-            "ruff": "lint",
-            "mypy": "types",
-            "pytest": "tests",
-            "trace": "trace",
-            "parity": "parity",
-            "benchmark": "benchmark",
-        }
-        for field, suffix in field_to_suffix.items():
-            result_text = validation.get(field)
-            if result_text is None:
-                continue
-            normalized_checks.append({
-                "command": command_map.get(suffix, field),
-                "result": result_text,
-            })
-    if not normalized_checks:
-        return
-
-    github_context = message.get("github_context") or {}
-    github_validation = validation.get("github") or {}
-    repo = PostgresRuntimeEventRepository()
-    for check in normalized_checks:
-        command = check.get("command") or ""
-        result_text = check.get("result") or ""
-        suffix = slice_result_verification_key(command)
-        if suffix is None:
-            continue
-        try:
-            resolved = repo.resolve_verification_obligation(
-                project_slug=project_slug,
-                issue_number=issue_number,
-                verification_key_suffix=suffix,
-            )
-        except Exception as exc:
-            print(json.dumps({"warning": f"failed to resolve Dev verification key in PAA for suffix {suffix}: {str(exc)}"}), file=sys.stderr)
-            continue
-        if not resolved:
-            continue
-        verification_key, verification_id = resolved
-        summary = f"Dev packet {message.get('message_id')} recorded {suffix}: {result_text}"
-        artifact_location = f"dev-packet:{message.get('message_id')}:{verification_key}"
-        metadata = {
-            "packet_id": message.get("message_id"),
-            "schema_type": schema_type,
-            "command": command,
-            "result_text": result_text,
-            "github_context": github_context,
-            "github_validation": github_validation,
-            "result_summary": payload.get("result_summary") or payload.get("implementation_summary"),
-            "packet_artifacts": payload.get("artifacts"),
-        }
-        try:
-            repo.record_evidence_if_missing(
-                project_slug=project_slug,
-                issue_number=issue_number,
-                verification_id=verification_id,
-                agent_name='Dev Agent',
-                result=evidence_result_from_text(result_text),
-                summary=summary,
-                artifact_location=artifact_location,
-                metadata=metadata,
-                captured_at=message.get("created_at"),
-            )
-        except Exception as exc:
-            print(json.dumps({"warning": f"failed to persist Dev evidence to PAA for {verification_key}: {str(exc)}"}), file=sys.stderr)
+    try:
+        return shared_persist_slice_result(message)
+    except Exception as exc:
+        print(json.dumps({"warning": f"failed to persist Dev evidence to PAA: {str(exc)}"}), file=sys.stderr)
 
 
 def update_queue_message_status(message_id: Optional[str], queue_status: str, handoff_status: str, timestamp_field: str):
@@ -610,187 +433,47 @@ def get_git_root() -> Optional[Path]:
 
 
 def state_root_candidates() -> list[tuple[Path, str]]:
-    explicit = os.environ.get(STATE_ENV_VAR)
-    if explicit:
-        return [(Path(explicit).expanduser(), f"env:{STATE_ENV_VAR}")]
-
-    candidates: list[tuple[Path, str]] = []
-    home_root = Path.home() / ".codex/state/fractal-core-handoff"
-    repo_root = get_git_root() or Path.cwd()
-    runtime_root = repo_root / ".project/data/paa/queue-state/fractal-core-handoff"
-    candidates.append((runtime_root, "repo-runtime"))
-    candidates.append((home_root, "home"))
-
-    git_root = get_git_root()
-    if git_root:
-        candidates.append((git_root / ".codex-state/fractal-core-handoff", "git-root"))
-
-    cwd_root = Path.cwd() / ".codex-state/fractal-core-handoff"
-    if all(cwd_root != path for path, _ in candidates):
-        candidates.append((cwd_root, "cwd"))
-
-    return candidates
+    return claim_ledger_helpers.state_root_candidates()
 
 
 def unique_state_root_candidates() -> list[tuple[Path, str]]:
-    seen: set[Path] = set()
-    ordered: list[tuple[Path, str]] = []
-    for path, source in state_root_candidates():
-        resolved = path.expanduser()
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        ordered.append((resolved, source))
-    return ordered
+    return claim_ledger_helpers.unique_state_root_candidates()
 
 
 def path_is_writable_dir(path: Path) -> bool:
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-        probe = path / f".writable-{uuid.uuid4().hex}"
-        probe.write_text("ok", encoding="utf-8")
-        probe.unlink()
-        return True
-    except Exception:
-        return False
+    return claim_ledger_helpers.path_is_writable_dir(path)
 
 
 def resolve_active_state_root() -> tuple[Path, str, list[dict[str, object]]]:
-    candidates = unique_state_root_candidates()
-    candidate_info = []
-    explicit = bool(os.environ.get(STATE_ENV_VAR))
-    for path, source in candidates:
-        writable = path_is_writable_dir(path)
-        candidate_info.append({"path": str(path), "source": source, "writable": writable})
-        if writable:
-            return path, source, candidate_info
-    if explicit:
-        raise RuntimeError(
-            f"Configured state dir via {STATE_ENV_VAR} is not writable: {candidates[0][0]}"
-        )
-    raise RuntimeError(
-        "No writable claim-ledger state directory found. Candidates: "
-        + ", ".join(f"{info['source']}={info['path']} writable={info['writable']}" for info in candidate_info)
-    )
+    return claim_ledger_helpers.resolve_active_state_root()
 
 
 def claims_dir(root: Path) -> Path:
-    return root / "claims"
+    return claim_ledger_helpers.claims_dir(root)
 
 
 def ensure_state_dirs() -> tuple[Path, str, list[dict[str, object]]]:
-    root, source, candidate_info = resolve_active_state_root()
-    claims_dir(root).mkdir(parents=True, exist_ok=True)
-    return root, source, candidate_info
+    return claim_ledger_helpers.ensure_state_dirs()
 
 
 def claim_path(claim_id: str, root: Optional[Path] = None) -> Path:
-    if root is None:
-        root, _, _ = ensure_state_dirs()
-    return claims_dir(root) / f"{claim_id}.json"
+    return claim_ledger_helpers.claim_path(claim_id, root)
 
 
 def all_existing_claim_dirs() -> list[Path]:
-    dirs: list[Path] = []
-    seen: set[Path] = set()
-    for root, _ in unique_state_root_candidates():
-        cdir = claims_dir(root)
-        if cdir.exists() and cdir not in seen:
-            seen.add(cdir)
-            dirs.append(cdir)
-    return dirs
+    return claim_ledger_helpers.all_existing_claim_dirs()
 
 
-class RabbitMQManagementClient:
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_MANAGEMENT_PORT, user=DEFAULT_USER, password=DEFAULT_PASSWORD, vhost=DEFAULT_VHOST):
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.vhost = vhost
-        self.base = f"http://{host}:{port}/api"
-        token = base64.b64encode(f"{user}:{password}".encode()).decode()
-        self.auth_header = f"Basic {token}"
-
-    def _request(self, method, path, payload=None):
-        data = None
-        headers = {"Authorization": self.auth_header}
-        if payload is not None:
-            data = json.dumps(payload).encode()
-            headers["Content-Type"] = "application/json"
-        req = urllib.request.Request(self.base + path, data=data, method=method, headers=headers)
-        try:
-            with urllib.request.urlopen(req) as resp:
-                body = resp.read().decode() if resp.length != 0 else ""
-                return resp.status, json.loads(body) if body else None
-        except urllib.error.HTTPError as e:
-            body = e.read().decode()
-            raise RuntimeError(f"RabbitMQ API {method} {path} failed: {e.code} {body}") from e
-        except urllib.error.URLError as e:
-            raise RuntimeError(f"RabbitMQ API connection failed: {e}") from e
-
-    def overview(self):
-        return self._request("GET", "/overview")
-
-    def queue(self, name):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        qname = urllib.parse.quote(name, safe="")
-        return self._request("GET", f"/queues/{vhost}/{qname}")
-
-    def declare_exchange(self, name, exchange_type="direct", durable=True):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        ename = urllib.parse.quote(name, safe="")
-        return self._request("PUT", f"/exchanges/{vhost}/{ename}", {"type": exchange_type, "durable": durable, "auto_delete": False, "internal": False, "arguments": {}})
-
-    def declare_queue(self, name, durable=True):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        qname = urllib.parse.quote(name, safe="")
-        return self._request("PUT", f"/queues/{vhost}/{qname}", {"durable": durable, "auto_delete": False, "arguments": {}})
-
-    def bind_queue(self, exchange, queue, routing_key):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        ename = urllib.parse.quote(exchange, safe="")
-        qname = urllib.parse.quote(queue, safe="")
-        return self._request("POST", f"/bindings/{vhost}/e/{ename}/q/{qname}", {"routing_key": routing_key, "arguments": {}})
-
-    def publish(self, exchange, routing_key, payload):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        ename = urllib.parse.quote(exchange, safe="")
-        body = {
-            "properties": {"delivery_mode": 2},
-            "routing_key": routing_key,
-            "payload": json.dumps(payload),
-            "payload_encoding": "string",
-        }
-        return self._request("POST", f"/exchanges/{vhost}/{ename}/publish", body)
-
-    def get_messages(self, queue, count=1, ackmode="ack_requeue_true", truncate=50000):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        qname = urllib.parse.quote(queue, safe="")
-        body = {
-            "count": count,
-            "ackmode": ackmode,
-            "encoding": "auto",
-            "truncate": truncate,
-        }
-        return self._request("POST", f"/queues/{vhost}/{qname}/get", body)
-
-    def purge_queue(self, queue):
-        vhost = urllib.parse.quote(self.vhost, safe="")
-        qname = urllib.parse.quote(queue, safe="")
-        return self._request("DELETE", f"/queues/{vhost}/{qname}/contents")
+class RabbitMQManagementClient(queue_transport_helpers.RabbitMQManagementClient):
+    pass
 
 
 def load_json(path):
-    with open(path, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+    return claim_ledger_helpers.load_json(path)
 
 
 def save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
-        fh.write("\n")
+    return claim_ledger_helpers.save_json(path, data)
 
 
 def reconcile_ready_count(raw_ready: Optional[int], preview: list[dict], preview_probe_ran: bool) -> tuple[int, Optional[dict]]:
@@ -814,53 +497,7 @@ def reconcile_ready_count(raw_ready: Optional[int], preview: list[dict], preview
 
 
 def validate_envelope(message, require_authority=True):
-    errors = []
-    for field in ENVELOPE_REQUIRED:
-        if field not in message:
-            errors.append(f"missing top-level field: {field}")
-    if "github_context" not in message:
-        errors.append("missing top-level field: github_context")
-    if require_authority and "authority_context" not in message:
-        errors.append("missing top-level field: authority_context")
-    if errors:
-        return errors
-    if message.get("schema_type") not in SUPPORTED_SCHEMA_TYPES:
-        errors.append(f"unsupported schema_type: {message.get('schema_type')}")
-    ac = message.get("authority_context")
-    if require_authority:
-        if not isinstance(ac, dict):
-            errors.append("authority_context must be an object")
-        else:
-            for field in AUTHORITY_CONTEXT_REQUIRED:
-                if field not in ac:
-                    errors.append(f"missing authority_context field: {field}")
-    gc = message.get("github_context")
-    if not isinstance(gc, dict):
-        errors.append("github_context must be an object")
-    else:
-        for field in GITHUB_CONTEXT_REQUIRED:
-            if field not in gc:
-                errors.append(f"missing github_context field: {field}")
-    payload = message.get("payload")
-    if not isinstance(payload, dict):
-        errors.append("payload must be an object")
-    else:
-        required = PAYLOAD_REQUIRED_BY_SCHEMA.get(message.get("schema_type"), [])
-        for field in required:
-            if field not in payload:
-                errors.append(f"missing payload field: {field}")
-    expected_route = route_policy_for_schema(message.get("schema_type"))
-    if expected_route:
-        actual_from_role = normalize_role_name(message.get("from_role"))
-        actual_to_role = normalize_role_name(message.get("to_role"))
-        if (actual_from_role, actual_to_role) not in expected_route:
-            route_options = ", ".join(f"{fr} -> {to}" for fr, to in sorted(expected_route))
-            errors.append(
-                "invalid route for "
-                f"{message.get('schema_type')}: expected one of [{route_options}], "
-                f"got {actual_from_role} -> {actual_to_role}"
-            )
-    return errors
+    return packet_envelope_helpers.validate_envelope(message, require_authority=require_authority)
 
 
 def list_claims(queue=None, status=None):
@@ -881,11 +518,7 @@ def list_claims(queue=None, status=None):
 
 
 def load_claim(claim_id):
-    for cdir in all_existing_claim_dirs():
-        path = cdir / f"{claim_id}.json"
-        if path.exists():
-            return path, load_json(path)
-    raise RuntimeError(f"claim not found: {claim_id}")
+    return claim_ledger_helpers.FileQueueClaimLedgerRepository().load_claim(claim_id)
 
 
 def cmd_state_info(_args):

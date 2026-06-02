@@ -96,12 +96,12 @@ class PaaConsumerInboxTests(unittest.TestCase):
             },
         }
 
-        with patch('paa_consumer.inbox.handoff_runtime.load_json', return_value=message), \
-            patch('paa_consumer.inbox.handoff_runtime.validate_envelope', return_value=[]), \
+        with patch('paa_consumer.inbox.load_json', return_value=message), \
+            patch('paa_consumer.inbox.validate_envelope', return_value=[]), \
             patch('paa_consumer.inbox.PostgresRuntimeEventRepository', return_value=_FakeRuntimeEventRepository()), \
-            patch('paa_consumer.inbox.handoff_runtime.persist_slice_result', side_effect=lambda *args, **kwargs: call_order.append('persist_slice_result')), \
-            patch('paa_consumer.inbox.handoff_runtime.persist_qa_verification', side_effect=lambda *args, **kwargs: call_order.append('persist_qa_verification')), \
-            patch('paa_consumer.inbox.handoff_runtime.RabbitMQManagementClient', _FakeClient):
+            patch('paa_consumer.inbox.persist_slice_result', side_effect=lambda *args, **kwargs: call_order.append('persist_slice_result')), \
+            patch('paa_consumer.inbox.persist_qa_verification', side_effect=lambda *args, **kwargs: call_order.append('persist_qa_verification')), \
+            patch('paa_consumer.inbox.build_default_management_client', return_value=_FakeClient()):
             result = dispatch_packet(ROOT, message_file)
 
         self.assertTrue(result['ok'])

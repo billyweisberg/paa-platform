@@ -10,8 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from paa_core import handoff_runtime
+from paa_core.claim_ledger import FileQueueClaimLedgerRepository, utc_now
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_producer_consumer_project_config
+from paa_core.queue_transport import RabbitMQManagementClient, build_default_management_client
 from paa_core.policies.acceptance import DefaultAcceptancePolicy
 from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
 from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
@@ -71,7 +72,7 @@ class _JsonFilePacketArtifactReader:
 
 
 class _QueueTransportAdapter:
-    def __init__(self, *, client: handoff_runtime.RabbitMQManagementClient) -> None:
+    def __init__(self, *, client: RabbitMQManagementClient) -> None:
         self._client = client
 
     def preview_queue(self, queue_name: str, *, limit: int = 1) -> object:
@@ -104,70 +105,78 @@ class _QueueTransportAdapter:
 
 
 class _QueueClaimStateAdapter:
-    def __init__(self) -> None:
-        self._root, self._source, _ = handoff_runtime.ensure_state_dirs()
+    def __init__(self, *, claim_ledger_repository: FileQueueClaimLedgerRepository, runtime_event_repository: PostgresRuntimeEventRepository) -> None:
+        self._claim_ledger_repository = claim_ledger_repository
+        self._runtime_event_repository = runtime_event_repository
 
     def record_claim(self, claim_record: object) -> object:
         if not isinstance(claim_record, dict):
             return {'claim_id': None}
-        claim_id = str(uuid.uuid4())
-        record = {
-            'claim_id': claim_id,
+        record = self._claim_ledger_repository.record_claim({
             'queue': claim_record.get('queue_name'),
-            'claimed_at': handoff_runtime.utc_now(),
+            'claimed_at': utc_now(),
             'claimed_by': claim_record.get('claimant_name'),
             'status': 'claimed',
-            'state_dir': str(self._root),
-            'state_dir_source': self._source,
             'packet_message_id': claim_record.get('packet_message_id'),
             'packet_schema_type': claim_record.get('packet_schema_type'),
             'packet_reference': claim_record.get('packet_reference'),
-        }
-        handoff_runtime.save_json(handoff_runtime.claim_path(claim_id, self._root), record)
-        handoff_runtime.update_queue_message_status(
-            claim_record.get('packet_message_id'),
-            'claimed',
-            'claimed',
-            'claimed_at',
-        )
-        return {'claim_id': claim_id}
+        })
+        packet_message_id = claim_record.get('packet_message_id')
+        if isinstance(packet_message_id, str) and packet_message_id:
+            self._runtime_event_repository.update_queue_message_status_by_external(
+                message_id_external=packet_message_id,
+                queue_status='claimed',
+                handoff_status='claimed',
+                timestamp_field='claimed_at',
+            )
+        return {'claim_id': record['claim_id']}
 
 
 class _QueueClaimLifecycleAdapter:
+    def __init__(
+        self,
+        *,
+        claim_ledger_repository: FileQueueClaimLedgerRepository,
+        runtime_event_repository: PostgresRuntimeEventRepository,
+        client: RabbitMQManagementClient,
+        exchange: str,
+    ) -> None:
+        self._claim_ledger_repository = claim_ledger_repository
+        self._runtime_event_repository = runtime_event_repository
+        self._client = client
+        self._exchange = exchange
+
     def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
-        path, claim = handoff_runtime.load_claim(claim_id)
+        path, claim = self._claim_ledger_repository.load_claim(claim_id)
         claim['status'] = 'done'
-        claim['acked_at'] = handoff_runtime.utc_now()
-        handoff_runtime.save_json(path, claim)
-        handoff_runtime.update_queue_message_status(
-            (claim.get('original_envelope') or {}).get('message_id'),
-            'acknowledged',
-            'completed',
-            'acknowledged_at',
-        )
+        claim['acked_at'] = utc_now()
+        self._claim_ledger_repository.update_claim(path, claim)
+        message_id = (claim.get('original_envelope') or {}).get('message_id')
+        if isinstance(message_id, str) and message_id:
+            self._runtime_event_repository.update_queue_message_status_by_external(
+                message_id_external=message_id,
+                queue_status='acknowledged',
+                handoff_status='completed',
+                timestamp_field='acknowledged_at',
+            )
         return {'ok': True, 'claim_id': claim_id, 'status': claim['status']}
 
     def requeue_claim(self, claim_id: str) -> dict[str, object]:
-        path, claim = handoff_runtime.load_claim(claim_id)
+        path, claim = self._claim_ledger_repository.load_claim(claim_id)
         envelope = claim.get('original_envelope')
-        client = handoff_runtime.RabbitMQManagementClient(
-            user=handoff_runtime.DEFAULT_USER,
-            password=handoff_runtime.DEFAULT_PASSWORD,
-            host=handoff_runtime.DEFAULT_HOST,
-            port=handoff_runtime.DEFAULT_MANAGEMENT_PORT,
-            vhost=handoff_runtime.DEFAULT_VHOST,
-        )
-        _, result = client.publish(DEFAULT_RUNTIME_QUEUE_EXCHANGE, claim['queue'], envelope)
+        _, result = self._client.publish(self._exchange, claim['queue'], envelope)
         claim['status'] = 'requeued'
-        claim['requeued_at'] = handoff_runtime.utc_now()
+        claim['requeued_at'] = utc_now()
         claim['requeue_result'] = dict(result)
-        handoff_runtime.save_json(path, claim)
-        handoff_runtime.update_queue_message_status(
-            (claim.get('original_envelope') or {}).get('message_id'),
-            'requeued',
-            'requeued',
-            'updated_at',
-        )
+        self._claim_ledger_repository.update_claim(path, claim)
+        message_id = (claim.get('original_envelope') or {}).get('message_id')
+        if isinstance(message_id, str) and message_id:
+            self._runtime_event_repository.update_queue_message_status_by_external(
+                message_id_external=message_id,
+                queue_status='requeued',
+                handoff_status='requeued',
+                timestamp_field='updated_at',
+            )
         return {'ok': bool(result.get('routed')), 'claim_id': claim_id, 'status': claim['status']}
 
 
@@ -985,24 +994,27 @@ def build_techlead_runtime_host(
         runtime_path_adapter=None,
         logger=runtime_logger,
     )
-    client = handoff_runtime.RabbitMQManagementClient(
-        user=handoff_runtime.DEFAULT_USER,
-        password=handoff_runtime.DEFAULT_PASSWORD,
-        host=handoff_runtime.DEFAULT_HOST,
-        port=handoff_runtime.DEFAULT_MANAGEMENT_PORT,
-        vhost=handoff_runtime.DEFAULT_VHOST,
-    )
+    client = build_default_management_client()
+    claim_ledger_repository = FileQueueClaimLedgerRepository()
     queue_claim_runtime_service = DefaultQueueClaimRuntimeService(
         queue_transport_adapter=_QueueTransportAdapter(client=client),
         packet_envelope_validator=_PassthroughPacketEnvelopeValidator(),
-        queue_claim_state_adapter=_QueueClaimStateAdapter(),
+        queue_claim_state_adapter=_QueueClaimStateAdapter(
+            claim_ledger_repository=claim_ledger_repository,
+            runtime_event_repository=runtime_event_repository,
+        ),
         supported_queue_names=tuple(topology.queue_names.values()),
         logger=runtime_logger,
     )
     return TechLeadRuntimeHost(
         queue_name=topology.queue_names['techlead'],
         queue_claim_runtime_service=queue_claim_runtime_service,
-        queue_claim_lifecycle_adapter=_QueueClaimLifecycleAdapter(),
+        queue_claim_lifecycle_adapter=_QueueClaimLifecycleAdapter(
+            claim_ledger_repository=claim_ledger_repository,
+            runtime_event_repository=runtime_event_repository,
+            client=client,
+            exchange=DEFAULT_RUNTIME_QUEUE_EXCHANGE,
+        ),
         packet_reference_resolution_service=packet_reference_resolution_service,
         queue_packet_runtime_controller=queue_packet_runtime_controller,
         assignment_publisher=_TechLeadAssignmentPublisher(
