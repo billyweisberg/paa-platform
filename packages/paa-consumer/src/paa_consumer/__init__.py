@@ -1,3 +1,3 @@
 """Consumer-side PAA runtime tooling."""
 
-__all__ = ["commands"]
+__all__: list[str] = []
