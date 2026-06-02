@@ -44,6 +44,17 @@ class RuntimeWorktreeInspectRequest:
     review_output_path: Path | None = None
 
 
+@dataclass(frozen=True)
+class RuntimeWorktreeCleanupRequest:
+    repo_root: Path
+    target_role: str
+    lineage_view: dict[str, Any]
+    ownership_view: dict[str, Any]
+    stale_view: dict[str, Any]
+    decision_result: dict[str, Any]
+    superseded_branch: str | None = None
+
+
 class DefaultRuntimeWorktreeService:
     _STATIC_ROLE_BRANCH_SUFFIX = {
         'delivery-architect': 'delivery',
@@ -443,6 +454,228 @@ class DefaultRuntimeWorktreeService:
             'next_step_hint': assessment.get('recommended_action') if assessment else None,
         }
 
+    def reset_required_lifecycle(self, request: RuntimeWorktreeCleanupRequest) -> dict[str, Any]:
+        if request.target_role != 'python-team':
+            return {
+                'ok': False,
+                'reason': 'unsupported_target_role_for_reset_required',
+                'details': 'Phase H3 reset-required lifecycle mutation supports only python-team in this slice.',
+                'target_role': request.target_role,
+            }
+        ownership_view = request.ownership_view
+        stale_view = request.stale_view
+        if not ownership_view.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'worktree_ownership_unavailable',
+                'details': 'Reset-required lifecycle mutation requires a successful worktree ownership query.',
+                'ownership_view': ownership_view,
+            }
+        if not stale_view.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'worktree_staleness_unavailable',
+                'details': 'Reset-required lifecycle mutation requires a successful stale-worktree query.',
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+            }
+        lineage_view = ownership_view.get('lineage_view') or request.lineage_view or {}
+        workflow_stage = lineage_view.get('workflow_stage')
+        if workflow_stage != 'dev_reset_required':
+            return {
+                'ok': False,
+                'reason': 'reset_required_not_supported_for_current_stage',
+                'details': 'Reset-required lifecycle mutation is only supported when the current workflow is dev_reset_required.',
+                'workflow_stage': workflow_stage,
+                'target_role': request.target_role,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+            }
+        decision_result = request.decision_result
+        if not decision_result.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'reset_required_decision_failed',
+                'details': 'Reset-required lifecycle mutation could not emit the underlying TechLead decision.',
+                'workflow_stage': workflow_stage,
+                'target_role': request.target_role,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        ownership = ownership_view.get('worktree_ownership') or {}
+        staleness = dict(stale_view.get('worktree_staleness') or {})
+        staleness['status'] = 'stale'
+        staleness['stale'] = True
+        staleness['cleanup_candidate'] = True
+        reasons = list(staleness.get('reasons') or [])
+        if 'lineage_state_reset_required' not in reasons:
+            reasons.append('lineage_state_reset_required')
+        staleness['reasons'] = reasons
+        if not staleness.get('recommended_action'):
+            staleness['recommended_action'] = 'investigate_and_cleanup_after_lifecycle_review'
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'target_role': request.target_role,
+            'canonical_branch': (lineage_view.get('lineage') or {}).get('canonical_branch'),
+            'role_branch': ownership.get('role_branch'),
+            'worktree_path': ownership.get('worktree_path'),
+            'worktree_ownership': ownership,
+            'worktree_staleness': staleness,
+            'decision_result': decision_result,
+            'cleanup_candidate': True,
+            'next_step_hint': 'record_reset_required_and_preserve_worktree_for_later_cleanup',
+            'lineage_view': lineage_view,
+        }
+
+    def reset_cleanup(self, request: RuntimeWorktreeCleanupRequest) -> dict[str, Any]:
+        lifecycle = self.reset_required_lifecycle(request)
+        if not lifecycle.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'reset_required_lifecycle_unavailable',
+                'details': 'Physical reset cleanup requires a successful reset-required lifecycle mutation result.',
+                'lifecycle': lifecycle,
+            }
+        ownership = lifecycle.get('worktree_ownership') or {}
+        staleness = lifecycle.get('worktree_staleness') or {}
+        worktree_path_value = ownership.get('worktree_path')
+        default_path_value = ownership.get('default_worktree_path')
+        role_branch = ownership.get('role_branch')
+        if not ownership.get('registered'):
+            return {
+                'ok': False,
+                'reason': 'reset_cleanup_requires_registered_worktree',
+                'details': 'Physical reset cleanup only runs when the owned role worktree is currently registered.',
+                'lifecycle': lifecycle,
+            }
+        if not staleness.get('stale') or not staleness.get('cleanup_candidate'):
+            return {
+                'ok': False,
+                'reason': 'reset_cleanup_requires_stale_cleanup_candidate',
+                'details': 'Physical reset cleanup only runs when stale detection marks the worktree as a cleanup candidate.',
+                'lifecycle': lifecycle,
+            }
+        if not worktree_path_value or not default_path_value:
+            return {
+                'ok': False,
+                'reason': 'reset_cleanup_missing_worktree_path',
+                'details': 'Physical reset cleanup requires a concrete owned worktree path.',
+                'lifecycle': lifecycle,
+            }
+        worktree_path = Path(worktree_path_value).resolve()
+        default_worktree_path = Path(default_path_value).resolve()
+        if worktree_path != default_worktree_path:
+            return {
+                'ok': False,
+                'reason': 'reset_cleanup_requires_default_owned_worktree_path',
+                'details': 'Physical reset cleanup only runs against the deterministic owned worktree path in this slice.',
+                'lifecycle': lifecycle,
+            }
+        entry_before = self.git_worktree_for_path(request.repo_root.resolve(), worktree_path)
+        if entry_before is None:
+            return {
+                'ok': False,
+                'reason': 'reset_cleanup_requires_registered_worktree_entry',
+                'details': 'The owned worktree is no longer registered; refusing to run physical cleanup against an ambiguous state.',
+                'lifecycle': lifecycle,
+            }
+        code, _stdout, error = self.run_text_with_errors(['git', 'worktree', 'remove', str(worktree_path)], cwd=request.repo_root.resolve())
+        if code != 0:
+            return {
+                'ok': False,
+                'reason': 'git_worktree_remove_failed',
+                'details': 'git worktree remove did not complete successfully.',
+                'cleanup_candidate': True,
+                'worktree_path': str(worktree_path),
+                'role_branch': role_branch,
+                'prior_worktree_ownership': ownership,
+                'prior_worktree_staleness': staleness,
+                'decision_result': lifecycle.get('decision_result'),
+                'git_error': error,
+            }
+        entry_after = self.git_worktree_for_path(request.repo_root.resolve(), worktree_path)
+        branch_preserved = bool(role_branch and self.git_local_branch_exists(request.repo_root.resolve(), role_branch))
+        return {
+            'ok': True,
+            'workflow_stage': lifecycle.get('workflow_stage'),
+            'target_role': request.target_role,
+            'canonical_branch': lifecycle.get('canonical_branch'),
+            'role_branch': role_branch,
+            'worktree_path': str(worktree_path),
+            'cleanup_performed': entry_after is None,
+            'cleanup_result': {
+                'command': ['git', 'worktree', 'remove', str(worktree_path)],
+                'worktree_removed': entry_after is None,
+                'worktree_still_registered': entry_after is not None,
+                'branch_preserved': branch_preserved,
+            },
+            'prior_worktree_ownership': ownership,
+            'prior_worktree_staleness': staleness,
+            'decision_result': lifecycle.get('decision_result'),
+            'next_step_hint': (
+                'prepare_fresh_role_worktree_before_next_python_run'
+                if entry_after is None
+                else 'investigate_remaining_registered_worktree_state'
+            ),
+            'lineage_view': lifecycle.get('lineage_view'),
+        }
+
+    def superseded_cleanup(self, request: RuntimeWorktreeCleanupRequest) -> dict[str, Any]:
+        return self._cleanup_for_lineage_state(
+            request=request,
+            expected_lineage_state='superseded',
+            unsupported_reason='unsupported_target_role_for_superseded_cleanup',
+            unsupported_details='Phase H5 superseded cleanup supports only python-team in this slice.',
+            decision_failed_reason='superseded_decision_failed',
+            decision_failed_details='Superseded cleanup could not emit the underlying TechLead decision.',
+            requires_registered_reason='superseded_cleanup_requires_registered_worktree',
+            requires_registered_details='Superseded cleanup only runs when the owned role worktree is currently registered.',
+            requires_stale_reason='superseded_cleanup_requires_stale_cleanup_candidate',
+            requires_stale_details='Superseded cleanup only runs when stale detection marks the worktree as a cleanup candidate.',
+            missing_path_reason='superseded_cleanup_missing_worktree_path',
+            missing_path_details='Superseded cleanup requires a concrete owned worktree path.',
+            default_path_reason='superseded_cleanup_requires_default_owned_worktree_path',
+            default_path_details='Superseded cleanup only runs against the deterministic owned worktree path in this slice.',
+            entry_reason='superseded_cleanup_requires_registered_worktree_entry',
+            entry_details='The owned worktree is no longer registered; refusing to run physical cleanup against an ambiguous state.',
+            next_step_hint='prepare_replacement_role_worktree_only_if_new_assignment_requires_it',
+            preserved_flags=('branch_preserved',),
+            preserved_values=lambda role_branch, canonical_branch, request: {
+                'branch_preserved': bool(
+                    (request.superseded_branch or role_branch)
+                    and self.git_local_branch_exists(request.repo_root.resolve(), request.superseded_branch or role_branch)
+                )
+            },
+        )
+
+    def closed_cleanup(self, request: RuntimeWorktreeCleanupRequest) -> dict[str, Any]:
+        return self._cleanup_for_lineage_state(
+            request=request,
+            expected_lineage_state='closed',
+            unsupported_reason='unsupported_target_role_for_closed_cleanup',
+            unsupported_details='Phase H6 closed cleanup supports only python-team in this slice.',
+            decision_failed_reason='closed_decision_failed',
+            decision_failed_details='Closed cleanup could not emit the underlying TechLead decision.',
+            requires_registered_reason='closed_cleanup_requires_registered_worktree',
+            requires_registered_details='Closed cleanup only runs when the owned role worktree is currently registered.',
+            requires_stale_reason='closed_cleanup_requires_stale_cleanup_candidate',
+            requires_stale_details='Closed cleanup only runs when stale detection marks the worktree as a cleanup candidate.',
+            missing_path_reason='closed_cleanup_missing_worktree_path',
+            missing_path_details='Closed cleanup requires a concrete owned worktree path.',
+            default_path_reason='closed_cleanup_requires_default_owned_worktree_path',
+            default_path_details='Closed cleanup only runs against the deterministic owned worktree path in this slice.',
+            entry_reason='closed_cleanup_requires_registered_worktree_entry',
+            entry_details='The owned worktree is no longer registered; refusing to run physical cleanup against an ambiguous state.',
+            next_step_hint='retain_closed_lineage_branches_for_audit_until_explicit_retirement_policy_exists',
+            preserved_flags=('role_branch_preserved', 'canonical_branch_preserved'),
+            preserved_values=lambda role_branch, canonical_branch, request: {
+                'role_branch_preserved': bool(role_branch and self.git_local_branch_exists(request.repo_root.resolve(), role_branch)),
+                'canonical_branch_preserved': bool(canonical_branch and self.git_local_branch_exists(request.repo_root.resolve(), canonical_branch)),
+            },
+        )
+
     @classmethod
     def role_branch_name(cls, *, issue_number: int, target_role: str, explicit: str | None, repo_root: Path) -> str:
         if explicit:
@@ -724,6 +957,179 @@ class DefaultRuntimeWorktreeService:
             'next_step_hint': 'enter_worktree_and_execute_role',
         }
 
+    def _cleanup_for_lineage_state(
+        self,
+        *,
+        request: RuntimeWorktreeCleanupRequest,
+        expected_lineage_state: str,
+        unsupported_reason: str,
+        unsupported_details: str,
+        decision_failed_reason: str,
+        decision_failed_details: str,
+        requires_registered_reason: str,
+        requires_registered_details: str,
+        requires_stale_reason: str,
+        requires_stale_details: str,
+        missing_path_reason: str,
+        missing_path_details: str,
+        default_path_reason: str,
+        default_path_details: str,
+        entry_reason: str,
+        entry_details: str,
+        next_step_hint: str,
+        preserved_flags: tuple[str, ...],
+        preserved_values,
+    ) -> dict[str, Any]:
+        repo_root = request.repo_root.resolve()
+        if request.target_role != 'python-team':
+            return {
+                'ok': False,
+                'reason': unsupported_reason,
+                'details': unsupported_details,
+                'target_role': request.target_role,
+            }
+        lineage_view = request.lineage_view
+        if not lineage_view.get('ok'):
+            return self._ambiguous_lineage_result(lineage_view)
+        lineage = lineage_view.get('lineage') or {}
+        workflow_stage = lineage_view.get('workflow_stage')
+        if lineage.get('lineage_state') != expected_lineage_state:
+            return {
+                'ok': False,
+                'reason': f'{expected_lineage_state}_not_supported_for_current_stage',
+                'details': f'{expected_lineage_state.capitalize()} cleanup is only supported when lineage state is {expected_lineage_state}.',
+                'workflow_stage': workflow_stage,
+                'lineage_view': lineage_view,
+            }
+        ownership_view = request.ownership_view
+        stale_view = request.stale_view
+        if not ownership_view.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'worktree_ownership_unavailable',
+                'details': f'{expected_lineage_state.capitalize()} cleanup requires a successful worktree ownership query.',
+                'ownership_view': ownership_view,
+                'lineage_view': lineage_view,
+            }
+        if not stale_view.get('ok'):
+            return {
+                'ok': False,
+                'reason': 'worktree_staleness_unavailable',
+                'details': f'{expected_lineage_state.capitalize()} cleanup requires a successful stale-worktree query.',
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'lineage_view': lineage_view,
+            }
+        decision_result = request.decision_result
+        if not decision_result.get('ok'):
+            return {
+                'ok': False,
+                'reason': decision_failed_reason,
+                'details': decision_failed_details,
+                'workflow_stage': workflow_stage,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+                'lineage_view': lineage_view,
+            }
+        ownership = ownership_view.get('worktree_ownership') or {}
+        staleness = stale_view.get('worktree_staleness') or {}
+        worktree_path_value = ownership.get('worktree_path')
+        default_path_value = ownership.get('default_worktree_path')
+        role_branch = ownership.get('role_branch')
+        canonical_branch = lineage.get('canonical_branch')
+        if not ownership.get('registered'):
+            return {
+                'ok': False,
+                'reason': requires_registered_reason,
+                'details': requires_registered_details,
+                'lineage_view': lineage_view,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        if not staleness.get('stale') or not staleness.get('cleanup_candidate'):
+            return {
+                'ok': False,
+                'reason': requires_stale_reason,
+                'details': requires_stale_details,
+                'lineage_view': lineage_view,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        if not worktree_path_value or not default_path_value:
+            return {
+                'ok': False,
+                'reason': missing_path_reason,
+                'details': missing_path_details,
+                'lineage_view': lineage_view,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        worktree_path = Path(worktree_path_value).resolve()
+        default_worktree_path = Path(default_path_value).resolve()
+        if worktree_path != default_worktree_path:
+            return {
+                'ok': False,
+                'reason': default_path_reason,
+                'details': default_path_details,
+                'lineage_view': lineage_view,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        entry_before = self.git_worktree_for_path(repo_root, worktree_path)
+        if entry_before is None:
+            return {
+                'ok': False,
+                'reason': entry_reason,
+                'details': entry_details,
+                'lineage_view': lineage_view,
+                'ownership_view': ownership_view,
+                'stale_view': stale_view,
+                'decision_result': decision_result,
+            }
+        code, _stdout, error = self.run_text_with_errors(['git', 'worktree', 'remove', str(worktree_path)], cwd=repo_root)
+        if code != 0:
+            return {
+                'ok': False,
+                'reason': 'git_worktree_remove_failed',
+                'details': 'git worktree remove did not complete successfully.',
+                'worktree_path': str(worktree_path),
+                'role_branch': role_branch,
+                'canonical_branch': canonical_branch,
+                'prior_worktree_ownership': ownership,
+                'prior_worktree_staleness': staleness,
+                'decision_result': decision_result,
+                'git_error': error,
+                'lineage_view': lineage_view,
+            }
+        entry_after = self.git_worktree_for_path(repo_root, worktree_path)
+        cleanup_result = {
+            'command': ['git', 'worktree', 'remove', str(worktree_path)],
+            'worktree_removed': entry_after is None,
+            'worktree_still_registered': entry_after is not None,
+        }
+        cleanup_result.update(preserved_values(role_branch, canonical_branch, request))
+        return {
+            'ok': True,
+            'workflow_stage': workflow_stage,
+            'target_role': request.target_role,
+            'canonical_branch': canonical_branch,
+            'role_branch': role_branch,
+            'superseded_branch': request.superseded_branch,
+            'worktree_path': str(worktree_path),
+            'cleanup_performed': entry_after is None,
+            'cleanup_result': cleanup_result,
+            'prior_worktree_ownership': ownership,
+            'prior_worktree_staleness': staleness,
+            'decision_result': decision_result,
+            'next_step_hint': next_step_hint if entry_after is None else 'investigate_remaining_registered_worktree_state',
+            'lineage_view': lineage_view,
+        }
+
     @staticmethod
     def _ambiguous_lineage_result(lineage_view: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -755,6 +1161,7 @@ class DefaultRuntimeWorktreeService:
 __all__ = [
     'DefaultRuntimeWorktreeService',
     'RuntimeWorktreeBranchRequest',
+    'RuntimeWorktreeCleanupRequest',
     'RuntimeWorktreeInspectRequest',
     'RuntimeWorktreePrepareRequest',
 ]

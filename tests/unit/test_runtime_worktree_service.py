@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 from paa_core.services.runtime_worktree import (
     DefaultRuntimeWorktreeService,
     RuntimeWorktreeBranchRequest,
+    RuntimeWorktreeCleanupRequest,
     RuntimeWorktreeInspectRequest,
     RuntimeWorktreePrepareRequest,
 )
@@ -30,6 +31,12 @@ def _git(repo_root: Path, *args: str) -> str:
 
 class RuntimeWorktreeServiceTests(unittest.TestCase):
     def setUp(self) -> None:
+        self._original_branch_suffix = dict(DefaultRuntimeWorktreeService._STATIC_ROLE_BRANCH_SUFFIX)
+        self._original_role_labels = dict(DefaultRuntimeWorktreeService._STATIC_ROLE_LABEL_BY_CLI)
+        DefaultRuntimeWorktreeService._STATIC_ROLE_BRANCH_SUFFIX.setdefault('python-team', 'dev')
+        DefaultRuntimeWorktreeService._STATIC_ROLE_LABEL_BY_CLI.setdefault('python-team', 'Dev')
+        DefaultRuntimeWorktreeService._STATIC_ROLE_BRANCH_SUFFIX.setdefault('dev', 'dev')
+        DefaultRuntimeWorktreeService._STATIC_ROLE_LABEL_BY_CLI.setdefault('dev', 'Dev')
         self._tempdir = tempfile.TemporaryDirectory()
         self.repo_root = Path(self._tempdir.name) / 'repo'
         self.repo_root.mkdir(parents=True, exist_ok=True)
@@ -55,6 +62,8 @@ class RuntimeWorktreeServiceTests(unittest.TestCase):
         }
 
     def tearDown(self) -> None:
+        DefaultRuntimeWorktreeService._STATIC_ROLE_BRANCH_SUFFIX = self._original_branch_suffix
+        DefaultRuntimeWorktreeService._STATIC_ROLE_LABEL_BY_CLI = self._original_role_labels
         self._tempdir.cleanup()
 
     def test_prepare_role_branch_creates_role_branch_from_canonical_branch(self) -> None:
@@ -151,6 +160,189 @@ class RuntimeWorktreeServiceTests(unittest.TestCase):
         self.assertEqual(result['target_role'], 'QA')
         self.assertEqual(result['assignment_artifact']['assignment_type'], 'verify_authorized_slice')
         self.assertEqual(result['current_branch'], 'issue-6-qa')
+
+    def test_reset_required_lifecycle_marks_cleanup_candidate(self) -> None:
+        prepare_result = self.service.prepare_role_worktree(
+            RuntimeWorktreePrepareRequest(
+                repo_root=self.repo_root,
+                target_role='dev',
+                lineage_view=self.lineage_view,
+            )
+        )
+        self.assertTrue(prepare_result['ok'])
+        reset_lineage_view = {
+            **self.lineage_view,
+            'workflow_stage': 'dev_reset_required',
+            'lineage': {
+                **self.lineage_view['lineage'],
+                'lineage_state': 'active',
+            },
+        }
+        ownership_view = self.service.worktree_ownership_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=reset_lineage_view,
+        )
+        stale_view = self.service.worktree_stale_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=reset_lineage_view,
+        )
+
+        result = self.service.reset_required_lifecycle(
+            RuntimeWorktreeCleanupRequest(
+                repo_root=self.repo_root,
+                target_role='python-team',
+                lineage_view=reset_lineage_view,
+                ownership_view=ownership_view,
+                stale_view=stale_view,
+                decision_result={'ok': True},
+            )
+        )
+
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['cleanup_candidate'])
+        self.assertTrue(result['worktree_staleness']['stale'])
+        self.assertIn('lineage_state_reset_required', result['worktree_staleness']['reasons'])
+
+    def test_reset_cleanup_removes_registered_worktree_and_preserves_branch(self) -> None:
+        prepare_result = self.service.prepare_role_worktree(
+            RuntimeWorktreePrepareRequest(
+                repo_root=self.repo_root,
+                target_role='dev',
+                lineage_view=self.lineage_view,
+            )
+        )
+        self.assertTrue(prepare_result['ok'])
+        worktree_path = Path(prepare_result['worktree_path'])
+        reset_lineage_view = {
+            **self.lineage_view,
+            'workflow_stage': 'dev_reset_required',
+            'lineage': {
+                **self.lineage_view['lineage'],
+                'lineage_state': 'active',
+            },
+        }
+        ownership_view = self.service.worktree_ownership_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=reset_lineage_view,
+        )
+        stale_view = self.service.worktree_stale_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=reset_lineage_view,
+        )
+
+        result = self.service.reset_cleanup(
+            RuntimeWorktreeCleanupRequest(
+                repo_root=self.repo_root,
+                target_role='python-team',
+                lineage_view=reset_lineage_view,
+                ownership_view=ownership_view,
+                stale_view=stale_view,
+                decision_result={'ok': True},
+            )
+        )
+
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['cleanup_performed'])
+        self.assertFalse(worktree_path.exists())
+        self.assertTrue(result['cleanup_result']['branch_preserved'])
+        self.assertIsNone(self.service.git_worktree_for_path(self.repo_root, worktree_path))
+
+    def test_superseded_cleanup_removes_registered_worktree(self) -> None:
+        prepare_result = self.service.prepare_role_worktree(
+            RuntimeWorktreePrepareRequest(
+                repo_root=self.repo_root,
+                target_role='dev',
+                lineage_view=self.lineage_view,
+            )
+        )
+        self.assertTrue(prepare_result['ok'])
+        worktree_path = Path(prepare_result['worktree_path'])
+        superseded_lineage_view = {
+            **self.lineage_view,
+            'workflow_stage': 'dev_reset_required',
+            'lineage': {
+                **self.lineage_view['lineage'],
+                'lineage_state': 'superseded',
+                'superseded_branch': 'issue-6-dev',
+            },
+        }
+        ownership_view = self.service.worktree_ownership_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=superseded_lineage_view,
+        )
+        stale_view = self.service.worktree_stale_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=superseded_lineage_view,
+        )
+
+        result = self.service.superseded_cleanup(
+            RuntimeWorktreeCleanupRequest(
+                repo_root=self.repo_root,
+                target_role='python-team',
+                lineage_view=superseded_lineage_view,
+                ownership_view=ownership_view,
+                stale_view=stale_view,
+                decision_result={'ok': True},
+                superseded_branch='issue-6-dev',
+            )
+        )
+
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['cleanup_performed'])
+        self.assertFalse(worktree_path.exists())
+        self.assertTrue(result['cleanup_result']['branch_preserved'])
+
+    def test_closed_cleanup_removes_registered_worktree_and_preserves_canonical_branch(self) -> None:
+        prepare_result = self.service.prepare_role_worktree(
+            RuntimeWorktreePrepareRequest(
+                repo_root=self.repo_root,
+                target_role='dev',
+                lineage_view=self.lineage_view,
+            )
+        )
+        self.assertTrue(prepare_result['ok'])
+        worktree_path = Path(prepare_result['worktree_path'])
+        closed_lineage_view = {
+            **self.lineage_view,
+            'workflow_stage': 'awaiting_acceptance',
+            'lineage': {
+                **self.lineage_view['lineage'],
+                'lineage_state': 'closed',
+            },
+        }
+        ownership_view = self.service.worktree_ownership_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=closed_lineage_view,
+        )
+        stale_view = self.service.worktree_stale_view(
+            repo_root=self.repo_root,
+            target_role='python-team',
+            lineage_view=closed_lineage_view,
+        )
+
+        result = self.service.closed_cleanup(
+            RuntimeWorktreeCleanupRequest(
+                repo_root=self.repo_root,
+                target_role='python-team',
+                lineage_view=closed_lineage_view,
+                ownership_view=ownership_view,
+                stale_view=stale_view,
+                decision_result={'ok': True},
+            )
+        )
+
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['cleanup_performed'])
+        self.assertFalse(worktree_path.exists())
+        self.assertTrue(result['cleanup_result']['role_branch_preserved'])
+        self.assertTrue(result['cleanup_result']['canonical_branch_preserved'])
 
 
 if __name__ == '__main__':
