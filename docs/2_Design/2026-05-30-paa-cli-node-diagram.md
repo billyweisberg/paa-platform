@@ -4,7 +4,7 @@ Doc-Type: design-note
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-30
-Last-Edited: 2026-05-30
+Last-Edited: 2026-06-02
 Author: Billy Weisberg
 Repo: paa-platform
 Component: PAAOperatorCLI
@@ -49,7 +49,7 @@ Primary current sources:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-cli-command-inventory-and-migration-map.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-modeled-ownership-inventory.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/` as an internal runtime-host package
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/`
 
 ## Node Diagram
@@ -87,7 +87,7 @@ flowchart TD
 
   subgraph ConsumerOwners["Current Consumer-Aligned Owners"]
     INBOX["inbox.py\nqueue command helpers"]
-    TECHLEAD["techlead.py\ncurrent runtime shell"]
+    TECHLEAD["techlead.py\nlegacy runtime shell"]
     SVCMAP["techlead_service_map.py"]
     GUARD["runtime_guardrails.py"]
     AUTHINST["authority_install.py"]
@@ -195,12 +195,12 @@ These are the primary operator-facing structural nodes.
 ### Current modeled owners
 The diagram makes explicit that many command families currently terminate in:
 - producer modules
-- consumer modules
+- internal consumer-package modules
 - governed core services
 - planned future runtime controllers
 
-This is a transitional design reality.
-The unified CLI is therefore a migration surface as well as a host surface.
+This is now mostly an internal-package integration reality rather than a split-CLI reality.
+The unified CLI is the host surface; the consumer package is an internal collaborator package.
 
 ## Immediate Design Reading
 

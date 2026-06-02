@@ -4,7 +4,7 @@ Doc-Type: design-note
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-30
-Last-Edited: 2026-05-30
+Last-Edited: 2026-06-02
 Author: Billy Weisberg
 Repo: paa-platform
 Component: PAAOperatorCLI
@@ -15,7 +15,7 @@ Supersedes:
 Superseded-By:
 Canonical: true
 Review-After: 2026-06-20
-Summary: First-pass inventory of current producer, consumer, and script command surfaces mapped to their target unified `paa` CLI families and long-term canonical owners.
+Summary: Inventory of producer, internal consumer-package, and script command surfaces mapped to the unified `paa` CLI after the user-facing `paa_consumer` cutover was completed.
 
 # PAA CLI Command Inventory And Migration Map
 
@@ -28,13 +28,14 @@ This document exists to answer three questions:
 2. what functionality do they currently expose?
 3. where should each command move in the unified `paa` CLI?
 
-This is a first-pass migration map, not the final command grammar.
+This is now a cutover-state inventory, not just a migration sketch.
 
 ## Scope
 
 This inventory covers:
 - current `paa-producer` commands
-- current `paa-consumer` commands
+- current unified `paa` consumer/runtime commands
+- internal `paa-consumer` package responsibilities that are no longer user-facing commands
 - repo-local script surfaces that are still operator-relevant
 
 It does not yet inventory:
@@ -49,8 +50,8 @@ That deeper inventory is the next pass.
 Primary current sources:
 - `packages/paa-producer/src/paa_producer/commands.py`
 - `packages/paa-producer/src/paa_producer/__main__.py`
-- `packages/paa-consumer/src/paa_consumer/commands.py`
-- `packages/paa-consumer/src/paa_consumer/__main__.py`
+- `packages/paa-cli/src/paa_cli/app.py`
+- `packages/paa-consumer/src/paa_consumer/`
 - `scripts/docs/`
 - `scripts/governance/`
 - `scripts/runtime/`
@@ -68,7 +69,7 @@ The unified operator CLI should be:
 - `paa report`
 - `paa ops`
 
-Existing producer and consumer commands should be absorbed into those families instead of preserved as parallel command roots long term.
+Existing producer and former consumer commands should be absorbed into those families instead of preserved as parallel command roots long term.
 
 ## Producer Command Inventory
 
@@ -95,47 +96,30 @@ Existing producer and consumer commands should be absorbed into those families i
 | `materialize-verification-obligations` | `paa-producer` | load verification obligations | `paa derive verification-obligations` | derivation subsystem | migrate |
 | `load-issue-into-paa` | `paa-producer` | materialize issue into PAA structures | `paa authority load-issue` | authority ingestion subsystem | migrate |
 
-## Consumer Command Inventory
+## Runtime/Consumer Command Inventory
 
-| Current command | Current package owner | Current purpose | Target unified `paa` family | Long-term canonical owner | Migration status |
+| Historical command | Historical package owner | Historical purpose | Unified `paa` family | Long-term canonical owner | Migration status |
 |---|---|---|---|---|---|
-| `install-consumer-runtime` | `paa-consumer` | install consumer runtime assets | `paa ops install-consumer-runtime` | ops/runtime install layer | migrate |
-| `update-consumer-runtime` | `paa-consumer` | update consumer runtime assets | `paa ops update-consumer-runtime` | ops/runtime install layer | migrate |
-| `install-authority-package` | `paa-consumer` | install published authority package | `paa authority install-package` | authority install layer | migrate |
-| `smoke-test` | `paa-consumer` | consumer smoke validation | `paa verify consumer-smoke` | verification layer | migrate |
-| `queue-state-info` | `paa-consumer` | inspect queue runtime state paths | `paa queue state-info` | queue subsystem | migrate |
-| `queue-ensure-topology` | `paa-consumer` | create/verify queue topology | `paa queue ensure-topology` | queue subsystem | migrate |
-| `queue-check` | `paa-consumer` | inspect queue contents | `paa queue check` | queue subsystem | migrate |
-| `queue-validate` | `paa-consumer` | validate one queue message | `paa queue validate` | queue subsystem | migrate |
-| `queue-send` | `paa-consumer` | send one queue message | `paa queue send` | queue subsystem | migrate |
-| `queue-claim-next` | `paa-consumer` | claim next queue message | `paa queue claim-next` | queue subsystem | migrate |
-| `queue-list-claims` | `paa-consumer` | list outstanding claims | `paa queue list-claims` | queue subsystem | migrate |
-| `queue-ack` | `paa-consumer` | acknowledge claimed message | `paa queue ack` | queue subsystem | migrate |
-| `queue-requeue` | `paa-consumer` | requeue claimed message | `paa queue requeue` | queue subsystem | migrate |
-| `automation-preflight` | `paa-consumer` | runtime preflight and environment checks | `paa ops automation-preflight` | ops/runtime guardrails | migrate |
-| `validate-runtime` | `paa-consumer` | consumer runtime validation | `paa ops validate-runtime` | ops/runtime guardrails | migrate |
-| `techlead-validate-packet` | `paa-consumer` | validate TechLead packet envelope | `paa queue validate-packet --role techlead` | queue/packet subsystem | migrate |
-| `techlead-send-packet` | `paa-consumer` | dispatch TechLead packet | `paa queue send-packet --role techlead` | queue/packet subsystem | migrate |
-| `techlead-status` | `paa-consumer` | inspect TechLead runtime status | `paa worker techlead status` | TechLead worker controller | migrate |
-| `techlead-service-map` | `paa-consumer` | inspect extracted TechLead service map | `paa report techlead-service-map` | reporting / worker diagnostics | migrate |
-| `techlead-emit-next-assignment` | `paa-consumer` | derive and emit next assignment | `paa worker techlead emit-next-assignment` | TechLead worker controller | migrate |
-| `techlead-lineage` | `paa-consumer` | inspect TechLead lineage view | `paa report techlead-lineage` | reporting / TechLead diagnostics | migrate |
-| `techlead-prepare-role-branch` | `paa-consumer` | create role branch | `paa worker techlead prepare-role-branch` | TechLead worker controller | migrate |
-| `techlead-prepare-role-worktree` | `paa-consumer` | create role worktree | `paa worker techlead prepare-role-worktree` | TechLead worker controller | migrate |
-| `techlead-handoff-to-role-worktree` | `paa-consumer` | handoff to role worktree | `paa worker techlead handoff-role-worktree` | TechLead worker controller | migrate |
-| `techlead-inspect-role-worktree` | `paa-consumer` | inspect role worktree | `paa report techlead-role-worktree` | reporting / TechLead diagnostics | migrate |
-| `techlead-worktree-ownership` | `paa-consumer` | inspect worktree ownership | `paa report techlead-worktree-ownership` | reporting / TechLead diagnostics | migrate |
-| `techlead-worktree-stale` | `paa-consumer` | detect stale worktrees | `paa report techlead-worktree-stale` | reporting / TechLead diagnostics | migrate |
-| `techlead-reset-required` | `paa-consumer` | handle reset-required path | `paa worker techlead reset-required` | TechLead worker controller | migrate |
-| `techlead-reset-cleanup` | `paa-consumer` | handle reset cleanup path | `paa worker techlead reset-cleanup` | TechLead worker controller | migrate |
-| `techlead-superseded-cleanup` | `paa-consumer` | handle superseded cleanup path | `paa worker techlead superseded-cleanup` | TechLead worker controller | migrate |
-| `techlead-closed-cleanup` | `paa-consumer` | handle closed cleanup path | `paa worker techlead closed-cleanup` | TechLead worker controller | migrate |
-| `techlead-role-entry` | `paa-consumer` | prepare role-entry packet/context | `paa worker techlead role-entry` | TechLead worker controller | migrate |
-| `techlead-role-result-assist` | `paa-consumer` | help role return/result path | `paa worker techlead role-result-assist` | TechLead worker controller | migrate |
-| `techlead-role-return` | `paa-consumer` | process role return | `paa worker techlead role-return` | TechLead worker controller | migrate |
-| `techlead-emit-decision` | `paa-consumer` | emit TechLead decision packet | `paa worker techlead emit-decision` | TechLead worker controller | migrate |
-| `techlead-closeout-qa-pass` | `paa-consumer` | close out QA-pass path | `paa accept techlead closeout-qa-pass` | acceptance subsystem | migrate |
-| `techlead-accept-and-merge` | `paa-consumer` | perform acceptance and merge | `paa accept techlead accept-and-merge` | acceptance subsystem | migrate |
+| `install-consumer-runtime` | `paa-consumer` | install consumer runtime assets | `paa ops install-consumer-runtime` | ops/runtime install layer | completed |
+| `update-consumer-runtime` | `paa-consumer` | update consumer runtime assets | `paa ops update-consumer-runtime` | ops/runtime install layer | completed |
+| `install-authority-package` | `paa-consumer` | install published authority package | `paa authority install-package` | authority install layer | completed |
+| `smoke-test` | `paa-consumer` | consumer smoke validation | `paa verify consumer-smoke` | verification layer | completed |
+| `queue-state-info` | `paa-consumer` | inspect queue runtime state paths | `paa queue state-info` | queue subsystem | completed |
+| `queue-ensure-topology` | `paa-consumer` | create/verify queue topology | `paa queue ensure-topology` | queue subsystem | completed |
+| `queue-check` | `paa-consumer` | inspect queue contents | `paa queue check` | queue subsystem | completed |
+| `queue-validate` | `paa-consumer` | validate one queue message | `paa queue validate` | queue subsystem | completed |
+| `queue-send` | `paa-consumer` | send one queue message | `paa queue send` | queue subsystem | completed |
+| `queue-claim-next` | `paa-consumer` | claim next queue message | `paa queue claim-next` | queue subsystem | completed |
+| `queue-list-claims` | `paa-consumer` | list outstanding claims | `paa queue list-claims` | queue subsystem | completed |
+| `queue-ack` | `paa-consumer` | acknowledge claimed message | `paa queue ack` | queue subsystem | completed |
+| `queue-requeue` | `paa-consumer` | requeue claimed message | `paa queue requeue` | queue subsystem | completed |
+| `automation-preflight` | `paa-consumer` | runtime preflight and environment checks | `paa ops automation-preflight` | ops/runtime guardrails | completed |
+| `validate-runtime` | `paa-consumer` | consumer runtime validation | `paa ops validate-runtime` | ops/runtime guardrails | completed |
+| `techlead-validate-packet` | `paa-consumer` | validate TechLead packet envelope | `paa queue validate-packet` | queue/packet subsystem | completed |
+| `techlead-send-packet` | `paa-consumer` | dispatch TechLead packet | `paa queue send-packet` | queue/packet subsystem | completed |
+| `techlead-service-map` | `paa-consumer` | inspect extracted TechLead service map | `paa report techlead-service-map` | reporting / worker diagnostics | completed |
+| all `runtime-supervisor*` and `*-runtime` commands | `paa-consumer` | runtime supervisor and host lifecycle control | `paa runtime ...` | runtime host/supervisor layer | completed |
+| legacy `techlead-*` shell commands | `paa-consumer` | direct TechLead shell orchestration and legacy worktree flows | no current unified replacement; retired with legacy shell demotion | legacy shell history only | retired |
 
 ## Script Surface Inventory
 
@@ -165,9 +149,8 @@ Existing producer and consumer commands should be absorbed into those families i
 - the extracted TechLead service set gives the future worker controller a strong core
 
 ### What is still missing
-- one unified `paa` command root
-- one canonical command grammar for operators
-- explicit migration of script surfaces into command families
+- final retirement or rewrite of legacy TechLead shell-only behaviors that no longer have user-facing commands
+- explicit migration of remaining script surfaces into stable command families
 - a component/module/class inventory showing which script-backed capabilities already have proper modeled owners underneath
 
 ## Immediate Follow-On Artifact
@@ -189,6 +172,6 @@ That second pass will show:
 
 ## Decision
 
-This command inventory and migration map is now the first concrete bridge from:
-- today's producer/consumer/script command surfaces
-- to the future unified `paa` operator CLI
+The unified `paa` CLI is now the user-facing operator surface.
+
+`paa-consumer` remains an internal package boundary for runtime hosts and support modules, not a parallel CLI.

@@ -4,7 +4,7 @@ Doc-Type: component-spec
 Status: active
 Lifecycle-Stage: design
 Created: 2026-05-30
-Last-Edited: 2026-05-30
+Last-Edited: 2026-06-02
 Author: Billy Weisberg
 Repo: paa-platform
 Component: PAAOperatorCLI
@@ -25,7 +25,7 @@ Date: 2026-05-30
 
 Define the full `Component Spec` for `PAAOperatorCLI` as the operator-facing application boundary for the full PAA methodology.
 
-This component exists to replace the current split between:
+This component exists to replace the former split between:
 - `paa-producer` command roots
 - `paa-consumer` command roots
 - operator-relevant scripts under `scripts/docs/`, `scripts/governance/`, and `scripts/runtime/`
@@ -72,7 +72,7 @@ Dependency stratum:
 Primary upstream dependencies:
 - host-support collaborators: `EnvironmentResolver`, `CommandRouter`, `CommandResultNormalizer`, and `OutputRenderer`
 - governed core services where stable modeled owners already exist
-- transitional producer and consumer module-backed collaborators behind explicit adapter boundaries
+- transitional producer and internal consumer-package collaborators behind explicit adapter boundaries
 - future worker-runtime controller components such as `TechLeadWorkerService`, `DevWorkerService`, `QAWorkerService`, and `QueuePacketRuntimeController`
 
 Primary downstream consumers:
@@ -97,7 +97,7 @@ Authority boundary:
 - owns lifecycle-oriented command grouping across authority-derivation, component-realization, runtime-execution, acceptance-closeout, and cross-lane ops families
 - owns fail-closed operator error surfacing when required authority or runtime context is missing
 - owns JSON and table output shaping for operator-safe command results
-- owns thin adapter dispatch into existing producer, consumer, and core capabilities
+- owns thin adapter dispatch into existing producer, internal consumer-package, and core capabilities
 - owns bridge-only operation request objects used to communicate with downstream owners
 - does not own core business decisions already governed by domain services
 - does not own implementation-plan persistence or implementation-plan truth
@@ -129,7 +129,7 @@ Owned responsibilities:
 - stable operator output formatting in JSON and table modes
 - bounded exit-code semantics and fail-closed error reporting
 - bridge-only translation from unified CLI requests into downstream authority, derivation, planning, worker, queue, verification, acceptance, reporting, and ops operations
-- migration bridge from current producer, consumer, and script command surfaces to the unified operator application
+- migration bridge from current producer, internal consumer-package, and script command surfaces to the unified operator application
 
 ## Non-Ownership Boundary
 
@@ -161,7 +161,7 @@ Excluded responsibilities:
 | `ExecutionPackageResolutionService` | service | support execution-package and runtime-context diagnostics where needed |
 | `TechLead` decision-service family | service family | support governed decision diagnostics and acceptance-aligned inspection surfaces |
 | transitional producer module-backed collaborators | transitional-module | provide authority, derivation, coder-brief, packet, and ops functionality behind explicit adapter boundaries until governed replacements exist |
-| transitional consumer module-backed collaborators | transitional-module | provide current queue, runtime shell, guardrail, and reporting surfaces behind explicit adapter boundaries until governed replacements exist |
+| transitional consumer package-backed collaborators | transitional-module | provide queue, runtime host, guardrail, and reporting surfaces behind explicit adapter boundaries while the internal package boundary still exists |
 | future `TechLeadWorkerService`, `DevWorkerService`, `QAWorkerService`, and `QueuePacketRuntimeController` | future-governed-target | replace current runtime-shell and queue-helper collaborators without changing CLI-owned invocation or render semantics |
 
 ## Component Elements Table
@@ -439,7 +439,7 @@ If those become necessary, the component boundary should be reconsidered.
 - fully rewriting every producer and consumer command in the first slice
 - designing every final subcommand flag in this component spec
 - replacing future worker-runtime controllers with CLI-only logic
-- preserving parallel long-term roots such as standalone `paa-producer` and `paa-consumer` CLIs once migration is complete
+- preserving a parallel standalone `paa-consumer` CLI once migration is complete
 
 ## Plan Seed Table
 
