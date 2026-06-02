@@ -172,7 +172,10 @@ def _resolve_coder_brief_schema_path() -> Path:
 
 def _validate_packet(packet: dict[str, Any], schema_path: Path) -> None:
     _require_jsonschema()
-    Draft202012Validator(_load_json(schema_path)).validate(packet)
+    validator_cls = Draft202012Validator
+    if validator_cls is None:  # pragma: no cover - narrowed by _require_jsonschema
+        raise RuntimeError('jsonschema validator unavailable')
+    validator_cls(_load_json(schema_path)).validate(packet)
 
 
 def _resolve_brief_context(*, project_slug: str, package_id_external: str) -> PacketBriefContext:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 
 @dataclass(frozen=True)
@@ -62,9 +62,20 @@ class DefaultRuntimeStatusReportService:
         self._runtime_queue_names = runtime_queue_names
         self._traceability_loader = traceability_loader
 
+    @staticmethod
+    def _packet_dict(packet: dict[str, Any] | None) -> dict[str, Any]:
+        return packet if isinstance(packet, dict) else {}
+
+    @staticmethod
+    def _task_list(current: dict[str, Any]) -> list[dict[str, Any]]:
+        tasks = current.get('tasks')
+        if not isinstance(tasks, list):
+            return []
+        return [cast(dict[str, Any], task) for task in tasks if isinstance(task, dict)]
+
     def active_workflow_context(self, repo_root: Path, project_slug: str) -> dict[str, Any]:
         current, manifest = self._load_authority(repo_root)
-        tasks = current.get('tasks', [])
+        tasks = self._task_list(current)
         current_task = tasks[0] if tasks else None
         queues = self._queue_state_loader(repo_root)
         issue = None
@@ -74,8 +85,9 @@ class DefaultRuntimeStatusReportService:
         owner_role = 'Unknown'
         recommended_actions: list[dict[str, Any]] = []
         if current_task:
-            qa_packet = self._qa_packet_loader(current_task['issue_number'], reports_dir=self._reports_dir_resolver(repo_root))
-            fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
+            reports_dir = self._reports_dir_resolver(repo_root)
+            qa_packet = self._qa_packet_loader(current_task['issue_number'], reports_dir)
+            fallback_pr_number = cast(int | None, qa_packet.get('pr_number')) if qa_packet else None
             fallback_packet = self._packet_preview_loader(queues, current_task['issue_number'])
             issue, pr = self._github_state_loader(
                 current_task['issue_number'],
@@ -93,7 +105,7 @@ class DefaultRuntimeStatusReportService:
             )
             local_decision_packet = self._local_decision_loader(
                 current_task['issue_number'],
-                reports_dir=self._reports_dir_resolver(repo_root),
+                reports_dir,
             )
             workflow_stage, owner_role, recommended_actions, _unattended_safe = self._terminal_lineage_override(
                 local_decision_packet=local_decision_packet,
@@ -122,7 +134,7 @@ class DefaultRuntimeStatusReportService:
     def build_report(self, request: RuntimeStatusReportRequest) -> dict[str, Any]:
         repo_root = request.repo_root.resolve()
         current, manifest = self._load_authority(repo_root)
-        tasks = current.get('tasks', [])
+        tasks = self._task_list(current)
         current_task = tasks[0] if tasks else None
         queues = self._queue_state_loader(repo_root)
         auto_roles, architect_missing = self._automation_state_loader(repo_root)
@@ -154,7 +166,7 @@ class DefaultRuntimeStatusReportService:
 
         inferred_packet = self._newest_packet_preview_loader(queues)
         inferred_issue_number = self._issue_number_from_packet_preview(inferred_packet)
-        report_task = current_task
+        report_task: dict[str, Any] | None = current_task
         if report_task is None and inferred_issue_number is not None:
             report_task = {
                 'issue_number': inferred_issue_number,
@@ -164,10 +176,11 @@ class DefaultRuntimeStatusReportService:
             }
 
         if report_task:
-            qa_packet = self._qa_packet_loader(report_task['issue_number'], reports_dir=self._reports_dir_resolver(repo_root))
-            fallback_pr_number = qa_packet.get('pr_number') if qa_packet else None
+            reports_dir = self._reports_dir_resolver(repo_root)
+            qa_packet = self._qa_packet_loader(report_task['issue_number'], reports_dir)
+            fallback_pr_number = cast(int | None, qa_packet.get('pr_number')) if qa_packet else None
             fallback_packet = self._packet_preview_loader(queues, report_task['issue_number']) or inferred_packet
-            local_decision_packet = self._local_decision_loader(report_task['issue_number'], reports_dir=self._reports_dir_resolver(repo_root))
+            local_decision_packet = self._local_decision_loader(report_task['issue_number'], reports_dir)
             issue, pr = self._github_state_loader(
                 report_task['issue_number'],
                 self._github_repo_resolver(repo_root),
@@ -194,7 +207,9 @@ class DefaultRuntimeStatusReportService:
                     current.get('package_id_external') or '',
                     brief_id_external,
                 )
-                lineage = lineage_view.get('lineage') or lineage
+                lineage_candidate = lineage_view.get('lineage')
+                if isinstance(lineage_candidate, dict):
+                    lineage = cast(dict[str, Any], lineage_candidate)
 
             workflow_stage, owner_role, recommended, unattended_safe = self._terminal_lineage_override(
                 local_decision_packet=local_decision_packet,
@@ -207,7 +222,7 @@ class DefaultRuntimeStatusReportService:
                 unattended_safe=unattended_safe,
             )
 
-            last_qa_verdict = qa_packet.get('verification_status') if qa_packet else 'unknown'
+            last_qa_verdict = cast(str | None, qa_packet.get('verification_status')) if qa_packet else 'unknown'
             superseded = any(e.get('event_type') == 'qa_escalation_superseded' for e in escalations)
             reset_required = any(e.get('event_type') in {'reset_branch_required', 'reset_branch_recommended'} for e in escalations)
             architect_rejected = any(e.get('event_type') == 'architect_rejection_recorded' for e in escalations)
@@ -221,12 +236,15 @@ class DefaultRuntimeStatusReportService:
                 effective_verification_state = last_qa_verdict
             else:
                 effective_verification_state = 'unknown'
+            qa_packet_dict = self._packet_dict(qa_packet)
+            protected_path_checks = self._packet_dict(cast(dict[str, Any] | None, qa_packet_dict.get('protected_path_checks')))
+            technical_scope_checks = self._packet_dict(cast(dict[str, Any] | None, qa_packet_dict.get('technical_scope_checks')))
             verification = {
-                'protected_path': 'pass' if qa_packet and qa_packet.get('protected_path_checks', {}).get('protected_10000_step_parity_passed') else 'unknown',
-                'scope': 'fail' if qa_packet and qa_packet.get('technical_scope_checks', {}).get('unauthorized_scope_widening') else ('pass' if qa_packet and qa_packet.get('verification_status') == 'pass' else 'unknown'),
+                'protected_path': 'pass' if protected_path_checks.get('protected_10000_step_parity_passed') else 'unknown',
+                'scope': 'fail' if technical_scope_checks.get('unauthorized_scope_widening') else ('pass' if qa_packet and qa_packet.get('verification_status') == 'pass' else 'unknown'),
                 'last_qa_verdict': last_qa_verdict,
                 'effective_verification_state': effective_verification_state,
-                'qa_packet_path': qa_packet.get('path') if qa_packet else None,
+                'qa_packet_path': cast(str | None, qa_packet_dict.get('path')),
             }
 
             active_work = {
@@ -324,10 +342,10 @@ class DefaultRuntimeStatusReportService:
 
     @staticmethod
     def _brief_id_external_for_report_task(current: dict[str, Any], issue_number: int) -> str | None:
-        tasks = current.get('tasks') or []
+        tasks = DefaultRuntimeStatusReportService._task_list(current)
         for task in tasks:
             if task.get('issue_number') == issue_number:
-                return task.get('brief_id_external')
+                return cast(str | None, task.get('brief_id_external'))
         return None
 
 

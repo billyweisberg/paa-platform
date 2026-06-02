@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,11 @@ class DefaultRuntimeLineageService:
         self._worktree_ownership_record = worktree_ownership_record
         self._worktree_staleness_assessment = worktree_staleness_assessment
 
+    @staticmethod
+    def _packet_payload(packet: dict[str, Any] | None) -> dict[str, Any]:
+        payload = (packet or {}).get('payload')
+        return cast(dict[str, Any], payload) if isinstance(payload, dict) else {}
+
     def build_lineage_view(self, request: RuntimeLineageRequest) -> dict[str, Any]:
         repo_root = request.repo_root.resolve()
         _current, manifest = self._load_authority(repo_root)
@@ -65,7 +70,7 @@ class DefaultRuntimeLineageService:
         current_task = self._resolve_task_summary(manifest, package, issue_number)
         queues = self._queue_state_loader(repo_root)
         reports_dir = self._reports_dir_resolver(repo_root)
-        local_decision_packet = self._local_decision_loader(issue_number, reports_dir=reports_dir)
+        local_decision_packet = self._local_decision_loader(issue_number, reports_dir)
         qa_packet = self._qa_packet_loader(issue_number, reports_dir)
         fallback_packet = self._packet_preview_loader(queues, issue_number)
         issue, pr = self._github_state_loader(
@@ -96,7 +101,7 @@ class DefaultRuntimeLineageService:
             recommended=recommended,
             unattended_safe=unattended_safe,
         )
-        ambiguity_reasons = []
+        ambiguity_reasons: list[str] = []
         if lineage['current_packet_type'] is None and lineage['canonical_branch'] is None and not pr:
             ambiguity_reasons.append('no_lineage_packet_or_pr_context')
         return {
@@ -138,13 +143,13 @@ class DefaultRuntimeLineageService:
             issue_number,
             schema_type='techlead_decision_packet',
         ) if issue_number else None
-        local_decision_packet = self._local_decision_loader(issue_number, reports_dir=reports_dir) if issue_number else None
+        local_decision_packet = self._local_decision_loader(issue_number, reports_dir) if issue_number else None
         lineage_packet = self._newest_packet(decision_packet, assignment_packet, local_decision_packet)
-        payload = (lineage_packet or {}).get('payload') or {}
-        canonical_branch = payload.get('canonical_branch') or (pr.get('headRefName') if pr else None)
-        role_branch = payload.get('role_branch')
+        payload = self._packet_payload(lineage_packet)
+        canonical_branch = cast(str | None, payload.get('canonical_branch')) or (cast(str | None, pr.get('headRefName')) if pr else None)
+        role_branch = cast(str | None, payload.get('role_branch'))
         reset_required = any(e.get('event_type') in {'reset_branch_required', 'reset_branch_recommended'} for e in escalations)
-        lineage_state = payload.get('lineage_state')
+        lineage_state = cast(str | None, payload.get('lineage_state'))
         if lineage_state is None:
             if reset_required:
                 lineage_state = 'reset_required'
@@ -168,13 +173,13 @@ class DefaultRuntimeLineageService:
         return {
             'canonical_branch': canonical_branch,
             'active_role_branch': role_branch,
-            'branch_owner_role': payload.get('branch_owner_role') or ('TechLead' if lineage_packet else None),
+            'branch_owner_role': cast(str | None, payload.get('branch_owner_role')) or ('TechLead' if lineage_packet else None),
             'lineage_state': lineage_state,
-            'latest_lineage_action': payload.get('lineage_action'),
-            'source_branch': payload.get('source_branch'),
-            'superseded_branch': payload.get('superseded_branch'),
-            'worktree_hint': payload.get('worktree_hint'),
-            'reset_reason': payload.get('reset_reason'),
+            'latest_lineage_action': cast(str | None, payload.get('lineage_action')),
+            'source_branch': cast(str | None, payload.get('source_branch')),
+            'superseded_branch': cast(str | None, payload.get('superseded_branch')),
+            'worktree_hint': cast(str | None, payload.get('worktree_hint')),
+            'reset_reason': cast(str | None, payload.get('reset_reason')),
             'current_packet_type': lineage_packet.get('schema_type') if lineage_packet else None,
             'current_packet_message_id': lineage_packet.get('message_id') if lineage_packet else None,
             'current_packet_queue': lineage_packet.get('queue_name') if lineage_packet else None,
@@ -196,12 +201,12 @@ class DefaultRuntimeLineageService:
     ) -> tuple[str, str, list[dict[str, Any]], bool]:
         if not local_decision_packet:
             return workflow_stage, owner_role, recommended, unattended_safe
-        payload = local_decision_packet.get('payload') or {}
+        payload = DefaultRuntimeLineageService._packet_payload(local_decision_packet)
         if payload.get('lineage_state') != 'closed':
             return workflow_stage, owner_role, recommended, unattended_safe
         if any((queue_data.get('preview') or []) for queue_data in queues.values()):
             return workflow_stage, owner_role, recommended, unattended_safe
-        latest_lineage_action = payload.get('lineage_action')
+        latest_lineage_action = cast(str | None, payload.get('lineage_action'))
         if latest_lineage_action == 'proof_only_closed':
             return 'proof_only_closed', 'TechLead', [], True
         if pr and pr.get('mergedAt') and (issue and (issue.get('state') or '').upper() == 'CLOSED'):

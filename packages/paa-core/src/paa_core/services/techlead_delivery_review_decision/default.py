@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Callable
 
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 
@@ -31,7 +32,7 @@ class DefaultTechLeadDeliveryReviewDecisionService:
         self,
         *,
         logger: StructuredLogger | None = None,
-        clock: callable | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._logger = logger if logger is not None else _NullStructuredLogger()
         self._clock = clock if clock is not None else self._default_clock

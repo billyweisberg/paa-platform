@@ -92,7 +92,8 @@ def main() -> int:
         return 0
 
     if args.command == 'authority':
-        return authority_main(remainder)
+        result = authority_main(remainder)
+        return int(result) if result is not None else 0
 
     if args.command == 'derive-artifacts':
         repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()

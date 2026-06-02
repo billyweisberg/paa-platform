@@ -74,7 +74,10 @@ def validate_stage1_design_package(package_path: Path, schema_path: Path) -> dic
     _require_jsonschema()
     schema = _load_json(schema_path)
     package = _load_json(package_path)
-    Draft202012Validator(schema).validate(package)
+    validator_cls = Draft202012Validator
+    if validator_cls is None:  # pragma: no cover - narrowed by _require_jsonschema
+        raise RuntimeError('jsonschema validator unavailable')
+    validator_cls(schema).validate(package)
     return package
 
 

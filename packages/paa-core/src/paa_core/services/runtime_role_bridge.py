@@ -572,7 +572,9 @@ class DefaultRuntimeRoleBridgeService:
         }
 
     def acknowledge_source_assignment(self, *, repo_root: Path, message_id: str, queue_name: str, claimed_by: str) -> dict[str, Any]:
-        claims = self._queue_admin_service.list_claims(repo_root=repo_root, queue=queue_name, status='claimed').get('claims', [])
+        claims_result = self._queue_admin_service.list_claims(repo_root=repo_root, queue=queue_name, status='claimed')
+        claims_value = claims_result.get('claims', [])
+        claims = [claim for claim in claims_value if isinstance(claim, dict)] if isinstance(claims_value, list) else []
         matching_claims = [claim for claim in claims if claim.get('message_id') == message_id]
         if len(matching_claims) > 1:
             return {

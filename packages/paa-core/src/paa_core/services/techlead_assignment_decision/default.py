@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Callable
 
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 from paa_core.services.workflow_lifecycle import WorkflowLifecycleService
@@ -40,7 +41,7 @@ class DefaultTechLeadAssignmentDecisionService:
         *,
         logger: StructuredLogger | None = None,
         workflow_lifecycle_service: WorkflowLifecycleService | None = None,
-        clock: callable | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._logger = logger if logger is not None else _NullStructuredLogger()
         self._workflow_lifecycle_service = workflow_lifecycle_service

@@ -84,7 +84,10 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _validate_brief(brief: dict[str, Any], schema_path: Path) -> None:
     _require_jsonschema()
     schema = _load_json(schema_path)
-    Draft202012Validator(schema).validate(brief)
+    validator_cls = Draft202012Validator
+    if validator_cls is None:  # pragma: no cover - narrowed by _require_jsonschema
+        raise RuntimeError('jsonschema validator unavailable')
+    validator_cls(schema).validate(brief)
 
 
 def _query_single_row(sql: str) -> list[str] | None:
