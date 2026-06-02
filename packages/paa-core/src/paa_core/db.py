@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import os
-import subprocess
 from typing import Iterable
+
+import psycopg
 
 
 @dataclass(frozen=True)
@@ -107,63 +109,38 @@ def sql_literal(value: object | None) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def _connect(settings: DBSettings) -> psycopg.Connection:
+    if not settings.host or not settings.port:
+        raise RuntimeError('PAA DB settings require host and port for Python driver access')
+    return psycopg.connect(
+        host=settings.host,
+        port=settings.port,
+        dbname=settings.name,
+        user=settings.user,
+        password=settings.password,
+        autocommit=True,
+    )
+
+
+def _stringify_cell(value: object | None) -> str:
+    if value is None:
+        return ''
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    return str(value)
+
+
 def run_psql(sql: str, *, settings: DBSettings | None = None) -> str:
     cfg = settings or settings_from_profile(None)
-    if cfg.mode == 'docker_exec':
-        if not cfg.container:
-            raise RuntimeError('PAA DB docker_exec mode requires a container name')
-        cmd = [
-            'docker',
-            'exec',
-            '-i',
-            cfg.container,
-            'psql',
-            '-v',
-            'ON_ERROR_STOP=1',
-            '-U',
-            cfg.user,
-            '-d',
-            cfg.name,
-            '-At',
-            '-F',
-            '	',
-        ]
-        env = None
-    elif cfg.mode == 'tcp':
-        if not cfg.host or not cfg.port:
-            raise RuntimeError('PAA DB tcp mode requires host and port')
-        cmd = [
-            'psql',
-            '-v',
-            'ON_ERROR_STOP=1',
-            '-h',
-            cfg.host,
-            '-p',
-            str(cfg.port),
-            '-U',
-            cfg.user,
-            '-d',
-            cfg.name,
-            '-At',
-            '-F',
-            '	',
-        ]
-        env = os.environ.copy()
-        if cfg.password is not None:
-            env['PGPASSWORD'] = cfg.password
-    else:
-        raise RuntimeError(f'Unsupported PAA DB mode: {cfg.mode}')
-    result = subprocess.run(
-        cmd,
-        input=sql,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or 'PAA psql command failed')
-    return result.stdout
+    try:
+        with _connect(cfg) as conn, conn.cursor() as cur:
+            cur.execute(sql)
+            if cur.description is None:
+                return ''
+            rows = cur.fetchall()
+    except psycopg.Error as exc:
+        raise RuntimeError(str(exc).strip() or 'PAA PostgreSQL command failed') from exc
+    return '\n'.join('\t'.join(_stringify_cell(cell) for cell in row) for row in rows)
 
 
 def query_rows(sql: str, *, settings: DBSettings | None = None) -> list[list[str]]:
