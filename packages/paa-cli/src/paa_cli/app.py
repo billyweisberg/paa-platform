@@ -35,19 +35,6 @@ from paa_core.services.methodology_execution_projection import (
     DefaultMethodologyExecutionProjectionService,
 )
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
-from paa_consumer.hosts import (
-    build_dev_runtime_host,
-    build_qa_runtime_host,
-    build_runtime_supervisor,
-    build_techlead_runtime_host,
-)
-from paa_consumer.runtime_supervisor_control import (
-    restart_runtime_supervisor,
-    runtime_supervisor_logs,
-    runtime_supervisor_status,
-    start_runtime_supervisor,
-    stop_runtime_supervisor,
-)
 
 from .command_adapters import (
     AgentCommandAdapter,
@@ -76,6 +63,18 @@ from .router import CommandRegistration, CommandRouter
 
 _OUTPUT_MODES: Final[tuple[str, ...]] = ('table', 'json', 'summary')
 _PREFLIGHTED_FAMILIES: Final[set[str]] = {'component', 'plan'}
+
+
+def _consumer_hosts_module():
+    from paa_consumer import hosts as consumer_hosts
+
+    return consumer_hosts
+
+
+def _runtime_supervisor_control_module():
+    from paa_consumer import runtime_supervisor_control as runtime_supervisor_control
+
+    return runtime_supervisor_control
 
 
 class NullStructuredLogger:
@@ -945,7 +944,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        supervisor = build_runtime_supervisor(resolved_repo_root)
+        supervisor = _consumer_hosts_module().build_runtime_supervisor(resolved_repo_root)
         result = supervisor.run(
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -968,7 +967,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = start_runtime_supervisor(
+        result = _runtime_supervisor_control_module().start_runtime_supervisor(
             resolved_repo_root,
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -985,7 +984,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = stop_runtime_supervisor(resolved_repo_root)
+        result = _runtime_supervisor_control_module().stop_runtime_supervisor(resolved_repo_root)
         typer.echo(json.dumps(result, indent=2))
         raise typer.Exit(code=0 if result.get('ok') else 1)
 
@@ -994,7 +993,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = runtime_supervisor_status(resolved_repo_root)
+        result = _runtime_supervisor_control_module().runtime_supervisor_status(resolved_repo_root)
         typer.echo(json.dumps(result, indent=2))
 
     @runtime_app.command('logs')
@@ -1003,7 +1002,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         lines: int = typer.Option(200, '--lines'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        output = runtime_supervisor_logs(resolved_repo_root, lines=lines)
+        output = _runtime_supervisor_control_module().runtime_supervisor_logs(resolved_repo_root, lines=lines)
         if output:
             typer.echo(output)
 
@@ -1018,7 +1017,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = restart_runtime_supervisor(
+        result = _runtime_supervisor_control_module().restart_runtime_supervisor(
             resolved_repo_root,
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -1041,7 +1040,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_techlead_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        host = _consumer_hosts_module().build_techlead_runtime_host(
+            resolved_repo_root,
+            actor_name=actor_name,
+            host_name=host_name,
+        )
         result = host.run_loop(
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -1061,7 +1064,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_dev_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        host = _consumer_hosts_module().build_dev_runtime_host(
+            resolved_repo_root,
+            actor_name=actor_name,
+            host_name=host_name,
+        )
         result = host.run_loop(
             intake_mode=intake_mode,
             emit_worker_result=emit_worker_result,
@@ -1081,7 +1088,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = build_qa_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        host = _consumer_hosts_module().build_qa_runtime_host(
+            resolved_repo_root,
+            actor_name=actor_name,
+            host_name=host_name,
+        )
         result = host.run_loop(
             intake_mode=intake_mode,
             emit_verification=emit_verification,
