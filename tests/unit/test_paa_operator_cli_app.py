@@ -865,6 +865,31 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         fake_inbox.run_queue_command.assert_called_once_with(ROOT, ['purge', '--queue', 'paa-techlead'])
 
+    def test_queue_claim_next_forwards_to_consumer_queue_runtime(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_inbox = Mock()
+        fake_inbox.run_queue_command.return_value = 0
+
+        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+            result = self.runner.invoke(app, ['queue', 'claim-next', '--repo-root', str(ROOT), '--queue', 'paa-techlead'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        fake_inbox.run_queue_command.assert_called_once_with(ROOT, ['claim-next', '--queue', 'paa-techlead'])
+
+    def test_queue_send_packet_uses_consumer_inbox_dispatch(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_inbox = Mock()
+        fake_inbox.dispatch_packet.return_value = {'ok': True, 'resolved_queue': 'paa-techlead'}
+
+        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+            result = self.runner.invoke(
+                app,
+                ['queue', 'send-packet', '--repo-root', str(ROOT), '--message-file', str(ROOT / 'packet.json')],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        fake_inbox.dispatch_packet.assert_called_once_with(ROOT, ROOT / 'packet.json')
+
     def test_role_add_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 

@@ -17,6 +17,9 @@ else:  # pragma: no branch
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
+from paa_core.claim_ledger import load_json
+from paa_core.install import install_consumer_runtime
+from paa_core.packet_envelope import validate_envelope
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
@@ -81,6 +84,30 @@ def _consumer_inbox_module():
     from paa_consumer import inbox as consumer_inbox
 
     return consumer_inbox
+
+
+def _consumer_authority_install_module():
+    from paa_consumer import authority_install as consumer_authority_install
+
+    return consumer_authority_install
+
+
+def _consumer_runtime_guardrails_module():
+    from paa_consumer import runtime_guardrails as consumer_runtime_guardrails
+
+    return consumer_runtime_guardrails
+
+
+def _consumer_smoke_test_module():
+    from paa_consumer import smoke_test as consumer_smoke_test
+
+    return consumer_smoke_test
+
+
+def _consumer_techlead_service_map_module():
+    from paa_consumer import techlead_service_map as consumer_techlead_service_map
+
+    return consumer_techlead_service_map
 
 
 class NullStructuredLogger:
@@ -479,6 +506,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         help='Methodology pointer explain reads plus compatibility aliases for older report commands.',
         no_args_is_help=True,
     )
+    authority_app = typer.Typer(help='Authority package install surfaces.', no_args_is_help=True)
+    ops_app = typer.Typer(help='Runtime install and validation surfaces.', no_args_is_help=True)
+    verify_app = typer.Typer(help='Runtime smoke and verification surfaces.', no_args_is_help=True)
     role_app = typer.Typer(help='Project-scoped runtime role identity commands.', no_args_is_help=True)
     agent_app = typer.Typer(help='Project-scoped runtime agent identity commands.', no_args_is_help=True)
     queue_app = typer.Typer(help='Queue packet preview surfaces over the runtime controller.', no_args_is_help=True)
@@ -913,6 +943,14 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['ensure-topology'])
         raise typer.Exit(code=code)
 
+    @queue_app.command('state-info')
+    def queue_state_info(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['state-info'])
+        raise typer.Exit(code=code)
+
     @queue_app.command('check')
     def queue_check(
         queue: str = typer.Option(..., '--queue'),
@@ -933,6 +971,116 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             argv.extend(['--queue', queue])
         code = _consumer_inbox_module().run_queue_command(resolved_repo_root, argv)
         raise typer.Exit(code=code)
+
+    @queue_app.command('validate')
+    def queue_validate(
+        message_file: str = typer.Option(..., '--message-file'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(
+            resolved_repo_root,
+            ['validate', '--message-file', str(Path(message_file).resolve())],
+        )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('send')
+    def queue_send(
+        queue: str = typer.Option(..., '--queue'),
+        message_file: str = typer.Option(..., '--message-file'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(
+            resolved_repo_root,
+            ['send', '--queue', queue, '--message-file', str(Path(message_file).resolve())],
+        )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('claim-next')
+    def queue_claim_next(
+        queue: str = typer.Option(..., '--queue'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(
+            resolved_repo_root,
+            ['claim-next', '--queue', queue],
+        )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('list-claims')
+    def queue_list_claims(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        queue: str | None = typer.Option(None, '--queue'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        argv = ['list-claims']
+        if queue:
+            argv.extend(['--queue', queue])
+        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, argv)
+        raise typer.Exit(code=code)
+
+    @queue_app.command('ack')
+    def queue_ack(
+        claim_id: str = typer.Option(..., '--claim-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(
+            resolved_repo_root,
+            ['ack', '--claim-id', claim_id],
+        )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('requeue')
+    def queue_requeue(
+        claim_id: str = typer.Option(..., '--claim-id'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        code = _consumer_inbox_module().run_queue_command(
+            resolved_repo_root,
+            ['requeue', '--claim-id', claim_id],
+        )
+        raise typer.Exit(code=code)
+
+    @queue_app.command('validate-packet')
+    def queue_validate_packet(
+        message_file: str = typer.Option(..., '--message-file'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        message = load_json(Path(message_file).resolve())
+        errors = validate_envelope(message, require_authority=True)
+        if errors:
+            typer.echo(json.dumps({
+                'ok': False,
+                'message_file': str(Path(message_file).resolve()),
+                'resolved_queue': None,
+                'errors': errors,
+            }, indent=2))
+            raise typer.Exit(code=1)
+        resolved_queue = _consumer_inbox_module().resolve_packet_queue(message, repo_root=resolved_repo_root)
+        typer.echo(json.dumps({
+            'ok': True,
+            'message_file': str(Path(message_file).resolve()),
+            'message_id': message.get('message_id'),
+            'schema_type': message.get('schema_type'),
+            'resolved_queue': resolved_queue,
+            'from_role': message.get('from_role'),
+            'to_role': message.get('to_role'),
+        }, indent=2))
+
+    @queue_app.command('send-packet')
+    def queue_send_packet(
+        message_file: str = typer.Option(..., '--message-file'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        result = _consumer_inbox_module().dispatch_packet(resolved_repo_root, Path(message_file).resolve())
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
 
     @worker_app.command('dispatch')
     def worker_dispatch(
@@ -1156,10 +1304,89 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+    @report_app.command('techlead-service-map')
+    def report_techlead_service_map() -> None:
+        typer.echo(json.dumps(_consumer_techlead_service_map_module().build_techlead_service_map(), indent=2))
+
+    @authority_app.command('install-package')
+    def authority_install_package(
+        repo_root: str = typer.Option(..., '--repo-root'),
+        package_root: str = typer.Option(..., '--package-root'),
+        authority_install_root: str | None = typer.Option(None, '--authority-install-root'),
+    ) -> None:
+        destination = Path(authority_install_root).resolve() if authority_install_root else None
+        result = _consumer_authority_install_module().install_authority(
+            Path(repo_root).resolve(),
+            Path(package_root).resolve(),
+            destination,
+        )
+        typer.echo(json.dumps(result, indent=2))
+
+    @ops_app.command('install-consumer-runtime')
+    def ops_install_consumer_runtime(
+        repo_root: str = typer.Option(..., '--repo-root'),
+        project_pack: str = typer.Option('fractal-core', '--project-pack'),
+    ) -> None:
+        result = install_consumer_runtime(Path(repo_root).resolve(), project_pack=project_pack)
+        typer.echo(json.dumps({
+            'ok': True,
+            'install_mode': result.install_mode,
+            'repo_root': str(result.repo_root),
+            'codex_install_root': str(result.codex_install_root),
+            'runtime_data_root': str(result.runtime_data_root),
+            'platform_revision': result.platform_revision,
+            'project_pack': result.project_pack,
+        }, indent=2))
+
+    @ops_app.command('update-consumer-runtime')
+    def ops_update_consumer_runtime(
+        repo_root: str = typer.Option(..., '--repo-root'),
+        project_pack: str = typer.Option('fractal-core', '--project-pack'),
+    ) -> None:
+        result = install_consumer_runtime(Path(repo_root).resolve(), project_pack=project_pack)
+        typer.echo(json.dumps({
+            'ok': True,
+            'install_mode': result.install_mode,
+            'repo_root': str(result.repo_root),
+            'codex_install_root': str(result.codex_install_root),
+            'runtime_data_root': str(result.runtime_data_root),
+            'platform_revision': result.platform_revision,
+            'project_pack': result.project_pack,
+        }, indent=2))
+
+    @ops_app.command('validate-runtime')
+    def ops_validate_runtime(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        typer.echo(json.dumps(_consumer_runtime_guardrails_module().validate(resolved_repo_root), indent=2))
+
+    @verify_app.command('consumer-smoke')
+    def verify_consumer_smoke(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        expected_branch: str | None = typer.Option(None, '--expected-branch'),
+        validate_schema: bool = typer.Option(False, '--validate-schema'),
+        output: str | None = typer.Option(None, '--output'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        output_path = Path(output).resolve() if output else None
+        typer.echo(json.dumps(
+            _consumer_smoke_test_module().run_smoke_test(
+                resolved_repo_root,
+                expected_branch=expected_branch,
+                validate_schema_flag=validate_schema,
+                output_path=output_path,
+            ),
+            indent=2,
+        ))
+
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')
     app.add_typer(report_app, name='report')
+    app.add_typer(authority_app, name='authority')
+    app.add_typer(ops_app, name='ops')
+    app.add_typer(verify_app, name='verify')
     app.add_typer(role_app, name='role')
     app.add_typer(agent_app, name='agent')
     app.add_typer(queue_app, name='queue')
