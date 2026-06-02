@@ -38,6 +38,34 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertIn('terminal_lineage_override_policy', remaining_names)
         self.assertNotIn('live_closed_closeout_context', remaining_names)
 
+    def test_runtime_supervisor_uses_builder_and_prints_summary(self) -> None:
+        buffer = io.StringIO()
+        fake_supervisor = type(
+            'FakeSupervisor',
+            (),
+            {
+                'run': lambda self, **kwargs: {
+                    'ok': True,
+                    'host_count': 3,
+                    'intake_mode': kwargs['intake_mode'],
+                    'max_iterations': kwargs['max_iterations'],
+                    'results': {'techlead': {}, 'dev': {}, 'qa': {}},
+                    'errors': {},
+                }
+            },
+        )()
+
+        with patch('paa_consumer.__main__.build_runtime_supervisor', return_value=fake_supervisor), \
+             patch('sys.stdout', buffer), \
+             patch('sys.argv', ['paa-consumer', 'runtime-supervisor', '--max-iterations', '2']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(payload['host_count'], 3)
+        self.assertEqual(payload['max_iterations'], 2)
+        self.assertEqual(set(payload['results'].keys()), {'techlead', 'dev', 'qa'})
+
     def test_techlead_runtime_uses_host_builder_and_prints_loop_summary(self) -> None:
         buffer = io.StringIO()
         fake_host = type(

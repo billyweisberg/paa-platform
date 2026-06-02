@@ -20,6 +20,7 @@ CONSUMER_COMMANDS = (
     'automation-preflight',
     'techlead-status',
     'techlead-service-map',
+    'runtime-supervisor',
     'techlead-runtime',
     'dev-runtime',
     'qa-runtime',
