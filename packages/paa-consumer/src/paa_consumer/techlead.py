@@ -374,9 +374,6 @@ def repo_reports_dir(repo_root: Path) -> Path:
     return repo_root / '.project' / 'data' / 'paa' / 'reports'
 
 
-AUTH_SCRIPT = repo_auth_script(REPO_ROOT)
-QUEUE_SCRIPT = repo_queue_script(REPO_ROOT)
-AUTOMATIONS_DIR = repo_automations_dir(REPO_ROOT)
 AUTH_CURRENT = repo_auth_current(REPO_ROOT)
 DEFAULT_SCHEMA = repo_default_schema(REPO_ROOT)
 QA_WORK_DIR = repo_reports_dir(REPO_ROOT)
@@ -2695,24 +2692,6 @@ def default_assignment_paths(repo_root: Path, issue_number: int, target_role: st
     output = reports_dir / f'techlead-assignment.issue{issue_number}.{slug}.json'
     review = reports_dir / f'techlead-assignment.issue{issue_number}.{slug}.md'
     return output, review
-
-
-def default_result_input_path(repo_root: Path, issue_number: int, target_role: str) -> Path:
-    slug = target_role.replace(' ', '-').lower()
-    reports_dir = repo_reports_dir(repo_root)
-    return reports_dir / f'role-result-input.issue{issue_number}.{slug}.json'
-
-
-def default_result_packet_paths(repo_root: Path, issue_number: int, target_role: str) -> tuple[Path, Path]:
-    slug = target_role.replace(' ', '-').lower()
-    reports_dir = repo_reports_dir(repo_root)
-    if target_role == 'Delivery Architect':
-        stem = f'delivery-review.issue{issue_number}.{slug}'
-    elif is_team_worker_label(target_role, repo_root=repo_root):
-        stem = f'worker-result.issue{issue_number}.{slug}'
-    else:
-        stem = f'qa-verification.issue{issue_number}.{slug}'
-    return reports_dir / f'{stem}.json', reports_dir / f'{stem}.md'
 
 
 def _build_assignment_decision_request(
