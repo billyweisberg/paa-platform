@@ -82,6 +82,10 @@ from paa_core.services.runtime_assignment_context import (
     DefaultRuntimeAssignmentContextService,
     RuntimeAssignmentContextRequest,
 )
+from paa_core.services.runtime_lineage import (
+    DefaultRuntimeLineageService,
+    RuntimeLineageRequest,
+)
 from paa_core.services.runtime_closeout import (
     DefaultRuntimeCloseoutService,
     RuntimeQaCloseoutRequest,
@@ -1362,112 +1366,63 @@ def automation_preflight(args):
 
 
 def derive_lineage_section(current_task, pr, queues, escalations, reports_dir: Path = QA_WORK_DIR):
-    issue_number = current_task['issue_number'] if current_task else None
-    assignment_packet = latest_packet_preview(
-        queues,
-        issue_number,
-        schema_type='techlead_assignment_packet',
-    ) if issue_number else None
-    decision_packet = latest_packet_preview(
-        queues,
-        issue_number,
-        schema_type='techlead_decision_packet',
-    ) if issue_number else None
-    local_decision_packet = latest_techlead_decision_packet(issue_number, reports_dir=reports_dir) if issue_number else None
-    lineage_packet = newest_packet(decision_packet, assignment_packet, local_decision_packet)
-    payload = (lineage_packet or {}).get('payload') or {}
-    canonical_branch = payload.get('canonical_branch') or (pr.get('headRefName') if pr else None)
-    role_branch = payload.get('role_branch')
-    reset_required = any(e.get('event_type') in {'reset_branch_required', 'reset_branch_recommended'} for e in escalations)
-    lineage_state = payload.get('lineage_state')
-    if lineage_state is None:
-        if reset_required:
-            lineage_state = 'reset_required'
-        elif canonical_branch:
-            lineage_state = 'active'
-        else:
-            lineage_state = 'unknown'
-    worktree_target_role = target_role_for_branch(role_branch)
-    worktree_path = None
-    worktree_entry = None
-    worktree_ownership = None
-    if worktree_target_role and role_branch:
-        worktree_path = default_role_worktree_path(REPO_ROOT, role_branch)
-        worktree_entry = git_worktree_for_path(REPO_ROOT, worktree_path)
-        worktree_ownership = worktree_ownership_record(
-            REPO_ROOT,
-            worktree_target_role,
-            role_branch,
-            worktree_path,
-            worktree_entry=worktree_entry,
-        )
-    worktree_staleness = worktree_staleness_assessment(lineage_state, worktree_ownership)
-    return {
-        'canonical_branch': canonical_branch,
-        'active_role_branch': role_branch,
-        'branch_owner_role': payload.get('branch_owner_role') or ('TechLead' if lineage_packet else None),
-        'lineage_state': lineage_state,
-        'latest_lineage_action': payload.get('lineage_action'),
-        'source_branch': payload.get('source_branch'),
-        'superseded_branch': payload.get('superseded_branch'),
-        'worktree_hint': payload.get('worktree_hint'),
-        'reset_reason': payload.get('reset_reason'),
-        'current_packet_type': lineage_packet.get('schema_type') if lineage_packet else None,
-        'current_packet_message_id': lineage_packet.get('message_id') if lineage_packet else None,
-        'current_packet_queue': lineage_packet.get('queue_name') if lineage_packet else None,
-        'worktree_ownership': worktree_ownership,
-        'worktree_staleness': worktree_staleness,
-    }
+    return DefaultRuntimeLineageService(
+        load_authority=load_authority,
+        load_design_package=load_design_package,
+        resolve_issue_number_from_package=resolve_issue_number_from_package,
+        resolve_task_summary=resolve_task_summary,
+        queue_state_loader=queue_state,
+        local_decision_loader=latest_techlead_decision_packet,
+        qa_packet_loader=latest_qa_packet,
+        reports_dir_resolver=repo_reports_dir,
+        packet_preview_loader=latest_packet_preview,
+        github_state_loader=github_state,
+        github_repo_resolver=github_repo_for_root,
+        workflow_deriver=derive_workflow,
+        newest_packet=newest_packet,
+        target_role_for_branch=target_role_for_branch,
+        default_role_worktree_path=default_role_worktree_path,
+        git_worktree_for_path=git_worktree_for_path,
+        worktree_ownership_record=worktree_ownership_record,
+        worktree_staleness_assessment=worktree_staleness_assessment,
+    ).derive_lineage_section(
+        repo_root=REPO_ROOT,
+        current_task=current_task,
+        pr=pr,
+        queues=queues,
+        escalations=escalations,
+        reports_dir=reports_dir,
+    )
 
 
 def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: str, brief_id_external: str) -> dict:
-    _current, manifest = load_authority(repo_root)
-    package = load_design_package(project_slug, package_id_external)
-    issue_number = resolve_issue_number_from_package(package, package_id_external, project_slug)
-    current_task = resolve_task_summary(manifest, package, issue_number)
-    queues = queue_state(repo_root)
-    local_decision_packet = latest_techlead_decision_packet(issue_number, reports_dir=repo_reports_dir(repo_root))
-    qa_packet = latest_qa_packet(issue_number, repo_reports_dir(repo_root))
-    fallback_packet = latest_packet_preview(queues, issue_number)
-    issue, pr = github_state(
-        issue_number,
-        github_repo_for_root(repo_root),
-        fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
-        fallback_task=current_task,
-        fallback_packet=fallback_packet,
+    return DefaultRuntimeLineageService(
+        load_authority=load_authority,
+        load_design_package=load_design_package,
+        resolve_issue_number_from_package=resolve_issue_number_from_package,
+        resolve_task_summary=resolve_task_summary,
+        queue_state_loader=queue_state,
+        local_decision_loader=latest_techlead_decision_packet,
+        qa_packet_loader=latest_qa_packet,
+        reports_dir_resolver=repo_reports_dir,
+        packet_preview_loader=latest_packet_preview,
+        github_state_loader=github_state,
+        github_repo_resolver=github_repo_for_root,
+        workflow_deriver=derive_workflow,
+        newest_packet=newest_packet,
+        target_role_for_branch=target_role_for_branch,
+        default_role_worktree_path=default_role_worktree_path,
+        git_worktree_for_path=git_worktree_for_path,
+        worktree_ownership_record=worktree_ownership_record,
+        worktree_staleness_assessment=worktree_staleness_assessment,
+    ).build_lineage_view(
+        RuntimeLineageRequest(
+            repo_root=repo_root,
+            project_slug=project_slug,
+            package_id_external=package_id_external,
+            brief_id_external=brief_id_external,
+        )
     )
-    workflow_stage, owner_role, escalations, recommended, unattended_safe = derive_workflow(current_task, issue, pr, qa_packet, queues)
-    lineage = derive_lineage_section(current_task, pr, queues, escalations, reports_dir=repo_reports_dir(repo_root))
-    workflow_stage, owner_role, recommended, unattended_safe = apply_terminal_lineage_override(
-        local_decision_packet=local_decision_packet,
-        queues=queues,
-        issue=issue,
-        pr=pr,
-        workflow_stage=workflow_stage,
-        owner_role=owner_role,
-        recommended=recommended,
-        unattended_safe=unattended_safe,
-    )
-    ambiguity_reasons = []
-    if lineage['current_packet_type'] is None and lineage['canonical_branch'] is None and not pr:
-        ambiguity_reasons.append('no_lineage_packet_or_pr_context')
-    return {
-        'ok': len(ambiguity_reasons) == 0,
-        'project_slug': project_slug,
-        'package_id_external': package_id_external,
-        'brief_id_external': brief_id_external,
-        'issue_number': issue_number,
-        'issue_url': issue.get('url'),
-        'pr_number': pr.get('number') if pr else None,
-        'pr_url': pr.get('url') if pr else None,
-        'workflow_stage': workflow_stage,
-        'current_owner_role': owner_role,
-        'lineage': lineage,
-        'source_packet_path': qa_packet.get('path') if qa_packet else None,
-        'recommended_actions': recommended,
-        'unattended_safe': unattended_safe,
-        'ambiguity_reasons': ambiguity_reasons,
-    }
 
 
 def action_type_for_role(role):
