@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from paa_core.repositories.methodology_execution import MethodologyExecutionRepository
 from paa_core.services.execution_package_resolution import (
     ExecutionPackageResolutionRequest,
@@ -14,6 +16,7 @@ from paa_core.services.methodology_execution_projection import (
     MethodologyExecutionStatusProjection,
 )
 
+from .contracts import PacketPayloadReader
 from .models import (
     PacketContextAssemblyRequest,
     PacketContextAssemblyResult,
@@ -30,10 +33,15 @@ class _NullStructuredLogger:
         return None
 
 
+class _SupportedContextConfig(TypedDict):
+    required_capabilities: tuple[str, ...]
+    context_kind: str
+
+
 class DefaultPacketContextAssemblyService:
     """Assemble the first supported deterministic worker-runtime packet context."""
 
-    _SUPPORTED_CONTEXTS = {
+    _SUPPORTED_CONTEXTS: dict[tuple[str, str], _SupportedContextConfig] = {
         ('worker_result_packet', 'techlead'): {
             'required_capabilities': ('packet-read', 'techlead-runtime'),
             'context_kind': 'worker_result_review',
@@ -54,7 +62,7 @@ class DefaultPacketContextAssemblyService:
         methodology_execution_repository: MethodologyExecutionRepository,
         methodology_execution_projection_service: MethodologyExecutionProjectionService,
         execution_package_resolution_service: ExecutionPackageResolutionService,
-        packet_payload_reader=None,
+        packet_payload_reader: PacketPayloadReader | None = None,
         logger: StructuredLogger | None = None,
     ) -> None:
         self._methodology_execution_repository = methodology_execution_repository
@@ -76,7 +84,7 @@ class DefaultPacketContextAssemblyService:
         return self._execution_package_resolution_service
 
     @property
-    def packet_payload_reader(self):
+    def packet_payload_reader(self) -> PacketPayloadReader | None:
         return self._packet_payload_reader
 
     @property
@@ -119,6 +127,7 @@ class DefaultPacketContextAssemblyService:
                     ),
                 ),
             )
+        assert context_config is not None
 
         methodology_execution_id = request.methodology_execution_id
         if not methodology_execution_id:

@@ -13,6 +13,7 @@ from paa_core.techlead_runtime_host import TechLeadRuntimeHost, _TechLeadAssignm
 from paa_core.services.queue_claim_runtime import QueueClaimRuntimeResult, QueuePacketClaimSummary, QueuePacketPreviewSummary, QueueClaimRuntimeRequest
 from paa_core.services.packet_reference_resolution import PacketReferenceResolutionResult, PacketReferenceResolutionSummary, PacketReferenceResolutionRequest
 from paa_core.services.queue_packet_runtime_controller import QueuePacketDispatchSummary, QueuePacketRuntimeRequest, QueuePacketRuntimeResult
+from paa_core.services.techlead_worker import TechLeadWorkerDispatchSummary, TechLeadWorkerRequest, TechLeadWorkerResult
 
 
 class _FakeQueueClaimRuntimeService:
@@ -343,14 +344,32 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             ok=True,
             metadata={'resolution': True},
         )
-        worker_result = SimpleNamespace(
-            request=SimpleNamespace(packet_payload={'issue_number': 6}),
+        worker_result = TechLeadWorkerResult(
+            request=TechLeadWorkerRequest(
+                packet_schema_type='worker_result_packet',
+                packet_payload={'issue_number': 6},
+            ),
+            methodology_execution_id='exec-1',
+            current_execution_summary=None,
+            dispatch_summary=TechLeadWorkerDispatchSummary(
+                handler_key='techlead-worker-dispatch',
+                packet_schema_type='worker_result_packet',
+                decision_service_used='worker-review-routing',
+                decision_supported=True,
+                recommended_next_action='assign_qa',
+                recommended_target_role='QA',
+                packet_emission_required=True,
+                methodology_transition_required=False,
+                blocking_reasons=(),
+                notes=(),
+            ),
             worker_review_routing_result=SimpleNamespace(
                 summary=SimpleNamespace(review_summary='Route implementation to QA.'),
                 recommended_actions=('assign_qa',),
             ),
             assignment_decision_result=None,
-            dispatch_summary=SimpleNamespace(recommended_next_action='assign_qa', recommended_target_role='QA'),
+            methodology_transition_result=None,
+            normalized_packet_output_summary=None,
             ok=True,
         )
         dispatch_result = QueuePacketRuntimeResult(
@@ -449,8 +468,25 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             ok=True,
             metadata={'resolution': True},
         )
-        worker_result = SimpleNamespace(
-            request=SimpleNamespace(packet_payload={'issue_number': 6, 'target_role': 'Dev'}),
+        worker_result = TechLeadWorkerResult(
+            request=TechLeadWorkerRequest(
+                packet_schema_type='techlead_decision_packet',
+                packet_payload={'issue_number': 6, 'target_role': 'Dev'},
+            ),
+            methodology_execution_id='exec-1',
+            current_execution_summary=None,
+            dispatch_summary=TechLeadWorkerDispatchSummary(
+                handler_key='techlead-worker-dispatch',
+                packet_schema_type='techlead_decision_packet',
+                decision_service_used='assignment',
+                decision_supported=True,
+                recommended_next_action='assign_dev',
+                recommended_target_role='Dev',
+                packet_emission_required=True,
+                methodology_transition_required=False,
+                blocking_reasons=(),
+                notes=(),
+            ),
             worker_review_routing_result=None,
             assignment_decision_result=SimpleNamespace(
                 summary=SimpleNamespace(
@@ -459,7 +495,8 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
                     allowed_result_types=('implemented_ready_for_qa', 'blocked'),
                 ),
             ),
-            dispatch_summary=SimpleNamespace(recommended_next_action='assign_dev', recommended_target_role='Dev'),
+            methodology_transition_result=None,
+            normalized_packet_output_summary=None,
             ok=True,
         )
         dispatch_result = QueuePacketRuntimeResult(

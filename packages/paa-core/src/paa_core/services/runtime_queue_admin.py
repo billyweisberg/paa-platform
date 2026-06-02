@@ -21,6 +21,8 @@ from paa_core.runtime_evidence import persist_qa_verification, persist_slice_res
 from paa_core.runtime_paths import repo_queue_state_root, resolved_repo_runtime_queue_topology
 from paa_core.team_worker_roles import team_worker_queue_name_by_display_name
 
+JsonDict = dict[str, Any]
+
 
 class DefaultRuntimeQueueAdminService:
     """Owns queue admin, claim lifecycle, and packet transport for the `paa` CLI."""
@@ -72,7 +74,7 @@ class DefaultRuntimeQueueAdminService:
         preview_probe_ran = preview > 0
         if preview > 0:
             _, messages = client.get_messages(queue, count=preview, ackmode='ack_requeue_true')
-            for msg in messages:
+            for msg in messages or []:
                 payload = msg.get('payload') if isinstance(msg, dict) else None
                 try:
                     parsed = json.loads(payload) if isinstance(payload, str) else payload
@@ -140,7 +142,8 @@ class DefaultRuntimeQueueAdminService:
             agent_name=self._packet_compiler_agent_name_for_message(message),
         )
         _, publish_result = self._client().publish(exchange, queue, message)
-        if publish_result.get('routed'):
+        routed = publish_result.get('routed') if isinstance(publish_result, dict) else False
+        if routed and isinstance(publish_result, dict):
             self._runtime_event_repository.record_queue_send_for_message(
                 message=message,
                 queue_name=queue,
@@ -151,7 +154,7 @@ class DefaultRuntimeQueueAdminService:
             persist_slice_result(message)
             persist_qa_verification(message)
         return {
-            'ok': bool(publish_result.get('routed')),
+            'ok': bool(routed),
             'queue': queue,
             'message_id': message['message_id'],
             'schema_type': message['schema_type'],
@@ -256,6 +259,15 @@ class DefaultRuntimeQueueAdminService:
         env = claim.get('original_envelope')
         queue = str(claim.get('queue') or '')
         exchange = self._resolved_runtime_exchange(repo_root)
+        if not isinstance(env, dict):
+            return ({
+                'ok': False,
+                'claim_id': claim_id,
+                'status': 'invalid',
+                'queue': claim.get('queue'),
+                'state_dir': claim.get('state_dir'),
+                'reason': 'missing_original_envelope',
+            }, 1)
         _, result = self._client().publish(exchange, queue, env)
         claim['status'] = 'requeued'
         claim['requeued_at'] = utc_now()
@@ -270,7 +282,7 @@ class DefaultRuntimeQueueAdminService:
                 timestamp_field='updated_at',
             )
         payload = {
-            'ok': bool(result.get('routed')),
+            'ok': bool(result.get('routed')) if isinstance(result, dict) else False,
             'claim_id': claim_id,
             'status': claim['status'],
             'queue': claim.get('queue'),
@@ -312,7 +324,8 @@ class DefaultRuntimeQueueAdminService:
             agent_name=self._packet_compiler_agent_name_for_message(message),
         )
         _, publish_result = self._client().publish(exchange, queue_name, message)
-        if publish_result.get('routed'):
+        routed = publish_result.get('routed') if isinstance(publish_result, dict) else False
+        if routed and isinstance(publish_result, dict):
             self._runtime_event_repository.record_queue_send_for_message(
                 message=message,
                 queue_name=queue_name,
@@ -323,7 +336,7 @@ class DefaultRuntimeQueueAdminService:
             persist_slice_result(message)
             persist_qa_verification(message)
         result = {
-            'ok': bool(publish_result.get('routed')),
+            'ok': bool(routed),
             'message_file': str(message_file),
             'message_id': message.get('message_id'),
             'schema_type': message.get('schema_type'),
@@ -345,7 +358,8 @@ class DefaultRuntimeQueueAdminService:
 
     def _resolve_techlead_packet_queue(self, *, message: dict[str, Any], repo_root: Path) -> str:
         schema_type = message.get('schema_type')
-        payload = message.get('payload') or {}
+        raw_payload = message.get('payload')
+        payload: JsonDict = raw_payload if isinstance(raw_payload, dict) else {}
         if schema_type == 'techlead_assignment_packet':
             role = normalize_role_name(payload.get('target_role') if isinstance(payload, dict) else None) or normalize_role_name(message.get('to_role'))
         elif schema_type == 'techlead_decision_packet':

@@ -187,7 +187,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'techlead_decision_recorded',
                 'severity': 'medium',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'TechLead has already recorded the next routing or merge decision for the active slice.',
                 'details': {
                     'message_id': latest_techlead_packet.get('message_id'),
@@ -218,7 +218,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'techlead_assignment_issued',
                 'severity': 'medium',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'TechLead has issued the next assignment packet for the active slice.',
                 'details': {
                     'message_id': latest_techlead_packet.get('message_id'),
@@ -279,7 +279,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'qa_packet_waiting_for_techlead',
                 'severity': 'high',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': (
                     acceptance_decision_result.summary.decision_summary
                     if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
@@ -310,7 +310,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'delivery_review_waiting_for_techlead',
                 'severity': 'medium',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'TechLead has a waiting Delivery Architect review packet to review.',
                 'details': {
                     'message_id': latest_techlead_packet.get('message_id'),
@@ -418,7 +418,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'worker_packet_waiting_for_techlead',
                 'severity': 'medium',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': summary,
                 'details': details,
                 'recommended_route': 'TechLead',
@@ -452,7 +452,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'dev_packet_waiting_for_techlead',
                 'severity': 'medium',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'TechLead has a waiting Dev result packet to review before QA is assigned.',
                 'details': {
                     'message_id': latest_techlead_packet.get('message_id'),
@@ -488,7 +488,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'architect_packet_waiting',
                 'severity': 'high',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']} if current_task else None,
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'Architect queue has a waiting packet.',
                 'details': details,
                 'recommended_route': 'Architect',
@@ -498,7 +498,7 @@ class DefaultRuntimeWorkflowService:
                 escalations.append({
                     'event_type': 'reset_branch_recommended',
                     'severity': 'high',
-                    'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                    'work_item_ref': self._work_item_ref(current_task),
                     'summary': 'The current slice has repeated the same scope failure after an in-place narrowing attempt; a reset branch recovery should be chosen instead of another incremental cleanup pass.',
                     'details': {
                         'architect_rejection_comment_at': (architect_rejection_before_rework or {}).get('createdAt'),
@@ -531,7 +531,7 @@ class DefaultRuntimeWorkflowService:
             escalations.append({
                 'event_type': 'qa_escalation_superseded',
                 'severity': 'low',
-                'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                'work_item_ref': self._work_item_ref(current_task),
                 'summary': 'A newer Python rework/handoff has superseded the earlier QA escalation for this issue.',
                 'details': {
                     'superseded_qa_packet_id': qa_packet.get('message_id'),
@@ -552,6 +552,7 @@ class DefaultRuntimeWorkflowService:
             return RuntimeWorkflowDerivation(stage, owner, escalations, recommended, unattended_safe)
 
         if architect_rejected_after_qa and issue['state'] == 'OPEN' and pr and pr.get('state') == 'OPEN':
+            assert qa_packet is not None
             stage = 'dev_reset_required' if reset_required_after_failed_rework else 'dev_rework_required'
             owner = 'Dev'
             unattended_safe = False
@@ -559,7 +560,7 @@ class DefaultRuntimeWorkflowService:
                 escalations.append({
                     'event_type': 'reset_branch_required',
                     'severity': 'high',
-                    'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                    'work_item_ref': self._work_item_ref(current_task),
                     'summary': 'The issue has repeated the same scope failure after an in-place rework. The correct recovery is a clean reset branch from main, not another incremental narrowing pass.',
                     'details': {
                         'qa_packet_id': qa_packet.get('message_id'),
@@ -583,7 +584,7 @@ class DefaultRuntimeWorkflowService:
                 escalations.append({
                     'event_type': 'architect_rejection_recorded',
                     'severity': 'high',
-                    'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                    'work_item_ref': self._work_item_ref(current_task),
                     'summary': 'Architect has already reviewed the QA escalation and rejected the current PR head pending a narrower rework.',
                     'details': {
                         'qa_packet_id': qa_packet.get('message_id'),
@@ -609,10 +610,11 @@ class DefaultRuntimeWorkflowService:
                 stage = 'techlead_qa_review_pending'
                 owner = 'TechLead'
                 unattended_safe = False
+                assert qa_packet is not None
                 escalations.append({
                     'event_type': 'qa_escalation_pending',
                     'severity': 'high',
-                    'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                    'work_item_ref': self._work_item_ref(current_task),
                     'summary': 'QA has escalated the active slice for Architect review.',
                     'details': {
                         'qa_packet_id': qa_packet.get('message_id'),
@@ -636,6 +638,7 @@ class DefaultRuntimeWorkflowService:
                 stage = 'techlead_qa_review_pending'
                 owner = 'TechLead'
                 unattended_safe = False
+                assert qa_packet is not None
                 acceptance_decision_result = None
                 try:
                     acceptance_decision_service = self._acceptance_decision_service_factory()
@@ -654,7 +657,7 @@ class DefaultRuntimeWorkflowService:
                 escalations.append({
                     'event_type': 'qa_pass_pending_acceptance',
                     'severity': 'medium',
-                    'work_item_ref': {'issue_number': current_task['issue_number'], 'task_id': current_task['task_id']},
+                    'work_item_ref': self._work_item_ref(current_task),
                     'summary': (
                         acceptance_decision_result.summary.decision_summary
                         if acceptance_decision_result is not None and acceptance_decision_result.summary.decision_summary
@@ -720,6 +723,15 @@ class DefaultRuntimeWorkflowService:
             owner = 'Dev'
 
         return RuntimeWorkflowDerivation(stage, owner, escalations, recommended, unattended_safe)
+
+    @staticmethod
+    def _work_item_ref(current_task: dict[str, Any] | None) -> dict[str, Any] | None:
+        if current_task is None:
+            return None
+        return {
+            'issue_number': current_task.get('issue_number'),
+            'task_id': current_task.get('task_id'),
+        }
 
     @staticmethod
     def apply_terminal_lineage_override(

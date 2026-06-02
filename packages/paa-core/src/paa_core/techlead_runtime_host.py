@@ -8,11 +8,13 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from paa_core.claim_ledger import FileQueueClaimLedgerRepository, utc_now
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_unified_runtime_project_config
+from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
 from paa_core.queue_transport import RabbitMQManagementClient, build_default_management_client
+from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
 from paa_core.policies.acceptance import DefaultAcceptancePolicy
 from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
 from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
@@ -25,18 +27,37 @@ from paa_core.repositories.workflow_state import (
     WorkflowTransitionAppendSpec,
 )
 from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
-from paa_core.services.execution_package_resolution.models import ExecutionPackageResolutionView
+from paa_core.services.dev_worker import DevWorkerService
+from paa_core.services.execution_package_resolution import (
+    DefaultExecutionPackageResolutionService,
+    ExecutionPackageResolutionService,
+)
+from paa_core.services.execution_package_resolution.models import (
+    ExecutionPackageCapabilitySummary,
+    ExecutionPackageGap,
+    ExecutionPackageResolutionRequest,
+    ExecutionPackageResolutionView,
+)
+from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 from paa_core.services.methodology_execution_preflight import DefaultMethodologyExecutionPreflightService
 from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
 from paa_core.services.packet_reference_resolution import (
     DefaultPacketReferenceResolutionService,
     PacketReferenceResolutionRequest,
+    PacketReferenceResolutionService,
 )
-from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
+from paa_core.services.qa_worker import QAWorkerService
+from paa_core.services.queue_claim_runtime import (
+    DefaultQueueClaimRuntimeService,
+    QueueClaimRuntimeRequest,
+    QueueClaimRuntimeResult,
+    QueueClaimRuntimeService,
+)
 from paa_core.services.queue_packet_runtime_controller import (
     DefaultQueuePacketRuntimeController,
     QueuePacketRuntimeRequest,
+    QueuePacketRuntimeController,
 )
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
 from paa_core.services.techlead_assignment_decision import DefaultTechLeadAssignmentDecisionService
@@ -44,11 +65,56 @@ from paa_core.services.techlead_closeout_decision import DefaultTechLeadCloseout
 from paa_core.services.techlead_delivery_review_decision import DefaultTechLeadDeliveryReviewDecisionService
 from paa_core.services.techlead_lineage_decision import DefaultTechLeadLineageDecisionService
 from paa_core.services.techlead_reset_recovery_decision import DefaultTechLeadResetRecoveryDecisionService
-from paa_core.services.techlead_worker import DefaultTechLeadWorkerService
+from paa_core.services.techlead_worker import (
+    DefaultTechLeadWorkerService,
+    TechLeadWorkerResult,
+)
 from paa_core.services.techlead_worker_review_routing import DefaultTechLeadWorkerReviewRoutingService
 from paa_core.services.workflow_lifecycle import DefaultWorkflowLifecycleService, WorkflowLifecycleRequest
 
 from paa_core.runtime_packet_dispatch import dispatch_packet
+
+JsonDict = dict[str, Any]
+
+
+class _QueueClaimLifecycleAdapterProtocol(Protocol):
+    def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
+        ...
+
+    def requeue_claim(self, claim_id: str) -> dict[str, object]:
+        ...
+
+
+class _TechLeadAssignmentPublisherProtocol(Protocol):
+    def publish_next_assignment(
+        self,
+        *,
+        worker_result: TechLeadWorkerResult,
+        source_packet_message_id: str | None,
+        source_packet_path: str | None,
+    ) -> dict[str, Any] | None:
+        ...
+
+
+class _WorkflowTransitionAdapterProtocol(Protocol):
+    def apply_return_transition(
+        self,
+        *,
+        packet_path: str | None,
+        packet_message_id: str | None,
+        packet_schema_type: str | None,
+    ) -> dict[str, Any]:
+        ...
+
+    def record_assignment_emitted(
+        self,
+        *,
+        source_packet_message_id: str | None,
+        source_packet_schema_type: str | None,
+        source_claim_id: str | None,
+        emitted_assignment: dict[str, Any],
+    ) -> dict[str, Any]:
+        ...
 
 
 class _NullStructuredLogger:
@@ -62,26 +128,31 @@ class _NullStructuredLogger:
 class _JsonFilePacketArtifactReader:
     def read_packet_payload(self, packet_path: str) -> dict[str, object]:
         path = Path(packet_path).expanduser().resolve()
-        payload = json.loads(path.read_text())
+        payload: object = json.loads(path.read_text())
         if isinstance(payload, dict):
             inner_payload = payload.get('payload')
             if isinstance(inner_payload, dict):
-                return inner_payload
-            return payload
+                return cast(dict[str, object], inner_payload)
+            return cast(dict[str, object], payload)
         return {'packet_payload': payload}
+
+    def read_packet(self, packet_reference: object) -> dict[str, object]:
+        if isinstance(packet_reference, str):
+            return self.read_packet_payload(packet_reference)
+        return {'packet_payload': packet_reference}
 
 
 class _QueueTransportAdapter:
     def __init__(self, *, client: RabbitMQManagementClient) -> None:
         self._client = client
 
-    def preview_queue(self, queue_name: str, *, limit: int = 1) -> object:
+    def preview_queue(self, queue_name: str, *, limit: int = 1) -> JsonDict | None:
         _, messages = self._client.get_messages(queue_name, count=limit, ackmode='ack_requeue_true')
         if not messages:
             return None
         return self._normalize_broker_message(messages[0])
 
-    def claim_next_packet(self, queue_name: str, *, claimant_name: str | None = None) -> object:
+    def claim_next_packet(self, queue_name: str, *, claimant_name: str | None = None) -> JsonDict | None:
         del claimant_name
         _, messages = self._client.get_messages(queue_name, count=1, ackmode='ack_requeue_false')
         if not messages:
@@ -98,6 +169,7 @@ class _QueueTransportAdapter:
             'packet_message_id': parsed.get('message_id'),
             'packet_schema_type': parsed.get('schema_type'),
             'packet_reference': parsed.get('message_id'),
+            'packet_payload': parsed.get('payload') if isinstance(parsed.get('payload'), dict) else None,
             'message_id': parsed.get('message_id'),
             'schema_type': parsed.get('schema_type'),
             'original_envelope': parsed,
@@ -109,7 +181,7 @@ class _QueueClaimStateAdapter:
         self._claim_ledger_repository = claim_ledger_repository
         self._runtime_event_repository = runtime_event_repository
 
-    def record_claim(self, claim_record: object) -> object:
+    def record_claim(self, claim_record: object) -> dict[str, object]:
         if not isinstance(claim_record, dict):
             return {'claim_id': None}
         record = self._claim_ledger_repository.record_claim({
@@ -164,12 +236,14 @@ class _QueueClaimLifecycleAdapter:
     def requeue_claim(self, claim_id: str) -> dict[str, object]:
         path, claim = self._claim_ledger_repository.load_claim(claim_id)
         envelope = claim.get('original_envelope')
+        if not isinstance(envelope, dict):
+            return {'ok': False, 'claim_id': claim_id, 'status': 'invalid', 'reason': 'missing_original_envelope'}
         _, result = self._client.publish(self._exchange, claim['queue'], envelope)
         claim['status'] = 'requeued'
         claim['requeued_at'] = utc_now()
-        claim['requeue_result'] = dict(result)
+        claim['requeue_result'] = result if isinstance(result, dict) else {}
         self._claim_ledger_repository.update_claim(path, claim)
-        message_id = (claim.get('original_envelope') or {}).get('message_id')
+        message_id = envelope.get('message_id')
         if isinstance(message_id, str) and message_id:
             self._runtime_event_repository.update_queue_message_status_by_external(
                 message_id_external=message_id,
@@ -177,28 +251,131 @@ class _QueueClaimLifecycleAdapter:
                 handoff_status='requeued',
                 timestamp_field='updated_at',
             )
-        return {'ok': bool(result.get('routed')), 'claim_id': claim_id, 'status': claim['status']}
+        routed = result.get('routed') if isinstance(result, dict) else False
+        return {'ok': bool(routed), 'claim_id': claim_id, 'status': claim['status']}
 
 
 class _NullExecutionPackageResolutionService:
-    def resolve_execution_context(self, request):
+    @property
+    def repository(self) -> PostgresExecutionPackageRepository:
+        return self._repository
+
+    @property
+    def capability_policy(self) -> DefaultDeploymentCapabilityPolicy:
+        return self._capability_policy
+
+    @property
+    def logger(self) -> StructuredLogger:
+        return self._logger
+
+    def __init__(self) -> None:
+        self._repository = PostgresExecutionPackageRepository()
+        self._capability_policy = DefaultDeploymentCapabilityPolicy()
+        self._logger: StructuredLogger = _NullStructuredLogger()
+
+    def resolve_execution_context(
+        self,
+        request: ExecutionPackageResolutionRequest,
+    ) -> ExecutionPackageResolutionView:
         return ExecutionPackageResolutionView(
-            execution_surface_key=request.execution_surface_key,
+            execution_surface_key=request.execution_surface_key or 'techlead-runtime',
+            execution_surface_type=request.execution_surface_type or 'consumer_repo_runtime',
+            execution_package_install_id=None,
+            package_name=None,
             repo_root_path=request.repo_root_path,
             runtime_root_path=request.runtime_root_path,
-            work_item_id=request.work_item_id,
-            consumer_context_key=None,
-            methodology_execution_id=None,
-            package_id_external=None,
             package_version=None,
-            package_root_path=None,
-            overlays=(),
-            artifact_refs=(),
-            capability_summary=(),
-            summary='not-used-in-techlead-runtime-transition-proof',
-            unresolved_requirements=(),
+            authority_version_id=None,
+            active_overlay_keys=(),
+            manifest_path=None,
+            package_metadata_path=None,
+            docs_root_path=None,
+            artifacts_root_path=None,
+            capability_summary=ExecutionPackageCapabilitySummary(
+                allowed=True,
+                missing_capabilities=(),
+                blocking_reasons=(),
+                satisfied_capabilities=(),
+                notes=('not-used-in-techlead-runtime-transition-proof',),
+                metadata={},
+            ),
+            warnings=(),
+            gaps=(),
             metadata={},
         )
+
+    def resolve_execution_context_for_surface(
+        self,
+        execution_surface_key: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
+        merged_request = request or ExecutionPackageResolutionRequest()
+        return self.resolve_execution_context(
+            ExecutionPackageResolutionRequest(
+                execution_surface_key=execution_surface_key,
+                execution_surface_type=merged_request.execution_surface_type,
+                repo_root_path=merged_request.repo_root_path,
+                runtime_root_path=merged_request.runtime_root_path,
+                work_item_id=merged_request.work_item_id,
+                coder_run_brief_id=merged_request.coder_run_brief_id,
+                consumer_context_key=merged_request.consumer_context_key,
+                required_surface_types=merged_request.required_surface_types,
+                required_artifact_refs=merged_request.required_artifact_refs,
+                required_overlay_keys=merged_request.required_overlay_keys,
+                metadata=dict(merged_request.metadata or {}) if merged_request.metadata else None,
+            )
+        )
+
+    def resolve_execution_context_for_repo_root(
+        self,
+        repo_root_path: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
+        merged_request = request or ExecutionPackageResolutionRequest()
+        return self.resolve_execution_context(
+            ExecutionPackageResolutionRequest(
+                execution_surface_key=merged_request.execution_surface_key,
+                execution_surface_type=merged_request.execution_surface_type,
+                repo_root_path=repo_root_path,
+                runtime_root_path=merged_request.runtime_root_path,
+                work_item_id=merged_request.work_item_id,
+                coder_run_brief_id=merged_request.coder_run_brief_id,
+                consumer_context_key=merged_request.consumer_context_key,
+                required_surface_types=merged_request.required_surface_types,
+                required_artifact_refs=merged_request.required_artifact_refs,
+                required_overlay_keys=merged_request.required_overlay_keys,
+                metadata=dict(merged_request.metadata or {}) if merged_request.metadata else None,
+            )
+        )
+
+    def resolve_execution_context_for_runtime_root(
+        self,
+        runtime_root_path: str,
+        request: ExecutionPackageResolutionRequest | None = None,
+    ) -> ExecutionPackageResolutionView:
+        merged_request = request or ExecutionPackageResolutionRequest()
+        return self.resolve_execution_context(
+            ExecutionPackageResolutionRequest(
+                execution_surface_key=merged_request.execution_surface_key,
+                execution_surface_type=merged_request.execution_surface_type,
+                repo_root_path=merged_request.repo_root_path,
+                runtime_root_path=runtime_root_path,
+                work_item_id=merged_request.work_item_id,
+                coder_run_brief_id=merged_request.coder_run_brief_id,
+                consumer_context_key=merged_request.consumer_context_key,
+                required_surface_types=merged_request.required_surface_types,
+                required_artifact_refs=merged_request.required_artifact_refs,
+                required_overlay_keys=merged_request.required_overlay_keys,
+                metadata=dict(merged_request.metadata or {}) if merged_request.metadata else None,
+            )
+        )
+
+    def detect_execution_package_gaps(
+        self,
+        request: ExecutionPackageResolutionRequest,
+    ) -> tuple[ExecutionPackageGap, ...]:
+        del request
+        return ()
 
 
 class _TechLeadWorkflowTransitionAdapter:
@@ -208,7 +385,7 @@ class _TechLeadWorkflowTransitionAdapter:
         workflow_state_repository: PostgresWorkflowStateRepository,
         runtime_event_repository: PostgresRuntimeEventRepository,
         runtime_identity_repository: PostgresRuntimeIdentityRepository,
-        logger: object | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         self._workflow_state_repository = workflow_state_repository
         self._runtime_event_repository = runtime_event_repository
@@ -362,7 +539,7 @@ class _TechLeadWorkflowTransitionAdapter:
 
 
 class _PassthroughPacketEnvelopeValidator:
-    def validate_packet_envelope(self, packet: object) -> object:
+    def validate_packet_envelope(self, packet: object) -> dict[str, bool]:
         return {'ok': packet is not None}
 
 
@@ -618,15 +795,15 @@ class TechLeadRuntimeHost:
         self,
         *,
         queue_name: str,
-        queue_claim_runtime_service: object,
-        queue_claim_lifecycle_adapter: object | None,
-        packet_reference_resolution_service: object,
-        queue_packet_runtime_controller: object,
-        assignment_publisher: object | None,
-        workflow_transition_adapter: object | None,
+        queue_claim_runtime_service: QueueClaimRuntimeService,
+        queue_claim_lifecycle_adapter: _QueueClaimLifecycleAdapterProtocol | None,
+        packet_reference_resolution_service: PacketReferenceResolutionService,
+        queue_packet_runtime_controller: QueuePacketRuntimeController,
+        assignment_publisher: _TechLeadAssignmentPublisherProtocol | None,
+        workflow_transition_adapter: _WorkflowTransitionAdapterProtocol | None,
         actor_name: str,
         host_name: str,
-        logger: object | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         self._queue_name = queue_name
         self._queue_claim_runtime_service = queue_claim_runtime_service
@@ -654,7 +831,6 @@ class TechLeadRuntimeHost:
                 metadata=claim_result.metadata,
             )
 
-        envelope = claim_result.normalized_packet_envelope or {}
         packet_message_id = self._resolved_packet_message_id(claim_result)
         packet_reference = self._resolved_packet_reference(claim_result)
         packet_schema_type = self._resolved_packet_schema_type(claim_result) or 'worker_result_packet'
@@ -727,7 +903,10 @@ class TechLeadRuntimeHost:
             and (workflow_transition_result is None or bool(workflow_transition_result.get('ok')))
         ):
             selected_worker_result = runtime_result.selected_worker_result
-            if selected_worker_result is not None and self._assignment_publisher is not None:
+            if (
+                isinstance(selected_worker_result, TechLeadWorkerResult)
+                and self._assignment_publisher is not None
+            ):
                 emitted_assignment = self._assignment_publisher.publish_next_assignment(
                     worker_result=selected_worker_result,
                     source_packet_message_id=resolution_result.resolution_summary.packet_message_id,
@@ -753,9 +932,11 @@ class TechLeadRuntimeHost:
         final_reason = runtime_result.reason
         final_details = runtime_result.details
         if not workflow_success:
+            assert workflow_transition_result is not None
             final_reason = str(workflow_transition_result.get('reason') or 'workflow_transition_failed')
             final_details = ', '.join(str(item) for item in workflow_transition_result.get('blocking_reasons') or ()) or runtime_result.details
         elif not assignment_transition_success:
+            assert assignment_transition_result is not None
             final_reason = str(assignment_transition_result.get('reason') or 'assignment_transition_failed')
             final_details = ', '.join(str(item) for item in assignment_transition_result.get('blocking_reasons') or ()) or runtime_result.details
         lifecycle_result = self._finalize_claim(
@@ -799,7 +980,7 @@ class TechLeadRuntimeHost:
             return self._queue_claim_lifecycle_adapter.acknowledge_claim(claim_id)
         return self._queue_claim_lifecycle_adapter.requeue_claim(claim_id)
 
-    def _claim_with_retry(self, *, intake_mode: str) -> object:
+    def _claim_with_retry(self, *, intake_mode: str) -> QueueClaimRuntimeResult:
         attempts = 3 if intake_mode == 'claim_next' else 1
         retry_delay_seconds = 0.75
         last_result = None
@@ -823,10 +1004,10 @@ class TechLeadRuntimeHost:
             if getattr(last_result, 'reason', None) != 'missing_queue_packet' or attempt >= attempts:
                 return last_result
             time.sleep(retry_delay_seconds)
-        return last_result
+        return cast(QueueClaimRuntimeResult, last_result)
 
     @staticmethod
-    def _resolved_packet_message_id(claim_result: object) -> str | None:
+    def _resolved_packet_message_id(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_message_id')
@@ -845,7 +1026,7 @@ class TechLeadRuntimeHost:
         return None
 
     @staticmethod
-    def _resolved_packet_reference(claim_result: object) -> str | None:
+    def _resolved_packet_reference(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_reference')
@@ -864,7 +1045,7 @@ class TechLeadRuntimeHost:
         return None
 
     @staticmethod
-    def _resolved_packet_schema_type(claim_result: object) -> str | None:
+    def _resolved_packet_schema_type(claim_result: QueueClaimRuntimeResult) -> str | None:
         envelope = getattr(claim_result, 'normalized_packet_envelope', None) or {}
         if isinstance(envelope, dict):
             value = envelope.get('packet_schema_type')
@@ -941,7 +1122,7 @@ def build_techlead_runtime_host(
     *,
     actor_name: str = 'TechLead Agent',
     host_name: str = 'techlead-runtime-host',
-    logger: object | None = None,
+    logger: StructuredLogger | None = None,
 ) -> TechLeadRuntimeHost:
     resolved_repo_root = repo_root.expanduser().resolve()
     runtime_logger = logger if logger is not None else _NullStructuredLogger()
@@ -982,8 +1163,8 @@ def build_techlead_runtime_host(
     packet_reader = _JsonFilePacketArtifactReader()
     queue_packet_runtime_controller = DefaultQueuePacketRuntimeController(
         techlead_worker_service=techlead_worker_service,
-        dev_worker_service=_UnsupportedWorkerHost('DevWorkerService'),
-        qa_worker_service=_UnsupportedWorkerHost('QAWorkerService'),
+        dev_worker_service=cast(DevWorkerService, _UnsupportedWorkerHost('DevWorkerService')),
+        qa_worker_service=cast(QAWorkerService, _UnsupportedWorkerHost('QAWorkerService')),
         queue_packet_reader=packet_reader,
         queue_packet_delivery_adapter=None,
         logger=runtime_logger,
