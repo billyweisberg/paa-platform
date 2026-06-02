@@ -1,4 +1,4 @@
-.PHONY: docs-lint-governed docs-lint-language docs-lint-code docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference
+.PHONY: docs-lint-governed docs-lint-language docs-lint-code docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference runtime-supervisor
 
 docs-lint-governed:
 	bash /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/lint_governed_docs.sh
@@ -45,3 +45,6 @@ docs-current-reference:
 	python /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/paa_docs.py current \
 	  --root /Users/billyweisberg/Repos/billyweisberg/paa-platform \
 	  --stage reference
+
+runtime-supervisor:
+	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_runtime_supervisor.sh
