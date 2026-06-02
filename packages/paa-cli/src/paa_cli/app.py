@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Final
 
 try:
@@ -33,6 +35,19 @@ from paa_core.services.methodology_execution_projection import (
     DefaultMethodologyExecutionProjectionService,
 )
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
+from paa_consumer.hosts import (
+    build_dev_runtime_host,
+    build_qa_runtime_host,
+    build_runtime_supervisor,
+    build_techlead_runtime_host,
+)
+from paa_consumer.runtime_supervisor_control import (
+    restart_runtime_supervisor,
+    runtime_supervisor_logs,
+    runtime_supervisor_status,
+    start_runtime_supervisor,
+    stop_runtime_supervisor,
+)
 
 from .command_adapters import (
     AgentCommandAdapter,
@@ -463,6 +478,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     agent_app = typer.Typer(help='Project-scoped runtime agent identity commands.', no_args_is_help=True)
     queue_app = typer.Typer(help='Queue packet preview surfaces over the runtime controller.', no_args_is_help=True)
     worker_app = typer.Typer(help='Worker dispatch preview surfaces over the runtime controller.', no_args_is_help=True)
+    runtime_app = typer.Typer(help='Runtime host and supervisor control surfaces.', no_args_is_help=True)
 
     @component_app.command('materialize')
     def component_materialize(
@@ -918,6 +934,162 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+    @runtime_app.command('supervisor')
+    def runtime_supervisor(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        intake_mode: str = typer.Option('claim_next', '--intake-mode'),
+        emit_next_assignment: bool = typer.Option(True, '--emit-next-assignment/--no-emit-next-assignment'),
+        emit_worker_result: bool = typer.Option(True, '--emit-worker-result/--no-emit-worker-result'),
+        emit_verification: bool = typer.Option(True, '--emit-verification/--no-emit-verification'),
+        max_iterations: int = typer.Option(0, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        supervisor = build_runtime_supervisor(resolved_repo_root)
+        result = supervisor.run(
+            intake_mode=intake_mode,
+            emit_next_assignment=emit_next_assignment,
+            emit_worker_result=emit_worker_result,
+            emit_verification=emit_verification,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
+
+    @runtime_app.command('start')
+    def runtime_start(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        intake_mode: str = typer.Option('claim_next', '--intake-mode'),
+        emit_next_assignment: bool = typer.Option(True, '--emit-next-assignment/--no-emit-next-assignment'),
+        emit_worker_result: bool = typer.Option(True, '--emit-worker-result/--no-emit-worker-result'),
+        emit_verification: bool = typer.Option(True, '--emit-verification/--no-emit-verification'),
+        max_iterations: int = typer.Option(0, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        result = start_runtime_supervisor(
+            resolved_repo_root,
+            intake_mode=intake_mode,
+            emit_next_assignment=emit_next_assignment,
+            emit_worker_result=emit_worker_result,
+            emit_verification=emit_verification,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
+
+    @runtime_app.command('stop')
+    def runtime_stop(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        result = stop_runtime_supervisor(resolved_repo_root)
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
+
+    @runtime_app.command('status')
+    def runtime_status(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        result = runtime_supervisor_status(resolved_repo_root)
+        typer.echo(json.dumps(result, indent=2))
+
+    @runtime_app.command('logs')
+    def runtime_logs(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        lines: int = typer.Option(200, '--lines'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        output = runtime_supervisor_logs(resolved_repo_root, lines=lines)
+        if output:
+            typer.echo(output)
+
+    @runtime_app.command('restart')
+    def runtime_restart(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        intake_mode: str = typer.Option('claim_next', '--intake-mode'),
+        emit_next_assignment: bool = typer.Option(True, '--emit-next-assignment/--no-emit-next-assignment'),
+        emit_worker_result: bool = typer.Option(True, '--emit-worker-result/--no-emit-worker-result'),
+        emit_verification: bool = typer.Option(True, '--emit-verification/--no-emit-verification'),
+        max_iterations: int = typer.Option(0, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        result = restart_runtime_supervisor(
+            resolved_repo_root,
+            intake_mode=intake_mode,
+            emit_next_assignment=emit_next_assignment,
+            emit_worker_result=emit_worker_result,
+            emit_verification=emit_verification,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
+
+    @runtime_app.command('techlead')
+    def runtime_techlead(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        actor_name: str = typer.Option('TechLead Agent', '--actor-name'),
+        host_name: str = typer.Option('techlead-runtime-host', '--host-name'),
+        intake_mode: str = typer.Option('preview', '--intake-mode'),
+        emit_next_assignment: bool = typer.Option(False, '--emit-next-assignment/--no-emit-next-assignment'),
+        max_iterations: int = typer.Option(1, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        host = build_techlead_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        result = host.run_loop(
+            intake_mode=intake_mode,
+            emit_next_assignment=emit_next_assignment,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+
+    @runtime_app.command('dev')
+    def runtime_dev(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        actor_name: str = typer.Option('Dev Agent', '--actor-name'),
+        host_name: str = typer.Option('dev-runtime-host', '--host-name'),
+        intake_mode: str = typer.Option('preview', '--intake-mode'),
+        emit_worker_result: bool = typer.Option(False, '--emit-worker-result/--no-emit-worker-result'),
+        max_iterations: int = typer.Option(1, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        host = build_dev_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        result = host.run_loop(
+            intake_mode=intake_mode,
+            emit_worker_result=emit_worker_result,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+
+    @runtime_app.command('qa')
+    def runtime_qa(
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        actor_name: str = typer.Option('QA Agent', '--actor-name'),
+        host_name: str = typer.Option('qa-runtime-host', '--host-name'),
+        intake_mode: str = typer.Option('preview', '--intake-mode'),
+        emit_verification: bool = typer.Option(False, '--emit-verification/--no-emit-verification'),
+        max_iterations: int = typer.Option(1, '--max-iterations'),
+        poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
+    ) -> None:
+        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
+        host = build_qa_runtime_host(resolved_repo_root, actor_name=actor_name, host_name=host_name)
+        result = host.run_loop(
+            intake_mode=intake_mode,
+            emit_verification=emit_verification,
+            max_iterations=max_iterations,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        typer.echo(json.dumps(result, indent=2))
+
     @report_app.command('explain')
     def report_explain(
         methodology_execution_id: str = typer.Option(..., '--methodology-execution-id'),
@@ -946,6 +1118,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     app.add_typer(agent_app, name='agent')
     app.add_typer(queue_app, name='queue')
     app.add_typer(worker_app, name='worker')
+    app.add_typer(runtime_app, name='runtime')
     return app
 
 

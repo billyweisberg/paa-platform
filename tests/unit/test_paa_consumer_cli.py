@@ -38,134 +38,54 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertIn('terminal_lineage_override_policy', remaining_names)
         self.assertNotIn('live_closed_closeout_context', remaining_names)
 
-    def test_runtime_supervisor_uses_builder_and_prints_summary(self) -> None:
-        buffer = io.StringIO()
-        fake_supervisor = type(
-            'FakeSupervisor',
-            (),
-            {
-                'run': lambda self, **kwargs: {
-                    'ok': True,
-                    'host_count': 3,
-                    'intake_mode': kwargs['intake_mode'],
-                    'max_iterations': kwargs['max_iterations'],
-                    'results': {'techlead': {}, 'dev': {}, 'qa': {}},
-                    'errors': {},
-                }
-            },
-        )()
-
-        with patch('paa_consumer.__main__.build_runtime_supervisor', return_value=fake_supervisor), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'runtime-supervisor', '--max-iterations', '2']):
+    def test_runtime_supervisor_command_forwards_to_paa_cli(self) -> None:
+        with patch('paa_consumer.__main__._run_paa_cli', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', 'runtime-supervisor-start']):
             exit_code = main()
 
         self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertEqual(payload['host_count'], 3)
-        self.assertEqual(payload['max_iterations'], 2)
-        self.assertEqual(set(payload['results'].keys()), {'techlead', 'dev', 'qa'})
+        self.assertEqual(mock_run.call_args.args[0], ['runtime', 'start', '--repo-root', '/tmp/repo'])
 
-
-    def test_runtime_supervisor_start_routes_to_control_surface(self) -> None:
-        buffer = io.StringIO()
-        with patch('paa_consumer.__main__.start_runtime_supervisor', return_value={'ok': True, 'pid': 123}), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-start']):
+    def test_runtime_supervisor_command_forwards_to_paa_cli_runtime_group(self) -> None:
+        with patch('paa_consumer.__main__._run_paa_cli', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', 'runtime-supervisor', '--max-iterations', '2']):
             exit_code = main()
 
         self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertEqual(payload['pid'], 123)
+        self.assertEqual(
+            mock_run.call_args.args[0],
+            ['runtime', 'supervisor', '--repo-root', '/tmp/repo', '--max-iterations', '2'],
+        )
 
-    def test_runtime_supervisor_status_routes_to_control_surface(self) -> None:
-        buffer = io.StringIO()
-        with patch('paa_consumer.__main__.runtime_supervisor_status', return_value={'ok': True, 'running': True, 'pid': 321}), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-status']):
+    def test_runtime_supervisor_status_forwards_to_paa_cli_runtime_group(self) -> None:
+        with patch('paa_consumer.__main__._run_paa_cli', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', 'runtime-supervisor-status']):
             exit_code = main()
 
         self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertTrue(payload['running'])
-        self.assertEqual(payload['pid'], 321)
+        self.assertEqual(mock_run.call_args.args[0], ['runtime', 'status', '--repo-root', '/tmp/repo'])
 
-    def test_runtime_supervisor_logs_routes_to_control_surface(self) -> None:
-        buffer = io.StringIO()
-        with patch('paa_consumer.__main__.runtime_supervisor_logs', return_value='line-1\nline-2'), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-logs']):
+    def test_techlead_runtime_forwards_to_paa_cli_runtime_group(self) -> None:
+        with patch('paa_consumer.__main__._run_paa_cli', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', 'techlead-runtime', '--max-iterations', '2']):
             exit_code = main()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(buffer.getvalue().strip(), 'line-1\nline-2')
+        self.assertEqual(
+            mock_run.call_args.args[0],
+            ['runtime', 'techlead', '--repo-root', '/tmp/repo', '--max-iterations', '2'],
+        )
 
-    def test_runtime_supervisor_stop_routes_to_control_surface(self) -> None:
-        buffer = io.StringIO()
-        with patch('paa_consumer.__main__.stop_runtime_supervisor', return_value={'ok': True, 'stopped': True}), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-stop']):
+    def test_qa_runtime_forwards_to_paa_cli_runtime_group(self) -> None:
+        with patch('paa_consumer.__main__._run_paa_cli', return_value=0) as mock_run, \
+             patch('sys.argv', ['paa-consumer', '--repo-root', '/tmp/repo', 'qa-runtime', '--max-iterations', '2']):
             exit_code = main()
 
         self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertTrue(payload['stopped'])
-
-    def test_techlead_runtime_uses_host_builder_and_prints_loop_summary(self) -> None:
-        buffer = io.StringIO()
-        fake_host = type(
-            'FakeHost',
-            (),
-            {
-                'run_loop': lambda self, **kwargs: {
-                    'host_name': 'techlead-runtime-host',
-                    'queue_name': 'paa-techlead',
-                    'intake_mode': kwargs['intake_mode'],
-                    'emit_next_assignment': kwargs['emit_next_assignment'],
-                    'iteration_count': kwargs['max_iterations'],
-                    'iterations': [],
-                }
-            },
-        )()
-
-        with patch('paa_consumer.__main__.build_techlead_runtime_host', return_value=fake_host), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'techlead-runtime', '--max-iterations', '2', '--emit-next-assignment']):
-            exit_code = main()
-
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertEqual(payload['queue_name'], 'paa-techlead')
-        self.assertTrue(payload['emit_next_assignment'])
-        self.assertEqual(payload['iteration_count'], 2)
-
-    def test_qa_runtime_uses_host_builder_and_prints_loop_summary(self) -> None:
-        buffer = io.StringIO()
-        fake_host = type(
-            'FakeHost',
-            (),
-            {
-                'run_loop': lambda self, **kwargs: {
-                    'host_name': 'qa-runtime-host',
-                    'queue_name': 'paa-qa',
-                    'intake_mode': kwargs['intake_mode'],
-                    'emit_verification': kwargs['emit_verification'],
-                    'iteration_count': kwargs['max_iterations'],
-                    'iterations': [],
-                }
-            },
-        )()
-
-        with patch('paa_consumer.__main__.build_qa_runtime_host', return_value=fake_host), \
-             patch('sys.stdout', buffer), \
-             patch('sys.argv', ['paa-consumer', 'qa-runtime', '--max-iterations', '2', '--emit-verification']):
-            exit_code = main()
-
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(buffer.getvalue())
-        self.assertEqual(payload['queue_name'], 'paa-qa')
-        self.assertTrue(payload['emit_verification'])
-        self.assertEqual(payload['iteration_count'], 2)
+        self.assertEqual(
+            mock_run.call_args.args[0],
+            ['runtime', 'qa', '--repo-root', '/tmp/repo', '--max-iterations', '2'],
+        )
 
     def test_queue_purge_routes_to_shared_queue_runtime(self) -> None:
         with patch('paa_consumer.__main__.run_queue_command', return_value=0) as mock_run, \

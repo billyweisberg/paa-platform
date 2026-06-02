@@ -12,22 +12,10 @@ from paa_core import handoff_runtime
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_consumer.authority_install import install_authority
 from paa_consumer.commands import CONSUMER_COMMANDS
-from paa_consumer.hosts import (
-    build_dev_runtime_host,
-    build_qa_runtime_host,
-    build_runtime_supervisor,
-    build_techlead_runtime_host,
-)
+from paa_cli.app import build_app as build_paa_cli_app
 from paa_consumer.inbox import dispatch_techlead_packet, resolve_techlead_packet_queue, run_queue_command
 from paa_consumer.techlead_service_map import build_techlead_service_map
 from paa_consumer.runtime_guardrails import validate
-from paa_consumer.runtime_supervisor_control import (
-    restart_runtime_supervisor,
-    runtime_supervisor_logs,
-    runtime_supervisor_status,
-    start_runtime_supervisor,
-    stop_runtime_supervisor,
-)
 from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
 
@@ -81,6 +69,33 @@ def _print_legacy_shell_block(command: str) -> None:
     ))
 
 
+
+
+def _run_paa_cli(argv: list[str]) -> int:
+    app = build_paa_cli_app()
+    try:
+        app(args=argv, prog_name='paa', standalone_mode=False)
+        return 0
+    except SystemExit as exc:
+        code = exc.code
+        return int(code) if isinstance(code, int) else 1
+
+
+def _forward_runtime_command(command: str, args: argparse.Namespace, remainder: list[str]) -> int:
+    repo_root = args.repo_root or str(repo_root_from_cwd())
+    mapping = {
+        'runtime-supervisor': ['runtime', 'supervisor'],
+        'runtime-supervisor-start': ['runtime', 'start'],
+        'runtime-supervisor-stop': ['runtime', 'stop'],
+        'runtime-supervisor-status': ['runtime', 'status'],
+        'runtime-supervisor-logs': ['runtime', 'logs'],
+        'runtime-supervisor-restart': ['runtime', 'restart'],
+        'techlead-runtime': ['runtime', 'techlead'],
+        'dev-runtime': ['runtime', 'dev'],
+        'qa-runtime': ['runtime', 'qa'],
+    }
+    return _run_paa_cli([*mapping[command], '--repo-root', repo_root, *remainder])
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog='paa-consumer', allow_abbrev=False)
     parser.add_argument('command', nargs='?', default='help')
@@ -103,6 +118,9 @@ def main() -> int:
     if args.command in _LEGACY_TECHLEAD_SHELL_COMMANDS and not _legacy_shell_allowed(args):
         _print_legacy_shell_block(args.command)
         return 2
+
+    if args.command in {'runtime-supervisor', 'runtime-supervisor-start', 'runtime-supervisor-stop', 'runtime-supervisor-status', 'runtime-supervisor-logs', 'runtime-supervisor-restart', 'techlead-runtime', 'dev-runtime', 'qa-runtime'}:
+        return _forward_runtime_command(args.command, args, remainder)
 
     if args.command in {'install-consumer-runtime', 'update-consumer-runtime'}:
         if not args.repo_root:

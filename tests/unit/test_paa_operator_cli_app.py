@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 import unittest
@@ -11,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-producer' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
+sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
 from paa_cli.app import build_app, build_default_cli
 from paa_cli.command_adapters import (
@@ -793,6 +795,44 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('\"packet_message_id\": \"msg-1\"', result.output)
         self.assertIn('\"packet_path\": \"/tmp/worker-result.json\"', result.output)
         self.assertIn('\"target_worker_host\": \"TechLeadWorkerService\"', result.output)
+
+    def test_runtime_start_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch('paa_cli.app.start_runtime_supervisor', return_value={'ok': True, 'pid': 111}):
+            result = self.runner.invoke(app, ['runtime', 'start', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertEqual(json.loads(result.stdout)['pid'], 111)
+
+    def test_runtime_status_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch('paa_cli.app.runtime_supervisor_status', return_value={'ok': True, 'running': True, 'pid': 222}):
+            result = self.runner.invoke(app, ['runtime', 'status', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['running'])
+        self.assertEqual(payload['pid'], 222)
+
+    def test_runtime_techlead_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_host = Mock()
+        fake_host.run_loop.return_value = {
+            'host_name': 'techlead-runtime-host',
+            'queue_name': 'paa-techlead',
+            'intake_mode': 'preview',
+            'iteration_count': 1,
+            'iterations': [],
+        }
+
+        with unittest.mock.patch('paa_cli.app.build_techlead_runtime_host', return_value=fake_host):
+            result = self.runner.invoke(app, ['runtime', 'techlead', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertEqual(json.loads(result.stdout)['queue_name'], 'paa-techlead')
+        fake_host.run_loop.assert_called_once()
 
     def test_role_add_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
