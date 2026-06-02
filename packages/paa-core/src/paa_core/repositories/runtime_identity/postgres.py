@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from paa_core.db import DBSettings, run_psql, sql_literal
+from paa_core.db import DBSettings, query_json_rows, query_scalar, run_psql, sql_literal
 
 from .models import AgentRecord, AgentUpsertSpec, RoleRecord, RoleUpsertSpec
 
@@ -118,10 +118,10 @@ ON CONFLICT (project_id, name) DO UPDATE SET
 
     def _resolve_project_id(self, project_slug: str) -> str:
         sql = f"SELECT project_id::text FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1;"
-        output = run_psql(sql, settings=self._settings).strip()
+        output = query_scalar(sql, settings=self._settings)
         if not output:
             raise LookupError(f'Project slug {project_slug!r} does not exist.')
-        return output
+        return str(output)
 
     def _role_sql(self, *, where_clause: str) -> str:
         return f"""
@@ -167,14 +167,7 @@ FROM (
 """
 
     def _query_json_rows(self, sql: str) -> list[dict[str, Any]]:
-        output = run_psql(sql, settings=self._settings)
-        rows: list[dict[str, Any]] = []
-        for line in output.splitlines():
-            text = line.strip()
-            if not text:
-                continue
-            rows.append(json.loads(text))
-        return rows
+        return query_json_rows(sql, settings=self._settings)
 
     @staticmethod
     def _bool_sql(value: bool) -> str:

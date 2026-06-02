@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-from paa_core.db import DBSettings, run_psql, sql_literal
+from paa_core.db import DBSettings, query_json_rows, run_psql, sql_literal
 
 from .models import (
     MethodologyExecutionBindingEntrySpec,
@@ -309,14 +308,7 @@ FROM (
 """
 
     def _query_json_rows(self, sql: str) -> list[dict[str, Any]]:
-        out = run_psql(sql, settings=self._settings)
-        rows: list[dict[str, Any]] = []
-        for line in out.splitlines():
-            text = line.strip()
-            if not text:
-                continue
-            rows.append(json.loads(text))
-        return rows
+        return query_json_rows(sql, settings=self._settings)
 
     def _execution_from_row(self, row: dict[str, Any]) -> MethodologyExecutionRecord:
         return MethodologyExecutionRecord(

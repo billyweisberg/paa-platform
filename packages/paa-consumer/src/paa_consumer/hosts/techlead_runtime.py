@@ -12,6 +12,7 @@ from typing import Any
 
 from paa_core import handoff_runtime
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_producer_consumer_project_config
+from paa_core.db import query_scalar, sql_literal
 from paa_core.policies.acceptance import DefaultAcceptancePolicy
 from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
 from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
@@ -338,22 +339,22 @@ class _TechLeadWorkflowTransitionAdapter:
     def _resolve_project_id(project_slug: str) -> str | None:
         sql = (
             "SELECT project_id::text FROM paa.projects "
-            f"WHERE slug = {handoff_runtime.sql_literal(project_slug)} LIMIT 1;"
+            f"WHERE slug = {sql_literal(project_slug)} LIMIT 1;"
         )
-        out = handoff_runtime.run_psql(sql).strip()
-        return out or None
+        out = query_scalar(sql)
+        return str(out) if out else None
 
     @staticmethod
     def _resolve_role_id(project_id: str, role_name: str) -> str | None:
         sql = f"""
 SELECT role_id::text
 FROM paa.roles
-WHERE project_id = {handoff_runtime.sql_literal(project_id)}::uuid
-  AND name = {handoff_runtime.sql_literal(role_name)}
+WHERE project_id = {sql_literal(project_id)}::uuid
+  AND name = {sql_literal(role_name)}
 LIMIT 1;
 """
-        out = handoff_runtime.run_psql(sql).strip()
-        return out or None
+        out = query_scalar(sql)
+        return str(out) if out else None
 
 
 class _PassthroughPacketEnvelopeValidator:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
-from typing import Iterable
+from typing import Any, Iterable
 
 import psycopg
 
@@ -130,16 +130,54 @@ def _stringify_cell(value: object | None) -> str:
     return str(value)
 
 
-def run_psql(sql: str, *, settings: DBSettings | None = None) -> str:
+def execute_sql(sql: str, *, settings: DBSettings | None = None) -> None:
+    cfg = settings or settings_from_profile(None)
+    try:
+        with _connect(cfg) as conn, conn.cursor() as cur:
+            cur.execute(sql)
+    except psycopg.Error as exc:
+        raise RuntimeError(str(exc).strip() or 'PAA PostgreSQL command failed') from exc
+
+
+def query_all_rows(sql: str, *, settings: DBSettings | None = None) -> list[tuple[Any, ...]]:
     cfg = settings or settings_from_profile(None)
     try:
         with _connect(cfg) as conn, conn.cursor() as cur:
             cur.execute(sql)
             if cur.description is None:
-                return ''
-            rows = cur.fetchall()
+                return []
+            return list(cur.fetchall())
     except psycopg.Error as exc:
         raise RuntimeError(str(exc).strip() or 'PAA PostgreSQL command failed') from exc
+
+
+def query_json_rows(sql: str, *, settings: DBSettings | None = None) -> list[dict[str, Any]]:
+    rows = query_all_rows(sql, settings=settings)
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        if not row:
+            continue
+        payload = row[0]
+        if payload is None:
+            continue
+        if isinstance(payload, dict):
+            result.append(payload)
+        elif isinstance(payload, str):
+            result.append(json.loads(payload))
+        else:
+            raise RuntimeError(f'Expected JSON row object, got {type(payload).__name__}')
+    return result
+
+
+def query_scalar(sql: str, *, settings: DBSettings | None = None) -> Any | None:
+    rows = query_all_rows(sql, settings=settings)
+    if not rows or not rows[0]:
+        return None
+    return rows[0][0]
+
+
+def run_psql(sql: str, *, settings: DBSettings | None = None) -> str:
+    rows = query_all_rows(sql, settings=settings)
     return '\n'.join('\t'.join(_stringify_cell(cell) for cell in row) for row in rows)
 
 
@@ -155,4 +193,4 @@ def query_rows(sql: str, *, settings: DBSettings | None = None) -> list[list[str
 
 def execute_all(statements: Iterable[str], *, settings: DBSettings | None = None) -> None:
     for statement in statements:
-        run_psql(statement, settings=settings)
+        execute_sql(statement, settings=settings)
