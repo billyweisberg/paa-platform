@@ -21,6 +21,13 @@ from paa_consumer.hosts import (
 from paa_consumer.inbox import dispatch_techlead_packet, resolve_techlead_packet_queue, run_queue_command
 from paa_consumer.techlead_service_map import build_techlead_service_map
 from paa_consumer.runtime_guardrails import validate
+from paa_consumer.runtime_supervisor_control import (
+    restart_runtime_supervisor,
+    runtime_supervisor_logs,
+    runtime_supervisor_status,
+    start_runtime_supervisor,
+    stop_runtime_supervisor,
+)
 from paa_consumer.smoke_test import run_smoke_test
 from paa_consumer.techlead import main as techlead_main
 
@@ -242,6 +249,89 @@ def main() -> int:
     if args.command == 'techlead-service-map':
         print(json.dumps(build_techlead_service_map(), indent=2))
         return 0
+
+    if args.command == 'runtime-supervisor-start':
+        argp = argparse.ArgumentParser(
+            prog='paa-consumer runtime-supervisor-start',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', type=Path, default=args.repo_root)
+        argp.add_argument('--intake-mode', choices=['preview', 'claim_next'], default='claim_next')
+        argp.add_argument('--emit-next-assignment', action='store_true', default=True)
+        argp.add_argument('--no-emit-next-assignment', action='store_false', dest='emit_next_assignment')
+        argp.add_argument('--emit-worker-result', action='store_true', default=True)
+        argp.add_argument('--no-emit-worker-result', action='store_false', dest='emit_worker_result')
+        argp.add_argument('--emit-verification', action='store_true', default=True)
+        argp.add_argument('--no-emit-verification', action='store_false', dest='emit_verification')
+        argp.add_argument('--max-iterations', type=int, default=0)
+        argp.add_argument('--poll-interval-seconds', type=float, default=5.0)
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
+        result = start_runtime_supervisor(
+            repo_root,
+            intake_mode=subargs.intake_mode,
+            emit_next_assignment=subargs.emit_next_assignment,
+            emit_worker_result=subargs.emit_worker_result,
+            emit_verification=subargs.emit_verification,
+            max_iterations=subargs.max_iterations,
+            poll_interval_seconds=subargs.poll_interval_seconds,
+        )
+        print(json.dumps(result, indent=2))
+        return 0 if result.get('ok') else 1
+
+    if args.command == 'runtime-supervisor-stop':
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
+        result = stop_runtime_supervisor(repo_root)
+        print(json.dumps(result, indent=2))
+        return 0 if result.get('ok') else 1
+
+    if args.command == 'runtime-supervisor-status':
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else repo_root_from_cwd()
+        print(json.dumps(runtime_supervisor_status(repo_root), indent=2))
+        return 0
+
+    if args.command == 'runtime-supervisor-logs':
+        argp = argparse.ArgumentParser(
+            prog='paa-consumer runtime-supervisor-logs',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', type=Path, default=args.repo_root)
+        argp.add_argument('--lines', type=int, default=200)
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
+        output = runtime_supervisor_logs(repo_root, lines=subargs.lines)
+        if output:
+            print(output)
+        return 0
+
+    if args.command == 'runtime-supervisor-restart':
+        argp = argparse.ArgumentParser(
+            prog='paa-consumer runtime-supervisor-restart',
+            allow_abbrev=False,
+        )
+        argp.add_argument('--repo-root', type=Path, default=args.repo_root)
+        argp.add_argument('--intake-mode', choices=['preview', 'claim_next'], default='claim_next')
+        argp.add_argument('--emit-next-assignment', action='store_true', default=True)
+        argp.add_argument('--no-emit-next-assignment', action='store_false', dest='emit_next_assignment')
+        argp.add_argument('--emit-worker-result', action='store_true', default=True)
+        argp.add_argument('--no-emit-worker-result', action='store_false', dest='emit_worker_result')
+        argp.add_argument('--emit-verification', action='store_true', default=True)
+        argp.add_argument('--no-emit-verification', action='store_false', dest='emit_verification')
+        argp.add_argument('--max-iterations', type=int, default=0)
+        argp.add_argument('--poll-interval-seconds', type=float, default=5.0)
+        subargs = argp.parse_args(remainder)
+        repo_root = Path(subargs.repo_root).resolve() if subargs.repo_root else repo_root_from_cwd()
+        result = restart_runtime_supervisor(
+            repo_root,
+            intake_mode=subargs.intake_mode,
+            emit_next_assignment=subargs.emit_next_assignment,
+            emit_worker_result=subargs.emit_worker_result,
+            emit_verification=subargs.emit_verification,
+            max_iterations=subargs.max_iterations,
+            poll_interval_seconds=subargs.poll_interval_seconds,
+        )
+        print(json.dumps(result, indent=2))
+        return 0 if result.get('ok') else 1
 
     if args.command == 'runtime-supervisor':
         argp = argparse.ArgumentParser(

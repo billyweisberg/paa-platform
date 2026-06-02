@@ -50,13 +50,13 @@ runtime-supervisor:
 	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_runtime_supervisor.sh
 
 runtime-supervisor-start:
-	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh start
+	PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-start --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
 
 runtime-supervisor-stop:
-	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh stop || true
+	PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-stop --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform || true
 
 runtime-supervisor-status:
-	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh status
+	PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-status --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform
 
 runtime-supervisor-logs:
-	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh logs
+	PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:. python -m paa_consumer runtime-supervisor-logs --repo-root /Users/billyweisberg/Repos/billyweisberg/paa-platform

@@ -66,6 +66,51 @@ class PaaConsumerCliTests(unittest.TestCase):
         self.assertEqual(payload['max_iterations'], 2)
         self.assertEqual(set(payload['results'].keys()), {'techlead', 'dev', 'qa'})
 
+
+    def test_runtime_supervisor_start_routes_to_control_surface(self) -> None:
+        buffer = io.StringIO()
+        with patch('paa_consumer.__main__.start_runtime_supervisor', return_value={'ok': True, 'pid': 123}), \
+             patch('sys.stdout', buffer), \
+             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-start']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(payload['pid'], 123)
+
+    def test_runtime_supervisor_status_routes_to_control_surface(self) -> None:
+        buffer = io.StringIO()
+        with patch('paa_consumer.__main__.runtime_supervisor_status', return_value={'ok': True, 'running': True, 'pid': 321}), \
+             patch('sys.stdout', buffer), \
+             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-status']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(buffer.getvalue())
+        self.assertTrue(payload['running'])
+        self.assertEqual(payload['pid'], 321)
+
+    def test_runtime_supervisor_logs_routes_to_control_surface(self) -> None:
+        buffer = io.StringIO()
+        with patch('paa_consumer.__main__.runtime_supervisor_logs', return_value='line-1\nline-2'), \
+             patch('sys.stdout', buffer), \
+             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-logs']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(buffer.getvalue().strip(), 'line-1\nline-2')
+
+    def test_runtime_supervisor_stop_routes_to_control_surface(self) -> None:
+        buffer = io.StringIO()
+        with patch('paa_consumer.__main__.stop_runtime_supervisor', return_value={'ok': True, 'stopped': True}), \
+             patch('sys.stdout', buffer), \
+             patch('sys.argv', ['paa-consumer', 'runtime-supervisor-stop']):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(buffer.getvalue())
+        self.assertTrue(payload['stopped'])
+
     def test_techlead_runtime_uses_host_builder_and_prints_loop_summary(self) -> None:
         buffer = io.StringIO()
         fake_host = type(
