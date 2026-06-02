@@ -843,52 +843,52 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)['queue_name'], 'paa-techlead')
         fake_host.run_loop.assert_called_once()
 
-    def test_queue_ensure_topology_forwards_to_consumer_queue_runtime(self) -> None:
+    def test_queue_ensure_topology_uses_runtime_queue_admin_service(self) -> None:
         app, _, _ = self._typer_cli()
-        fake_inbox = Mock()
-        fake_inbox.run_queue_command.return_value = 0
+        fake_service = Mock()
+        fake_service.ensure_topology.return_value = {'ok': True, 'queues': ['paa-techlead']}
 
-        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+        with unittest.mock.patch('paa_cli.app._build_runtime_queue_admin_service', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'ensure-topology', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_inbox.run_queue_command.assert_called_once_with(ROOT, ['ensure-topology'])
+        fake_service.ensure_topology.assert_called_once_with(repo_root=ROOT)
 
-    def test_queue_purge_forwards_to_consumer_queue_runtime(self) -> None:
+    def test_queue_purge_uses_runtime_queue_admin_service(self) -> None:
         app, _, _ = self._typer_cli()
-        fake_inbox = Mock()
-        fake_inbox.run_queue_command.return_value = 0
+        fake_service = Mock()
+        fake_service.purge.return_value = {'ok': True, 'purged_queues': ['paa-techlead']}
 
-        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+        with unittest.mock.patch('paa_cli.app._build_runtime_queue_admin_service', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'purge', '--repo-root', str(ROOT), '--queue', 'paa-techlead'])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_inbox.run_queue_command.assert_called_once_with(ROOT, ['purge', '--queue', 'paa-techlead'])
+        fake_service.purge.assert_called_once_with(repo_root=ROOT, queue='paa-techlead')
 
-    def test_queue_claim_next_forwards_to_consumer_queue_runtime(self) -> None:
+    def test_queue_claim_next_uses_runtime_queue_admin_service(self) -> None:
         app, _, _ = self._typer_cli()
-        fake_inbox = Mock()
-        fake_inbox.run_queue_command.return_value = 0
+        fake_service = Mock()
+        fake_service.claim_next.return_value = ({'ok': True, 'claimed': False}, 0)
 
-        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+        with unittest.mock.patch('paa_cli.app._build_runtime_queue_admin_service', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'claim-next', '--repo-root', str(ROOT), '--queue', 'paa-techlead'])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_inbox.run_queue_command.assert_called_once_with(ROOT, ['claim-next', '--queue', 'paa-techlead'])
+        fake_service.claim_next.assert_called_once_with(repo_root=ROOT, queue='paa-techlead', claimed_by='paa')
 
-    def test_queue_send_packet_uses_consumer_inbox_dispatch(self) -> None:
+    def test_queue_send_packet_uses_runtime_queue_admin_service(self) -> None:
         app, _, _ = self._typer_cli()
-        fake_inbox = Mock()
-        fake_inbox.dispatch_packet.return_value = {'ok': True, 'resolved_queue': 'paa-techlead'}
+        fake_service = Mock()
+        fake_service.send_packet.return_value = ({'ok': True, 'resolved_queue': 'paa-techlead'}, 0)
 
-        with unittest.mock.patch('paa_cli.app._consumer_inbox_module', return_value=fake_inbox):
+        with unittest.mock.patch('paa_cli.app._build_runtime_queue_admin_service', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 ['queue', 'send-packet', '--repo-root', str(ROOT), '--message-file', str(ROOT / 'packet.json')],
             )
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_inbox.dispatch_packet.assert_called_once_with(ROOT, ROOT / 'packet.json')
+        fake_service.send_packet.assert_called_once_with(repo_root=ROOT, message_file=ROOT / 'packet.json')
 
     def test_ops_automation_preflight_uses_consumer_techlead_module(self) -> None:
         app, _, _ = self._typer_cli()

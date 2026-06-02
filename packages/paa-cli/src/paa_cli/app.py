@@ -17,9 +17,8 @@ else:  # pragma: no branch
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
-from paa_core.claim_ledger import load_json
 from paa_core.install import install_consumer_runtime
-from paa_core.packet_envelope import validate_envelope
+from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
@@ -80,12 +79,6 @@ def _runtime_supervisor_control_module():
     return runtime_supervisor_control
 
 
-def _consumer_inbox_module():
-    from paa_consumer import inbox as consumer_inbox
-
-    return consumer_inbox
-
-
 def _consumer_authority_install_module():
     from paa_consumer import authority_install as consumer_authority_install
 
@@ -114,6 +107,10 @@ def _consumer_techlead_module():
     from paa_consumer import techlead as consumer_techlead
 
     return consumer_techlead
+
+
+def _build_runtime_queue_admin_service() -> DefaultRuntimeQueueAdminService:
+    return DefaultRuntimeQueueAdminService()
 
 
 class NullStructuredLogger:
@@ -946,7 +943,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['ensure-topology'])
+        result = _build_runtime_queue_admin_service().ensure_topology(repo_root=resolved_repo_root)
+        typer.echo(json.dumps(result, indent=2))
+        code = 0 if result.get('ok') else 1
         raise typer.Exit(code=code)
 
     @queue_app.command('state-info')
@@ -954,17 +953,27 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['state-info'])
-        raise typer.Exit(code=code)
+        typer.echo(json.dumps(_build_runtime_queue_admin_service().state_info(repo_root=resolved_repo_root), indent=2))
+        raise typer.Exit(code=0)
 
     @queue_app.command('check')
     def queue_check(
         queue: str = typer.Option(..., '--queue'),
+        preview: int = typer.Option(0, '--preview'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, ['check', '--queue', queue])
-        raise typer.Exit(code=code)
+        typer.echo(
+            json.dumps(
+                _build_runtime_queue_admin_service().check(
+                    repo_root=resolved_repo_root,
+                    queue=queue,
+                    preview=preview,
+                ),
+                indent=2,
+            )
+        )
+        raise typer.Exit(code=0)
 
     @queue_app.command('purge')
     def queue_purge(
@@ -972,10 +981,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         queue: str | None = typer.Option(None, '--queue'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        argv = ['purge']
-        if queue:
-            argv.extend(['--queue', queue])
-        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, argv)
+        result = _build_runtime_queue_admin_service().purge(repo_root=resolved_repo_root, queue=queue)
+        typer.echo(json.dumps(result, indent=2))
+        code = 0 if result.get('ok') else 1
         raise typer.Exit(code=code)
 
     @queue_app.command('validate')
@@ -983,11 +991,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         message_file: str = typer.Option(..., '--message-file'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
-        resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(
-            resolved_repo_root,
-            ['validate', '--message-file', str(Path(message_file).resolve())],
-        )
+        del repo_root
+        result = _build_runtime_queue_admin_service().validate(message_file=Path(message_file).resolve())
+        typer.echo(json.dumps(result, indent=2))
+        code = 0 if result.get('ok') else 1
         raise typer.Exit(code=code)
 
     @queue_app.command('send')
@@ -997,35 +1004,48 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(
-            resolved_repo_root,
-            ['send', '--queue', queue, '--message-file', str(Path(message_file).resolve())],
+        result = _build_runtime_queue_admin_service().send(
+            repo_root=resolved_repo_root,
+            queue=queue,
+            message_file=Path(message_file).resolve(),
         )
+        typer.echo(json.dumps(result, indent=2))
+        code = 0 if result.get('ok') else 1
         raise typer.Exit(code=code)
 
     @queue_app.command('claim-next')
     def queue_claim_next(
         queue: str = typer.Option(..., '--queue'),
+        claimed_by: str = typer.Option('paa', '--claimed-by'),
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(
-            resolved_repo_root,
-            ['claim-next', '--queue', queue],
+        result, code = _build_runtime_queue_admin_service().claim_next(
+            repo_root=resolved_repo_root,
+            queue=queue,
+            claimed_by=claimed_by,
         )
+        typer.echo(json.dumps(result, indent=2))
         raise typer.Exit(code=code)
 
     @queue_app.command('list-claims')
     def queue_list_claims(
         repo_root: str | None = typer.Option(None, '--repo-root'),
         queue: str | None = typer.Option(None, '--queue'),
+        status: str | None = typer.Option(None, '--status'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        argv = ['list-claims']
-        if queue:
-            argv.extend(['--queue', queue])
-        code = _consumer_inbox_module().run_queue_command(resolved_repo_root, argv)
-        raise typer.Exit(code=code)
+        typer.echo(
+            json.dumps(
+                _build_runtime_queue_admin_service().list_claims(
+                    repo_root=resolved_repo_root,
+                    queue=queue,
+                    status=status,
+                ),
+                indent=2,
+            )
+        )
+        raise typer.Exit(code=0)
 
     @queue_app.command('ack')
     def queue_ack(
@@ -1033,10 +1053,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(
-            resolved_repo_root,
-            ['ack', '--claim-id', claim_id],
-        )
+        result = _build_runtime_queue_admin_service().ack(repo_root=resolved_repo_root, claim_id=claim_id)
+        typer.echo(json.dumps(result, indent=2))
+        code = 0 if result.get('ok') else 1
         raise typer.Exit(code=code)
 
     @queue_app.command('requeue')
@@ -1045,10 +1064,8 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        code = _consumer_inbox_module().run_queue_command(
-            resolved_repo_root,
-            ['requeue', '--claim-id', claim_id],
-        )
+        result, code = _build_runtime_queue_admin_service().requeue(repo_root=resolved_repo_root, claim_id=claim_id)
+        typer.echo(json.dumps(result, indent=2))
         raise typer.Exit(code=code)
 
     @queue_app.command('validate-packet')
@@ -1057,26 +1074,12 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        message = load_json(Path(message_file).resolve())
-        errors = validate_envelope(message, require_authority=True)
-        if errors:
-            typer.echo(json.dumps({
-                'ok': False,
-                'message_file': str(Path(message_file).resolve()),
-                'resolved_queue': None,
-                'errors': errors,
-            }, indent=2))
-            raise typer.Exit(code=1)
-        resolved_queue = _consumer_inbox_module().resolve_packet_queue(message, repo_root=resolved_repo_root)
-        typer.echo(json.dumps({
-            'ok': True,
-            'message_file': str(Path(message_file).resolve()),
-            'message_id': message.get('message_id'),
-            'schema_type': message.get('schema_type'),
-            'resolved_queue': resolved_queue,
-            'from_role': message.get('from_role'),
-            'to_role': message.get('to_role'),
-        }, indent=2))
+        result, code = _build_runtime_queue_admin_service().validate_packet(
+            repo_root=resolved_repo_root,
+            message_file=Path(message_file).resolve(),
+        )
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=code)
 
     @queue_app.command('send-packet')
     def queue_send_packet(
@@ -1084,9 +1087,12 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _consumer_inbox_module().dispatch_packet(resolved_repo_root, Path(message_file).resolve())
+        result, code = _build_runtime_queue_admin_service().send_packet(
+            repo_root=resolved_repo_root,
+            message_file=Path(message_file).resolve(),
+        )
         typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        raise typer.Exit(code=code)
 
     @worker_app.command('dispatch')
     def worker_dispatch(
