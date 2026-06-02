@@ -103,7 +103,7 @@ Existing producer and former consumer commands should be absorbed into those fam
 | `install-runtime` | `paa-consumer` | install consumer runtime assets | `paa ops install-runtime` | ops/runtime install layer | completed |
 | `update-runtime` | `paa-consumer` | update consumer runtime assets | `paa ops update-runtime` | ops/runtime install layer | completed |
 | `install-authority-package` | `paa-consumer` | install published authority package | `paa authority install-package` | authority install layer | completed |
-| `smoke-test` | `paa-consumer` | consumer smoke validation | `paa verify consumer-smoke` | verification layer | completed |
+| `smoke-test` | `paa-consumer` | runtime smoke validation | `paa verify runtime-smoke` | verification layer | completed |
 | `queue-state-info` | `paa-consumer` | inspect queue runtime state paths | `paa queue state-info` | queue subsystem | completed |
 | `queue-ensure-topology` | `paa-consumer` | create/verify queue topology | `paa queue ensure-topology` | queue subsystem | completed |
 | `queue-check` | `paa-consumer` | inspect queue contents | `paa queue check` | queue subsystem | completed |

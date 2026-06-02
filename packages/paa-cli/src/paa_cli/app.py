@@ -17,7 +17,7 @@ else:  # pragma: no branch
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
-from paa_core.install import install_runtime_support
+from paa_core.install import install_authority_package, install_runtime_support
 from paa_core.runtime_control import (
     restart_runtime_supervisor,
     runtime_supervisor_logs,
@@ -31,6 +31,8 @@ from paa_core.runtime_hosts import (
     build_runtime_supervisor,
     build_techlead_runtime_host,
 )
+from paa_core.runtime_smoke import run_runtime_smoke_test
+from paa_core.runtime_guardrails import validate_runtime_install
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.services.automation_preflight import DefaultAutomationPreflightService
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
@@ -51,6 +53,7 @@ from paa_core.services.methodology_execution_projection import (
     DefaultMethodologyExecutionProjectionService,
 )
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
+from paa_core.techlead_service_map import build_techlead_service_map
 
 from .command_adapters import (
     AgentCommandAdapter,
@@ -79,30 +82,6 @@ from .router import CommandRegistration, CommandRouter
 
 _OUTPUT_MODES: Final[tuple[str, ...]] = ('table', 'json', 'summary')
 _PREFLIGHTED_FAMILIES: Final[set[str]] = {'component', 'plan'}
-
-
-def _consumer_authority_install_module():
-    from paa_consumer import authority_install as consumer_authority_install
-
-    return consumer_authority_install
-
-
-def _consumer_runtime_guardrails_module():
-    from paa_consumer import runtime_guardrails as consumer_runtime_guardrails
-
-    return consumer_runtime_guardrails
-
-
-def _consumer_smoke_test_module():
-    from paa_consumer import smoke_test as consumer_smoke_test
-
-    return consumer_smoke_test
-
-
-def _consumer_techlead_service_map_module():
-    from paa_consumer import techlead_service_map as consumer_techlead_service_map
-
-    return consumer_techlead_service_map
 
 
 def _build_runtime_queue_admin_service() -> DefaultRuntimeQueueAdminService:
@@ -1318,7 +1297,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
 
     @report_app.command('techlead-service-map')
     def report_techlead_service_map() -> None:
-        typer.echo(json.dumps(_consumer_techlead_service_map_module().build_techlead_service_map(), indent=2))
+        typer.echo(json.dumps(build_techlead_service_map(), indent=2))
 
     @authority_app.command('install-package')
     def authority_install_package(
@@ -1327,12 +1306,20 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         authority_install_root: str | None = typer.Option(None, '--authority-install-root'),
     ) -> None:
         destination = Path(authority_install_root).resolve() if authority_install_root else None
-        result = _consumer_authority_install_module().install_authority(
-            Path(repo_root).resolve(),
-            Path(package_root).resolve(),
-            destination,
+        result = install_authority_package(
+            repo_root=Path(repo_root).resolve(),
+            package_root=Path(package_root).resolve(),
+            authority_install_root=destination,
         )
-        typer.echo(json.dumps(result, indent=2))
+        metadata_path = result.authority_install_root / 'package-metadata.json'
+        metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        typer.echo(json.dumps({
+            'ok': True,
+            'repo_root': str(result.repo_root),
+            'package_root': str(result.package_root),
+            'authority_install_root': str(result.authority_install_root),
+            'package_metadata': metadata,
+        }, indent=2))
 
     @ops_app.command('install-runtime')
     def ops_install_runtime(
@@ -1371,7 +1358,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        typer.echo(json.dumps(_consumer_runtime_guardrails_module().validate(resolved_repo_root), indent=2))
+        typer.echo(json.dumps(validate_runtime_install(resolved_repo_root), indent=2))
 
     @ops_app.command('automation-preflight')
     def ops_automation_preflight(
@@ -1388,20 +1375,18 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         typer.echo(json.dumps(result, indent=2))
         raise typer.Exit(code=0 if result.get('ok') else 1)
 
-    @verify_app.command('consumer-smoke')
-    def verify_consumer_smoke(
+    @verify_app.command('runtime-smoke')
+    def verify_runtime_smoke(
         repo_root: str | None = typer.Option(None, '--repo-root'),
         expected_branch: str | None = typer.Option(None, '--expected-branch'),
-        validate_schema: bool = typer.Option(False, '--validate-schema'),
         output: str | None = typer.Option(None, '--output'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
         output_path = Path(output).resolve() if output else None
         typer.echo(json.dumps(
-            _consumer_smoke_test_module().run_smoke_test(
+            run_runtime_smoke_test(
                 resolved_repo_root,
                 expected_branch=expected_branch,
-                validate_schema_flag=validate_schema,
                 output_path=output_path,
             ),
             indent=2,

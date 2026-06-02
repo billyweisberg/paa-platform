@@ -907,6 +907,82 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             project_slug='paa-platform',
         )
 
+    def test_report_techlead_service_map_uses_core_builder(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch(
+            'paa_cli.app.build_techlead_service_map',
+            return_value={'techlead_shell_status': 'mostly_shell', 'extracted_service_count': 7},
+        ) as mock_build:
+            result = self.runner.invoke(app, ['report', 'techlead-service-map'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['extracted_service_count'], 7)
+        mock_build.assert_called_once_with()
+
+    def test_authority_install_package_uses_core_install(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_result = Mock()
+        fake_result.repo_root = ROOT
+        fake_result.package_root = ROOT / 'package'
+        fake_result.authority_install_root = ROOT / 'authority'
+
+        with unittest.mock.patch('paa_cli.app.install_authority_package', return_value=fake_result) as mock_install, \
+             unittest.mock.patch('pathlib.Path.exists', return_value=False):
+            result = self.runner.invoke(
+                app,
+                [
+                    'authority',
+                    'install-package',
+                    '--repo-root',
+                    str(ROOT),
+                    '--package-root',
+                    str(ROOT / 'package'),
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        mock_install.assert_called_once_with(
+            repo_root=ROOT,
+            package_root=ROOT / 'package',
+            authority_install_root=None,
+        )
+
+    def test_ops_validate_runtime_uses_core_guardrails(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch(
+            'paa_cli.app.validate_runtime_install',
+            return_value={'ok': True, 'branch': 'main', 'authority_version': '1.0'},
+        ) as mock_validate:
+            result = self.runner.invoke(app, ['ops', 'validate-runtime', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        mock_validate.assert_called_once_with(ROOT)
+
+    def test_verify_runtime_smoke_uses_core_runtime_smoke(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch(
+            'paa_cli.app.run_runtime_smoke_test',
+            return_value={'ok': True, 'runtime_supervisor': {'running': True}},
+        ) as mock_smoke:
+            result = self.runner.invoke(app, ['verify', 'runtime-smoke', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        mock_smoke.assert_called_once_with(
+            ROOT,
+            expected_branch=None,
+            output_path=None,
+        )
+
     def test_role_add_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 
