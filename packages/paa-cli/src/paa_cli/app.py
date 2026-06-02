@@ -26,22 +26,27 @@ from paa_core.application.dto.queue import (
     QueueSendRequest,
     QueueValidateRequest,
 )
+from paa_core.application.dto.authority import AuthorityInstallRequest
 from paa_core.application.dto.runtime import (
     RuntimeHostRunRequest,
     RuntimeLogsRequest,
     RuntimeStatusRequest,
     RuntimeSupervisorRequest,
 )
+from paa_core.application.dto.status import RuntimeSmokeRequest, RuntimeValidationRequest
+from paa_core.application.dto.workflow import AutomationPreflightRequest
 from paa_core.application.services import (
+    DefaultAuthorityInstallApplicationService,
+    DefaultAutomationPreflightApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
+    DefaultRuntimeReportApplicationService,
+    DefaultRuntimeValidationApplicationService,
 )
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
-from paa_core.install import install_authority_package, install_runtime_support
-from paa_core.runtime_smoke import run_runtime_smoke_test
-from paa_core.runtime_guardrails import validate_runtime_install
+from paa_core.install import install_runtime_support
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.services.automation_preflight import DefaultAutomationPreflightService
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
@@ -62,8 +67,6 @@ from paa_core.services.methodology_execution_projection import (
     DefaultMethodologyExecutionProjectionService,
 )
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
-from paa_core.techlead_service_map import build_techlead_service_map
-
 from .command_adapters import (
     AgentCommandAdapter,
     ComponentCommandAdapter,
@@ -103,6 +106,24 @@ def _build_queue_admin_application_service() -> DefaultQueueAdminApplicationServ
 
 def _build_runtime_admin_application_service() -> DefaultRuntimeAdminApplicationService:
     return DefaultRuntimeAdminApplicationService()
+
+
+def _build_runtime_report_application_service() -> DefaultRuntimeReportApplicationService:
+    return DefaultRuntimeReportApplicationService()
+
+
+def _build_runtime_validation_application_service() -> DefaultRuntimeValidationApplicationService:
+    return DefaultRuntimeValidationApplicationService()
+
+
+def _build_authority_install_application_service() -> DefaultAuthorityInstallApplicationService:
+    return DefaultAuthorityInstallApplicationService()
+
+
+def _build_automation_preflight_application_service() -> DefaultAutomationPreflightApplicationService:
+    return DefaultAutomationPreflightApplicationService(
+        automation_preflight_service=_build_automation_preflight_service()
+    )
 
 
 def _emit_json_result(result: object) -> None:
@@ -1316,7 +1337,9 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
 
     @report_app.command('techlead-service-map')
     def report_techlead_service_map() -> None:
-        typer.echo(json.dumps(build_techlead_service_map(), indent=2))
+        result = _build_runtime_report_application_service().techlead_service_map()
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @authority_app.command('install-package')
     def authority_install_package(
@@ -1325,20 +1348,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         authority_install_root: str | None = typer.Option(None, '--authority-install-root'),
     ) -> None:
         destination = Path(authority_install_root).resolve() if authority_install_root else None
-        result = install_authority_package(
-            repo_root=Path(repo_root).resolve(),
-            package_root=Path(package_root).resolve(),
-            authority_install_root=destination,
+        result = _build_authority_install_application_service().install_package(
+            AuthorityInstallRequest(
+                repo_root=Path(repo_root).resolve(),
+                package_root=Path(package_root).resolve(),
+                authority_install_root=destination,
+            )
         )
-        metadata_path = result.authority_install_root / 'package-metadata.json'
-        metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        typer.echo(json.dumps({
-            'ok': True,
-            'repo_root': str(result.repo_root),
-            'package_root': str(result.package_root),
-            'authority_install_root': str(result.authority_install_root),
-            'package_metadata': metadata,
-        }, indent=2))
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @ops_app.command('install-runtime')
     def ops_install_runtime(
@@ -1377,7 +1395,11 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        typer.echo(json.dumps(validate_runtime_install(resolved_repo_root), indent=2))
+        result = _build_runtime_validation_application_service().validate_runtime(
+            RuntimeValidationRequest(repo_root=resolved_repo_root)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @ops_app.command('automation-preflight')
     def ops_automation_preflight(
@@ -1386,13 +1408,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         target_role: str = typer.Option(..., '--target-role'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _build_automation_preflight_service().evaluate(
-            repo_root=resolved_repo_root,
-            target_role=target_role,
-            project_slug=project_slug,
+        result = _build_automation_preflight_application_service().evaluate(
+            AutomationPreflightRequest(
+                repo_root=resolved_repo_root,
+                target_role=target_role,
+                project_slug=project_slug,
+            )
         )
-        typer.echo(json.dumps(result, indent=2))
-        raise typer.Exit(code=0 if result.get('ok') else 1)
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @verify_app.command('runtime-smoke')
     def verify_runtime_smoke(
@@ -1402,14 +1426,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
         output_path = Path(output).resolve() if output else None
-        typer.echo(json.dumps(
-            run_runtime_smoke_test(
-                resolved_repo_root,
+        result = _build_runtime_validation_application_service().runtime_smoke(
+            RuntimeSmokeRequest(
+                repo_root=resolved_repo_root,
                 expected_branch=expected_branch,
                 output_path=output_path,
-            ),
-            indent=2,
-        ))
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
