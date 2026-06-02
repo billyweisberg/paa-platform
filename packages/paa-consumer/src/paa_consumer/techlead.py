@@ -78,6 +78,10 @@ from paa_core.services.runtime_closeout import (
     DefaultRuntimeCloseoutService,
     RuntimeQaCloseoutRequest,
 )
+from paa_core.services.runtime_acceptance import (
+    DefaultRuntimeAcceptanceService,
+    RuntimeAcceptanceRequest,
+)
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_display_name,
@@ -3854,215 +3858,75 @@ def closeout_qa_pass(args):
 
 def accept_and_merge_qa_pass(args):
     repo_root = args.repo_root.resolve()
-    qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
-    if qa_packet is None:
-        return {
-            'ok': False,
-            'reason': 'qa_packet_not_found',
-            'details': f'No repo-local QA verification packet was found for issue #{args.issue_number}.',
-        }
-    if qa_packet.get('verification_status') != 'pass':
-        return {
-            'ok': False,
-            'reason': 'qa_packet_not_pass',
-            'details': f"QA packet {qa_packet.get('message_id')!r} is not a passing packet.",
-            'qa_packet': qa_packet,
-        }
 
-    recommended_action = (qa_packet.get('recommended_action') or {})
-    merge_recommendation = recommended_action.get('merge_recommendation')
-    if merge_recommendation not in {'accept_and_merge', 'merge'}:
-        return {
-            'ok': False,
-            'reason': 'qa_packet_not_accept_and_merge',
-            'details': (
-                'TechLead acceptance requires a QA recommendation of '
-                f"`accept_and_merge` or `merge`; received {merge_recommendation!r}."
-            ),
-            'qa_packet': qa_packet,
-        }
-
-    fallback_packet = latest_packet_preview(queue_state(repo_root), args.issue_number)
-    github_repo = github_repo_for_root(repo_root)
-    issue_full, pr_full = github_state(
-        args.issue_number,
-        github_repo,
-        fallback_pr_number=qa_packet.get('pr_number'),
-        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
-        fallback_packet=fallback_packet,
-    )
-    if pr_full is None:
-        return {
-            'ok': False,
-            'reason': 'pr_not_found',
-            'details': f'No PR could be resolved for issue #{args.issue_number}.',
-            'qa_packet': qa_packet,
-            'github_state': {'issue_state': issue_full.get('state') if issue_full else None},
-        }
-
-    merge_state = run_json([
-        'gh', 'pr', 'view', str(pr_full['number']),
-        '--repo', github_repo,
-        '--json', 'number,state,isDraft,mergeStateStatus,mergedAt,statusCheckRollup,url',
-    ])
-    ci_status = derive_ci_status(merge_state)
-    pr_merged = bool(merge_state.get('mergedAt'))
-    pr_open = (merge_state.get('state') or '').upper() == 'OPEN'
-    if not pr_merged:
-        if not pr_open:
-            return {
-                'ok': False,
-                'reason': 'pr_not_open_for_merge',
-                'details': f"PR #{pr_full['number']} is not open and not merged.",
-                'qa_packet': qa_packet,
-                'pr': merge_state,
-            }
-        if merge_state.get('isDraft'):
-            return {
-                'ok': False,
-                'reason': 'pr_is_draft',
-                'details': f"PR #{pr_full['number']} is still draft and cannot be accepted by TechLead.",
-                'qa_packet': qa_packet,
-                'pr': merge_state,
-            }
-        if ci_status != 'green':
-            return {
-                'ok': False,
-                'reason': 'pr_checks_not_green',
-                'details': f"PR #{pr_full['number']} does not have green checks.",
-                'qa_packet': qa_packet,
-                'pr': merge_state,
-                'ci_status': ci_status,
-            }
-        if merge_state.get('mergeStateStatus') != 'CLEAN':
-            return {
-                'ok': False,
-                'reason': 'pr_not_mergeable_cleanly',
-                'details': (
-                    f"PR #{pr_full['number']} is not in CLEAN merge state; "
-                    f"received {merge_state.get('mergeStateStatus')!r}."
-                ),
-                'qa_packet': qa_packet,
-                'pr': merge_state,
-            }
-
-    merge_result = {
-        'ok': True,
-        'already_merged': pr_merged,
-        'merge_method': args.merge_method,
-        'pr_number': pr_full['number'],
-        'pr_url': pr_full.get('url'),
-    }
-    if not pr_merged:
-        merge_cmd = [
-            'gh', 'pr', 'merge', str(pr_full['number']),
+    def _merge_state_loader(pr_number: int, github_repo: str):
+        return run_json([
+            'gh', 'pr', 'view', str(pr_number),
             '--repo', github_repo,
-            f'--{args.merge_method}',
+            '--json', 'number,state,isDraft,mergeStateStatus,mergedAt,statusCheckRollup,url',
+        ])
+
+    def _merge_pr(pr_number: int, github_repo: str, merge_method: str):
+        merge_cmd = [
+            'gh', 'pr', 'merge', str(pr_number),
+            '--repo', github_repo,
+            f'--{merge_method}',
         ]
         merge_code, merge_stdout, merge_error = run_text_with_errors(merge_cmd)
-        merge_result.update({
+        return {
             'ok': merge_code == 0,
             'stdout': merge_stdout.strip() if merge_stdout else '',
             'stderr': merge_error if merge_code != 0 else '',
-        })
-        if merge_code != 0:
-            return {
-                'ok': False,
-                'reason': 'pr_merge_failed',
-                'details': f"TechLead could not merge PR #{pr_full['number']}.",
-                'qa_packet': qa_packet,
-                'pr': merge_state,
-                'merge': merge_result,
-            }
+        }
 
-    issue_after_merge, pr_after_merge = github_state(
-        args.issue_number,
-        github_repo,
-        fallback_pr_number=pr_full.get('number'),
-        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
-        fallback_packet=fallback_packet,
-    )
-    issue_close = {'ok': True, 'already_closed': (issue_after_merge.get('state') or '').upper() == 'CLOSED'}
-    if not issue_close['already_closed']:
+    def _close_issue(issue_number: int, github_repo: str, comment: str):
         close_cmd = [
-            'gh', 'issue', 'close', str(args.issue_number),
+            'gh', 'issue', 'close', str(issue_number),
             '--repo', github_repo,
             '--reason', 'completed',
-            '--comment', args.issue_close_comment or f'Closed by TechLead after QA pass and merge of PR #{pr_full["number"]}.',
+            '--comment', comment,
         ]
         close_code, close_stdout, close_error = run_text_with_errors(close_cmd)
-        issue_close.update({
+        return {
             'ok': close_code == 0,
             'stdout': close_stdout.strip() if close_stdout else '',
             'stderr': close_error if close_code != 0 else '',
-        })
-        if close_code != 0:
-            return {
-                'ok': False,
-                'reason': 'issue_close_failed',
-                'details': f'TechLead merged the PR but could not close issue #{args.issue_number}.',
-                'qa_packet': qa_packet,
-                'merge': merge_result,
-                'issue_close': issue_close,
-            }
-
-    final_issue_state, final_pr_state = github_state(
-        args.issue_number,
-        github_repo,
-        fallback_pr_number=pr_full.get('number'),
-        fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
-        fallback_packet=fallback_packet,
-    )
-
-    closeout_args = SimpleNamespace(
-        repo_root=repo_root,
-        package_id_external=args.package_id_external,
-        brief_id_external=args.brief_id_external,
-        project_slug=args.project_slug,
-        issue_number=args.issue_number,
-        send_decision=True,
-        ack_qa_packet=True,
-        claimed_by=args.claimed_by,
-        canonical_branch=args.canonical_branch,
-        role_branch=args.role_branch,
-        worktree_hint=args.worktree_hint,
-        output=args.output,
-        review_output=args.review_output,
-    )
-    closeout_result = closeout_qa_pass(closeout_args)
-    if not closeout_result.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'closeout_after_merge_failed',
-            'details': 'TechLead merged the PR but could not record the QA-pass closeout state.',
-            'qa_packet': qa_packet,
-            'merge': merge_result,
-            'issue_close': issue_close,
-            'github_state_after_merge': {
-                'issue_state': final_issue_state.get('state') if final_issue_state else None,
-                'issue_closed_at': final_issue_state.get('closedAt') if final_issue_state else None,
-                'pr_number': final_pr_state.get('number') if final_pr_state else None,
-                'pr_state': final_pr_state.get('state') if final_pr_state else None,
-                'pr_merged_at': final_pr_state.get('mergedAt') if final_pr_state else None,
-            },
-            'closeout': closeout_result,
         }
 
-    return {
-        'ok': True,
-        'issue_number': args.issue_number,
-        'merge': merge_result,
-        'issue_close': issue_close,
-        'github_state_after_merge': {
-            'issue_state': final_issue_state.get('state') if final_issue_state else None,
-            'issue_closed_at': final_issue_state.get('closedAt') if final_issue_state else None,
-            'pr_number': final_pr_state.get('number') if final_pr_state else None,
-            'pr_state': final_pr_state.get('state') if final_pr_state else None,
-            'pr_merged_at': final_pr_state.get('mergedAt') if final_pr_state else None,
-        },
-        'closeout': closeout_result,
-        'next_step_hint': 'run techlead-status to confirm closed lineage and empty spoke queues',
-    }
+    def _closeout_runner(payload):
+        return closeout_qa_pass(SimpleNamespace(**payload))
+
+    def _fallback_packet_loader(resolved_repo_root: Path, issue_number: int):
+        return latest_packet_preview(queue_state(resolved_repo_root), issue_number)
+
+    return DefaultRuntimeAcceptanceService(
+        github_state_loader=github_state,
+        merge_state_loader=_merge_state_loader,
+        merge_pr=_merge_pr,
+        close_issue=_close_issue,
+        closeout_runner=_closeout_runner,
+        fallback_packet_loader=_fallback_packet_loader,
+        github_repo_resolver=github_repo_for_root,
+        ci_status_deriver=derive_ci_status,
+        qa_packet_loader=latest_qa_packet,
+        reports_dir_resolver=repo_reports_dir,
+    ).accept_and_merge_qa_pass(
+        RuntimeAcceptanceRequest(
+            repo_root=repo_root,
+            issue_number=args.issue_number,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            project_slug=args.project_slug,
+            merge_method=args.merge_method,
+            issue_close_comment=args.issue_close_comment,
+            claimed_by=args.claimed_by,
+            canonical_branch=args.canonical_branch,
+            role_branch=args.role_branch,
+            worktree_hint=args.worktree_hint,
+            output_path=args.output,
+            review_output_path=args.review_output,
+        )
+    )
 
 
 def prepare_role_branch(args):
