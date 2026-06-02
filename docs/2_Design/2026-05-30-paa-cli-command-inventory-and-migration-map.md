@@ -100,8 +100,8 @@ Existing producer and former consumer commands should be absorbed into those fam
 
 | Historical command | Historical package owner | Historical purpose | Unified `paa` family | Long-term canonical owner | Migration status |
 |---|---|---|---|---|---|
-| `install-consumer-runtime` | `paa-consumer` | install consumer runtime assets | `paa ops install-consumer-runtime` | ops/runtime install layer | completed |
-| `update-consumer-runtime` | `paa-consumer` | update consumer runtime assets | `paa ops update-consumer-runtime` | ops/runtime install layer | completed |
+| `install-runtime` | `paa-consumer` | install consumer runtime assets | `paa ops install-runtime` | ops/runtime install layer | completed |
+| `update-runtime` | `paa-consumer` | update consumer runtime assets | `paa ops update-runtime` | ops/runtime install layer | completed |
 | `install-authority-package` | `paa-consumer` | install published authority package | `paa authority install-package` | authority install layer | completed |
 | `smoke-test` | `paa-consumer` | consumer smoke validation | `paa verify consumer-smoke` | verification layer | completed |
 | `queue-state-info` | `paa-consumer` | inspect queue runtime state paths | `paa queue state-info` | queue subsystem | completed |

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 
-from paa_core.runtime_guardrails import validate_consumer_runtime
+from paa_core.runtime_guardrails import validate_runtime_install
 
 
 def run_smoke_test(
@@ -20,7 +20,7 @@ def run_smoke_test(
     errors: list[str] = []
     warnings: list[str] = []
 
-    runtime = validate_consumer_runtime(repo_root, expected_branch=expected_branch)
+    runtime = validate_runtime_install(repo_root, expected_branch=expected_branch)
     if not runtime.get('ok'):
         errors.extend(str(item) for item in runtime.get('errors', []))
 

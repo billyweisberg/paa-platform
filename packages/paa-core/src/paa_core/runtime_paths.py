@@ -46,8 +46,8 @@ def repo_installed_artifact_path(repo_root: Path, name: str) -> Path:
     return repo_authority_install_root(repo_root) / 'artifacts' / name
 
 
-def repo_consumer_bin(repo_root: Path) -> Path:
-    return repo_paa_root(repo_root) / 'bin' / 'paa-consumer'
+def repo_runtime_cli_bin(repo_root: Path) -> Path:
+    return repo_paa_root(repo_root) / 'bin' / 'paa'
 
 
 def repo_producer_bin(repo_root: Path) -> Path:
@@ -105,3 +105,6 @@ def resolved_repo_runtime_queue_topology(repo_root: Path) -> RuntimeQueueTopolog
     """Return repo queue topology with PAA defaults applied."""
 
     return normalize_runtime_queue_topology(repo_runtime_queue_topology(repo_root))
+
+
+repo_consumer_bin = repo_runtime_cli_bin

@@ -59,8 +59,8 @@ class ProducerProjectConfig:
 
 
 @dataclass(frozen=True)
-class ConsumerProjectConfig:
-    """Consumer-side project config."""
+class RuntimeProjectConfig:
+    """Runtime-side project config."""
 
     path: Path
     project_id: str
@@ -76,8 +76,8 @@ class ConsumerProjectConfig:
 
 
 @dataclass(frozen=True)
-class ProducerConsumerProjectConfig:
-    """Unified producer-consumer project config."""
+class UnifiedRuntimeProjectConfig:
+    """Unified producer/runtime project config."""
 
     path: Path
     project_id: str
@@ -130,11 +130,11 @@ def load_producer_project_config(path: Path) -> ProducerProjectConfig:
     )
 
 
-def load_consumer_project_config(path: Path) -> ConsumerProjectConfig:
-    """Load a consumer project config from JSON."""
+def load_runtime_project_config(path: Path) -> RuntimeProjectConfig:
+    """Load a runtime project config from JSON."""
 
     data = load_json(path)
-    return ConsumerProjectConfig(
+    return RuntimeProjectConfig(
         path=path,
         project_id=data["project_id"],
         project_pack=data.get("project_pack", "fractal-core"),
@@ -149,11 +149,11 @@ def load_consumer_project_config(path: Path) -> ConsumerProjectConfig:
     )
 
 
-def load_producer_consumer_project_config(path: Path) -> ProducerConsumerProjectConfig:
-    """Load a unified producer-consumer project config from JSON."""
+def load_unified_runtime_project_config(path: Path) -> UnifiedRuntimeProjectConfig:
+    """Load a unified producer/runtime project config from JSON."""
 
     data = load_json(path)
-    return ProducerConsumerProjectConfig(
+    return UnifiedRuntimeProjectConfig(
         path=path,
         project_id=data["project_id"],
         project_pack=data.get("project_pack", "fractal-core"),
@@ -235,6 +235,12 @@ def runtime_queue_name_for_role(
     if queue_key is None:
         return None
     return runtime_queue_name_by_key(queue_key, topology=topology)
+
+
+ConsumerProjectConfig = RuntimeProjectConfig
+ProducerConsumerProjectConfig = UnifiedRuntimeProjectConfig
+load_consumer_project_config = load_runtime_project_config
+load_producer_consumer_project_config = load_unified_runtime_project_config
 
 
 def runtime_queue_name_for_schema(

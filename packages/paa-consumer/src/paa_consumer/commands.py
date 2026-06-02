@@ -1,8 +1,8 @@
 """Consumer command definitions."""
 
 CONSUMER_COMMANDS = (
-    'install-consumer-runtime',
-    'update-consumer-runtime',
+    'install-runtime',
+    'update-runtime',
     'install-authority-package',
     'smoke-test',
     'queue-state-info',

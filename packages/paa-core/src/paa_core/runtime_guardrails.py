@@ -31,7 +31,7 @@ def authority_version(repo_root: Path) -> str | None:
     return data.get('project', {}).get('authority_version')
 
 
-def validate_consumer_runtime(repo_root: Path, *, expected_branch: str | None = None) -> dict[str, object]:
+def validate_runtime_install(repo_root: Path, *, expected_branch: str | None = None) -> dict[str, object]:
     repo_root = repo_root.resolve()
     current_branch = git_branch(repo_root)
     behind, ahead = branch_ahead_behind(repo_root)
@@ -54,5 +54,9 @@ def validate_consumer_runtime(repo_root: Path, *, expected_branch: str | None = 
     }
 
 
-def validate_current_consumer_runtime() -> dict[str, object]:
-    return validate_consumer_runtime(repo_root_from_cwd())
+def validate_current_runtime_install() -> dict[str, object]:
+    return validate_runtime_install(repo_root_from_cwd())
+
+
+validate_consumer_runtime = validate_runtime_install
+validate_current_consumer_runtime = validate_current_runtime_install

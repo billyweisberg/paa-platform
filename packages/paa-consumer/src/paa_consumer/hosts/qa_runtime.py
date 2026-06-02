@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from paa_core.claim_ledger import FileQueueClaimLedgerRepository, utc_now
-from paa_core.config import load_producer_consumer_project_config
+from paa_core.config import load_unified_runtime_project_config
 from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
 from paa_core.queue_transport import DEFAULT_EXCHANGE, RabbitMQManagementClient, build_default_management_client
 from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
@@ -681,7 +681,7 @@ def build_qa_runtime_host(
     resolved_repo_root = repo_root.expanduser().resolve()
     runtime_logger = logger if logger is not None else _NullStructuredLogger()
     topology = resolved_repo_runtime_queue_topology(resolved_repo_root)
-    project_config = load_producer_consumer_project_config(repo_project_config_path(resolved_repo_root))
+    project_config = load_unified_runtime_project_config(repo_project_config_path(resolved_repo_root))
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
     runtime_event_repository = PostgresRuntimeEventRepository()
     execution_package_repository = PostgresExecutionPackageRepository()

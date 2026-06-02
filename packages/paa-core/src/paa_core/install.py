@@ -311,8 +311,8 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
     return result
 
 
-def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
-    """Install or update the consumer-mode repo-local PAA payload."""
+def install_runtime_support(repo_root: Path, project_pack: str = DEFAULT_PROJECT_PACK) -> InstallResult:
+    """Install or update the runtime-mode repo-local PAA payload."""
 
     root = platform_repo_root()
     result = _install_common_layout(
@@ -327,7 +327,7 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
     replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     for name in ["authority/current", "claims", "queue-state", "artifacts", "evidence", "cache", "reports"]:
         ensure_directory(result.runtime_data_root / name)
-    _write_wrapper(result.codex_install_root / 'bin' / 'paa-consumer', 'paa_consumer')
+    _write_wrapper(result.codex_install_root / 'bin' / 'paa', 'paa_cli')
     _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
     _install_selected_files(
         root / "scripts" / "runtime",
@@ -357,10 +357,13 @@ def install_consumer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
             _copy_file(config_path, result.codex_install_root / config_path.name)
     (result.codex_install_root / 'README.md').write_text(
         "# Repo-local PAA install\n\n"
-        f"This repo carries the consumer-mode PAA payload under `.codex/paa/`.\n"
+        f"This repo carries the runtime-mode PAA payload under `.codex/paa/`.\n"
         f"Selected project pack: `{project_pack}`.\n"
     )
     return result
+
+
+install_consumer_runtime = install_runtime_support
 
 
 def install_authority_package(repo_root: Path, package_root: Path, authority_install_root: Path | None = None) -> AuthorityInstallResult:

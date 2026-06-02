@@ -17,7 +17,7 @@ else:  # pragma: no branch
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
-from paa_core.install import install_consumer_runtime
+from paa_core.install import install_runtime_support
 from paa_core.runtime_control import (
     restart_runtime_supervisor,
     runtime_supervisor_logs,
@@ -1334,12 +1334,12 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         typer.echo(json.dumps(result, indent=2))
 
-    @ops_app.command('install-consumer-runtime')
-    def ops_install_consumer_runtime(
+    @ops_app.command('install-runtime')
+    def ops_install_runtime(
         repo_root: str = typer.Option(..., '--repo-root'),
         project_pack: str = typer.Option('fractal-core', '--project-pack'),
     ) -> None:
-        result = install_consumer_runtime(Path(repo_root).resolve(), project_pack=project_pack)
+        result = install_runtime_support(Path(repo_root).resolve(), project_pack=project_pack)
         typer.echo(json.dumps({
             'ok': True,
             'install_mode': result.install_mode,
@@ -1350,12 +1350,12 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             'project_pack': result.project_pack,
         }, indent=2))
 
-    @ops_app.command('update-consumer-runtime')
-    def ops_update_consumer_runtime(
+    @ops_app.command('update-runtime')
+    def ops_update_runtime(
         repo_root: str = typer.Option(..., '--repo-root'),
         project_pack: str = typer.Option('fractal-core', '--project-pack'),
     ) -> None:
-        result = install_consumer_runtime(Path(repo_root).resolve(), project_pack=project_pack)
+        result = install_runtime_support(Path(repo_root).resolve(), project_pack=project_pack)
         typer.echo(json.dumps({
             'ok': True,
             'install_mode': result.install_mode,
