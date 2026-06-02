@@ -18,6 +18,19 @@ from paa_core.repositories.methodology_execution import PostgresMethodologyExecu
 from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.install import install_consumer_runtime
+from paa_core.runtime_control import (
+    restart_runtime_supervisor,
+    runtime_supervisor_logs,
+    runtime_supervisor_status,
+    start_runtime_supervisor,
+    stop_runtime_supervisor,
+)
+from paa_core.runtime_hosts import (
+    build_dev_runtime_host,
+    build_qa_runtime_host,
+    build_runtime_supervisor,
+    build_techlead_runtime_host,
+)
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
@@ -65,18 +78,6 @@ from .router import CommandRegistration, CommandRouter
 
 _OUTPUT_MODES: Final[tuple[str, ...]] = ('table', 'json', 'summary')
 _PREFLIGHTED_FAMILIES: Final[set[str]] = {'component', 'plan'}
-
-
-def _consumer_hosts_module():
-    from paa_consumer import hosts as consumer_hosts
-
-    return consumer_hosts
-
-
-def _runtime_supervisor_control_module():
-    from paa_consumer import runtime_supervisor_control as runtime_supervisor_control
-
-    return runtime_supervisor_control
 
 
 def _consumer_authority_install_module():
@@ -1139,7 +1140,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        supervisor = _consumer_hosts_module().build_runtime_supervisor(resolved_repo_root)
+        supervisor = build_runtime_supervisor(resolved_repo_root)
         result = supervisor.run(
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -1162,7 +1163,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _runtime_supervisor_control_module().start_runtime_supervisor(
+        result = start_runtime_supervisor(
             resolved_repo_root,
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -1179,7 +1180,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _runtime_supervisor_control_module().stop_runtime_supervisor(resolved_repo_root)
+        result = stop_runtime_supervisor(resolved_repo_root)
         typer.echo(json.dumps(result, indent=2))
         raise typer.Exit(code=0 if result.get('ok') else 1)
 
@@ -1188,7 +1189,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str | None = typer.Option(None, '--repo-root'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _runtime_supervisor_control_module().runtime_supervisor_status(resolved_repo_root)
+        result = runtime_supervisor_status(resolved_repo_root)
         typer.echo(json.dumps(result, indent=2))
 
     @runtime_app.command('logs')
@@ -1197,7 +1198,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         lines: int = typer.Option(200, '--lines'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        output = _runtime_supervisor_control_module().runtime_supervisor_logs(resolved_repo_root, lines=lines)
+        output = runtime_supervisor_logs(resolved_repo_root, lines=lines)
         if output:
             typer.echo(output)
 
@@ -1212,7 +1213,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        result = _runtime_supervisor_control_module().restart_runtime_supervisor(
+        result = restart_runtime_supervisor(
             resolved_repo_root,
             intake_mode=intake_mode,
             emit_next_assignment=emit_next_assignment,
@@ -1235,7 +1236,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = _consumer_hosts_module().build_techlead_runtime_host(
+        host = build_techlead_runtime_host(
             resolved_repo_root,
             actor_name=actor_name,
             host_name=host_name,
@@ -1259,7 +1260,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = _consumer_hosts_module().build_dev_runtime_host(
+        host = build_dev_runtime_host(
             resolved_repo_root,
             actor_name=actor_name,
             host_name=host_name,
@@ -1283,7 +1284,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         poll_interval_seconds: float = typer.Option(5.0, '--poll-interval-seconds'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        host = _consumer_hosts_module().build_qa_runtime_host(
+        host = build_qa_runtime_host(
             resolved_repo_root,
             actor_name=actor_name,
             host_name=host_name,

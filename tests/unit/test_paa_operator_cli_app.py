@@ -799,22 +799,17 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
     def test_runtime_start_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 
-        fake_runtime_control = Mock()
-        fake_runtime_control.start_runtime_supervisor.return_value = {'ok': True, 'pid': 111}
-
-        with unittest.mock.patch('paa_cli.app._runtime_supervisor_control_module', return_value=fake_runtime_control):
+        with unittest.mock.patch('paa_cli.app.start_runtime_supervisor', return_value={'ok': True, 'pid': 111}) as mock_start:
             result = self.runner.invoke(app, ['runtime', 'start', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertEqual(json.loads(result.stdout)['pid'], 111)
+        mock_start.assert_called_once()
 
     def test_runtime_status_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 
-        fake_runtime_control = Mock()
-        fake_runtime_control.runtime_supervisor_status.return_value = {'ok': True, 'running': True, 'pid': 222}
-
-        with unittest.mock.patch('paa_cli.app._runtime_supervisor_control_module', return_value=fake_runtime_control):
+        with unittest.mock.patch('paa_cli.app.runtime_supervisor_status', return_value={'ok': True, 'running': True, 'pid': 222}):
             result = self.runner.invoke(app, ['runtime', 'status', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -833,10 +828,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             'iterations': [],
         }
 
-        fake_hosts_module = Mock()
-        fake_hosts_module.build_techlead_runtime_host.return_value = fake_host
-
-        with unittest.mock.patch('paa_cli.app._consumer_hosts_module', return_value=fake_hosts_module):
+        with unittest.mock.patch('paa_cli.app.build_techlead_runtime_host', return_value=fake_host):
             result = self.runner.invoke(app, ['runtime', 'techlead', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
