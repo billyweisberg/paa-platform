@@ -20,6 +20,7 @@ from paa_core.repositories.execution_package import PostgresExecutionPackageRepo
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.repositories.workflow_state import PostgresWorkflowStateRepository
 from paa_core.runtime_paths import repo_authority_manifest_path, resolved_repo_runtime_queue_topology
+from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.services.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
@@ -72,6 +73,10 @@ from paa_core.services.runtime_role_bridge import (
 from paa_core.services.runtime_decision_bridge import (
     DefaultRuntimeDecisionBridgeService,
     RuntimeDecisionBridgeRequest,
+)
+from paa_core.services.runtime_closeout import (
+    DefaultRuntimeCloseoutService,
+    RuntimeQaCloseoutRequest,
 )
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
@@ -3792,193 +3797,59 @@ def closeout_qa_pass(args):
     repo_root = args.repo_root.resolve()
     package = load_design_package(args.project_slug, args.package_id_external)
     execution_mode = package_execution_mode(package)
-    proof_only = execution_mode == 'proof_only'
     qa_packet = latest_qa_packet(args.issue_number, repo_reports_dir(repo_root))
-    if qa_packet is None:
-        return {
-            'ok': False,
-            'reason': 'qa_packet_not_found',
-            'details': f'No repo-local QA verification packet was found for issue #{args.issue_number}.',
-        }
-    if qa_packet.get('verification_status') != 'pass':
-        return {
-            'ok': False,
-            'reason': 'qa_packet_not_pass',
-            'details': f"QA packet {qa_packet.get('message_id')!r} is not a passing packet.",
-            'qa_packet': qa_packet,
-        }
-
     fallback_packet = latest_packet_preview(queue_state(repo_root), args.issue_number)
     issue_full, pr_full = github_state(
         args.issue_number,
         github_repo_for_root(repo_root),
-        fallback_pr_number=qa_packet.get('pr_number'),
+        fallback_pr_number=qa_packet.get('pr_number') if qa_packet else None,
         fallback_task={'issue_number': args.issue_number, 'title': f'Issue #{args.issue_number}'},
         fallback_packet=fallback_packet,
     )
-    pr_merged = bool(pr_full and pr_full.get('mergedAt'))
-    issue_closed = (issue_full.get('state') or '').upper() == 'CLOSED'
-    if not pr_merged and not issue_closed and not proof_only:
-        return {
-            'ok': False,
-            'reason': 'slice_not_merged_or_closed',
-            'details': 'QA pass closeout requires a merged PR or a closed issue before TechLead records closed lineage.',
-            'qa_packet': qa_packet,
-            'github_state': {
-                'issue_state': issue_full.get('state'),
-                'pr_state': pr_full.get('state') if pr_full else None,
-                'pr_merged_at': pr_full.get('mergedAt') if pr_full else None,
-            },
-        }
 
-    persist_techlead_acceptance_event(
-        getattr(args, 'db_container', DEFAULT_DB_CONTAINER),
-        getattr(args, 'db_name', DEFAULT_DB_NAME),
-        getattr(args, 'db_user', DEFAULT_DB_USER),
-        args.project_slug,
-        args.issue_number,
-        qa_packet,
-        pr_full or {},
-        decision='proof_only_closed' if proof_only else 'accepted',
-        decision_notes=(
-            f"TechLead recorded proof-only closeout for issue #{args.issue_number} after QA pass from packet "
-            f"{qa_packet.get('message_id')} without requiring live merge or issue closure."
-            if proof_only
-            else None
-        ),
-        metadata_extra={
-            'closeout_mode': 'proof_only' if proof_only else 'live_delivery',
-            'proof_only_closeout': proof_only,
-            'issue_closed_at_closeout': issue_closed,
-            'pr_merged_at_closeout': pr_merged,
-        },
+    def _persist_acceptance(project_slug, issue_number, qa_packet_arg, pr_full_arg, decision, decision_notes, metadata_extra):
+        return persist_techlead_acceptance_event(
+            getattr(args, 'db_container', DEFAULT_DB_CONTAINER),
+            getattr(args, 'db_name', DEFAULT_DB_NAME),
+            getattr(args, 'db_user', DEFAULT_DB_USER),
+            project_slug,
+            issue_number,
+            qa_packet_arg,
+            pr_full_arg,
+            decision=decision,
+            decision_notes=decision_notes,
+            metadata_extra=metadata_extra,
+        )
+
+    def _emit_decision(payload):
+        return emit_decision(SimpleNamespace(**payload))
+
+    return DefaultRuntimeCloseoutService(
+        queue_admin_service=DefaultRuntimeQueueAdminService(),
+        acceptance_event_persister=_persist_acceptance,
+        decision_emitter=_emit_decision,
+    ).closeout_qa_pass(
+        RuntimeQaCloseoutRequest(
+            repo_root=repo_root,
+            issue_number=args.issue_number,
+            execution_mode=execution_mode,
+            qa_packet=qa_packet,
+            issue_full=issue_full,
+            pr_full=pr_full,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            project_slug=args.project_slug,
+            architecture_queue=techlead_queue_name(repo_root),
+            send_decision=bool(args.send_decision),
+            ack_qa_packet=bool(args.ack_qa_packet),
+            claimed_by=args.claimed_by,
+            canonical_branch=args.canonical_branch,
+            role_branch=args.role_branch,
+            worktree_hint=args.worktree_hint,
+            output_path=args.output,
+            review_output_path=args.review_output,
+        )
     )
-
-    emit_args = SimpleNamespace(
-        repo_root=repo_root,
-        package_id_external=args.package_id_external,
-        brief_id_external=args.brief_id_external,
-        project_slug=args.project_slug,
-        decision_type='proof_only_closed' if proof_only else 'closed',
-        send=args.send_decision,
-        source_packet_path=Path(qa_packet['path']),
-        canonical_branch=args.canonical_branch,
-        role_branch=args.role_branch,
-        superseded_branch=None,
-        worktree_hint=args.worktree_hint,
-        reset_reason=None,
-        output=args.output,
-        review_output=args.review_output,
-    )
-    decision_result = emit_decision(emit_args)
-    if not decision_result.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'decision_emission_failed',
-            'details': 'TechLead could not record the closed decision for the passing QA packet.',
-            'qa_packet': qa_packet,
-            'decision': decision_result,
-        }
-
-    qa_ack = None
-    if args.ack_qa_packet:
-        architecture_queue = techlead_queue_name(repo_root)
-        architecture_state = queue_state(repo_root).get(architecture_queue, {})
-        architecture_preview = architecture_state.get('preview') or []
-        head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
-        if not head_payload or head_payload.get('message_id') != qa_packet.get('message_id'):
-            return {
-                'ok': False,
-                'reason': 'qa_packet_not_queue_head',
-                'details': 'The passing QA packet is not the next claimable architecture-queue message; refusing to acknowledge the wrong packet.',
-                'qa_packet': qa_packet,
-                'architecture_queue_head': head_payload,
-                'decision': decision_result,
-            }
-        claim_cmd = [
-            str(repo_queue_script(repo_root)),
-            'queue-claim-next',
-            '--repo-root', str(repo_root),
-            '--queue', architecture_queue,
-            '--claimed-by', args.claimed_by,
-        ]
-        claim_result = run_json(claim_cmd)
-        if claim_result.get('message_id') != qa_packet.get('message_id'):
-            return {
-                'ok': False,
-                'reason': 'claimed_wrong_packet',
-                'details': 'Architecture queue claim did not return the expected passing QA packet.',
-                'qa_packet': qa_packet,
-                'claim': claim_result,
-                'decision': decision_result,
-            }
-        ack_cmd = [
-            str(repo_queue_script(repo_root)),
-            'queue-ack',
-            '--repo-root', str(repo_root),
-            '--queue', architecture_queue,
-            '--claim-id', claim_result['claim_id'],
-        ]
-        qa_ack = run_json(ack_cmd)
-
-    decision_ack = None
-    if args.send_decision and decision_result.get('sent'):
-        architecture_queue = techlead_queue_name(repo_root)
-        architecture_state = queue_state(repo_root).get(architecture_queue, {})
-        architecture_preview = architecture_state.get('preview') or []
-        head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
-        decision_message_id = decision_result.get('message_id')
-        if head_payload and head_payload.get('message_id') == decision_message_id:
-            claim_cmd = [
-                str(repo_queue_script(repo_root)),
-                'queue-claim-next',
-                '--repo-root', str(repo_root),
-                '--queue', architecture_queue,
-                '--claimed-by', f"{args.claimed_by}-decision",
-            ]
-            claim_result = run_json(claim_cmd)
-            if claim_result.get('message_id') == decision_message_id:
-                ack_cmd = [
-                    str(repo_queue_script(repo_root)),
-                    'queue-ack',
-                    '--repo-root', str(repo_root),
-                    '--queue', architecture_queue,
-                    '--claim-id', claim_result['claim_id'],
-                ]
-                decision_ack = run_json(ack_cmd)
-            else:
-                decision_ack = {
-                    'ok': False,
-                    'reason': 'claimed_wrong_decision_packet',
-                    'expected_message_id': decision_message_id,
-                    'claim': claim_result,
-                }
-        else:
-            decision_ack = {
-                'ok': False,
-                'reason': 'decision_packet_not_queue_head',
-                'expected_message_id': decision_message_id,
-                'architecture_queue_head': head_payload,
-            }
-
-    return {
-        'ok': True,
-        'issue_number': args.issue_number,
-        'execution_mode': execution_mode,
-        'closeout_mode': 'proof_only' if proof_only else 'live_delivery',
-        'qa_packet': qa_packet,
-        'github_state': {
-            'issue_state': issue_full.get('state'),
-            'issue_closed_at': issue_full.get('closedAt'),
-            'pr_number': pr_full.get('number') if pr_full else None,
-            'pr_state': pr_full.get('state') if pr_full else None,
-            'pr_merged_at': pr_full.get('mergedAt') if pr_full else None,
-        },
-        'decision': decision_result,
-        'qa_ack': qa_ack,
-        'decision_ack': decision_ack,
-        'next_step_hint': 'run_closed_cleanup_if_registered_role_worktrees_should_be_pruned',
-    }
 
 
 def accept_and_merge_qa_pass(args):
