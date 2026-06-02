@@ -47,7 +47,7 @@ This plan focuses only on the `P0` cluster:
 ## Current Hub
 
 Current legacy runtime hub:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 This file currently mixes:
 - CLI entrypoints
@@ -95,10 +95,10 @@ Own the decision of what next assignment should be emitted from the current work
 
 #### Current source ownership in hub
 Primary extraction sources:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2521`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2795`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2521`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2795`
 - supporting workflow helpers around:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:1508`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:1508`
 
 ### 2. `TechLeadWorkerReviewRoutingService`
 
@@ -123,10 +123,10 @@ Own post-worker-result review interpretation and QA-routing decision logic.
 #### Current source ownership in hub
 Primary extraction sources:
 - worker-result branch in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:1661`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:1661`
 - assignment derivation path using worker review outcome in:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2521`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2795`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2521`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2795`
 
 ### 3. `TechLeadAcceptanceDecisionService`
 
@@ -149,18 +149,18 @@ Own terminal or near-terminal decision logic after QA return.
 
 #### Current source ownership in hub
 Primary extraction sources:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2976`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:3192`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:3303`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:3494`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2976`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:3192`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:3303`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:3494`
 
 ## Exact File Ownership Plan
 
 | Target component | New owning files | Existing file(s) to shrink |
 |---|---|---|
-| `TechLeadAssignmentDecisionService` | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-consumer/src/paa_consumer/techlead.py` |
-| `TechLeadWorkerReviewRoutingService` | `packages/paa-core/src/paa_core/services/techlead_worker_review_routing/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-consumer/src/paa_consumer/techlead.py` |
-| `TechLeadAcceptanceDecisionService` | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-consumer/src/paa_consumer/techlead.py` |
+| `TechLeadAssignmentDecisionService` | `packages/paa-core/src/paa_core/services/techlead_assignment_decision/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` |
+| `TechLeadWorkerReviewRoutingService` | `packages/paa-core/src/paa_core/services/techlead_worker_review_routing/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` |
+| `TechLeadAcceptanceDecisionService` | `packages/paa-core/src/paa_core/services/techlead_acceptance_decision/__init__.py`, `contracts.py`, `models.py`, `default.py` | `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` |
 | focused tests | `tests/unit/test_techlead_assignment_decision_service.py`, `tests/unit/test_techlead_worker_review_routing_service.py`, `tests/unit/test_techlead_acceptance_decision_service.py` | `tests/unit/test_techlead_self_hosted.py` remains integration coverage |
 
 ## Extraction Sequence

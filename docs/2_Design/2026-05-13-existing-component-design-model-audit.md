@@ -298,7 +298,7 @@ It is an active producer-runtime dependency.
 
 ### Consumer runtime usage
 
-`packages/paa-consumer/src/paa_consumer/techlead.py`:
+`packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`:
 - reads `paa.design_packages`
 - uses package resolution in support of status/routing/reporting behavior
 

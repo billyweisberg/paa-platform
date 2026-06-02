@@ -281,7 +281,7 @@ What it defines:
 How it is used:
 - copied into installed runtime under `.codex/paa/schemas/runtime-records/`
 - referenced directly by consumer runtime in:
-  - `packages/paa-consumer/src/paa_consumer/techlead.py`
+  - `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - validated via `jsonschema` when `--validate-schema` is requested
 
 Important design finding:
@@ -355,7 +355,7 @@ Main handling code:
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
 - `packages/paa-producer/src/paa_producer/authority_runtime.py`
 - `packages/paa-consumer/src/paa_consumer/inbox.py`
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ### What they define in practice
 A packet carries:

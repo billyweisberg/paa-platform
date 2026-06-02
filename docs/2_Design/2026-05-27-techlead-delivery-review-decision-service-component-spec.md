@@ -29,7 +29,7 @@ Define the extracted application service that interprets Delivery Architect revi
 - return to Delivery Architect
 
 This service exists to remove delivery-review decision logic from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ## Related Notes
 

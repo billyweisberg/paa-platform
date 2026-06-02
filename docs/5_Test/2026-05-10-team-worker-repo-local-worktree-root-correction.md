@@ -31,7 +31,7 @@ Updated runtime default:
   - `$PAA_ROLE_WORKTREE_ROOT/<role_branch>`
 
 Updated source runtime:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Updated installed consumer runtime:
 - `<consumer_repo_root>/.codex/paa/lib/paa_consumer/techlead.py`

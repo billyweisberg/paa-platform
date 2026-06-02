@@ -165,7 +165,7 @@ Required outcome:
 - legacy TechLead shell code is no longer on the active path
 
 Primary targets:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - preflight and TechLead service extractions in `packages/paa-core/src/paa_core/services/`
 
 ### Phase 4. Rename neutral runtime/system APIs

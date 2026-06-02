@@ -25,7 +25,7 @@ Resolve the closed-slice reporting drift for issue `110` so that:
 ### 1. Local closeout fallback for lineage
 
 Updated:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Changes:
 - `techlead-lineage` now consults the latest repo-local `techlead_decision.issue<issue>.closed.json` artifact when the closeout packet has already auto-acked.
@@ -34,7 +34,7 @@ Changes:
 ### 2. Persist accepted closeout decisions into `paa.acceptance_events`
 
 Updated:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Changes:
 - `techlead-closeout-qa-pass` now persists an `accepted` `acceptance_event` for merged/closed QA-pass slices.

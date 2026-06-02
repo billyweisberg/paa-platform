@@ -31,7 +31,7 @@ That meant the workflow still depended on prompt/skill compliance or manual clea
 ## Fix
 
 Updated:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 New behavior in `role_return_bridge()` when `--send` is used:
 1. send the role result packet

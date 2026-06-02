@@ -63,7 +63,7 @@ Current workflow state is inferred from a mixture of:
 
 Relevant implementation surfaces:
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - `packages/paa-core/src/paa_core/sql/full_chain_reporting_view.sql`
 
 ### Why this is a problem
@@ -157,7 +157,7 @@ The handoff lifecycle is currently expressed in multiple layers:
 - repo-local automation memory written during execution
 
 Relevant implementation surfaces:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
 - `project-packs/fractal-core/skills/`
 - `project-packs/fractal-core/automations/`
@@ -190,7 +190,7 @@ There are still two partially different views of system truth:
 - DB-backed traceability and accepted-chain reporting
 
 Relevant implementation surfaces:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - `packages/paa-core/src/paa_core/sql/full_chain_reporting_view.sql`
 
 ### Why this is a problem
@@ -222,7 +222,7 @@ The active implementation now uses PAA-managed deterministic role worktrees unde
 However, some older references still preserve other concepts such as home-folder worktree roots or Codex-native worktree assumptions.
 
 Relevant implementation surfaces:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - `docs/6_Deploy/2026-05-03-worktree-branch-strategy.md`
 
 ### Why this is a problem

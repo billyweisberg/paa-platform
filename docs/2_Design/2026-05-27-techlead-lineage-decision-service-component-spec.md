@@ -26,7 +26,7 @@ Date: 2026-05-27
 Define the extracted application service that interprets superseded lineage or QA-escalation context and derives the next lineage decision recommendation.
 
 This first slice exists to remove superseded decision logic from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ## Related Notes
 

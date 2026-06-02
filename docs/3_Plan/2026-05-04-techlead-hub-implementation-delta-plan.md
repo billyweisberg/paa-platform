@@ -81,7 +81,7 @@ Current consumer queue wrapper:
 - `packages/paa-consumer/src/paa_consumer/delivery_runtime.py`
 
 Current TechLead runtime/reporting:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Important current assumptions:
 - queue names are still modeled as:
@@ -159,7 +159,7 @@ Changes:
 ### `paa_consumer.techlead`
 
 File:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Changes:
 - stop treating TechLead as mostly observational
@@ -373,7 +373,7 @@ Add to packet payload or metadata:
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
 
 ### TechLead reporting
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ## Short-term implementation approach
 

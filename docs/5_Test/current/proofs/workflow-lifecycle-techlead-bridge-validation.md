@@ -47,7 +47,7 @@ The intent of this validation is narrow:
 ## Integrated Consumer Path
 
 Consumer:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Bridge helper:
 - `workflow_lifecycle_worker_result_evaluation(...)`

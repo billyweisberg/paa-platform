@@ -158,7 +158,7 @@ A service is only proven once a real downstream consumer uses it.
 - focused tests proving the consumer uses the service output rather than ad hoc package lookup logic
 
 ### Completed consumer path
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - `repo_auth_current(...)` now resolves the authority manifest through `Execution Package Resolution Service` before falling back to direct filesystem lookup
 
 ## Step 5. Write `Workflow Lifecycle Service` pre-spec
@@ -311,12 +311,12 @@ The workflow slice is most useful once a real runtime or orchestration path cons
 - focused tests proving the consumer path delegates transition handling to the service
 
 ### Preferred first consumers
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - selected queue-result handling path that currently interprets worker-result return state inline
 
 ### Completed consumer bridge
 - consumer integration:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 - validation note:
   - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/5_Test/2026-05-17-workflow-lifecycle-techlead-bridge-validation.md`
 - established behavior:
@@ -346,7 +346,7 @@ The first consumer bridge is proven. The next work should extend the workflow mo
 - one real runtime action path now uses:
   - `apply_workflow_transition(...)`
 - connected runtime path:
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
   - `emit_next_assignment(...)`
 - current applied runtime family:
   - `worker_result_returned`

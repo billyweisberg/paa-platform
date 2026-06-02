@@ -27,7 +27,7 @@ Define the full `Component Spec` for `TechLeadAssignmentDecisionService` as the 
 
 This service exists to own next-assignment decision derivation from authoritative workflow context, packet context, and slice identity without leaving that decision trapped inside:
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 It is the first extraction in the `P0` runtime-remediation cluster because assignment decision is the highest-leverage reduction in TechLead hub complexity.
 
@@ -320,12 +320,12 @@ These should remain optional and should not be introduced before a real event co
 ## 10. Current Legacy Ownership To Extract
 
 Primary extraction sources in the runtime hub:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2521`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:2795`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2521`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:2795`
 
 Supporting workflow and packet interpretation currently nearby:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:1508`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py:1661`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:1508`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services:1661`
 
 Initial replacement goal:
 - `derive_next_assignment_context(...)` becomes a thin adapter around `TechLeadAssignmentDecisionService`

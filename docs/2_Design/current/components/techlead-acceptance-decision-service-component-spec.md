@@ -31,7 +31,7 @@ Date: 2026-05-22
 Define the extracted application service that turns QA verification context into acceptance, reroute, pause, or closeout decisions.
 
 This service exists to remove terminal decision logic from:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ## Related Notes
 

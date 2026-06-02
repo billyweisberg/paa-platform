@@ -33,7 +33,7 @@ This was a parser mismatch, not a routing limitation.
 The runtime logic already supported explicit Delivery Architect emission, but the CLI `choices` list excluded it.
 
 Corrected in source:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 Installed consumer runtime refreshed afterward in:
 - `<consumer_repo_root>`

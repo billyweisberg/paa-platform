@@ -25,7 +25,7 @@ Show the intended extraction path from the current `techlead.py` hub into bounde
 
 ## Current Source
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 ## Build Arrow Diagram
 

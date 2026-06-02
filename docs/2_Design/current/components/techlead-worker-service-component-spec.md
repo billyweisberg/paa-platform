@@ -31,7 +31,7 @@ Date: 2026-05-31
 Define the deterministic runtime worker host that composes the extracted TechLead decision services, methodology-execution services, and packet-runtime collaborators into one queue-driven orchestration surface.
 
 This component exists to replace the remaining orchestration ownership concentrated in:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 The intent is not to create a new monolith.
 The intent is to create one explicit runtime host that:

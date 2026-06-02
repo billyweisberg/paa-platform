@@ -387,7 +387,7 @@ Repo: paa-platform
 Canonical: false
 Summary: Contains a path claim without classification.
 
-`packages/paa-consumer/src/paa_consumer/techlead.py` orchestrates review routing.
+`packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` orchestrates review routing.
 """,
         )
         records, _ = paa_docs.build_index(self.root)

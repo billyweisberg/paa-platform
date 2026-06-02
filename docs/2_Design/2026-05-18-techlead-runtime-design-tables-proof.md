@@ -30,7 +30,7 @@ Proof target:
 - TechLead runtime extraction
 
 Current hybrid hub:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 
 This area is the right proof target because it is:
 - active now
@@ -83,9 +83,9 @@ The weak point is Step 2, where assignment decision remains hybrid and trapped i
 
 | Step | Current Owning Code / Module | Primary DB Truth | Missing Automation | Next Remediation |
 |---|---|---|---|---|
-| Assignment decision | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py` | workflow truth plus queue/handoff context | clean assignment-decision service boundary | extract `TechLeadAssignmentDecisionService` |
-| Worker review and QA routing | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py` | workflow truth plus packet evidence | clean review/routing service boundary | extract `TechLeadWorkerReviewRoutingService` |
-| Acceptance / reroute / closeout decision | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/techlead.py` | acceptance events, workflow truth, package/runtime state | clean acceptance-decision boundary | extract `TechLeadAcceptanceDecisionService` |
+| Assignment decision | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` | workflow truth plus queue/handoff context | clean assignment-decision service boundary | extract `TechLeadAssignmentDecisionService` |
+| Worker review and QA routing | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` | workflow truth plus packet evidence | clean review/routing service boundary | extract `TechLeadWorkerReviewRoutingService` |
+| Acceptance / reroute / closeout decision | `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services` | acceptance events, workflow truth, package/runtime state | clean acceptance-decision boundary | extract `TechLeadAcceptanceDecisionService` |
 
 ### What this reveals
 The same file owns too many decision layers.

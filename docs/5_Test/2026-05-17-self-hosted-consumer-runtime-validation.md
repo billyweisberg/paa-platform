@@ -50,7 +50,7 @@ A self-hosted proof slice exposed four real runtime/derivation gaps that had to 
 
 ## Corrections applied
 Code corrections:
-- `packages/paa-consumer/src/paa_consumer/techlead.py`
+- `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
   - resolve installed authority manifest path dynamically
   - resolve GitHub repo from installed authority
   - fall back to packet GitHub context when live GitHub issue/PR lookup is unavailable
