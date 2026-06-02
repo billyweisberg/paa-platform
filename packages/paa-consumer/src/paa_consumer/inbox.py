@@ -12,6 +12,7 @@ from paa_core.config import (
     runtime_queue_name_for_role,
     runtime_queue_name_for_schema,
 )
+from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime_paths import repo_queue_state_root, resolved_repo_runtime_queue_topology
 from paa_core.team_worker_roles import team_worker_queue_name_by_display_name
 
@@ -77,7 +78,12 @@ def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
     )
     topology = resolved_repo_runtime_queue_topology(repo_root)
     exchange = topology.queue_exchange or DEFAULT_RUNTIME_QUEUE_EXCHANGE
-    handoff_runtime.persist_packet_compilation_for_send_message(message, message_file=str(message_file))
+    runtime_event_repository = PostgresRuntimeEventRepository()
+    packet_compilation_run = runtime_event_repository.create_packet_compilation_run_for_message(
+        message=message,
+        message_file=str(message_file),
+        agent_name=handoff_runtime.packet_compiler_agent_name_for_message(message),
+    )
     client = handoff_runtime.RabbitMQManagementClient(
         user=handoff_runtime.DEFAULT_USER,
         password=handoff_runtime.DEFAULT_PASSWORD,
@@ -87,7 +93,13 @@ def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
     )
     _, result = client.publish(exchange, queue_name, message)
     if result.get('routed'):
-        handoff_runtime.persist_send_event(message, queue_name, publish_result=result, exchange=exchange)
+        runtime_event_repository.record_queue_send_for_message(
+            message=message,
+            queue_name=queue_name,
+            exchange=exchange,
+            publish_result=result,
+            packet_compilation_run=packet_compilation_run,
+        )
         handoff_runtime.persist_slice_result(message)
         handoff_runtime.persist_qa_verification(message)
     return {

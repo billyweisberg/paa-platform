@@ -34,12 +34,13 @@ class HandoffRuntimeTests(unittest.TestCase):
                 }
             },
         }
-        with patch('paa_core.handoff_runtime.run_psql', return_value='9e4509a5-5738-476b-a417-28e0012278f1\n') as mock_run:
+        with patch(
+            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.resolve_work_item_id_for_message',
+            return_value='9e4509a5-5738-476b-a417-28e0012278f1',
+        ) as mock_resolve:
             work_item_id = resolve_work_item_id_from_message(message)
         self.assertEqual(work_item_id, '9e4509a5-5738-476b-a417-28e0012278f1')
-        called_sql = mock_run.call_args[0][0]
-        self.assertIn('paa-stage1-2026-05-16-component-design-planning-service', called_sql)
-        self.assertIn('paa-coder-2026-05-16-component-design-planning-service-governed-draft', called_sql)
+        self.assertEqual(mock_resolve.call_args[0][0], message)
 
     def test_runtime_topology_resolution_uses_repo_project_config_when_defaults_are_requested(self):
         args = SimpleNamespace(
@@ -72,19 +73,21 @@ class HandoffRuntimeTests(unittest.TestCase):
             'payload': {},
             'correlation_id': 'issue-6',
         }
-        with patch('paa_core.handoff_runtime.lookup_packet_compilation_run', side_effect=[None, {'automation_run_id': 'run-1'}]), \
-             patch('paa_core.handoff_runtime.resolve_work_item_id_from_message', return_value='work-1'), \
-             patch('paa_core.handoff_runtime.run_psql') as mock_run:
+        fake_record = SimpleNamespace(automation_run_id='run-1')
+        with patch(
+            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.create_packet_compilation_run_for_message',
+            return_value=fake_record,
+        ) as mock_create:
             automation_run_id = persist_packet_compilation_for_send_message(
                 message,
                 message_file='/Users/billyweisberg/Repos/billyweisberg/paa-platform/.codex-work/runtime-proof/worker.json',
             )
         self.assertEqual(automation_run_id, 'run-1')
-        called_sql = mock_run.call_args[0][0]
-        self.assertIn('packet_compilation:worker_result_packet', called_sql)
-        self.assertIn('Dev Agent', called_sql)
-        self.assertIn('packet_output_path', called_sql)
-        self.assertIn('/Users/billyweisberg/Repos/billyweisberg/paa-platform/.codex-work/runtime-proof/worker.json', called_sql)
+        self.assertEqual(mock_create.call_args.kwargs['agent_name'], 'Dev Agent')
+        self.assertEqual(
+            mock_create.call_args.kwargs['message_file'],
+            '/Users/billyweisberg/Repos/billyweisberg/paa-platform/.codex-work/runtime-proof/worker.json',
+        )
 
     def test_cmd_send_persists_packet_compilation_before_send_event(self):
         message = {
@@ -125,12 +128,21 @@ class HandoffRuntimeTests(unittest.TestCase):
         mock_compile.assert_called_once_with(message, message_file=str(path))
         mock_send_event.assert_called_once()
 
-    def test_lookup_packet_compilation_run_tolerates_missing_trailing_fields(self):
+    def test_lookup_packet_compilation_run_returns_repository_record_shape(self):
         message = {
             'message_id': 'msg-1',
             'schema_type': 'worker_result_packet',
         }
-        with patch('paa_core.handoff_runtime.run_psql', return_value='run-1\tpacket_compilation:worker_result_packet\tCompiled worker_result_packet for issue #6'):
+        fake_record = SimpleNamespace(
+            automation_run_id='run-1',
+            trigger_type='packet_compilation:worker_result_packet',
+            summary='Compiled worker_result_packet for issue #6',
+            artifacts={},
+        )
+        with patch(
+            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.find_packet_compilation_run',
+            return_value=fake_record,
+        ):
             result = lookup_packet_compilation_run(message)
         self.assertEqual(result['automation_run_id'], 'run-1')
         self.assertEqual(result['trigger_type'], 'packet_compilation:worker_result_packet')

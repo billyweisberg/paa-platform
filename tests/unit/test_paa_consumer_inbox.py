@@ -60,6 +60,15 @@ class PaaConsumerInboxTests(unittest.TestCase):
                 call_order.append('publish')
                 return 200, {'routed': True}
 
+        class _FakeRuntimeEventRepository:
+            def create_packet_compilation_run_for_message(self, **kwargs):
+                call_order.append('persist_packet_compilation')
+                return object()
+
+            def record_queue_send_for_message(self, **kwargs):
+                call_order.append('persist_send_event')
+                return object()
+
         message = {
             'message_id': 'msg-1',
             'schema_type': 'qa_verification_packet',
@@ -89,8 +98,7 @@ class PaaConsumerInboxTests(unittest.TestCase):
 
         with patch('paa_consumer.inbox.handoff_runtime.load_json', return_value=message), \
             patch('paa_consumer.inbox.handoff_runtime.validate_envelope', return_value=[]), \
-            patch('paa_consumer.inbox.handoff_runtime.persist_packet_compilation_for_send_message', side_effect=lambda *args, **kwargs: call_order.append('persist_packet_compilation')), \
-            patch('paa_consumer.inbox.handoff_runtime.persist_send_event', side_effect=lambda *args, **kwargs: call_order.append('persist_send_event')), \
+            patch('paa_consumer.inbox.PostgresRuntimeEventRepository', return_value=_FakeRuntimeEventRepository()), \
             patch('paa_consumer.inbox.handoff_runtime.persist_slice_result', side_effect=lambda *args, **kwargs: call_order.append('persist_slice_result')), \
             patch('paa_consumer.inbox.handoff_runtime.persist_qa_verification', side_effect=lambda *args, **kwargs: call_order.append('persist_qa_verification')), \
             patch('paa_consumer.inbox.handoff_runtime.RabbitMQManagementClient', _FakeClient):

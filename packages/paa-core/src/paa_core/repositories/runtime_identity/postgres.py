@@ -16,6 +16,23 @@ class PostgresRuntimeIdentityRepository:
     def __init__(self, *, settings: DBSettings | None = None) -> None:
         self._settings = settings
 
+    def resolve_project_id(self, project_slug: str) -> str | None:
+        sql = f"SELECT project_id::text FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1;"
+        output = query_scalar(sql, settings=self._settings)
+        return str(output) if output else None
+
+    def resolve_role_id(self, project_slug: str, role_name: str) -> str | None:
+        sql = f"""
+SELECT r.role_id::text
+FROM paa.roles r
+JOIN paa.projects p ON p.project_id = r.project_id
+WHERE p.slug = {sql_literal(project_slug)}
+  AND r.name = {sql_literal(role_name)}
+LIMIT 1;
+"""
+        output = query_scalar(sql, settings=self._settings)
+        return str(output) if output else None
+
     def get_role_by_name(self, project_slug: str, role_name: str) -> RoleRecord | None:
         sql = self._role_sql(
             where_clause=(
@@ -117,11 +134,10 @@ ON CONFLICT (project_id, name) DO UPDATE SET
         return record
 
     def _resolve_project_id(self, project_slug: str) -> str:
-        sql = f"SELECT project_id::text FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1;"
-        output = query_scalar(sql, settings=self._settings)
+        output = self.resolve_project_id(project_slug)
         if not output:
             raise LookupError(f'Project slug {project_slug!r} does not exist.')
-        return str(output)
+        return output
 
     def _role_sql(self, *, where_clause: str) -> str:
         return f"""

@@ -12,11 +12,11 @@ from typing import Any
 
 from paa_core import handoff_runtime
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_producer_consumer_project_config
-from paa_core.db import query_scalar, sql_literal
 from paa_core.policies.acceptance import DefaultAcceptancePolicy
 from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
 from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
+from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.repositories.workflow_state import (
     PostgresWorkflowStateRepository,
@@ -198,10 +198,12 @@ class _TechLeadWorkflowTransitionAdapter:
         *,
         workflow_state_repository: PostgresWorkflowStateRepository,
         runtime_event_repository: PostgresRuntimeEventRepository,
+        runtime_identity_repository: PostgresRuntimeIdentityRepository,
         logger: object | None = None,
     ) -> None:
         self._workflow_state_repository = workflow_state_repository
         self._runtime_event_repository = runtime_event_repository
+        self._runtime_identity_repository = runtime_identity_repository
         self._logger = logger if logger is not None else _NullStructuredLogger()
         self._workflow_lifecycle_service = DefaultWorkflowLifecycleService(
             workflow_state_repository=workflow_state_repository,
@@ -226,16 +228,17 @@ class _TechLeadWorkflowTransitionAdapter:
         if not isinstance(message_file, str) or not message_file:
             return {'ok': False, 'reason': 'missing_assignment_message_file'}
         packet = self._load_packet(message_file)
-        work_item_id = handoff_runtime.resolve_work_item_id_from_message(packet)
-        project_id = self._resolve_project_id(handoff_runtime.project_slug_from_message(packet))
+        project_slug = self._project_slug_from_packet(packet)
+        work_item_id = self._runtime_event_repository.resolve_work_item_id_for_message(packet)
+        project_id = self._runtime_identity_repository.resolve_project_id(project_slug)
         if not work_item_id or not project_id:
             return {'ok': False, 'reason': 'missing_work_item_or_project'}
         current_state = self._workflow_state_repository.get_workflow_state_for_work_item(work_item_id)
         if current_state is None:
             return {'ok': False, 'reason': 'missing_workflow_state'}
         target_role = str((packet.get('payload') or {}).get('target_role') or '')
-        target_role_id = self._resolve_role_id(project_id, target_role)
-        techlead_role_id = self._resolve_role_id(project_id, 'TechLead')
+        target_role_id = self._runtime_identity_repository.resolve_role_id(project_slug, target_role)
+        techlead_role_id = self._runtime_identity_repository.resolve_role_id(project_slug, 'TechLead')
         emitted_queue_message = self._runtime_event_repository.get_queue_message_by_external(
             str(emitted_assignment.get('message_id') or '')
         )
@@ -306,8 +309,9 @@ class _TechLeadWorkflowTransitionAdapter:
         packet = self._load_packet(packet_path) if packet_path else None
         if packet is None:
             return {'ok': False, 'reason': 'missing_source_packet'}
-        work_item_id = handoff_runtime.resolve_work_item_id_from_message(packet)
-        project_id = self._resolve_project_id(handoff_runtime.project_slug_from_message(packet))
+        project_slug = self._project_slug_from_packet(packet)
+        work_item_id = self._runtime_event_repository.resolve_work_item_id_for_message(packet)
+        project_id = self._runtime_identity_repository.resolve_project_id(project_slug)
         if not work_item_id or not project_id:
             return {'ok': False, 'reason': 'missing_work_item_or_project'}
         transition_type = (
@@ -336,25 +340,16 @@ class _TechLeadWorkflowTransitionAdapter:
         return payload if isinstance(payload, dict) else {}
 
     @staticmethod
-    def _resolve_project_id(project_slug: str) -> str | None:
-        sql = (
-            "SELECT project_id::text FROM paa.projects "
-            f"WHERE slug = {sql_literal(project_slug)} LIMIT 1;"
-        )
-        out = query_scalar(sql)
-        return str(out) if out else None
-
-    @staticmethod
-    def _resolve_role_id(project_id: str, role_name: str) -> str | None:
-        sql = f"""
-SELECT role_id::text
-FROM paa.roles
-WHERE project_id = {sql_literal(project_id)}::uuid
-  AND name = {sql_literal(role_name)}
-LIMIT 1;
-"""
-        out = query_scalar(sql)
-        return str(out) if out else None
+    def _project_slug_from_packet(packet: dict[str, Any]) -> str:
+        project = packet.get('project')
+        if isinstance(project, str) and project:
+            return project
+        payload = packet.get('payload')
+        if isinstance(payload, dict):
+            project_slug = payload.get('project_slug')
+            if isinstance(project_slug, str) and project_slug:
+                return project_slug
+        return 'paa-platform'
 
 
 class _PassthroughPacketEnvelopeValidator:
@@ -945,6 +940,7 @@ def build_techlead_runtime_host(
     project_config = load_producer_consumer_project_config(repo_project_config_path(resolved_repo_root))
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
     runtime_event_repository = PostgresRuntimeEventRepository()
+    runtime_identity_repository = PostgresRuntimeIdentityRepository()
     workflow_state_repository = PostgresWorkflowStateRepository()
     methodology_execution_state_service = DefaultMethodologyExecutionStateService(
         methodology_execution_repository=methodology_execution_repository,
@@ -1017,6 +1013,7 @@ def build_techlead_runtime_host(
         workflow_transition_adapter=_TechLeadWorkflowTransitionAdapter(
             workflow_state_repository=workflow_state_repository,
             runtime_event_repository=runtime_event_repository,
+            runtime_identity_repository=runtime_identity_repository,
             logger=runtime_logger,
         ),
         actor_name=actor_name,

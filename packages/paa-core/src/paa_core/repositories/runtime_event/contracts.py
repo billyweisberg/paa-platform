@@ -17,6 +17,39 @@ from .models import (
 class RuntimeEventRepository(Protocol):
     """Read-oriented access boundary for runtime transport and execution evidence."""
 
+    def resolve_work_item_id_for_message(self, message: dict[str, object]) -> str | None:
+        """Return one work item id resolved from one runtime packet envelope."""
+
+    def find_packet_compilation_run(
+        self,
+        *,
+        message_id_external: str,
+        schema_type: str,
+    ) -> AutomationRunRecord | None:
+        """Return the latest packet-compilation run for one message id and schema type."""
+
+    def create_packet_compilation_run_for_message(
+        self,
+        *,
+        message: dict[str, object],
+        message_file: str,
+        agent_name: str,
+        work_item_id: str | None = None,
+    ) -> AutomationRunRecord | None:
+        """Persist one packet-compilation automation run for one outbound packet."""
+
+    def record_queue_send_for_message(
+        self,
+        *,
+        message: dict[str, object],
+        queue_name: str,
+        exchange: str,
+        publish_result: dict[str, object] | None = None,
+        work_item_id: str | None = None,
+        packet_compilation_run: AutomationRunRecord | None = None,
+    ) -> QueueMessageRecord | None:
+        """Persist one queue send/handoff record for one outbound packet."""
+
     def get_handoff(self, handoff_id: str) -> HandoffRecord | None:
         """Return one handoff by primary id."""
 

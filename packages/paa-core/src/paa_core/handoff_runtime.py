@@ -16,6 +16,7 @@ from typing import Optional
 
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE
 from paa_core.db import run_psql as shared_run_psql
+from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime_paths import repo_root_from_cwd, resolved_repo_runtime_queue_topology
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
@@ -276,48 +277,11 @@ def issue_number_from_message(message: dict) -> Optional[int]:
 
 
 def resolve_work_item_id_from_message(message: dict) -> Optional[str]:
-    project_slug = project_slug_from_message(message)
-    issue_number = issue_number_from_message(message)
-    payload = message.get("payload") or {}
-    coder_brief_resolution = payload.get("coder_brief_resolution") or {}
-    package_id_external = coder_brief_resolution.get("package_id_external")
-    brief_id_external = coder_brief_resolution.get("brief_id_external")
-    sql = f"""
-    WITH project AS (
-      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1
-    ), issue_match AS (
-      SELECT wi.work_item_id
-      FROM paa.work_items wi
-      JOIN project p ON p.project_id = wi.project_id
-      WHERE wi.issue_number = {sql_literal(issue_number)}
-      LIMIT 1
-    ), package_match AS (
-      SELECT dp.work_item_id
-      FROM paa.design_packages dp
-      JOIN project p ON p.project_id = dp.project_id
-      WHERE dp.package_id_external = {sql_literal(package_id_external)}
-        AND dp.work_item_id IS NOT NULL
-      LIMIT 1
-    ), brief_match AS (
-      SELECT cb.work_item_id
-      FROM paa.coder_run_briefs cb
-      JOIN project p ON p.project_id = cb.project_id
-      WHERE cb.brief_id_external = {sql_literal(brief_id_external)}
-        AND cb.work_item_id IS NOT NULL
-      LIMIT 1
-    )
-    SELECT coalesce(
-      (SELECT work_item_id::text FROM issue_match),
-      (SELECT work_item_id::text FROM package_match),
-      (SELECT work_item_id::text FROM brief_match)
-    );
-    """
     try:
-        out = run_psql(sql).strip()
+        return PostgresRuntimeEventRepository().resolve_work_item_id_for_message(message)
     except Exception as exc:
         print(json.dumps({"warning": f"failed to resolve work item for handoff send: {str(exc)}"}), file=sys.stderr)
         return None
-    return out or None
 
 
 def packet_compiler_agent_name_for_message(message: dict) -> str:
@@ -334,75 +298,17 @@ def packet_compiler_agent_name_for_message(message: dict) -> str:
 
 
 def persist_packet_compilation_for_send_message(message: dict, *, message_file: str) -> Optional[str]:
-    existing = lookup_packet_compilation_run(message)
-    if existing:
-        return existing.get("automation_run_id")
-
-    project_slug = project_slug_from_message(message)
-    work_item_id = resolve_work_item_id_from_message(message)
-    schema_type = str(message.get("schema_type") or "")
-    if not schema_type:
-        return None
-
-    issue_number = issue_number_from_message(message)
-    created_at = message.get("created_at") or utc_now()
     agent_name = packet_compiler_agent_name_for_message(message)
-    artifacts = {
-        "packet_schema_type": schema_type,
-        "message_id": message.get("message_id"),
-        "correlation_id": message.get("correlation_id"),
-        "output_path": str(Path(message_file).expanduser().resolve()),
-        "packet_output_path": str(Path(message_file).expanduser().resolve()),
-        "review_output_path": None,
-        "source_input_path": str(Path(message_file).expanduser().resolve()),
-        "source_packet_path": str(Path(message_file).expanduser().resolve()),
-        "packet_json": message,
-        "persistence_version": "1.0.0",
-    }
-    summary = (
-        f"Compiled {schema_type} for issue #{issue_number}"
-        if issue_number is not None
-        else f"Compiled {schema_type}"
-    )
-    sql = f"""
-    WITH project AS (
-      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1
-    ), agent AS (
-      SELECT a.agent_id
-      FROM paa.agents a
-      JOIN project p ON p.project_id = a.project_id
-      WHERE a.name = {sql_literal(agent_name)}
-      LIMIT 1
-    )
-    INSERT INTO paa.automation_runs (
-      agent_id,
-      work_item_id,
-      trigger_type,
-      status,
-      started_at,
-      finished_at,
-      summary,
-      artifacts_json
-    )
-    SELECT
-      agent.agent_id,
-      {sql_literal(work_item_id)}::uuid,
-      {sql_literal(f'packet_compilation:{schema_type}')},
-      'completed'::paa.automation_run_status,
-      {sql_literal(created_at)}::timestamptz,
-      {sql_literal(created_at)}::timestamptz,
-      {sql_literal(summary)},
-      {sql_literal(json.dumps(artifacts))}::jsonb
-    FROM agent;
-    """
     try:
-        run_psql(sql)
+        record = PostgresRuntimeEventRepository().create_packet_compilation_run_for_message(
+            message=message,
+            message_file=message_file,
+            agent_name=agent_name,
+        )
+        return record.automation_run_id if record is not None else None
     except Exception as exc:
         print(json.dumps({"warning": f"failed to persist packet compilation for handoff send: {str(exc)}"}), file=sys.stderr)
         return None
-
-    created = lookup_packet_compilation_run(message)
-    return created.get("automation_run_id") if created else None
 
 
 def persist_send_event(
@@ -412,98 +318,18 @@ def persist_send_event(
     *,
     exchange: Optional[str] = None,
 ):
-    project_slug = project_slug_from_message(message)
-    from_role = role_name_for_db(message.get("from_role"))
-    to_role = role_name_for_db(message.get("to_role"))
-    resolved_work_item_id = resolve_work_item_id_from_message(message)
-    payload_json = json.dumps(message)
-    packet_compilation = lookup_packet_compilation_run(message)
-    metadata = {
-        "queue_name": queue_name,
-        "exchange": exchange or DEFAULT_EXCHANGE,
-        "publish_result": publish_result or {},
-    }
-    if packet_compilation:
-        metadata["compiled_packet_automation_run_id"] = packet_compilation.get("automation_run_id")
-        metadata["compiled_packet_trigger_type"] = packet_compilation.get("trigger_type")
-        metadata["compiled_packet_summary"] = packet_compilation.get("summary")
-        metadata["compiled_packet_package_id_external"] = packet_compilation.get("package_id_external")
-        metadata["compiled_packet_brief_id_external"] = packet_compilation.get("brief_id_external")
-    metadata_json = json.dumps(metadata)
-    sql = f"""
-    WITH project AS (
-      SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
-    ), from_role AS (
-      SELECT role_id FROM paa.roles r JOIN project p ON p.project_id = r.project_id
-      WHERE r.name = {sql_literal(from_role)}
-    ), to_role AS (
-      SELECT role_id FROM paa.roles r JOIN project p ON p.project_id = r.project_id
-      WHERE r.name = {sql_literal(to_role)}
-    ), existing AS (
-      SELECT qm.queue_message_id
-      FROM paa.queue_messages qm
-      WHERE qm.message_id_external = {sql_literal(message.get("message_id"))}
-      LIMIT 1
-    ), packet_compilation_run AS (
-      SELECT {sql_literal(packet_compilation.get("automation_run_id") if packet_compilation else None)}::uuid AS automation_run_id
-    ), inserted_handoff AS (
-      INSERT INTO paa.handoffs (
-        project_id,
-        work_item_id,
-        from_role_id,
-        to_role_id,
-        handoff_type,
-        status,
-        created_at,
-        notes
-      )
-      SELECT
-        project.project_id,
-        {sql_literal(resolved_work_item_id)}::uuid,
-        (SELECT role_id FROM from_role),
-        (SELECT role_id FROM to_role),
-        {sql_literal(message.get("schema_type"))},
-        'pending'::paa.handoff_status,
-        {sql_literal(message.get("created_at"))}::timestamptz,
-        {sql_literal(f"correlation_id={message.get('correlation_id')}")}
-      FROM project
-      WHERE NOT EXISTS (SELECT 1 FROM existing)
-      RETURNING handoff_id
-    ), linked_compilation_run AS (
-      UPDATE paa.automation_runs ar
-      SET handoff_id = inserted_handoff.handoff_id,
-          updated_at = now()
-      FROM inserted_handoff, packet_compilation_run
-      WHERE ar.automation_run_id = packet_compilation_run.automation_run_id
-      RETURNING ar.automation_run_id
-    )
-    INSERT INTO paa.queue_messages (
-      handoff_id,
-      queue_name,
-      schema_type,
-      message_id_external,
-      correlation_key,
-      payload_json,
-      status,
-      sent_at,
-      metadata_json
-    )
-    SELECT
-      inserted_handoff.handoff_id,
-      {sql_literal(queue_name)},
-      {sql_literal(message.get("schema_type"))},
-      {sql_literal(message.get("message_id"))},
-      {sql_literal(message.get("correlation_id"))},
-      {sql_literal(payload_json)}::jsonb,
-      'sent'::paa.queue_message_status,
-      {sql_literal(utc_now())}::timestamptz,
-      {sql_literal(metadata_json)}::jsonb
-    FROM inserted_handoff
-    WHERE NOT EXISTS (SELECT 1 FROM existing)
-    RETURNING queue_message_id;
-    """
     try:
-        run_psql(sql)
+        repo = PostgresRuntimeEventRepository()
+        repo.record_queue_send_for_message(
+            message=message,
+            queue_name=queue_name,
+            exchange=exchange or DEFAULT_EXCHANGE,
+            publish_result=publish_result,
+            packet_compilation_run=repo.find_packet_compilation_run(
+                message_id_external=str(message.get("message_id") or ""),
+                schema_type=str(message.get("schema_type") or ""),
+            ),
+        )
     except Exception as exc:
         print(json.dumps({"warning": f"failed to persist handoff send to PAA: {str(exc)}"}), file=sys.stderr)
 
@@ -513,37 +339,22 @@ def lookup_packet_compilation_run(message: dict) -> Optional[dict]:
     schema_type = message.get("schema_type")
     if not message_id or not schema_type:
         return None
-    trigger_type = f"packet_compilation:{schema_type}"
-    sql = f"""
-    SELECT
-      ar.automation_run_id,
-      ar.trigger_type,
-      ar.summary,
-      ar.artifacts_json->>'package_id_external',
-      ar.artifacts_json->>'brief_id_external'
-    FROM paa.automation_runs ar
-    WHERE ar.trigger_type = {sql_literal(trigger_type)}
-      AND ar.artifacts_json->>'message_id' = {sql_literal(message_id)}
-    ORDER BY ar.created_at DESC
-    LIMIT 1;
-    """
     try:
-        out = run_psql(sql).strip()
+        record = PostgresRuntimeEventRepository().find_packet_compilation_run(
+            message_id_external=str(message_id),
+            schema_type=str(schema_type),
+        )
     except Exception as exc:
         print(json.dumps({"warning": f"failed to lookup packet compilation run in PAA: {str(exc)}"}), file=sys.stderr)
         return None
-    if not out:
+    if record is None:
         return None
-    fields = out.split("\t")
-    if len(fields) < 5:
-        fields.extend([""] * (5 - len(fields)))
-    automation_run_id, resolved_trigger_type, summary, package_id_external, brief_id_external = fields[:5]
     return {
-        "automation_run_id": automation_run_id,
-        "trigger_type": resolved_trigger_type,
-        "summary": summary or None,
-        "package_id_external": package_id_external or None,
-        "brief_id_external": brief_id_external or None,
+        "automation_run_id": record.automation_run_id,
+        "trigger_type": record.trigger_type,
+        "summary": record.summary or None,
+        "package_id_external": record.artifacts.get("package_id_external"),
+        "brief_id_external": record.artifacts.get("brief_id_external"),
     }
 
 

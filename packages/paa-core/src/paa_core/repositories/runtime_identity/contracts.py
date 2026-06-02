@@ -10,6 +10,12 @@ from .models import AgentRecord, AgentUpsertSpec, RoleRecord, RoleUpsertSpec
 class RuntimeIdentityRepository(Protocol):
     """Persistence boundary for project-scoped runtime roles and agents."""
 
+    def resolve_project_id(self, project_slug: str) -> str | None:
+        ...
+
+    def resolve_role_id(self, project_slug: str, role_name: str) -> str | None:
+        ...
+
     def get_role_by_name(self, project_slug: str, role_name: str) -> RoleRecord | None:
         ...
 

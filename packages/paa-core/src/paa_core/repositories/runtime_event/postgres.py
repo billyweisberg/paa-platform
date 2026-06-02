@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
-from paa_core.db import DBSettings, query_json_rows, sql_literal
+from paa_core.db import DBSettings, execute_sql, query_json_rows, query_scalar, sql_literal
 
 from .models import (
     AcceptanceEventRecord,
@@ -21,6 +23,266 @@ class PostgresRuntimeEventRepository:
 
     def __init__(self, *, settings: DBSettings | None = None) -> None:
         self._settings = settings
+
+    def resolve_work_item_id_for_message(self, message: dict[str, object]) -> str | None:
+        project_slug = self._project_slug_from_message(message)
+        issue_number = self._issue_number_from_message(message)
+        payload = message.get('payload') or {}
+        coder_brief_resolution = payload.get('coder_brief_resolution') if isinstance(payload, dict) else {}
+        if not isinstance(coder_brief_resolution, dict):
+            coder_brief_resolution = {}
+        package_id_external = coder_brief_resolution.get('package_id_external')
+        brief_id_external = coder_brief_resolution.get('brief_id_external')
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1
+), issue_match AS (
+  SELECT wi.work_item_id
+  FROM paa.work_items wi
+  JOIN project p ON p.project_id = wi.project_id
+  WHERE wi.issue_number = {sql_literal(issue_number)}
+  LIMIT 1
+), package_match AS (
+  SELECT dp.work_item_id
+  FROM paa.design_packages dp
+  JOIN project p ON p.project_id = dp.project_id
+  WHERE dp.package_id_external = {sql_literal(package_id_external)}
+    AND dp.work_item_id IS NOT NULL
+  LIMIT 1
+), brief_match AS (
+  SELECT cb.work_item_id
+  FROM paa.coder_run_briefs cb
+  JOIN project p ON p.project_id = cb.project_id
+  WHERE cb.brief_id_external = {sql_literal(brief_id_external)}
+    AND cb.work_item_id IS NOT NULL
+  LIMIT 1
+)
+SELECT coalesce(
+  (SELECT work_item_id::text FROM issue_match),
+  (SELECT work_item_id::text FROM package_match),
+  (SELECT work_item_id::text FROM brief_match)
+);
+"""
+        output = query_scalar(sql, settings=self._settings)
+        return str(output) if output else None
+
+    def find_packet_compilation_run(
+        self,
+        *,
+        message_id_external: str,
+        schema_type: str,
+    ) -> AutomationRunRecord | None:
+        trigger_type = f'packet_compilation:{schema_type}'
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ar.automation_run_id::text,
+    ar.agent_id::text,
+    ar.work_item_id::text,
+    ar.handoff_id::text,
+    ar.trigger_type,
+    ar.status::text AS status,
+    ar.started_at::text,
+    ar.finished_at::text,
+    ar.summary,
+    ar.artifacts_json AS artifacts,
+    ar.created_at::text,
+    ar.updated_at::text
+  FROM paa.automation_runs ar
+  WHERE ar.trigger_type = {sql_literal(trigger_type)}
+    AND ar.artifacts_json->>'message_id' = {sql_literal(message_id_external)}
+  ORDER BY ar.created_at DESC, ar.updated_at DESC
+  LIMIT 1
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        return self._automation_run_from_row(rows[0]) if rows else None
+
+    def create_packet_compilation_run_for_message(
+        self,
+        *,
+        message: dict[str, object],
+        message_file: str,
+        agent_name: str,
+        work_item_id: str | None = None,
+    ) -> AutomationRunRecord | None:
+        message_id = str(message.get('message_id') or '')
+        schema_type = str(message.get('schema_type') or '')
+        if not message_id or not schema_type:
+            return None
+        existing = self.find_packet_compilation_run(
+            message_id_external=message_id,
+            schema_type=schema_type,
+        )
+        if existing is not None:
+            return existing
+        project_slug = self._project_slug_from_message(message)
+        resolved_work_item_id = work_item_id or self.resolve_work_item_id_for_message(message)
+        issue_number = self._issue_number_from_message(message)
+        created_at = str(message.get('created_at') or self._utc_now())
+        output_path = str(Path(message_file).expanduser().resolve())
+        artifacts = {
+            'packet_schema_type': schema_type,
+            'message_id': message.get('message_id'),
+            'correlation_id': message.get('correlation_id'),
+            'output_path': output_path,
+            'packet_output_path': output_path,
+            'review_output_path': None,
+            'source_input_path': output_path,
+            'source_packet_path': output_path,
+            'packet_json': message,
+            'persistence_version': '1.0.0',
+        }
+        summary = (
+            f'Compiled {schema_type} for issue #{issue_number}'
+            if issue_number is not None
+            else f'Compiled {schema_type}'
+        )
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)} LIMIT 1
+), agent AS (
+  SELECT a.agent_id
+  FROM paa.agents a
+  JOIN project p ON p.project_id = a.project_id
+  WHERE a.name = {sql_literal(agent_name)}
+  LIMIT 1
+)
+INSERT INTO paa.automation_runs (
+  agent_id,
+  work_item_id,
+  trigger_type,
+  status,
+  started_at,
+  finished_at,
+  summary,
+  artifacts_json
+)
+SELECT
+  agent.agent_id,
+  {sql_literal(resolved_work_item_id)}::uuid,
+  {sql_literal(f'packet_compilation:{schema_type}')},
+  'completed'::paa.automation_run_status,
+  {sql_literal(created_at)}::timestamptz,
+  {sql_literal(created_at)}::timestamptz,
+  {sql_literal(summary)},
+  {sql_literal(json.dumps(artifacts, sort_keys=True))}::jsonb
+FROM agent;
+"""
+        execute_sql(sql, settings=self._settings)
+        return self.find_packet_compilation_run(
+            message_id_external=message_id,
+            schema_type=schema_type,
+        )
+
+    def record_queue_send_for_message(
+        self,
+        *,
+        message: dict[str, object],
+        queue_name: str,
+        exchange: str,
+        publish_result: dict[str, object] | None = None,
+        work_item_id: str | None = None,
+        packet_compilation_run: AutomationRunRecord | None = None,
+    ) -> QueueMessageRecord | None:
+        project_slug = self._project_slug_from_message(message)
+        from_role = self._role_name_for_db(message.get('from_role'))
+        to_role = self._role_name_for_db(message.get('to_role'))
+        resolved_work_item_id = work_item_id or self.resolve_work_item_id_for_message(message)
+        resolved_message_id = str(message.get('message_id') or '')
+        if not resolved_message_id:
+            return None
+        packet_compilation = packet_compilation_run or self.find_packet_compilation_run(
+            message_id_external=resolved_message_id,
+            schema_type=str(message.get('schema_type') or ''),
+        )
+        metadata: dict[str, object] = {
+            'queue_name': queue_name,
+            'exchange': exchange,
+            'publish_result': publish_result or {},
+        }
+        if packet_compilation is not None:
+            metadata['compiled_packet_automation_run_id'] = packet_compilation.automation_run_id
+            metadata['compiled_packet_trigger_type'] = packet_compilation.trigger_type
+            metadata['compiled_packet_summary'] = packet_compilation.summary
+            metadata['compiled_packet_package_id_external'] = packet_compilation.artifacts.get('package_id_external')
+            metadata['compiled_packet_brief_id_external'] = packet_compilation.artifacts.get('brief_id_external')
+        payload_json = json.dumps(message, sort_keys=True)
+        metadata_json = json.dumps(metadata, sort_keys=True)
+        sql = f"""
+WITH project AS (
+  SELECT project_id FROM paa.projects WHERE slug = {sql_literal(project_slug)}
+), from_role AS (
+  SELECT role_id FROM paa.roles r JOIN project p ON p.project_id = r.project_id
+  WHERE r.name = {sql_literal(from_role)}
+), to_role AS (
+  SELECT role_id FROM paa.roles r JOIN project p ON p.project_id = r.project_id
+  WHERE r.name = {sql_literal(to_role)}
+), existing AS (
+  SELECT qm.queue_message_id
+  FROM paa.queue_messages qm
+  WHERE qm.message_id_external = {sql_literal(resolved_message_id)}
+  LIMIT 1
+), packet_compilation_run AS (
+  SELECT {sql_literal(packet_compilation.automation_run_id if packet_compilation else None)}::uuid AS automation_run_id
+), inserted_handoff AS (
+  INSERT INTO paa.handoffs (
+    project_id,
+    work_item_id,
+    from_role_id,
+    to_role_id,
+    handoff_type,
+    status,
+    created_at,
+    notes
+  )
+  SELECT
+    project.project_id,
+    {sql_literal(resolved_work_item_id)}::uuid,
+    (SELECT role_id FROM from_role),
+    (SELECT role_id FROM to_role),
+    {sql_literal(message.get('schema_type'))},
+    'pending'::paa.handoff_status,
+    {sql_literal(message.get('created_at'))}::timestamptz,
+    {sql_literal(f"correlation_id={message.get('correlation_id')}")}
+  FROM project
+  WHERE NOT EXISTS (SELECT 1 FROM existing)
+  RETURNING handoff_id
+), linked_compilation_run AS (
+  UPDATE paa.automation_runs ar
+  SET handoff_id = inserted_handoff.handoff_id,
+      updated_at = now()
+  FROM inserted_handoff, packet_compilation_run
+  WHERE ar.automation_run_id = packet_compilation_run.automation_run_id
+  RETURNING ar.automation_run_id
+)
+INSERT INTO paa.queue_messages (
+  handoff_id,
+  queue_name,
+  schema_type,
+  message_id_external,
+  correlation_key,
+  payload_json,
+  status,
+  sent_at,
+  metadata_json
+)
+SELECT
+  inserted_handoff.handoff_id,
+  {sql_literal(queue_name)},
+  {sql_literal(message.get('schema_type'))},
+  {sql_literal(resolved_message_id)},
+  {sql_literal(message.get('correlation_id'))},
+  {sql_literal(payload_json)}::jsonb,
+  'sent'::paa.queue_message_status,
+  {sql_literal(self._utc_now())}::timestamptz,
+  {sql_literal(metadata_json)}::jsonb
+FROM inserted_handoff
+WHERE NOT EXISTS (SELECT 1 FROM existing);
+"""
+        execute_sql(sql, settings=self._settings)
+        return self.get_queue_message_by_external(resolved_message_id)
 
     def get_handoff(self, handoff_id: str) -> HandoffRecord | None:
         sql = f"""
@@ -227,6 +489,50 @@ FROM (
 
     def _query_json_rows(self, sql: str) -> list[dict[str, Any]]:
         return query_json_rows(sql, settings=self._settings)
+
+    @staticmethod
+    def _project_slug_from_message(message: dict[str, object]) -> str:
+        project = message.get('project')
+        if project in {'fractal-core-python', 'fractal-core'}:
+            return 'fractal-core-python'
+        return str(project or 'fractal-core-python')
+
+    @staticmethod
+    def _issue_number_from_message(message: dict[str, object]) -> int | None:
+        github_context = message.get('github_context')
+        issue_number = github_context.get('issue_number') if isinstance(github_context, dict) else None
+        try:
+            return int(issue_number) if issue_number is not None else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _role_name_for_db(raw_role: object) -> str | None:
+        normalized = str(raw_role or '')
+        mapping = {
+            'Python Team': 'Dev',
+            'python-team': 'Dev',
+            'Python Dev': 'Dev',
+            'Frontend Dev': 'Dev',
+            'Backend Dev': 'Dev',
+            'Infra Dev': 'Dev',
+            'Docs Dev': 'Dev',
+            'QA': 'QA',
+            'qa': 'QA',
+            'TechLead': 'TechLead',
+            'techlead': 'TechLead',
+            'Architect': 'Architect',
+            'architect': 'Architect',
+            'Authority Architect': 'Architect',
+            'Delivery Architect': 'Architect',
+        }
+        return mapping.get(normalized, normalized or None)
+
+    @staticmethod
+    def _utc_now() -> str:
+        from datetime import datetime, timezone
+
+        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
     def _handoff_from_row(self, row: dict[str, Any]) -> HandoffRecord:
         return HandoffRecord(
