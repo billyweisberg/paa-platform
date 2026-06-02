@@ -152,20 +152,37 @@ class _TechLeadAssignmentPublisher:
         source_packet_message_id: str | None,
         source_packet_path: str | None,
     ) -> dict[str, Any] | None:
+        assignment_result = worker_result.assignment_decision_result
         routing_result = worker_result.worker_review_routing_result
         dispatch_summary = worker_result.dispatch_summary
         request = worker_result.request
         payload = request.packet_payload or {}
         source_packet = self._read_source_packet(source_packet_path)
-        if (
-            routing_result is None
-            or not worker_result.ok
-            or dispatch_summary.recommended_next_action != 'assign_qa'
-            or dispatch_summary.recommended_target_role != 'QA'
-        ):
+        if not worker_result.ok:
+            return None
+
+        target_role = dispatch_summary.recommended_target_role
+        assignment_type = None
+        assignment_summary = None
+        allowed_result_types: tuple[str, ...] = ()
+        if assignment_result is not None:
+            assignment_type = assignment_result.summary.assignment_type
+            assignment_summary = assignment_result.summary.assignment_summary
+            allowed_result_types = assignment_result.summary.allowed_result_types
+        elif routing_result is not None and dispatch_summary.recommended_next_action == 'assign_qa' and target_role == 'QA':
+            assignment_type = 'verify_authorized_slice'
+            assignment_summary = routing_result.summary.review_summary
+            allowed_result_types = tuple(routing_result.recommended_actions or ('pass', 'fail_fixable', 'needs_human_review'))
+        if not target_role or not assignment_type or not assignment_summary:
             return None
 
         issue_number = payload.get('issue_number')
+        if not isinstance(issue_number, int) or issue_number <= 0:
+            issue = payload.get('issue')
+            if isinstance(issue, dict):
+                nested_issue_number = issue.get('number')
+                if isinstance(nested_issue_number, int):
+                    issue_number = nested_issue_number
         if not isinstance(issue_number, int) or issue_number <= 0:
             return {
                 'ok': False,
@@ -179,13 +196,16 @@ class _TechLeadAssignmentPublisher:
 
         github_links = self._normalize_github_links(payload, source_packet)
         branch_name = self._resolve_branch_name(payload, source_packet)
+        target_role_value = target_role.strip()
+        target_role_key = target_role_value.lower()
+        assignment_slug = assignment_type.replace('_', '-')
         packet = {
-            'message_id': self._build_message_id(issue_number=issue_number, assignment_type='verify_authorized_slice'),
+            'message_id': self._build_message_id(issue_number=issue_number, assignment_type=assignment_type),
             'schema_type': 'techlead_assignment_packet',
             'schema_version': '1.0.0',
             'project': self._project_slug,
             'from_role': 'techlead',
-            'to_role': 'qa',
+            'to_role': target_role_value,
             'created_at': self._utc_now(),
             'correlation_id': f'issue-{issue_number}',
             'github_context': {
@@ -205,8 +225,8 @@ class _TechLeadAssignmentPublisher:
                     'url': payload.get('pr_url'),
                     'ready_for_review': True,
                 },
-                'target_role': 'QA',
-                'assignment_type': 'verify_authorized_slice',
+                'target_role': target_role,
+                'assignment_type': assignment_type,
                 'source_context_ref': {
                     'source_packet_path': source_packet_path,
                     'source_packet_message_id': source_packet_message_id,
@@ -220,10 +240,10 @@ class _TechLeadAssignmentPublisher:
                 'lineage_action': 'created',
                 'source_branch': branch_name,
                 'superseded_branch': None,
-                'worktree_hint': f'issue-{issue_number}-qa',
+                'worktree_hint': f'issue-{issue_number}-{target_role_key}',
                 'reset_reason': None,
-                'allowed_result_types': list(routing_result.recommended_actions or ('pass', 'fail_fixable', 'needs_human_review')),
-                'assignment_summary': routing_result.summary.review_summary,
+                'allowed_result_types': list(allowed_result_types),
+                'assignment_summary': assignment_summary,
                 'coder_run_brief_ref': payload.get('coder_run_brief_ref'),
                 'coder_run_brief': payload.get('coder_run_brief'),
                 'coder_brief_resolution': payload.get('coder_brief_resolution'),
@@ -233,11 +253,16 @@ class _TechLeadAssignmentPublisher:
                 'pr_number': pr_number,
                 'workflow_stage': payload.get('workflow_stage'),
                 'worker_result_type': payload.get('worker_result_type'),
+                'next_assignment_type': assignment_type,
             },
             'authority_context': self._authority_context(source_packet),
         }
 
-        output_path = self._assignment_output_path(issue_number=issue_number)
+        output_path = self._assignment_output_path(
+            issue_number=issue_number,
+            target_role_slug=target_role_key,
+            assignment_slug=assignment_slug,
+        )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(packet, indent=2) + '\n')
         dispatch_result = dispatch_packet(self._repo_root, output_path)
@@ -249,9 +274,14 @@ class _TechLeadAssignmentPublisher:
             'dispatch': dispatch_result,
         }
 
-    def _assignment_output_path(self, *, issue_number: int) -> Path:
+    def _assignment_output_path(self, *, issue_number: int, target_role_slug: str, assignment_slug: str) -> Path:
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-        return self._repo_root / '.codex-work' / 'techlead-runtime' / f'issue-{issue_number}-qa-assignment-{stamp}.json'
+        return (
+            self._repo_root
+            / '.codex-work'
+            / 'techlead-runtime'
+            / f'issue-{issue_number}-{target_role_slug}-{assignment_slug}-{stamp}.json'
+        )
 
     def _authority_context(self, source_packet: dict[str, Any] | None) -> dict[str, Any]:
         source = source_packet.get('authority_context') if isinstance(source_packet, dict) else None

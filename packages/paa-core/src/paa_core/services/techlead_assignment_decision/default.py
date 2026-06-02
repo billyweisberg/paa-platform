@@ -26,6 +26,7 @@ class DefaultTechLeadAssignmentDecisionService:
     """Derive supported next-assignment decisions from resolved runtime context."""
 
     _EXPLICIT_TEAM_ROLE_MAP: dict[str, tuple[str, str]] = {
+        'dev': ('Dev', 'dev'),
         'python': ('Python Dev', 'python'),
         'python-dev': ('Python Dev', 'python'),
         'python-team': ('Python Dev', 'python'),
@@ -134,7 +135,7 @@ class DefaultTechLeadAssignmentDecisionService:
                     'the current TechLeadAssignmentDecisionService slice.'
                 ),
                 blocking_reasons=('unsupported_explicit_target_role',),
-                notes=('supported-explicit-targets:python,python-dev,python-team',),
+                notes=('supported-explicit-targets:dev,python,python-dev,python-team',),
             )
 
         target_role, target_role_cli = team_worker

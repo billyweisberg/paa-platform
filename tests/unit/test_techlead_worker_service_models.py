@@ -69,6 +69,7 @@ class TechLeadWorkerServiceModelsTests(unittest.TestCase):
             current_execution_summary=None,
             dispatch_summary=dispatch_summary,
             worker_review_routing_result=None,
+            assignment_decision_result=None,
             methodology_transition_result=None,
             normalized_packet_output_summary=None,
             ok=True,

@@ -32,7 +32,9 @@ class _NullStructuredLogger:
 class DefaultQueuePacketRuntimeController:
     """Coordinate the first supported deterministic queue runtime-controller slice."""
 
-    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'worker_result_packet', 'qa_verification_packet'})
+    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset(
+        {'worker_result_packet', 'qa_verification_packet', 'techlead_decision_packet'}
+    )
 
     def __init__(
         self,

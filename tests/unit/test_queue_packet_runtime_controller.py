@@ -60,7 +60,11 @@ class _FakeTechLeadWorkerService:
         return self.result
 
     def supports_packet_schema_type(self, packet_schema_type: str) -> bool:
-        return packet_schema_type in {'worker_result_packet', 'qa_verification_packet'}
+        return packet_schema_type in {
+            'worker_result_packet',
+            'qa_verification_packet',
+            'techlead_decision_packet',
+        }
 
 
 class _FakeQueuePacketReader:
@@ -179,6 +183,31 @@ class QueuePacketRuntimeControllerTests(unittest.TestCase):
         self.assertEqual(result.dispatch_summary.target_worker_host, 'TechLeadWorkerService')
         self.assertEqual(techlead_service.requests[0].packet_schema_type, 'qa_verification_packet')
 
+    def test_handle_packet_routes_supported_techlead_decision_packet_to_techlead_service(self) -> None:
+        techlead_service = _FakeTechLeadWorkerService(
+            _techlead_worker_result(ok=True, packet_schema_type='techlead_decision_packet')
+        )
+        service = self._build_service(techlead_worker_service=techlead_service)
+
+        result = service.handle_packet(
+            QueuePacketRuntimeRequest(
+                queue_name='paa-techlead',
+                packet_schema_type='techlead_decision_packet',
+                packet_message_id='msg-decision-1',
+                packet_payload={
+                    'methodology_execution_id': 'exec-decision-1',
+                    'project_slug': 'paa-platform',
+                    'issue_number': 42,
+                    'target_role': 'Dev',
+                    'workflow_stage': 'techlead_assignment_pending',
+                },
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.dispatch_summary.target_worker_host, 'TechLeadWorkerService')
+        self.assertEqual(techlead_service.requests[0].packet_schema_type, 'techlead_decision_packet')
+
     def test_handle_packet_fails_closed_for_unsupported_packet_schema_type(self) -> None:
         service = self._build_service()
 
@@ -249,13 +278,25 @@ class QueuePacketRuntimeControllerTests(unittest.TestCase):
 
 
 def _techlead_worker_result(*, ok: bool, packet_schema_type: str = 'worker_result_packet') -> TechLeadWorkerResult:
+    if packet_schema_type == 'worker_result_packet':
+        handler_key = 'worker-review-routing'
+        recommended_next_action = 'assign_dev' if ok else None
+        recommended_target_role = 'Dev' if ok else None
+    elif packet_schema_type == 'qa_verification_packet':
+        handler_key = 'qa-verification-acceptance'
+        recommended_next_action = 'close_slice' if ok else None
+        recommended_target_role = 'TechLead' if ok else None
+    else:
+        handler_key = 'techlead-assignment-decision'
+        recommended_next_action = 'assign_dev' if ok else None
+        recommended_target_role = 'Dev' if ok else None
     dispatch_summary = TechLeadWorkerDispatchSummary(
-        handler_key='worker-review-routing' if packet_schema_type == 'worker_result_packet' else 'qa-verification-acceptance',
+        handler_key=handler_key,
         packet_schema_type=packet_schema_type,
         decision_service_used='TechLeadWorkerReviewRoutingService',
         decision_supported=ok,
-        recommended_next_action='assign-dev' if ok and packet_schema_type == 'worker_result_packet' else ('close_slice' if ok else None),
-        recommended_target_role='Dev' if ok and packet_schema_type == 'worker_result_packet' else ('TechLead' if ok else None),
+        recommended_next_action=recommended_next_action,
+        recommended_target_role=recommended_target_role,
         packet_emission_required=False,
         methodology_transition_required=False,
         blocking_reasons=() if ok else ('techlead-routing-blocked',),
@@ -270,6 +311,7 @@ def _techlead_worker_result(*, ok: bool, packet_schema_type: str = 'worker_resul
         current_execution_summary=None,
         dispatch_summary=dispatch_summary,
         worker_review_routing_result=None,
+        assignment_decision_result=None,
         methodology_transition_result=None,
         normalized_packet_output_summary='Dry run only: would emit the next packet.',
         ok=ok,

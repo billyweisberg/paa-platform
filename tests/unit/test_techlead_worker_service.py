@@ -13,6 +13,10 @@ from paa_core.services.techlead_acceptance_decision.models import (
     TechLeadAcceptanceDecisionResult,
     TechLeadAcceptanceDecisionSummary,
 )
+from paa_core.services.techlead_assignment_decision.models import (
+    TechLeadAssignmentDecisionResult,
+    TechLeadAssignmentDecisionSummary,
+)
 from paa_core.services.techlead_worker import (
     DefaultTechLeadWorkerService,
     TECHLEAD_WORKER_SERVICE_METADATA,
@@ -51,6 +55,16 @@ class _FakeAcceptanceDecisionService:
         self.requests: list[object] = []
 
     def derive_acceptance_decision(self, request: object) -> TechLeadAcceptanceDecisionResult:
+        self.requests.append(request)
+        return self.result
+
+
+class _FakeAssignmentDecisionService:
+    def __init__(self, result: TechLeadAssignmentDecisionResult) -> None:
+        self.result = result
+        self.requests: list[object] = []
+
+    def derive_assignment_decision(self, request: object) -> TechLeadAssignmentDecisionResult:
         self.requests.append(request)
         return self.result
 
@@ -222,6 +236,88 @@ class TechLeadWorkerServiceTests(unittest.TestCase):
         self.assertEqual(projection_service.requested_execution_ids, ['exec-qa-1'])
         self.assertEqual(len(acceptance_service.requests), 1)
 
+    def test_handle_packet_supports_techlead_decision_packet_dry_run(self) -> None:
+        projection = MethodologyExecutionStatusProjection(
+            methodology_execution_id='exec-dev-1',
+            lane='component_realization',
+            stage='slice_execution',
+            step='techlead_assignment_pending',
+            status='active',
+            current_owner_role='TechLead',
+            next_action_key='assign-dev',
+            blocked_reason=None,
+            component_id='component-123',
+            design_package_id=None,
+            implementation_plan_id='plan-123',
+            coder_run_brief_id=None,
+            packet_id='packet-123',
+            workflow_state_id='workflow-123',
+            active_authority_ref=None,
+            active_artifact_ref=None,
+            binding_refs=('implementation_plan:plan-123',),
+            summary_text='TechLead is issuing a Dev assignment.',
+        )
+        assignment_result = TechLeadAssignmentDecisionResult(
+            project_slug='paa-platform',
+            issue_number=42,
+            issue_url='https://example.com/issues/42',
+            pr_number=77,
+            pr_url='https://example.com/pull/77',
+            branch_name='codex/issue-42',
+            workflow_stage='techlead_assignment_pending',
+            source_packet_schema_type='techlead_decision_packet',
+            source_packet_message_id='msg-decision-123',
+            source_packet_queue_name=None,
+            source_packet_path=None,
+            summary=TechLeadAssignmentDecisionSummary(
+                decision_supported=True,
+                target_role='Dev',
+                target_role_cli='dev',
+                assignment_type='implement_authorized_slice',
+                allowed_result_types=('implemented_ready_for_qa', 'blocked', 'needs_clarification'),
+                assignment_summary='TechLead is assigning Dev to implement the authorized slice.',
+                decision_reason='supported_explicit_team_worker_emission',
+                blocking_reasons=(),
+                notes=('explicit-target-role',),
+            ),
+            ok=True,
+        )
+        projection_service = _FakeProjectionService(projection)
+        assignment_service = _FakeAssignmentDecisionService(assignment_result)
+        service = self._build_service(
+            projection_service=projection_service,
+            assignment_service=assignment_service,
+        )
+
+        result = service.handle_packet(
+            TechLeadWorkerRequest(
+                packet_schema_type='techlead_decision_packet',
+                packet_message_id='msg-decision-123',
+                methodology_execution_id='exec-dev-1',
+                packet_payload={
+                    'project_slug': 'paa-platform',
+                    'issue_number': 42,
+                    'pr_number': 77,
+                    'workflow_stage': 'techlead_assignment_pending',
+                    'target_role': 'Dev',
+                    'branch': 'codex/issue-42',
+                },
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.dispatch_summary.handler_key, 'techlead-assignment-decision')
+        self.assertEqual(result.dispatch_summary.recommended_next_action, 'assign_dev')
+        self.assertEqual(result.dispatch_summary.recommended_target_role, 'Dev')
+        self.assertEqual(result.assignment_decision_result, assignment_result)
+        self.assertIsNone(result.worker_review_routing_result)
+        self.assertEqual(
+            result.normalized_packet_output_summary,
+            'TechLead is assigning Dev to implement the authorized slice.',
+        )
+        self.assertEqual(projection_service.requested_execution_ids, ['exec-dev-1'])
+        self.assertEqual(len(assignment_service.requests), 1)
+
     def test_handle_packet_fails_closed_for_unsupported_packet_schema_type(self) -> None:
         service = self._build_service()
 
@@ -288,6 +384,7 @@ class TechLeadWorkerServiceTests(unittest.TestCase):
         projection_service: _FakeProjectionService | None = None,
         routing_service: _FakeWorkerReviewRoutingService | None = None,
         acceptance_service: _FakeAcceptanceDecisionService | None = None,
+        assignment_service: _FakeAssignmentDecisionService | None = None,
     ) -> DefaultTechLeadWorkerService:
         if projection_service is None:
             projection_service = _FakeProjectionService(
@@ -357,6 +454,34 @@ class TechLeadWorkerServiceTests(unittest.TestCase):
                     ok=True,
                 )
             )
+        if assignment_service is None:
+            assignment_service = _FakeAssignmentDecisionService(
+                TechLeadAssignmentDecisionResult(
+                    project_slug='paa-platform',
+                    issue_number=1,
+                    issue_url=None,
+                    pr_number=None,
+                    pr_url=None,
+                    branch_name='codex/issue-1',
+                    workflow_stage='techlead_assignment_pending',
+                    source_packet_schema_type='techlead_decision_packet',
+                    source_packet_message_id='msg-default',
+                    source_packet_queue_name=None,
+                    source_packet_path=None,
+                    summary=TechLeadAssignmentDecisionSummary(
+                        decision_supported=True,
+                        target_role='Dev',
+                        target_role_cli='dev',
+                        assignment_type='implement_authorized_slice',
+                        allowed_result_types=('implemented_ready_for_qa',),
+                        assignment_summary='default',
+                        decision_reason='supported_explicit_team_worker_emission',
+                        blocking_reasons=(),
+                        notes=('explicit-target-role',),
+                    ),
+                    ok=True,
+                )
+            )
         unused = SimpleNamespace()
         logger = SimpleNamespace(info=lambda *args, **kwargs: None, warning=lambda *args, **kwargs: None)
         return DefaultTechLeadWorkerService(
@@ -364,7 +489,7 @@ class TechLeadWorkerServiceTests(unittest.TestCase):
             methodology_execution_state_service=unused,
             methodology_execution_projection_service=projection_service,
             methodology_execution_preflight_service=unused,
-            techlead_assignment_decision_service=unused,
+            techlead_assignment_decision_service=assignment_service,
             techlead_worker_review_routing_service=routing_service,
             techlead_acceptance_decision_service=acceptance_service,
             techlead_delivery_review_decision_service=unused,

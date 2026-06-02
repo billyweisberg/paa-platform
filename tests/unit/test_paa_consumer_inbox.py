@@ -36,6 +36,18 @@ class PaaConsumerInboxTests(unittest.TestCase):
 
         self.assertEqual(queue_name, 'paa-dev')
 
+    def test_techlead_decision_packets_route_to_paa_techlead_queue(self) -> None:
+        queue_name = resolve_techlead_packet_queue(
+            {
+                'schema_type': 'techlead_decision_packet',
+                'to_role': 'TechLead',
+                'payload': {'target_role': 'Dev'},
+            },
+            repo_root=ROOT,
+        )
+
+        self.assertEqual(queue_name, 'paa-techlead')
+
     def test_dispatch_packet_persists_packet_compilation_before_send_event(self) -> None:
         message_file = ROOT / '.codex-work' / 'test-dispatch-packet.json'
         call_order: list[str] = []

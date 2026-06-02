@@ -27,7 +27,12 @@ class DefaultPacketReferenceResolutionService:
     """Resolve the first supported minimal packet-reference slice."""
 
     _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset(
-        {'worker_result_packet', 'techlead_assignment_packet', 'qa_verification_packet'}
+        {
+            'worker_result_packet',
+            'techlead_assignment_packet',
+            'techlead_decision_packet',
+            'qa_verification_packet',
+        }
     )
 
     def __init__(

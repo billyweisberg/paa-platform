@@ -13,6 +13,7 @@ from paa_core.services.methodology_execution_state import MethodologyExecutionSt
 from paa_core.services.techlead_acceptance_decision import TechLeadAcceptanceDecisionService
 from paa_core.services.techlead_acceptance_decision.models import TechLeadAcceptanceDecisionRequest
 from paa_core.services.techlead_assignment_decision import TechLeadAssignmentDecisionService
+from paa_core.services.techlead_assignment_decision.models import TechLeadAssignmentDecisionRequest
 from paa_core.services.techlead_closeout_decision import TechLeadCloseoutDecisionService
 from paa_core.services.techlead_delivery_review_decision import TechLeadDeliveryReviewDecisionService
 from paa_core.services.techlead_lineage_decision import TechLeadLineageDecisionService
@@ -41,7 +42,9 @@ class _NullStructuredLogger:
 class DefaultTechLeadWorkerService:
     """Coordinate the first supported deterministic TechLead worker-host slice."""
 
-    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'worker_result_packet', 'qa_verification_packet'})
+    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset(
+        {'worker_result_packet', 'qa_verification_packet', 'techlead_decision_packet'}
+    )
 
     def __init__(
         self,
@@ -175,6 +178,12 @@ class DefaultTechLeadWorkerService:
                 methodology_execution_id=methodology_execution_id,
                 current_execution_summary=current_execution_summary,
             )
+        elif packet_schema_type == 'techlead_decision_packet':
+            result = self._handle_techlead_decision_packet(
+                request=request,
+                methodology_execution_id=methodology_execution_id,
+                current_execution_summary=current_execution_summary,
+            )
         else:
             routing_request = self._build_worker_review_routing_request(request)
             routing_result = self.techlead_worker_review_routing_service.derive_worker_review_routing(routing_request)
@@ -189,6 +198,7 @@ class DefaultTechLeadWorkerService:
                 current_execution_summary=current_execution_summary,
                 dispatch_summary=dispatch_summary,
                 worker_review_routing_result=routing_result,
+                assignment_decision_result=None,
                 methodology_transition_result=None,
                 normalized_packet_output_summary=normalized_packet_output_summary,
                 ok=routing_result.ok,
@@ -259,6 +269,7 @@ class DefaultTechLeadWorkerService:
             current_execution_summary=current_execution_summary,
             dispatch_summary=dispatch_summary,
             worker_review_routing_result=None,
+            assignment_decision_result=None,
             methodology_transition_result=None,
             normalized_packet_output_summary=normalized_packet_output_summary,
             ok=acceptance_result.ok,
@@ -269,6 +280,71 @@ class DefaultTechLeadWorkerService:
                 'service_component': 'TechLeadWorkerService',
                 'supported_packet_schema_type': request.packet_schema_type,
                 'acceptance_decision_supported': acceptance_result.summary.decision_supported,
+            },
+        )
+
+    def _handle_techlead_decision_packet(
+        self,
+        *,
+        request: TechLeadWorkerRequest,
+        methodology_execution_id: str,
+        current_execution_summary: MethodologyExecutionStatusProjection,
+    ) -> TechLeadWorkerResult:
+        payload = request.packet_payload or {}
+        issue_number = self._resolve_issue_number(payload)
+        pr_number = self._resolve_pr_number(payload)
+        assignment_request = TechLeadAssignmentDecisionRequest(
+            project_slug=str(payload.get('project_slug') or ''),
+            issue_number=issue_number,
+            issue_url=self._resolve_issue_url(payload),
+            pr_number=pr_number,
+            pr_url=self._resolve_pr_url(payload),
+            branch_name=self._resolve_branch_name(payload),
+            workflow_stage=str(payload.get('workflow_stage') or ''),
+            source_packet_schema_type=request.packet_schema_type,
+            source_packet_message_id=request.packet_message_id,
+            explicit_target_role=str(payload.get('target_role') or ''),
+            metadata=request.metadata,
+        )
+        assignment_result = self.techlead_assignment_decision_service.derive_assignment_decision(
+            assignment_request
+        )
+        target_role = assignment_result.summary.target_role
+        recommended_next_action = None
+        if assignment_result.ok and target_role:
+            recommended_next_action = f"assign_{target_role.strip().lower()}"
+        dispatch_summary = TechLeadWorkerDispatchSummary(
+            handler_key='techlead-assignment-decision',
+            packet_schema_type=request.packet_schema_type,
+            decision_service_used='TechLeadAssignmentDecisionService',
+            decision_supported=assignment_result.summary.decision_supported,
+            recommended_next_action=recommended_next_action,
+            recommended_target_role=target_role,
+            packet_emission_required=assignment_result.ok,
+            methodology_transition_required=False,
+            blocking_reasons=assignment_result.summary.blocking_reasons,
+            notes=assignment_result.summary.notes,
+        )
+        normalized_packet_output_summary = (
+            assignment_result.summary.assignment_summary if assignment_result.ok else None
+        )
+        return TechLeadWorkerResult(
+            request=request,
+            methodology_execution_id=methodology_execution_id,
+            current_execution_summary=current_execution_summary,
+            dispatch_summary=dispatch_summary,
+            worker_review_routing_result=None,
+            assignment_decision_result=assignment_result,
+            methodology_transition_result=None,
+            normalized_packet_output_summary=normalized_packet_output_summary,
+            ok=assignment_result.ok,
+            reason=assignment_result.reason,
+            details=assignment_result.details,
+            dry_run=True,
+            metadata={
+                'service_component': 'TechLeadWorkerService',
+                'supported_packet_schema_type': request.packet_schema_type,
+                'assignment_decision_supported': assignment_result.summary.decision_supported,
             },
         )
 
@@ -301,6 +377,68 @@ class DefaultTechLeadWorkerService:
             source_packet_message_id=request.packet_message_id,
             metadata=request.metadata,
         )
+
+    @staticmethod
+    def _resolve_issue_number(payload: dict[str, object]) -> int:
+        issue_number = payload.get('issue_number')
+        if isinstance(issue_number, int):
+            return issue_number
+        issue = payload.get('issue')
+        if isinstance(issue, dict):
+            nested = issue.get('number')
+            if isinstance(nested, int):
+                return nested
+        return 0
+
+    @staticmethod
+    def _resolve_pr_number(payload: dict[str, object]) -> int | None:
+        pr_number = payload.get('pr_number')
+        if isinstance(pr_number, int):
+            return pr_number
+        pr = payload.get('pr')
+        if isinstance(pr, dict):
+            nested = pr.get('number')
+            if isinstance(nested, int):
+                return nested
+        return None
+
+    @staticmethod
+    def _resolve_issue_url(payload: dict[str, object]) -> str | None:
+        value = payload.get('issue_url')
+        if isinstance(value, str) and value:
+            return value
+        issue = payload.get('issue')
+        if isinstance(issue, dict):
+            nested = issue.get('url')
+            if isinstance(nested, str) and nested:
+                return nested
+        return None
+
+    @staticmethod
+    def _resolve_pr_url(payload: dict[str, object]) -> str | None:
+        value = payload.get('pr_url')
+        if isinstance(value, str) and value:
+            return value
+        pr = payload.get('pr')
+        if isinstance(pr, dict):
+            nested = pr.get('url')
+            if isinstance(nested, str) and nested:
+                return nested
+        return None
+
+    @staticmethod
+    def _resolve_branch_name(payload: dict[str, object]) -> str | None:
+        branch = payload.get('branch')
+        if isinstance(branch, str) and branch:
+            return branch
+        if isinstance(branch, dict):
+            nested = branch.get('name')
+            if isinstance(nested, str) and nested:
+                return nested
+        canonical_branch = payload.get('canonical_branch')
+        if isinstance(canonical_branch, str) and canonical_branch:
+            return canonical_branch
+        return None
 
     def _build_dispatch_summary(
         self,
@@ -371,6 +509,7 @@ class DefaultTechLeadWorkerService:
             current_execution_summary=None,
             dispatch_summary=dispatch_summary,
             worker_review_routing_result=None,
+            assignment_decision_result=None,
             methodology_transition_result=None,
             normalized_packet_output_summary=None,
             ok=False,

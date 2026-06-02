@@ -285,6 +285,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
                 summary=SimpleNamespace(review_summary='Route implementation to QA.'),
                 recommended_actions=('assign_qa',),
             ),
+            assignment_decision_result=None,
             dispatch_summary=SimpleNamespace(recommended_next_action='assign_qa', recommended_target_role='QA'),
             ok=True,
         )
@@ -326,6 +327,108 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_assignment['message_id'], 'assign-1')
+        self.assertEqual(len(publisher.calls), 1)
+
+    def test_run_once_can_emit_dev_assignment_from_techlead_decision_packet(self) -> None:
+        claim_result = QueueClaimRuntimeResult(
+            request=QueueClaimRuntimeRequest(queue_name='paa-techlead', intake_mode='claim_next'),
+            preview_summary=QueuePacketPreviewSummary(
+                queue_name='paa-techlead',
+                packet_message_id='msg-decision-1',
+                packet_schema_type='techlead_decision_packet',
+                packet_reference='msg-decision-1',
+                preview_supported=True,
+                claim_supported=True,
+                blocking_reasons=(),
+                notes=('claimed-preview',),
+            ),
+            claim_summary=QueuePacketClaimSummary(
+                queue_name='paa-techlead',
+                claim_id='claim-decision-1',
+                claimant_name='TechLead Agent',
+                packet_message_id='msg-decision-1',
+                packet_reference='msg-decision-1',
+                claim_supported=True,
+                blocking_reasons=(),
+                notes=('claimed',),
+            ),
+            normalized_packet_envelope={
+                'packet_message_id': 'msg-decision-1',
+                'packet_schema_type': 'techlead_decision_packet',
+                'packet_reference': 'msg-decision-1',
+            },
+            normalized_packet_payload=None,
+            ok=True,
+            metadata={'claim': True},
+        )
+        resolution_result = PacketReferenceResolutionResult(
+            request=PacketReferenceResolutionRequest(packet_message_id='msg-decision-1'),
+            resolution_summary=PacketReferenceResolutionSummary(
+                resolution_source='message-id',
+                packet_message_id='msg-decision-1',
+                packet_schema_type='techlead_decision_packet',
+                queue_name='paa-techlead',
+                packet_reference='msg-decision-1',
+                resolved_packet_path='/tmp/techlead-decision.json',
+                resolution_supported=True,
+                blocking_reasons=(),
+                notes=('message-id', 'resolved-artifact-path'),
+            ),
+            normalized_packet_payload={'methodology_execution_id': 'exec-1'},
+            ok=True,
+            metadata={'resolution': True},
+        )
+        worker_result = SimpleNamespace(
+            request=SimpleNamespace(packet_payload={'issue_number': 6, 'target_role': 'Dev'}),
+            worker_review_routing_result=None,
+            assignment_decision_result=SimpleNamespace(
+                summary=SimpleNamespace(
+                    assignment_type='implement_authorized_slice',
+                    assignment_summary='Assign Dev to implement the authorized slice.',
+                    allowed_result_types=('implemented_ready_for_qa', 'blocked'),
+                ),
+            ),
+            dispatch_summary=SimpleNamespace(recommended_next_action='assign_dev', recommended_target_role='Dev'),
+            ok=True,
+        )
+        dispatch_result = QueuePacketRuntimeResult(
+            request=QueuePacketRuntimeRequest(
+                queue_name='paa-techlead',
+                packet_schema_type='techlead_decision_packet',
+                packet_message_id='msg-decision-1',
+                packet_path='/tmp/techlead-decision.json',
+                packet_payload={'methodology_execution_id': 'exec-1'},
+            ),
+            dispatch_summary=QueuePacketDispatchSummary(
+                handler_key='techlead-worker-dispatch',
+                packet_schema_type='techlead_decision_packet',
+                target_worker_host='TechLeadWorkerService',
+                dispatch_supported=True,
+                queue_side_effect_required=False,
+                ack_required=False,
+                blocking_reasons=(),
+                notes=('dry-run-only',),
+            ),
+            selected_worker_result=worker_result,
+            normalized_queue_side_effect_summary='Dry run only.',
+            ok=True,
+            metadata={'dispatch': True},
+        )
+        publisher = _FakeAssignmentPublisher(result={'ok': True, 'message_id': 'assign-dev-1', 'resolved_queue': 'paa-dev'})
+        host = TechLeadRuntimeHost(
+            queue_name='paa-techlead',
+            queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
+            queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
+            assignment_publisher=publisher,
+            actor_name='TechLead Agent',
+            host_name='techlead-runtime-host',
+        )
+
+        result = host.run_once(intake_mode='claim_next', emit_next_assignment=True)
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.emitted_assignment['message_id'], 'assign-dev-1')
         self.assertEqual(len(publisher.calls), 1)
 
     def test_run_once_claims_and_dispatches_returned_qa_verification_packet(self) -> None:

@@ -7,6 +7,7 @@ from typing import Any
 
 from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
 from paa_core.services.methodology_execution_state import MethodologyExecutionStateResult
+from paa_core.services.techlead_assignment_decision import TechLeadAssignmentDecisionResult
 from paa_core.services.techlead_worker_review_routing import TechLeadWorkerReviewRoutingResult
 
 
@@ -47,6 +48,7 @@ class TechLeadWorkerResult:
     current_execution_summary: MethodologyExecutionStatusProjection | None
     dispatch_summary: TechLeadWorkerDispatchSummary
     worker_review_routing_result: TechLeadWorkerReviewRoutingResult | None
+    assignment_decision_result: TechLeadAssignmentDecisionResult | None
     methodology_transition_result: MethodologyExecutionStateResult | None
     normalized_packet_output_summary: str | None
     ok: bool

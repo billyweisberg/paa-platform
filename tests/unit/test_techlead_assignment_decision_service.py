@@ -60,6 +60,21 @@ class TechLeadAssignmentDecisionServiceTests(unittest.TestCase):
         self.assertEqual(result.source_packet_queue_name, 'fractal-core-python')
         self.assertEqual(result.source_packet_path, '/tmp/worker-result.json')
 
+    def test_explicit_dev_assignment_is_supported(self) -> None:
+        request = TechLeadAssignmentDecisionRequest(
+            project_slug='paa-platform',
+            issue_number=123,
+            workflow_stage='techlead_assignment_pending',
+            explicit_target_role='dev',
+        )
+
+        result = self.service.derive_assignment_decision(request)
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.summary.target_role, 'Dev')
+        self.assertEqual(result.summary.target_role_cli, 'dev')
+        self.assertEqual(result.summary.assignment_type, 'implement_authorized_slice')
+
     def test_unsupported_stage_fails_closed(self) -> None:
         request = TechLeadAssignmentDecisionRequest(
             project_slug='paa-platform',
