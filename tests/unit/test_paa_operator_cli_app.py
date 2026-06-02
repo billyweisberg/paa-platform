@@ -882,20 +882,29 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         fake_service.send_packet.assert_called_once_with(repo_root=ROOT, message_file=ROOT / 'packet.json')
 
-    def test_ops_automation_preflight_uses_consumer_techlead_module(self) -> None:
+    def test_ops_automation_preflight_uses_core_service(self) -> None:
         app, _, _ = self._typer_cli()
-        fake_techlead = Mock()
-        fake_techlead.main.return_value = 0
+        fake_service = Mock()
+        fake_service.evaluate.return_value = {
+            'ok': True,
+            'should_invoke_model': False,
+            'skip_model_invocation': True,
+            'gate_reason': 'no_role_work_detected',
+            'workflow_stage': 'idle',
+            'current_owner_role': 'Unknown',
+        }
 
-        with unittest.mock.patch('paa_cli.app._consumer_techlead_module', return_value=fake_techlead):
+        with unittest.mock.patch('paa_cli.app._build_automation_preflight_service', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 ['ops', 'automation-preflight', '--repo-root', str(ROOT), '--target-role', 'techlead'],
             )
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_techlead.main.assert_called_once_with(
-            ['automation-preflight', '--repo-root', str(ROOT), '--target-role', 'techlead'],
+        fake_service.evaluate.assert_called_once_with(
+            repo_root=ROOT,
+            target_role='techlead',
+            project_slug='paa-platform',
         )
 
     def test_role_add_renders_live_typer_output(self) -> None:

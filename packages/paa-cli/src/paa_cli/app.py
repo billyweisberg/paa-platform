@@ -32,6 +32,7 @@ from paa_core.runtime_hosts import (
     build_techlead_runtime_host,
 )
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
+from paa_core.services.automation_preflight import DefaultAutomationPreflightService
 from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
@@ -104,14 +105,12 @@ def _consumer_techlead_service_map_module():
     return consumer_techlead_service_map
 
 
-def _consumer_techlead_module():
-    from paa_consumer import techlead as consumer_techlead
-
-    return consumer_techlead
-
-
 def _build_runtime_queue_admin_service() -> DefaultRuntimeQueueAdminService:
     return DefaultRuntimeQueueAdminService()
+
+
+def _build_automation_preflight_service() -> DefaultAutomationPreflightService:
+    return DefaultAutomationPreflightService()
 
 
 class NullStructuredLogger:
@@ -1377,13 +1376,17 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     @ops_app.command('automation-preflight')
     def ops_automation_preflight(
         repo_root: str | None = typer.Option(None, '--repo-root'),
+        project_slug: str = typer.Option('paa-platform', '--project-slug'),
         target_role: str = typer.Option(..., '--target-role'),
     ) -> None:
         resolved_repo_root = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
-        exit_code = _consumer_techlead_module().main(
-            ['automation-preflight', '--repo-root', str(resolved_repo_root), '--target-role', target_role],
+        result = _build_automation_preflight_service().evaluate(
+            repo_root=resolved_repo_root,
+            target_role=target_role,
+            project_slug=project_slug,
         )
-        raise typer.Exit(code=exit_code)
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0 if result.get('ok') else 1)
 
     @verify_app.command('consumer-smoke')
     def verify_consumer_smoke(
