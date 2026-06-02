@@ -6,9 +6,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
-from paa_consumer.hosts.qa_runtime import QARuntimeHost, _QAVerificationPublisher
+from paa_core.qa_runtime_host import QARuntimeHost, _QAVerificationPublisher
 from paa_core.services.packet_reference_resolution import (
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionResult,

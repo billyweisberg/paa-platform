@@ -8,9 +8,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
-from paa_consumer.hosts.techlead_runtime import TechLeadRuntimeHost, _TechLeadAssignmentPublisher
+from paa_core.techlead_runtime_host import TechLeadRuntimeHost, _TechLeadAssignmentPublisher
 from paa_core.services.queue_claim_runtime import QueueClaimRuntimeResult, QueuePacketClaimSummary, QueuePacketPreviewSummary, QueueClaimRuntimeRequest
 from paa_core.services.packet_reference_resolution import PacketReferenceResolutionResult, PacketReferenceResolutionSummary, PacketReferenceResolutionRequest
 from paa_core.services.queue_packet_runtime_controller import QueuePacketDispatchSummary, QueuePacketRuntimeRequest, QueuePacketRuntimeResult
@@ -710,7 +709,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             host_name='techlead-runtime-host',
         )
 
-        with patch('paa_consumer.hosts.techlead_runtime.time.sleep'):
+        with patch('paa_core.techlead_runtime_host.time.sleep'):
             result = host.run_once(intake_mode='claim_next')
 
         self.assertTrue(result.ok)

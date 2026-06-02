@@ -6,9 +6,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
-from paa_consumer.hosts.dev_runtime import DevRuntimeHost, _WorkerResultPublisher
+from paa_core.dev_runtime_host import DevRuntimeHost, _WorkerResultPublisher
 from paa_core.services.dev_worker import DevWorkerExecutionSummary, DevWorkerRequest, DevWorkerResult
 from paa_core.services.packet_reference_resolution import (
     PacketReferenceResolutionRequest,
