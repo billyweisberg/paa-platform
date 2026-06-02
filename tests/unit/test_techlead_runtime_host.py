@@ -87,6 +87,53 @@ class _FakeQueueClaimLifecycleAdapter:
         return {'ok': True, 'claim_id': claim_id, 'status': 'requeued'}
 
 
+class _FakeWorkflowTransitionAdapter:
+    def __init__(
+        self,
+        *,
+        return_result: dict[str, object] | None = None,
+        assignment_result: dict[str, object] | None = None,
+    ) -> None:
+        self.return_result = return_result if return_result is not None else {'ok': True, 'workflow_stage': 'techlead_worker_review_pending'}
+        self.assignment_result = assignment_result if assignment_result is not None else {'ok': True, 'workflow_stage': 'qa_execution_in_progress'}
+        self.return_calls: list[dict[str, object]] = []
+        self.assignment_calls: list[dict[str, object]] = []
+
+    def apply_return_transition(
+        self,
+        *,
+        packet_path: str | None,
+        packet_message_id: str | None,
+        packet_schema_type: str | None,
+    ) -> dict[str, object]:
+        self.return_calls.append(
+            {
+                'packet_path': packet_path,
+                'packet_message_id': packet_message_id,
+                'packet_schema_type': packet_schema_type,
+            }
+        )
+        return self.return_result
+
+    def record_assignment_emitted(
+        self,
+        *,
+        source_packet_message_id: str | None,
+        source_packet_schema_type: str | None,
+        source_claim_id: str | None,
+        emitted_assignment: dict[str, object],
+    ) -> dict[str, object]:
+        self.assignment_calls.append(
+            {
+                'source_packet_message_id': source_packet_message_id,
+                'source_packet_schema_type': source_packet_schema_type,
+                'source_claim_id': source_claim_id,
+                'emitted_assignment': emitted_assignment,
+            }
+        )
+        return self.assignment_result
+
+
 class TechLeadRuntimeHostTests(unittest.TestCase):
     def test_run_once_claims_resolves_and_dispatches_one_packet(self) -> None:
         claim_result = QueueClaimRuntimeResult(
@@ -163,6 +210,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=None,
+            workflow_transition_adapter=None,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -240,6 +288,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
                 )
             ),
             assignment_publisher=None,
+            workflow_transition_adapter=None,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -330,6 +379,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         )
         publisher = _FakeAssignmentPublisher()
         lifecycle = _FakeQueueClaimLifecycleAdapter()
+        workflow = _FakeWorkflowTransitionAdapter()
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
@@ -337,6 +387,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=publisher,
+            workflow_transition_adapter=workflow,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -346,6 +397,8 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_assignment['message_id'], 'assign-1')
         self.assertEqual(len(publisher.calls), 1)
+        self.assertEqual(workflow.return_calls[0]['packet_schema_type'], 'worker_result_packet')
+        self.assertEqual(workflow.assignment_calls[0]['source_claim_id'], 'claim-1')
         self.assertEqual(lifecycle.acks, ['claim-1'])
 
     def test_run_once_can_emit_dev_assignment_from_techlead_decision_packet(self) -> None:
@@ -435,6 +488,9 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         )
         publisher = _FakeAssignmentPublisher(result={'ok': True, 'message_id': 'assign-dev-1', 'resolved_queue': 'paa-dev'})
         lifecycle = _FakeQueueClaimLifecycleAdapter()
+        workflow = _FakeWorkflowTransitionAdapter(
+            assignment_result={'ok': True, 'workflow_stage': 'worker_execution_in_progress'}
+        )
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
@@ -442,6 +498,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=publisher,
+            workflow_transition_adapter=workflow,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -451,6 +508,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_assignment['message_id'], 'assign-dev-1')
         self.assertEqual(len(publisher.calls), 1)
+        self.assertEqual(workflow.assignment_calls[0]['source_packet_schema_type'], 'techlead_decision_packet')
         self.assertEqual(lifecycle.acks, ['claim-decision-1'])
 
     def test_run_once_claims_and_dispatches_returned_qa_verification_packet(self) -> None:
@@ -523,6 +581,9 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             metadata={'dispatch': True},
         )
         controller = _FakeQueuePacketRuntimeController(dispatch_result)
+        workflow = _FakeWorkflowTransitionAdapter(
+            return_result={'ok': True, 'workflow_stage': 'techlead_qa_review_pending'}
+        )
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
@@ -530,6 +591,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=controller,
             assignment_publisher=None,
+            workflow_transition_adapter=workflow,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -539,6 +601,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(controller.calls[0].packet_schema_type, 'qa_verification_packet')
         self.assertEqual(result.packet_path, '/tmp/qa-verification.json')
+        self.assertEqual(workflow.return_calls[0]['packet_schema_type'], 'qa_verification_packet')
 
     def test_assignment_publisher_message_ids_are_unique_per_run(self) -> None:
         publisher = _TechLeadAssignmentPublisher(
@@ -642,6 +705,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=None,
+            workflow_transition_adapter=None,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -715,6 +779,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
                 )
             ),
             assignment_publisher=None,
+            workflow_transition_adapter=None,
             actor_name='TechLead Agent',
             host_name='techlead-runtime-host',
         )
@@ -723,6 +788,87 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
 
         self.assertFalse(result.ok)
         self.assertEqual(lifecycle.requeues, ['claim-fail-1'])
+
+    def test_run_once_requeues_claim_when_return_transition_fails(self) -> None:
+        claim_result = QueueClaimRuntimeResult(
+            request=QueueClaimRuntimeRequest(queue_name='paa-techlead', intake_mode='claim_next'),
+            preview_summary=None,
+            claim_summary=QueuePacketClaimSummary(
+                queue_name='paa-techlead',
+                claim_id='claim-transition-fail-1',
+                claimant_name='TechLead Agent',
+                packet_message_id='msg-transition-fail-1',
+                packet_reference='msg-transition-fail-1',
+                claim_supported=True,
+                blocking_reasons=(),
+                notes=('claimed',),
+            ),
+            normalized_packet_envelope={'packet_message_id': 'msg-transition-fail-1', 'packet_schema_type': 'worker_result_packet', 'packet_reference': 'msg-transition-fail-1'},
+            normalized_packet_payload=None,
+            ok=True,
+            metadata={'claim': True},
+        )
+        resolution_result = PacketReferenceResolutionResult(
+            request=PacketReferenceResolutionRequest(packet_message_id='msg-transition-fail-1'),
+            resolution_summary=PacketReferenceResolutionSummary(
+                resolution_source='message-id',
+                packet_message_id='msg-transition-fail-1',
+                packet_schema_type='worker_result_packet',
+                queue_name='paa-techlead',
+                packet_reference='msg-transition-fail-1',
+                resolved_packet_path='/tmp/worker-result-transition-fail.json',
+                resolution_supported=True,
+                blocking_reasons=(),
+                notes=('message-id',),
+            ),
+            normalized_packet_payload={'methodology_execution_id': 'exec-transition-fail-1'},
+            ok=True,
+            metadata={'resolution': True},
+        )
+        dispatch_result = QueuePacketRuntimeResult(
+            request=QueuePacketRuntimeRequest(
+                queue_name='paa-techlead',
+                packet_schema_type='worker_result_packet',
+                packet_message_id='msg-transition-fail-1',
+                packet_path='/tmp/worker-result-transition-fail.json',
+                packet_payload={'methodology_execution_id': 'exec-transition-fail-1'},
+            ),
+            dispatch_summary=QueuePacketDispatchSummary(
+                handler_key='techlead-worker-dispatch',
+                packet_schema_type='worker_result_packet',
+                target_worker_host='TechLeadWorkerService',
+                dispatch_supported=True,
+                queue_side_effect_required=False,
+                ack_required=False,
+                blocking_reasons=(),
+                notes=('dry-run-only',),
+            ),
+            selected_worker_result=None,
+            normalized_queue_side_effect_summary='Dry run only.',
+            ok=True,
+            metadata={'dispatch': True},
+        )
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
+        workflow = _FakeWorkflowTransitionAdapter(
+            return_result={'ok': False, 'reason': 'workflow_transition_rejected', 'blocking_reasons': ('invalid_stage',)}
+        )
+        host = TechLeadRuntimeHost(
+            queue_name='paa-techlead',
+            queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
+            packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
+            queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
+            assignment_publisher=None,
+            workflow_transition_adapter=workflow,
+            actor_name='TechLead Agent',
+            host_name='techlead-runtime-host',
+        )
+
+        result = host.run_once(intake_mode='claim_next')
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.reason, 'workflow_transition_rejected')
+        self.assertEqual(lifecycle.requeues, ['claim-transition-fail-1'])
 
 
 if __name__ == '__main__':

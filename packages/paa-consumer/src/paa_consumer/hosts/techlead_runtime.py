@@ -12,9 +12,18 @@ from typing import Any
 
 from paa_core import handoff_runtime
 from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_producer_consumer_project_config
+from paa_core.policies.acceptance import DefaultAcceptancePolicy
+from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
+from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolicy
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
+from paa_core.repositories.workflow_state import (
+    PostgresWorkflowStateRepository,
+    WorkflowStateUpsertSpec,
+    WorkflowTransitionAppendSpec,
+)
 from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
+from paa_core.services.execution_package_resolution.models import ExecutionPackageResolutionView
 from paa_core.services.methodology_execution_preflight import DefaultMethodologyExecutionPreflightService
 from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
@@ -35,6 +44,7 @@ from paa_core.services.techlead_lineage_decision import DefaultTechLeadLineageDe
 from paa_core.services.techlead_reset_recovery_decision import DefaultTechLeadResetRecoveryDecisionService
 from paa_core.services.techlead_worker import DefaultTechLeadWorkerService
 from paa_core.services.techlead_worker_review_routing import DefaultTechLeadWorkerReviewRoutingService
+from paa_core.services.workflow_lifecycle import DefaultWorkflowLifecycleService, WorkflowLifecycleRequest
 
 from paa_consumer.inbox import dispatch_packet
 
@@ -158,6 +168,192 @@ class _QueueClaimLifecycleAdapter:
             'updated_at',
         )
         return {'ok': bool(result.get('routed')), 'claim_id': claim_id, 'status': claim['status']}
+
+
+class _NullExecutionPackageResolutionService:
+    def resolve_execution_context(self, request):
+        return ExecutionPackageResolutionView(
+            execution_surface_key=request.execution_surface_key,
+            repo_root_path=request.repo_root_path,
+            runtime_root_path=request.runtime_root_path,
+            work_item_id=request.work_item_id,
+            consumer_context_key=None,
+            methodology_execution_id=None,
+            package_id_external=None,
+            package_version=None,
+            package_root_path=None,
+            overlays=(),
+            artifact_refs=(),
+            capability_summary=(),
+            summary='not-used-in-techlead-runtime-transition-proof',
+            unresolved_requirements=(),
+            metadata={},
+        )
+
+
+class _TechLeadWorkflowTransitionAdapter:
+    def __init__(
+        self,
+        *,
+        workflow_state_repository: PostgresWorkflowStateRepository,
+        runtime_event_repository: PostgresRuntimeEventRepository,
+        logger: object | None = None,
+    ) -> None:
+        self._workflow_state_repository = workflow_state_repository
+        self._runtime_event_repository = runtime_event_repository
+        self._logger = logger if logger is not None else _NullStructuredLogger()
+        self._workflow_lifecycle_service = DefaultWorkflowLifecycleService(
+            workflow_state_repository=workflow_state_repository,
+            runtime_event_repository=runtime_event_repository,
+            execution_package_resolution_service=_NullExecutionPackageResolutionService(),
+            workflow_transition_policy=DefaultWorkflowTransitionPolicy(),
+            acceptance_policy=DefaultAcceptancePolicy(),
+            reset_recovery_policy=DefaultResetRecoveryPolicy(),
+            logger=self._logger,
+        )
+
+    def record_assignment_emitted(
+        self,
+        *,
+        source_packet_message_id: str | None,
+        source_packet_schema_type: str | None,
+        source_claim_id: str | None,
+        emitted_assignment: dict[str, Any],
+    ) -> dict[str, Any]:
+        dispatch = emitted_assignment.get('dispatch') or {}
+        message_file = emitted_assignment.get('message_file')
+        if not isinstance(message_file, str) or not message_file:
+            return {'ok': False, 'reason': 'missing_assignment_message_file'}
+        packet = self._load_packet(message_file)
+        work_item_id = handoff_runtime.resolve_work_item_id_from_message(packet)
+        project_id = self._resolve_project_id(handoff_runtime.project_slug_from_message(packet))
+        if not work_item_id or not project_id:
+            return {'ok': False, 'reason': 'missing_work_item_or_project'}
+        current_state = self._workflow_state_repository.get_workflow_state_for_work_item(work_item_id)
+        if current_state is None:
+            return {'ok': False, 'reason': 'missing_workflow_state'}
+        target_role = str((packet.get('payload') or {}).get('target_role') or '')
+        target_role_id = self._resolve_role_id(project_id, target_role)
+        techlead_role_id = self._resolve_role_id(project_id, 'TechLead')
+        emitted_queue_message = self._runtime_event_repository.get_queue_message_by_external(
+            str(emitted_assignment.get('message_id') or '')
+        )
+        target_stage = 'worker_execution_in_progress' if target_role == 'Dev' else 'qa_execution_in_progress'
+        self._workflow_state_repository.upsert_workflow_state(
+            WorkflowStateUpsertSpec(
+                project_id=current_state.project_id,
+                work_item_id=current_state.work_item_id,
+                workflow_stage=target_stage,
+                lineage_state='awaiting_result',
+                current_owner_role_id=target_role_id,
+                authority_version_id=current_state.authority_version_id,
+                design_package_id=current_state.design_package_id,
+                coder_run_brief_id=current_state.coder_run_brief_id,
+                blocking_reason_code=None,
+                blocking_reason_text=None,
+                terminal_decision=current_state.terminal_decision,
+                state_consistency=current_state.state_consistency,
+                current_issue_number=current_state.current_issue_number,
+                current_pr_number=current_state.current_pr_number,
+                canonical_branch=current_state.canonical_branch,
+                active_role_branch=current_state.active_role_branch,
+                active_handoff_id=emitted_queue_message.handoff_id if emitted_queue_message is not None else current_state.active_handoff_id,
+                active_queue_message_id=emitted_queue_message.queue_message_id if emitted_queue_message is not None else current_state.active_queue_message_id,
+                active_message_id_external=str(emitted_assignment.get('message_id') or current_state.active_message_id_external),
+                active_assignment_role_id=target_role_id,
+                active_result_role_id=techlead_role_id,
+                active_queue_claim_id=None,
+                metadata={
+                    **dict(current_state.metadata or {}),
+                    'last_assignment_message_id': emitted_assignment.get('message_id'),
+                    'last_assignment_target_role': target_role,
+                },
+            )
+        )
+        self._workflow_state_repository.append_workflow_transition(
+            WorkflowTransitionAppendSpec(
+                workflow_state_id=current_state.workflow_state_id,
+                project_id=current_state.project_id,
+                work_item_id=current_state.work_item_id,
+                transition_type='assignment_emitted',
+                transition_status='applied',
+                from_workflow_stage=current_state.workflow_stage,
+                to_workflow_stage=target_stage,
+                from_owner_role_id=current_state.current_owner_role_id,
+                to_owner_role_id=target_role_id,
+                source_queue_message_id=current_state.active_queue_message_id,
+                source_queue_claim_id=None,
+                source_message_id_external=source_packet_message_id,
+                source_packet_schema_type=source_packet_schema_type,
+                result_queue_message_id=emitted_queue_message.queue_message_id if emitted_queue_message is not None else None,
+                result_message_id_external=str(emitted_assignment.get('message_id') or ''),
+                result_packet_schema_type='techlead_assignment_packet',
+                result_role_id=target_role_id,
+                performed_by_role_id=techlead_role_id,
+                metadata={'assignment_target_role': target_role},
+            )
+        )
+        return {'ok': True, 'work_item_id': work_item_id, 'workflow_stage': target_stage}
+
+    def apply_return_transition(
+        self,
+        *,
+        packet_path: str | None,
+        packet_message_id: str | None,
+        packet_schema_type: str | None,
+    ) -> dict[str, Any]:
+        packet = self._load_packet(packet_path) if packet_path else None
+        if packet is None:
+            return {'ok': False, 'reason': 'missing_source_packet'}
+        work_item_id = handoff_runtime.resolve_work_item_id_from_message(packet)
+        project_id = self._resolve_project_id(handoff_runtime.project_slug_from_message(packet))
+        if not work_item_id or not project_id:
+            return {'ok': False, 'reason': 'missing_work_item_or_project'}
+        transition_type = (
+            'qa_result_returned' if packet_schema_type == 'qa_verification_packet' else 'worker_result_returned'
+        )
+        result = self._workflow_lifecycle_service.apply_workflow_transition(
+            WorkflowLifecycleRequest(
+                project_id=project_id,
+                work_item_id=work_item_id,
+                requested_transition_type=transition_type,
+                source_message_id_external=packet_message_id,
+                source_packet_schema_type=packet_schema_type,
+            )
+        )
+        return {
+            'ok': result.applied,
+            'work_item_id': work_item_id,
+            'workflow_stage': result.state_view.workflow_stage if result.state_view is not None else None,
+            'blocking_reasons': result.decision_summary.blocking_reasons,
+        }
+
+    @staticmethod
+    def _load_packet(packet_path: str) -> dict[str, Any]:
+        path = Path(packet_path).expanduser().resolve()
+        payload = json.loads(path.read_text())
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
+    def _resolve_project_id(project_slug: str) -> str | None:
+        sql = (
+            "SELECT project_id::text FROM paa.projects "
+            f"WHERE slug = {handoff_runtime.sql_literal(project_slug)} LIMIT 1;"
+        )
+        out = handoff_runtime.run_psql(sql).strip()
+        return out or None
+
+    @staticmethod
+    def _resolve_role_id(project_id: str, role_name: str) -> str | None:
+        sql = f"""
+SELECT role_id::text
+FROM paa.roles
+WHERE project_id = {handoff_runtime.sql_literal(project_id)}::uuid
+  AND name = {handoff_runtime.sql_literal(role_name)}
+LIMIT 1;
+"""
+        out = handoff_runtime.run_psql(sql).strip()
+        return out or None
 
 
 class _PassthroughPacketEnvelopeValidator:
@@ -422,6 +618,7 @@ class TechLeadRuntimeHost:
         packet_reference_resolution_service: object,
         queue_packet_runtime_controller: object,
         assignment_publisher: object | None,
+        workflow_transition_adapter: object | None,
         actor_name: str,
         host_name: str,
         logger: object | None = None,
@@ -432,6 +629,7 @@ class TechLeadRuntimeHost:
         self._packet_reference_resolution_service = packet_reference_resolution_service
         self._queue_packet_runtime_controller = queue_packet_runtime_controller
         self._assignment_publisher = assignment_publisher
+        self._workflow_transition_adapter = workflow_transition_adapter
         self._actor_name = actor_name
         self._host_name = host_name
         self._logger = logger if logger is not None else _NullStructuredLogger()
@@ -505,8 +703,24 @@ class TechLeadRuntimeHost:
                 },
             )
         )
+        workflow_transition_result = None
+        if (
+            runtime_result.ok
+            and self._workflow_transition_adapter is not None
+            and packet_schema_type in ('worker_result_packet', 'qa_verification_packet')
+        ):
+            workflow_transition_result = self._workflow_transition_adapter.apply_return_transition(
+                packet_path=resolution_result.resolution_summary.resolved_packet_path,
+                packet_message_id=resolution_result.resolution_summary.packet_message_id,
+                packet_schema_type=packet_schema_type,
+            )
         emitted_assignment = None
-        if emit_next_assignment and intake_mode == 'claim_next':
+        if (
+            emit_next_assignment
+            and intake_mode == 'claim_next'
+            and runtime_result.ok
+            and (workflow_transition_result is None or bool(workflow_transition_result.get('ok')))
+        ):
             selected_worker_result = runtime_result.selected_worker_result
             if selected_worker_result is not None and self._assignment_publisher is not None:
                 emitted_assignment = self._assignment_publisher.publish_next_assignment(
@@ -514,7 +728,31 @@ class TechLeadRuntimeHost:
                     source_packet_message_id=resolution_result.resolution_summary.packet_message_id,
                     source_packet_path=resolution_result.resolution_summary.resolved_packet_path,
                 )
-        lifecycle_success = runtime_result.ok and (emitted_assignment is None or bool(emitted_assignment.get('ok')))
+        assignment_transition_result = None
+        if (
+            emitted_assignment is not None
+            and bool(emitted_assignment.get('ok'))
+            and self._workflow_transition_adapter is not None
+        ):
+            assignment_transition_result = self._workflow_transition_adapter.record_assignment_emitted(
+                source_packet_message_id=resolution_result.resolution_summary.packet_message_id,
+                source_packet_schema_type=packet_schema_type,
+                source_claim_id=(claim_result.claim_summary.claim_id if claim_result.claim_summary else None),
+                emitted_assignment=emitted_assignment,
+            )
+        workflow_success = workflow_transition_result is None or bool(workflow_transition_result.get('ok'))
+        assignment_transition_success = assignment_transition_result is None or bool(assignment_transition_result.get('ok'))
+        emitted_assignment_success = emitted_assignment is None or bool(emitted_assignment.get('ok'))
+        lifecycle_success = runtime_result.ok and workflow_success and emitted_assignment_success and assignment_transition_success
+        final_ok = runtime_result.ok and workflow_success and assignment_transition_success
+        final_reason = runtime_result.reason
+        final_details = runtime_result.details
+        if not workflow_success:
+            final_reason = str(workflow_transition_result.get('reason') or 'workflow_transition_failed')
+            final_details = ', '.join(str(item) for item in workflow_transition_result.get('blocking_reasons') or ()) or runtime_result.details
+        elif not assignment_transition_success:
+            final_reason = str(assignment_transition_result.get('reason') or 'assignment_transition_failed')
+            final_details = ', '.join(str(item) for item in assignment_transition_result.get('blocking_reasons') or ()) or runtime_result.details
         lifecycle_result = self._finalize_claim(
             intake_mode=intake_mode,
             claim_id=(claim_result.claim_summary.claim_id if claim_result.claim_summary else None),
@@ -523,7 +761,7 @@ class TechLeadRuntimeHost:
         return TechLeadRuntimeLoopResult(
             queue_name=self._queue_name,
             intake_mode=intake_mode,
-            ok=runtime_result.ok,
+            ok=final_ok,
             skipped=False,
             packet_message_id=runtime_result.request.packet_message_id,
             claim_id=(claim_result.claim_summary.claim_id if claim_result.claim_summary else None),
@@ -531,12 +769,14 @@ class TechLeadRuntimeHost:
             packet_path=resolution_result.resolution_summary.resolved_packet_path,
             target_worker_host=runtime_result.dispatch_summary.target_worker_host,
             emitted_assignment=emitted_assignment,
-            reason=runtime_result.reason,
-            details=runtime_result.details,
+            reason=final_reason,
+            details=final_details,
             metadata={
                 'claim': claim_result.metadata,
                 'resolution': resolution_result.metadata,
                 'dispatch': runtime_result.metadata,
+                'workflow_transition': workflow_transition_result,
+                'assignment_transition': assignment_transition_result,
                 'claim_lifecycle': lifecycle_result,
             },
         )
@@ -704,6 +944,7 @@ def build_techlead_runtime_host(
     project_config = load_producer_consumer_project_config(repo_project_config_path(resolved_repo_root))
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
     runtime_event_repository = PostgresRuntimeEventRepository()
+    workflow_state_repository = PostgresWorkflowStateRepository()
     methodology_execution_state_service = DefaultMethodologyExecutionStateService(
         methodology_execution_repository=methodology_execution_repository,
         logger=runtime_logger,
@@ -771,6 +1012,11 @@ def build_techlead_runtime_host(
             repo_root=resolved_repo_root,
             project_slug=project_config.project_id,
             github_repo=project_config.github_repo,
+        ),
+        workflow_transition_adapter=_TechLeadWorkflowTransitionAdapter(
+            workflow_state_repository=workflow_state_repository,
+            runtime_event_repository=runtime_event_repository,
+            logger=runtime_logger,
         ),
         actor_name=actor_name,
         host_name=host_name,
