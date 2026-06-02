@@ -6,6 +6,11 @@ import json
 from pathlib import Path
 
 from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory, resolve_from_repo_root
+from paa_core.config import (
+    RuntimeQueueTopology,
+    load_runtime_queue_topology,
+    normalize_runtime_queue_topology,
+)
 
 
 def repo_root_from_cwd(cwd: Path | None = None) -> Path:
@@ -80,3 +85,23 @@ def producer_manifest_candidates(cwd: Path) -> list[Path]:
             candidates.append(resolve_from_repo_root(repo_root, manifest_path))
     candidates.append((repo_root / 'docs/architecture/tom-baby7-fractal-core/project-authority/fractal-core-python-authority.json').resolve())
     return [p for p in candidates if p.exists()]
+
+
+def repo_project_config_path(repo_root: Path) -> Path:
+    return repo_paa_root(repo_root) / 'project-config.json'
+
+
+def repo_runtime_queue_topology(repo_root: Path) -> RuntimeQueueTopology | None:
+    config_path = repo_project_config_path(repo_root)
+    if not config_path.exists():
+        return None
+    try:
+        return load_runtime_queue_topology(config_path)
+    except Exception:
+        return None
+
+
+def resolved_repo_runtime_queue_topology(repo_root: Path) -> RuntimeQueueTopology:
+    """Return repo queue topology with PAA defaults applied."""
+
+    return normalize_runtime_queue_topology(repo_runtime_queue_topology(repo_root))

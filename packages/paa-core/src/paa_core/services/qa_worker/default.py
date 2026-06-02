@@ -29,7 +29,7 @@ class _NullStructuredLogger:
 class DefaultQAWorkerService:
     """Coordinate the first supported deterministic QA worker-host slice."""
 
-    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'qa_verification_packet'})
+    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'techlead_assignment_packet'})
 
     def __init__(
         self,
@@ -117,7 +117,7 @@ class DefaultQAWorkerService:
                 project_id=request.project_id,
                 work_item_id=request.work_item_id,
                 component_id=request.component_id,
-                runtime_surface='techlead',
+                runtime_surface='qa',
                 actor_name=request.actor_name,
                 host_name=request.host_name,
                 metadata=request.metadata,

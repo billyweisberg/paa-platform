@@ -18,7 +18,7 @@ from paa_core.services.queue_claim_runtime import (
 class QueueClaimRuntimeServiceModelTests(unittest.TestCase):
     def test_request_model_captures_supported_queue_intake_slice(self) -> None:
         request = QueueClaimRuntimeRequest(
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             intake_mode='preview',
             packet_schema_type='worker_result_packet',
             claimant_name='techlead',
@@ -26,14 +26,14 @@ class QueueClaimRuntimeServiceModelTests(unittest.TestCase):
             metadata={'source': 'cli'},
         )
 
-        self.assertEqual(request.queue_name, 'fractal-core-architecture')
+        self.assertEqual(request.queue_name, 'paa-techlead')
         self.assertEqual(request.intake_mode, 'preview')
         self.assertEqual(request.packet_schema_type, 'worker_result_packet')
         self.assertEqual(request.metadata, {'source': 'cli'})
 
     def test_preview_and_claim_summary_models_capture_stable_intake_state(self) -> None:
         preview = QueuePacketPreviewSummary(
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             packet_message_id='msg-1',
             packet_schema_type='worker_result_packet',
             packet_reference='packets/worker-result.json',
@@ -43,7 +43,7 @@ class QueueClaimRuntimeServiceModelTests(unittest.TestCase):
             notes=('preview',),
         )
         claim = QueuePacketClaimSummary(
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             claim_id='claim-1',
             claimant_name='techlead',
             packet_message_id='msg-1',
@@ -60,11 +60,11 @@ class QueueClaimRuntimeServiceModelTests(unittest.TestCase):
 
     def test_result_model_captures_normalized_payload_and_failure_state(self) -> None:
         request = QueueClaimRuntimeRequest(
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             intake_mode='claim_next',
         )
         preview = QueuePacketPreviewSummary(
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             packet_message_id=None,
             packet_schema_type=None,
             packet_reference=None,

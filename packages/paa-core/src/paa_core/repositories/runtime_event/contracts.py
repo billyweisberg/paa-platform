@@ -29,6 +29,9 @@ class RuntimeEventRepository(Protocol):
     def get_automation_run(self, automation_run_id: str) -> AutomationRunRecord | None:
         """Return one automation run by primary id."""
 
+    def get_latest_automation_run_for_message_id(self, message_id_external: str) -> AutomationRunRecord | None:
+        """Return the latest automation run whose artifacts are bound to one stable external message id."""
+
     def list_transition_inputs_for_work_item(self, work_item_id: str) -> list[TransitionInputRecord]:
         """Return transition inputs for one work item in captured order."""
 

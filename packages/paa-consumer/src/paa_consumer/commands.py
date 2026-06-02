@@ -19,6 +19,8 @@ CONSUMER_COMMANDS = (
     'automation-preflight',
     'techlead-status',
     'techlead-service-map',
+    'techlead-runtime',
+    'qa-runtime',
     'techlead-emit-next-assignment',
     'techlead-lineage',
     'techlead-prepare-role-branch',

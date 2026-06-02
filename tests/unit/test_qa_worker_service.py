@@ -70,7 +70,7 @@ class _FakePacketContextAssemblyService:
         return self.result
 
     def supports_packet_context(self, packet_schema_type: str, runtime_surface: str) -> bool:
-        return packet_schema_type == 'qa_verification_packet' and runtime_surface == 'techlead'
+        return packet_schema_type == 'techlead_assignment_packet' and runtime_surface == 'qa'
 
 
 class _FakeVerificationRunner:
@@ -94,7 +94,7 @@ class _FakeQAVerificationPacketAssembler:
 
 
 class QAWorkerServiceTests(unittest.TestCase):
-    def test_handle_packet_supports_qa_verification_packet_dry_run(self) -> None:
+    def test_handle_packet_supports_techlead_assignment_packet_dry_run(self) -> None:
         projection = _status_projection()
         packet_context_service = _packet_context_service(status_projection=projection)
         verification_runner = _FakeVerificationRunner({'verification_status': 'pass', 'findings': ()})
@@ -108,7 +108,7 @@ class QAWorkerServiceTests(unittest.TestCase):
 
         result = service.handle_packet(
             QAWorkerRequest(
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='techlead_assignment_packet',
                 packet_message_id='msg-123',
                 methodology_execution_id='exec-123',
                 packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
@@ -147,7 +147,7 @@ class QAWorkerServiceTests(unittest.TestCase):
 
         result = service.handle_packet(
             QAWorkerRequest(
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='techlead_assignment_packet',
                 methodology_execution_id='exec-123',
                 runtime_mode='live',
             )
@@ -164,7 +164,7 @@ class QAWorkerServiceTests(unittest.TestCase):
 
         result = service.handle_packet(
             QAWorkerRequest(
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='techlead_assignment_packet',
                 methodology_execution_id='exec-123',
                 packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
             )
@@ -187,7 +187,7 @@ class QAWorkerServiceTests(unittest.TestCase):
 
         result = service.handle_packet(
             QAWorkerRequest(
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='techlead_assignment_packet',
                 methodology_execution_id='exec-123',
                 packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
             )
@@ -203,7 +203,7 @@ class QAWorkerServiceTests(unittest.TestCase):
 
         result = service.handle_packet(
             QAWorkerRequest(
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='techlead_assignment_packet',
                 methodology_execution_id='exec-123',
                 packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
             )
@@ -245,9 +245,9 @@ def _packet_context_service(
 ) -> _FakePacketContextAssemblyService:
     status_projection = status_projection or _status_projection()
     request = PacketContextAssemblyRequest(
-        packet_schema_type='qa_verification_packet',
+        packet_schema_type='techlead_assignment_packet',
         methodology_execution_id='exec-123',
-        runtime_surface='techlead',
+        runtime_surface='qa',
         packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
     )
     if blocked:
@@ -257,13 +257,13 @@ def _packet_context_service(
             execution_package_resolution=None,
             packet_payload=request.packet_payload,
             assembly_summary=PacketContextAssemblySummary(
-                packet_schema_type='qa_verification_packet',
-                runtime_surface='techlead',
+                packet_schema_type='techlead_assignment_packet',
+                runtime_surface='qa',
                 methodology_execution_id='exec-123',
                 execution_package_id=None,
-                context_kind='qa_verification_review',
+                context_kind='qa_assignment_execution',
                 assembly_supported=False,
-                required_capabilities=('packet-read', 'techlead-runtime'),
+                required_capabilities=('packet-read', 'qa-runtime'),
                 resolved_capabilities=(),
                 blocking_gaps=('unsupported_packet_context',),
                 notes=('fail-closed',),
@@ -281,14 +281,14 @@ def _packet_context_service(
         execution_package_resolution=None,
         packet_payload=request.packet_payload,
         assembly_summary=PacketContextAssemblySummary(
-            packet_schema_type='qa_verification_packet',
-            runtime_surface='techlead',
+            packet_schema_type='techlead_assignment_packet',
+            runtime_surface='qa',
             methodology_execution_id='exec-123',
             execution_package_id='install-123',
-            context_kind='qa_verification_review',
+            context_kind='qa_assignment_execution',
             assembly_supported=True,
-            required_capabilities=('packet-read', 'techlead-runtime'),
-            resolved_capabilities=('packet-read', 'techlead-runtime'),
+            required_capabilities=('packet-read', 'qa-runtime'),
+            resolved_capabilities=('packet-read', 'qa-runtime'),
             blocking_gaps=(),
             notes=('dry-run-supported',),
         ),

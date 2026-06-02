@@ -1,0 +1,19 @@
+{
+  "project_id": "paa-platform",
+  "project_pack": "paa",
+  "mode": "producer_consumer",
+  "authority_manifest_path": "docs/2_Design/2026-05-17-paa-proof-slice-authority-manifest.json",
+  "supporting_docs_root": "docs",
+  "artifact_examples_root": "templates/packet-examples",
+  "publication_output_root": ".project/data/paa/publish",
+  "authority_install_root": ".project/data/paa/authority/current",
+  "runtime_data_root": ".project/data/paa",
+  "github_repo": "billyweisberg/paa-platform",
+  "queue_names": {
+    "techlead": "paa-techlead",
+    "dev": "paa-dev",
+    "qa": "paa-qa"
+  },
+  "queue_exchange": "paa-handoff",
+  "db_profile": "paa_dev"
+}

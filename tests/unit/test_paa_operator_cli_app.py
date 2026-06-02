@@ -14,10 +14,12 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 
 from paa_cli.app import build_app, build_default_cli
 from paa_cli.command_adapters import (
+    AgentCommandAdapter,
     ComponentCommandAdapter,
     PlanCommandAdapter,
     QueueCommandAdapter,
     ReportCommandAdapter,
+    RoleCommandAdapter,
     StatusCommandAdapter,
     WorkerCommandAdapter,
 )
@@ -32,6 +34,8 @@ from paa_cli.models import (
     OperatorOutputTable,
 )
 from paa_cli.router import CommandRegistration, CommandRouter
+from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
+from paa_core.repositories.runtime_identity import AgentRecord, RoleRecord
 
 
 class _StubProjectionService:
@@ -208,7 +212,7 @@ class _StubRuntimeEventRepository:
         return QueueMessageRecord(
             queue_message_id='queue-message-1',
             handoff_id='handoff-1',
-            queue_name='fractal-core-architecture',
+            queue_name='paa-techlead',
             schema_type='worker_result_packet',
             message_id_external='msg-1',
             correlation_key='corr-1',
@@ -222,6 +226,34 @@ class _StubRuntimeEventRepository:
             updated_at=None,
         )
 
+    def get_latest_automation_run_for_message_id(self, message_id_external: str):
+        from paa_core.repositories.runtime_event import AutomationRunRecord
+
+        if message_id_external != 'msg-1':
+            return None
+        return AutomationRunRecord(
+            automation_run_id='automation-run-1',
+            agent_id='agent-1',
+            work_item_id='work-item-1',
+            handoff_id='handoff-1',
+            trigger_type='packet_compilation:worker_result_packet',
+            status='completed',
+            started_at=None,
+            finished_at=None,
+            summary='Compiled worker result packet.',
+            artifacts={
+                'message_id': 'msg-1',
+                'packet_output_path': '/tmp/worker-result.json',
+            },
+            created_at=None,
+            updated_at=None,
+        )
+
+
+class _StubPacketArtifactReader:
+    def read_packet_payload(self, packet_path: str) -> dict[str, object]:
+        return {'methodology_execution_id': 'exec-1', 'source_packet_path': packet_path}
+
 
 class _StubLogger:
     def info(self, event: str, **fields: object) -> None:
@@ -229,6 +261,56 @@ class _StubLogger:
 
     def warning(self, event: str, **fields: object) -> None:
         del event, fields
+
+
+class _StubRuntimeIdentityRepository:
+    def __init__(self) -> None:
+        self.roles: dict[tuple[str, str], RoleRecord] = {}
+        self.agents: dict[tuple[str, str], AgentRecord] = {}
+
+    def get_role_by_name(self, project_slug: str, role_name: str):
+        return self.roles.get((project_slug, role_name))
+
+    def upsert_role(self, spec):
+        record = RoleRecord(
+            role_id=f'role-{spec.name.lower()}',
+            project_id=f'project-{spec.project_slug}',
+            name=spec.name,
+            category=spec.category,
+            description=spec.description,
+            is_human_capable=spec.is_human_capable,
+            is_automation_capable=spec.is_automation_capable,
+            sort_order=spec.sort_order,
+            active=spec.active,
+            created_at=None,
+            updated_at=None,
+        )
+        self.roles[(spec.project_slug, spec.name)] = record
+        return record
+
+    def get_agent_by_name(self, project_slug: str, agent_name: str):
+        return self.agents.get((project_slug, agent_name))
+
+    def upsert_agent(self, spec):
+        role = None
+        if spec.role_name is not None:
+            role = self.get_role_by_name(spec.project_slug, spec.role_name)
+            if role is None:
+                raise LookupError(f'Role {spec.role_name!r} does not exist in project {spec.project_slug!r}.')
+        record = AgentRecord(
+            agent_id=f"agent-{spec.name.lower().replace(' ', '-')}",
+            project_id=f'project-{spec.project_slug}',
+            role_id=role.role_id if role else None,
+            name=spec.name,
+            agent_type=spec.agent_type,
+            runtime_kind=spec.runtime_kind,
+            active=spec.active,
+            metadata=dict(spec.metadata or {}),
+            created_at=None,
+            updated_at=None,
+        )
+        self.agents[(spec.project_slug, spec.name)] = record
+        return record
 
 
 class PAAOperatorCLIAppTests(unittest.TestCase):
@@ -315,6 +397,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_cli.rendering import OutputRenderer
 
         component_adapter = Mock(spec=ComponentCommandAdapter)
+        runtime_identity_repository = _StubRuntimeIdentityRepository()
         def component_run(request: OperatorCommandRequest) -> OperatorCommandResult:
             if request.command.command_name == 'complete':
                 return OperatorCommandResult(
@@ -393,6 +476,18 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 CommandRegistration(command_family='component', adapter=component_adapter),
                 CommandRegistration(command_family='plan', adapter=plan_adapter),
                 CommandRegistration(
+                    command_family='role',
+                    adapter=RoleCommandAdapter(
+                        runtime_identity_repository=runtime_identity_repository,
+                    ),
+                ),
+                CommandRegistration(
+                    command_family='agent',
+                    adapter=AgentCommandAdapter(
+                        runtime_identity_repository=runtime_identity_repository,
+                    ),
+                ),
+                CommandRegistration(
                     command_family='status',
                     adapter=StatusCommandAdapter(
                         methodology_execution_projection_service=_StubProjectionService(),
@@ -415,6 +510,11 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                     command_family='worker',
                     adapter=WorkerCommandAdapter(
                         queue_packet_runtime_controller=_StubQueuePacketRuntimeController(),
+                        packet_reference_resolution_service=DefaultPacketReferenceResolutionService(
+                            runtime_event_repository=_StubRuntimeEventRepository(),
+                            packet_artifact_reader=_StubPacketArtifactReader(),
+                            runtime_path_adapter=None,
+                        ),
                         runtime_event_repository=_StubRuntimeEventRepository(),
                     ),
                 ),
@@ -465,6 +565,10 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         component_adapter.run.assert_not_called()
 
     def test_queue_and_worker_commands_are_available(self) -> None:
+        app = build_app()
+        self.assertIsNotNone(app)
+
+    def test_role_and_agent_commands_are_available(self) -> None:
         app = build_app()
         self.assertIsNotNone(app)
 
@@ -554,7 +658,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'queue',
                 'preview',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-payload-json',
@@ -580,7 +684,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'queue',
                 'preview',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-path',
@@ -604,7 +708,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'queue',
                 'preview',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-message-id',
@@ -628,7 +732,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'worker',
                 'dispatch',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-payload-json',
@@ -652,7 +756,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'worker',
                 'dispatch',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-path',
@@ -666,7 +770,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertIn('\"packet_path\": \"packets/worker-result.json\"', result.output)
         self.assertIn('\"target_worker_host\": \"TechLeadWorkerService\"', result.output)
 
-    def test_worker_dispatch_from_message_pointer_fails_closed_until_payload_resolution_exists(self) -> None:
+    def test_worker_dispatch_from_message_pointer_resolves_artifact_path_through_shared_core(self) -> None:
         app, _, _ = self._typer_cli()
 
         result = self.runner.invoke(
@@ -675,7 +779,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
                 'worker',
                 'dispatch',
                 '--queue-name',
-                'fractal-core-architecture',
+                'paa-techlead',
                 '--packet-schema-type',
                 'worker_result_packet',
                 '--packet-message-id',
@@ -685,9 +789,79 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             ],
         )
 
-        self.assertEqual(result.exit_code, 2, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn('\"packet_message_id\": \"msg-1\"', result.output)
-        self.assertIn('\"reason\": \"missing_packet_payload\"', result.output)
+        self.assertIn('\"packet_path\": \"/tmp/worker-result.json\"', result.output)
+        self.assertIn('\"target_worker_host\": \"TechLeadWorkerService\"', result.output)
+
+    def test_role_add_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(
+            app,
+            [
+                'role',
+                'add',
+                '--project-slug',
+                'paa-platform',
+                '--name',
+                'Dev',
+                '--category',
+                'engineering',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"command_family\": \"role\"', result.output)
+        self.assertIn('Runtime role upsert completed.', result.output)
+        self.assertIn('\"name\": \"Dev\"', result.output)
+
+    def test_agent_add_renders_live_typer_output(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        role_result = self.runner.invoke(
+            app,
+            [
+                'role',
+                'add',
+                '--project-slug',
+                'paa-platform',
+                '--name',
+                'Dev',
+                '--category',
+                'engineering',
+                '--output',
+                'json',
+            ],
+        )
+        self.assertEqual(role_result.exit_code, 0, msg=role_result.output)
+
+        result = self.runner.invoke(
+            app,
+            [
+                'agent',
+                'add',
+                '--project-slug',
+                'paa-platform',
+                '--name',
+                'Dev Automation',
+                '--role-name',
+                'Dev',
+                '--agent-type',
+                'automation',
+                '--runtime-kind',
+                'codex',
+                '--output',
+                'json',
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('\"command_family\": \"agent\"', result.output)
+        self.assertIn('Runtime agent upsert completed.', result.output)
+        self.assertIn('\"name\": \"Dev Automation\"', result.output)
 
     def test_component_help_surfaces_preflight_behavior(self) -> None:
         app, _, _ = self._typer_cli()

@@ -92,7 +92,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='preview',
             )
         )
@@ -122,7 +122,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='claim_next',
                 claimant_name='techlead',
             )
@@ -145,7 +145,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='preview',
             )
         )
@@ -162,12 +162,32 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
         )
         self.assertIsNone(result.normalized_packet_payload)
 
+    def test_assemble_queue_intake_supports_techlead_assignment_packet(self) -> None:
+        packet = {
+            'packet_message_id': 'msg-qa-1',
+            'packet_schema_type': 'techlead_assignment_packet',
+            'packet_payload': {'methodology_execution_id': 'exec-qa-1'},
+        }
+        service = self._build_service(claim_result=packet)
+
+        result = service.assemble_queue_intake(
+            QueueClaimRuntimeRequest(
+                queue_name='paa-qa',
+                intake_mode='claim_next',
+                claimant_name='qa',
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.claim_summary.packet_message_id, 'msg-qa-1')
+        self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-qa-1'})
+
     def test_assemble_queue_intake_fails_closed_for_unsupported_intake_mode(self) -> None:
         service = self._build_service()
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='ack',
             )
         )
@@ -181,7 +201,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='claim_next',
             )
         )
@@ -200,7 +220,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='preview',
             )
         )
@@ -228,7 +248,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='preview',
             )
         )
@@ -240,14 +260,14 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
     def test_assemble_queue_intake_fails_closed_for_unsupported_packet_schema_type(self) -> None:
         packet = {
             'packet_message_id': 'msg-4',
-            'packet_schema_type': 'qa_verification_packet',
+            'packet_schema_type': 'architect_cycle_packet',
             'packet_payload': {'verification_status': 'pass'},
         }
         service = self._build_service(preview_result=packet)
 
         result = service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
-                queue_name='fractal-core-architecture',
+                queue_name='paa-techlead',
                 intake_mode='preview',
             )
         )
@@ -271,6 +291,7 @@ class QueueClaimRuntimeServiceTests(unittest.TestCase):
             queue_transport_adapter=transport,
             packet_envelope_validator=validator,
             queue_claim_state_adapter=claim_state_adapter,
+            supported_queue_names=('paa-techlead', 'paa-dev', 'paa-qa'),
             logger=logger,
         )
 

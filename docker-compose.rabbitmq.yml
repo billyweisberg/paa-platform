@@ -1,0 +1,23 @@
+services:
+  paa-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: paa-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${PAA_LOCAL_RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${PAA_LOCAL_RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${PAA_LOCAL_RABBITMQ_VHOST:-/}
+    ports:
+      - "${PAA_LOCAL_RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${PAA_LOCAL_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - paa-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  paa-rabbitmq-data:

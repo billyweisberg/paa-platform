@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
 from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
+from paa_core.repositories.runtime_identity import RUNTIME_IDENTITY_REPOSITORY_METADATA
 from paa_core.services.methodology_execution_state import (
     METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
 )
@@ -86,6 +87,7 @@ GOVERNED_COMPONENTS: tuple[GovernedComponentMetadata, ...] = tuple(
         PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
         IMPLEMENTATION_PLAN_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_REPOSITORY_METADATA,
+        RUNTIME_IDENTITY_REPOSITORY_METADATA,
         METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
         METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
         METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,

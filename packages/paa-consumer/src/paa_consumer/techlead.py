@@ -11,6 +11,7 @@ from pathlib import Path
 
 from paa_core.db import run_psql as shared_run_psql, settings_from_profile, settings_with_overrides
 from paa_core import handoff_runtime
+from paa_core.config import runtime_queue_name_for_role, runtime_queue_name_for_schema
 from paa_core.policies.acceptance import DefaultAcceptancePolicy
 from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
 from paa_core.policies.reset_recovery import DefaultResetRecoveryPolicy
@@ -18,7 +19,7 @@ from paa_core.policies.workflow_transition import DefaultWorkflowTransitionPolic
 from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.repositories.workflow_state import PostgresWorkflowStateRepository
-from paa_core.runtime_paths import repo_authority_manifest_path
+from paa_core.runtime_paths import repo_authority_manifest_path, resolved_repo_runtime_queue_topology
 from paa_core.services.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
@@ -67,8 +68,9 @@ DEFAULT_DB_SETTINGS = settings_from_profile(DEFAULT_DB_PROFILE)
 DEFAULT_DB_CONTAINER = DEFAULT_DB_SETTINGS.container
 DEFAULT_DB_NAME = DEFAULT_DB_SETTINGS.name
 DEFAULT_DB_USER = DEFAULT_DB_SETTINGS.user
-DEFAULT_PROJECT_SLUG = 'fractal-core-python'
-DEFAULT_AGENT_NAME = 'Fractal Core TechLead Automation'
+DEFAULT_PROJECT_SLUG = 'paa-platform'
+DEFAULT_AGENT_NAME = 'TechLead Agent'
+DEV_ROLE_LABEL = 'Dev'
 ROLE_CONFIG = {
     'Architect': {'dir': 'fractal-core-delivery-architect-automation', 'root': str(REPO_ROOT)},
     'QA': {'dir': 'fractal-core-qa-automation', 'root': str(REPO_ROOT)},
@@ -98,31 +100,7 @@ TEAM_WORKER_CLI_CHOICES = [role.key for role in active_team_worker_roles(repo_ro
 ROLE_BRIDGE_TARGET_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
 ROLE_EMIT_TARGET_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
 PREFLIGHT_TARGET_CHOICES = ['techlead', 'delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa']
-QUEUE_NAMES = ['fractal-core-python', 'fractal-core-qa', 'fractal-core-architecture']
 QUEUE_PREVIEW_DEPTH = 10
-ROLE_QUEUE_GATE = {
-    'delivery-architect': {
-        'queue_name': 'fractal-core-architecture',
-        'to_role': 'Delivery Architect',
-        'schema_types': {'techlead_assignment_packet'},
-    },
-    'python-team': {
-        'queue_name': 'fractal-core-python',
-        'to_role': 'Python Dev',
-        'schema_types': {'techlead_assignment_packet', 'architect_cycle_packet'},
-    },
-    'qa': {
-        'queue_name': 'fractal-core-qa',
-        'to_role': 'QA',
-        'schema_types': {'techlead_assignment_packet'},
-    },
-}
-for _worker_role in active_team_worker_roles(repo_root=REPO_ROOT):
-    ROLE_QUEUE_GATE[_worker_role.key] = {
-        'queue_name': 'fractal-core-python',
-        'to_role': _worker_role.display_name,
-        'schema_types': {'techlead_assignment_packet', 'architect_cycle_packet'},
-    }
 TECHLEAD_GATE_SCHEMA_TYPES = {
     'slice_result_packet',
     'worker_result_packet',
@@ -146,6 +124,68 @@ def is_team_worker_cli(target_role: str, repo_root: Path | None = None) -> bool:
 
 def is_team_worker_label(role_label: str, repo_root: Path | None = None) -> bool:
     return team_worker_role_for_label(role_label, repo_root=repo_root) is not None
+
+
+def normalize_runtime_role_label(role_label: str | None) -> str | None:
+    if role_label == 'Python Dev':
+        return DEV_ROLE_LABEL
+    return role_label
+
+
+def runtime_queue_topology(repo_root: Path = REPO_ROOT):
+    return resolved_repo_runtime_queue_topology(repo_root)
+
+
+def queue_name_by_key(queue_key: str, repo_root: Path = REPO_ROOT) -> str:
+    topology = runtime_queue_topology(repo_root)
+    queue_name = topology.queue_names.get(queue_key)
+    if not queue_name:
+        raise RuntimeError(f'Queue topology does not define queue key {queue_key!r}.')
+    return queue_name
+
+
+def techlead_queue_name(repo_root: Path = REPO_ROOT) -> str:
+    return queue_name_by_key('techlead', repo_root=repo_root)
+
+
+def dev_queue_name(repo_root: Path = REPO_ROOT) -> str:
+    return queue_name_by_key('dev', repo_root=repo_root)
+
+
+def qa_queue_name(repo_root: Path = REPO_ROOT) -> str:
+    return queue_name_by_key('qa', repo_root=repo_root)
+
+
+def runtime_queue_names(repo_root: Path = REPO_ROOT) -> list[str]:
+    topology = runtime_queue_topology(repo_root)
+    return list(topology.queue_names.values())
+
+
+def role_queue_gate(repo_root: Path = REPO_ROOT) -> dict[str, dict[str, object]]:
+    gate = {
+        'delivery-architect': {
+            'queue_name': techlead_queue_name(repo_root),
+            'to_role': 'Delivery Architect',
+            'schema_types': {'techlead_assignment_packet'},
+        },
+        'python-team': {
+            'queue_name': dev_queue_name(repo_root),
+            'to_role': DEV_ROLE_LABEL,
+            'schema_types': {'techlead_assignment_packet', 'architect_cycle_packet'},
+        },
+        'qa': {
+            'queue_name': qa_queue_name(repo_root),
+            'to_role': 'QA',
+            'schema_types': {'techlead_assignment_packet'},
+        },
+    }
+    for _worker_role in active_team_worker_roles(repo_root=repo_root):
+        gate[_worker_role.key] = {
+            'queue_name': dev_queue_name(repo_root),
+            'to_role': normalize_runtime_role_label(_worker_role.display_name),
+            'schema_types': {'techlead_assignment_packet', 'architect_cycle_packet'},
+        }
+    return gate
 
 
 def repo_auth_script(repo_root: Path) -> Path:
@@ -511,7 +551,7 @@ def load_design_package(project_slug, package_id_external):
 def queue_state(repo_root: Path = REPO_ROOT):
     out = {}
     queue_script = repo_queue_script(repo_root)
-    for q in QUEUE_NAMES:
+    for q in runtime_queue_names(repo_root):
         out[q] = run_json([
             str(queue_script),
             'queue-check',
@@ -569,7 +609,7 @@ def github_repo_for_root(repo_root: Path) -> str:
         repo = (manifest.get('project') or {}).get('repo')
         if repo:
             return str(repo)
-    return 'billyweisberg/fractal-core-python'
+    return 'billyweisberg/paa-platform'
 
 
 def _select_issue_url_from_packet(packet: dict | None, issue_number: int) -> str | None:
@@ -1242,7 +1282,7 @@ def automation_preflight(args):
         else:
             gate_reason = 'no_techlead_work_detected'
     else:
-        gate = ROLE_QUEUE_GATE[target_role]
+        gate = role_queue_gate(repo_root)[target_role]
         queue_candidates = queue_gate_candidates(
             queues,
             queue_name=gate['queue_name'],
@@ -1402,7 +1442,8 @@ def build_lineage_view(repo_root: Path, project_slug: str, package_id_external: 
 def action_type_for_role(role):
     mapping = {
         'Delivery Architect': 'route_to_delivery_architect',
-        'Python Dev': 'route_to_python',
+        DEV_ROLE_LABEL: 'route_to_dev',
+        'Python Dev': 'route_to_dev',
         'QA': 'route_to_qa',
         'Authority Architect': 'route_to_architect',
         'Architect': 'route_to_architect',
@@ -1413,6 +1454,7 @@ def action_type_for_role(role):
 
 def techlead_assignment_role(raw_role):
     mapping = {
+        DEV_ROLE_LABEL: 'python-team',
         'Python Dev': 'python-team',
         'QA': 'qa',
         'Delivery Architect': 'delivery-architect',
@@ -1834,12 +1876,12 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         stage = routed_workflow_stage or derived_review_stage
         if review_routing_result is not None and review_routing_result.summary.review_summary:
             summary = review_routing_result.summary.review_summary
-        elif worker_role == 'Python Dev':
-            summary = 'TechLead has a waiting Python worker result packet to review before QA is assigned.'
+        elif worker_role in {DEV_ROLE_LABEL, 'Python Dev'}:
+            summary = 'TechLead has a waiting Dev worker result packet to review before QA is assigned.'
         else:
             summary = f'TechLead has a waiting {worker_role} result packet to review.'
-        if worker_role == 'Python Dev':
-            reason = 'A Python worker result packet addressed to TechLead is waiting for the next routing decision.'
+        if worker_role in {DEV_ROLE_LABEL, 'Python Dev'}:
+            reason = 'A Dev worker result packet addressed to TechLead is waiting for the next routing decision.'
         else:
             reason = 'A worker result packet addressed to TechLead is waiting for the next routing decision.'
         owner = 'TechLead'
@@ -1926,11 +1968,11 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         })
         return stage, owner, escalations, recommended, unattended_safe
 
-    if queues['fractal-core-architecture']['messages_ready'] > 0:
+    if queues[techlead_queue_name(repo_root)]['messages_ready'] > 0:
         stage = 'ready_for_acceptance'
         owner = 'Architect'
         unattended_safe = False
-        preview = queues['fractal-core-architecture'].get('preview') or []
+        preview = queues[techlead_queue_name(repo_root)].get('preview') or []
         packet = preview[0]['payload_preview'] if preview else {}
         details = {
             'message_id': packet.get('message_id_external', packet.get('message_id')),
@@ -2010,7 +2052,7 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             stage = 'dev_reset_required'
         else:
             stage = 'dev_rework_required'
-        owner = 'Python Dev'
+        owner = DEV_ROLE_LABEL
         unattended_safe = False
         if reset_required_after_failed_rework:
             escalations.append({
@@ -2026,14 +2068,14 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                     'python_rework_comment_at': (latest_python_update or {}).get('createdAt'),
                     'qa_repeat_review_comment_at': (latest_qa_review or {}).get('createdAt'),
                 },
-                'recommended_route': 'Python Dev',
+                'recommended_route': DEV_ROLE_LABEL,
                 'status': 'open',
             })
             recommended.append({
                 'priority': 1,
-                'action_type': 'route_to_python_reset_branch',
+                'action_type': 'route_to_dev_reset_branch',
                 'reason': 'A second QA scope escalation after Architect-directed rework is a reliable contamination signal; rebuild the slice on a fresh branch from current main.',
-                'target_role': 'Python Dev',
+                'target_role': DEV_ROLE_LABEL,
                 'blocking': True,
             })
         else:
@@ -2048,14 +2090,14 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
                     'architect_comment_at': (latest_architect_rejection or {}).get('createdAt'),
                     'architect_comment_url': (latest_architect_rejection or {}).get('url'),
                 },
-                'recommended_route': 'Python Dev',
+                'recommended_route': DEV_ROLE_LABEL,
                 'status': 'open',
             })
             recommended.append({
                 'priority': 1,
-                'action_type': 'route_to_python',
+                'action_type': 'route_to_dev',
                 'reason': 'Architect has already rejected the current head and asked for the slice to be narrowed before any fresh QA review.',
-                'target_role': 'Python Dev',
+                'target_role': DEV_ROLE_LABEL,
                 'blocking': True,
             })
         return stage, owner, escalations, recommended, unattended_safe
@@ -2147,33 +2189,33 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
             })
             return stage, owner, escalations, recommended, unattended_safe
 
-    if queues['fractal-core-python']['messages_ready'] > 0:
+    if queues[dev_queue_name(repo_root)]['messages_ready'] > 0:
         stage = 'architect_authorized'
-        owner = 'Python Dev'
+        owner = DEV_ROLE_LABEL
         recommended.append({
             'priority': 1,
-            'action_type': 'route_to_python',
+            'action_type': 'route_to_dev',
             'reason': 'Python queue has a waiting Architect packet.',
-            'target_role': 'Python Dev',
+            'target_role': DEV_ROLE_LABEL,
             'blocking': False,
         })
         return stage, owner, escalations, recommended, unattended_safe
 
     if issue['state'] == 'OPEN' and pr and pr.get('state') == 'OPEN':
         stage = 'dev_in_progress'
-        owner = 'Python Dev'
+        owner = DEV_ROLE_LABEL
         recommended.append({
             'priority': 2,
             'action_type': 'monitor_dev',
             'reason': f'Issue #{issue["number"]} has an open PR but no waiting queue handoff.',
-            'target_role': 'Python Dev',
+            'target_role': DEV_ROLE_LABEL,
             'blocking': False,
         })
         return stage, owner, escalations, recommended, unattended_safe
 
     if current_task:
         stage = 'dev_in_progress'
-        owner = 'Python Dev'
+        owner = DEV_ROLE_LABEL
 
     return stage, owner, escalations, recommended, unattended_safe
 
@@ -2331,11 +2373,11 @@ def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJEC
 
     report = {
         'report_id': f'techlead-{datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")}',
-        'project_id': 'fractal-core-python',
+        'project_id': project_slug,
         'captured_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
         'captured_by': {
             'role': 'TechLead',
-            'agent_name': 'Fractal Core TechLead CLI',
+            'agent_name': DEFAULT_AGENT_NAME,
             'agent_type': 'automation',
         },
         'authority': {
@@ -2356,7 +2398,7 @@ def build_report(repo_root: Path = REPO_ROOT, project_slug: str = DEFAULT_PROJEC
             'ready': queues[q]['messages_ready'],
             'unacknowledged': queues[q]['messages_unacknowledged'],
             'latest_message': newest_queue_preview(queues[q]),
-        } for q in QUEUE_NAMES},
+        } for q in runtime_queue_names(repo_root)},
         'lineage': lineage,
         'automations': {'roles': auto_roles},
         'traceability': traceability,
@@ -2456,7 +2498,7 @@ def persist_techlead_acceptance_event(
       SELECT a.agent_id
       FROM paa.agents a
       JOIN project p ON p.project_id = a.project_id
-      WHERE a.name = 'Fractal Core TechLead Automation'
+      WHERE a.name = {sql_literal(DEFAULT_AGENT_NAME)}
       LIMIT 1
     ), techlead_role AS (
       SELECT r.role_id
@@ -3150,7 +3192,7 @@ def _resolve_worker_review_stage(
     worker_role: str,
     lifecycle_target_stage: str | None,
 ) -> str:
-    if worker_role == 'Python Dev':
+    if worker_role in {DEV_ROLE_LABEL, 'Python Dev'}:
         return 'techlead_dev_review_pending'
     return lifecycle_target_stage or 'techlead_worker_review_pending'
 
@@ -3916,7 +3958,8 @@ def closeout_qa_pass(args):
 
     qa_ack = None
     if args.ack_qa_packet:
-        architecture_state = queue_state(repo_root).get('fractal-core-architecture', {})
+        architecture_queue = techlead_queue_name(repo_root)
+        architecture_state = queue_state(repo_root).get(architecture_queue, {})
         architecture_preview = architecture_state.get('preview') or []
         head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
         if not head_payload or head_payload.get('message_id') != qa_packet.get('message_id'):
@@ -3932,7 +3975,7 @@ def closeout_qa_pass(args):
             str(repo_queue_script(repo_root)),
             'queue-claim-next',
             '--repo-root', str(repo_root),
-            '--queue', 'fractal-core-architecture',
+            '--queue', architecture_queue,
             '--claimed-by', args.claimed_by,
         ]
         claim_result = run_json(claim_cmd)
@@ -3949,14 +3992,15 @@ def closeout_qa_pass(args):
             str(repo_queue_script(repo_root)),
             'queue-ack',
             '--repo-root', str(repo_root),
-            '--queue', 'fractal-core-architecture',
+            '--queue', architecture_queue,
             '--claim-id', claim_result['claim_id'],
         ]
         qa_ack = run_json(ack_cmd)
 
     decision_ack = None
     if args.send_decision and decision_result.get('sent'):
-        architecture_state = queue_state(repo_root).get('fractal-core-architecture', {})
+        architecture_queue = techlead_queue_name(repo_root)
+        architecture_state = queue_state(repo_root).get(architecture_queue, {})
         architecture_preview = architecture_state.get('preview') or []
         head_payload = (architecture_preview[0] or {}).get('payload_preview') if architecture_preview else None
         decision_message_id = decision_result.get('message_id')
@@ -3965,7 +4009,7 @@ def closeout_qa_pass(args):
                 str(repo_queue_script(repo_root)),
                 'queue-claim-next',
                 '--repo-root', str(repo_root),
-                '--queue', 'fractal-core-architecture',
+                '--queue', architecture_queue,
                 '--claimed-by', f"{args.claimed_by}-decision",
             ]
             claim_result = run_json(claim_cmd)
@@ -3974,7 +4018,7 @@ def closeout_qa_pass(args):
                     str(repo_queue_script(repo_root)),
                     'queue-ack',
                     '--repo-root', str(repo_root),
-                    '--queue', 'fractal-core-architecture',
+                    '--queue', architecture_queue,
                     '--claim-id', claim_result['claim_id'],
                 ]
                 decision_ack = run_json(ack_cmd)

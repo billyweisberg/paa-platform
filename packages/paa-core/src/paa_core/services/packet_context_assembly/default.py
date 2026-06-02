@@ -33,9 +33,16 @@ class _NullStructuredLogger:
 class DefaultPacketContextAssemblyService:
     """Assemble the first supported deterministic worker-runtime packet context."""
 
-    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'worker_result_packet'})
-    _SUPPORTED_RUNTIME_SURFACES = frozenset({'techlead'})
-    _REQUIRED_CAPABILITIES = ('packet-read', 'techlead-runtime')
+    _SUPPORTED_CONTEXTS = {
+        ('worker_result_packet', 'techlead'): {
+            'required_capabilities': ('packet-read', 'techlead-runtime'),
+            'context_kind': 'worker_result_review',
+        },
+        ('techlead_assignment_packet', 'qa'): {
+            'required_capabilities': ('packet-read', 'qa-runtime'),
+            'context_kind': 'qa_assignment_execution',
+        },
+    }
 
     def __init__(
         self,
@@ -73,10 +80,7 @@ class DefaultPacketContextAssemblyService:
         return self._logger
 
     def supports_packet_context(self, packet_schema_type: str, runtime_surface: str) -> bool:
-        return (
-            packet_schema_type.strip() in self._SUPPORTED_PACKET_SCHEMA_TYPES
-            and runtime_surface.strip() in self._SUPPORTED_RUNTIME_SURFACES
-        )
+        return (packet_schema_type.strip(), runtime_surface.strip()) in self._SUPPORTED_CONTEXTS
 
     def assemble_packet_context(
         self,
@@ -84,6 +88,7 @@ class DefaultPacketContextAssemblyService:
     ) -> PacketContextAssemblyResult:
         packet_schema_type = request.packet_schema_type.strip()
         runtime_surface = request.runtime_surface.strip()
+        context_config = self._SUPPORTED_CONTEXTS.get((packet_schema_type, runtime_surface))
         self._logger.info(
             'packet_context_assembly.assemble_packet_context.start',
             packet_schema_type=packet_schema_type,
@@ -117,7 +122,7 @@ class DefaultPacketContextAssemblyService:
                 request,
                 reason='missing_methodology_execution_id',
                 details='The supported packet-context assembly slice requires a methodology execution id.',
-                context_kind='worker_result_review',
+                context_kind=context_config['context_kind'],
                 gaps=(
                     PacketContextGapSummary(
                         gap_key='missing_methodology_execution_id',
@@ -135,7 +140,7 @@ class DefaultPacketContextAssemblyService:
                 request,
                 reason='missing_packet_payload',
                 details='The supported packet-context assembly slice requires packet payload or a readable packet path.',
-                context_kind='worker_result_review',
+                context_kind=context_config['context_kind'],
                 gaps=(
                     PacketContextGapSummary(
                         gap_key='missing_packet_payload',
@@ -154,8 +159,8 @@ class DefaultPacketContextAssemblyService:
             runtime_surface,
             ExecutionPackageResolutionRequest(
                 execution_surface_key=runtime_surface,
-                execution_surface_type='worker_runtime',
-                required_surface_types=(runtime_surface,),
+                execution_surface_type='consumer_repo_runtime',
+                required_surface_types=('consumer_repo_runtime',),
                 required_artifact_refs=('installed_manifest',),
                 metadata={
                     'packet_schema_type': packet_schema_type,
@@ -181,9 +186,9 @@ class DefaultPacketContextAssemblyService:
             runtime_surface=runtime_surface,
             methodology_execution_id=methodology_execution_id,
             execution_package_id=execution_package_resolution.execution_package_install_id,
-            context_kind='worker_result_review',
+            context_kind=context_config['context_kind'],
             assembly_supported=ok,
-            required_capabilities=self._REQUIRED_CAPABILITIES,
+            required_capabilities=context_config['required_capabilities'],
             resolved_capabilities=execution_package_resolution.capability_summary.satisfied_capabilities,
             blocking_gaps=tuple(g.gap_key for g in gaps if g.blocking),
             notes=('dry-run-supported',),
@@ -248,7 +253,10 @@ class DefaultPacketContextAssemblyService:
                 execution_package_id=None,
                 context_kind=context_kind,
                 assembly_supported=False,
-                required_capabilities=self._REQUIRED_CAPABILITIES,
+                required_capabilities=self._required_capabilities_for(
+                    request.packet_schema_type,
+                    request.runtime_surface,
+                ),
                 resolved_capabilities=(),
                 blocking_gaps=tuple(g.gap_key for g in gaps if g.blocking),
                 notes=('fail-closed',),
@@ -263,6 +271,12 @@ class DefaultPacketContextAssemblyService:
                 'packet_schema_type': request.packet_schema_type,
             },
         )
+
+    def _required_capabilities_for(self, packet_schema_type: str, runtime_surface: str) -> tuple[str, ...]:
+        context_config = self._SUPPORTED_CONTEXTS.get((packet_schema_type.strip(), runtime_surface.strip()))
+        if context_config is None:
+            return ()
+        return tuple(context_config['required_capabilities'])
 
     def _primary_gap_key(self, gaps: tuple[PacketContextGapSummary, ...], *, fallback: str) -> str:
         for gap in gaps:

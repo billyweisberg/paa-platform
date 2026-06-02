@@ -7,34 +7,18 @@ from pathlib import Path
 from typing import Any
 
 from paa_core import handoff_runtime
-from paa_core.runtime_paths import repo_queue_state_root
+from paa_core.config import (
+    DEFAULT_RUNTIME_QUEUE_EXCHANGE,
+    runtime_queue_name_for_role,
+    runtime_queue_name_for_schema,
+)
+from paa_core.runtime_paths import repo_queue_state_root, resolved_repo_runtime_queue_topology
 from paa_core.team_worker_roles import team_worker_queue_name_by_display_name
-
-
-TECHLEAD_QUEUE_BY_ROLE = {
-    'Python Dev': 'fractal-core-python',
-    'QA': 'fractal-core-qa',
-    'Delivery Architect': 'fractal-core-architecture',
-    'Authority Architect': 'fractal-core-architecture',
-    'Architect': 'fractal-core-architecture',
-    # There is no dedicated TechLead queue yet; Phase B keeps control traffic on the
-    # architecture queue until we decide whether TechLead gets a first-class queue.
-    'TechLead': 'fractal-core-architecture',
-}
-
-TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA = {
-    # Phase A keeps physical queue names stable while semantic routing changes to TechLead.
-    'architect_cycle_packet': 'fractal-core-python',
-    'slice_result_packet': 'fractal-core-qa',
-    'worker_result_packet': 'fractal-core-architecture',
-    'qa_verification_packet': 'fractal-core-architecture',
-    'delivery_review_packet': 'fractal-core-architecture',
-}
 
 
 def run_queue_command(repo_root: Path, argv: list[str]) -> int:
     os.environ.setdefault('FRACTAL_CORE_HANDOFF_STATE_DIR', str(repo_queue_state_root(repo_root)))
-    return handoff_runtime.main(argv)
+    return handoff_runtime.main(['--repo-root', str(repo_root), *argv])
 
 
 def _normalize_role(role: Any) -> str | None:
@@ -42,6 +26,7 @@ def _normalize_role(role: Any) -> str | None:
 
 
 def resolve_techlead_packet_queue(message: dict[str, Any], repo_root: Path | None = None) -> str:
+    resolved_repo_root = repo_root.resolve() if repo_root is not None else None
     schema_type = message.get('schema_type')
     payload = message.get('payload') or {}
     if schema_type == 'techlead_assignment_packet':
@@ -53,20 +38,24 @@ def resolve_techlead_packet_queue(message: dict[str, Any], repo_root: Path | Non
             f"techlead packet dispatch only supports techlead_assignment_packet and "
             f"techlead_decision_packet, got {schema_type!r}"
         )
-    queue_name = TECHLEAD_QUEUE_BY_ROLE.get(role or '')
+    topology = None if resolved_repo_root is None else resolved_repo_runtime_queue_topology(resolved_repo_root)
+    queue_name = runtime_queue_name_for_role(role, topology=topology)
     if not queue_name and role:
-        queue_name = team_worker_queue_name_by_display_name(role, repo_root=repo_root)
+        queue_name = team_worker_queue_name_by_display_name(role, repo_root=resolved_repo_root)
     if not queue_name:
         raise RuntimeError(f'No queue mapping is defined for TechLead packet role {role!r}')
     return queue_name
 
 
-def resolve_packet_queue(message: dict[str, Any]) -> str:
+def resolve_packet_queue(message: dict[str, Any], repo_root: Path | None = None) -> str:
+    resolved_repo_root = repo_root.resolve() if repo_root is not None else None
     schema_type = message.get('schema_type')
-    if schema_type in TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA:
-        return TRANSITIONAL_RESULT_QUEUE_BY_SCHEMA[schema_type]
+    topology = None if resolved_repo_root is None else resolved_repo_runtime_queue_topology(resolved_repo_root)
+    queue_name = runtime_queue_name_for_schema(schema_type, topology=topology)
+    if queue_name:
+        return queue_name
     if schema_type in {'techlead_assignment_packet', 'techlead_decision_packet'}:
-        return resolve_techlead_packet_queue(message)
+        return resolve_techlead_packet_queue(message, repo_root=resolved_repo_root)
     raise RuntimeError(f'No queue mapping is defined for schema type {schema_type!r}')
 
 
@@ -81,7 +70,14 @@ def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
             'message_file': str(message_file),
             'errors': errors,
         }
-    queue_name = resolve_techlead_packet_queue(message, repo_root=repo_root) if schema_type in {'techlead_assignment_packet', 'techlead_decision_packet'} else resolve_packet_queue(message)
+    queue_name = (
+        resolve_techlead_packet_queue(message, repo_root=repo_root)
+        if schema_type in {'techlead_assignment_packet', 'techlead_decision_packet'}
+        else resolve_packet_queue(message, repo_root=repo_root)
+    )
+    topology = resolved_repo_runtime_queue_topology(repo_root)
+    exchange = topology.queue_exchange or DEFAULT_RUNTIME_QUEUE_EXCHANGE
+    handoff_runtime.persist_packet_compilation_for_send_message(message, message_file=str(message_file))
     client = handoff_runtime.RabbitMQManagementClient(
         user=handoff_runtime.DEFAULT_USER,
         password=handoff_runtime.DEFAULT_PASSWORD,
@@ -89,9 +85,9 @@ def dispatch_packet(repo_root: Path, message_file: Path) -> dict[str, Any]:
         port=handoff_runtime.DEFAULT_MANAGEMENT_PORT,
         vhost=handoff_runtime.DEFAULT_VHOST,
     )
-    _, result = client.publish(handoff_runtime.DEFAULT_EXCHANGE, queue_name, message)
+    _, result = client.publish(exchange, queue_name, message)
     if result.get('routed'):
-        handoff_runtime.persist_send_event(message, queue_name, publish_result=result)
+        handoff_runtime.persist_send_event(message, queue_name, publish_result=result, exchange=exchange)
         handoff_runtime.persist_slice_result(message)
         handoff_runtime.persist_qa_verification(message)
     return {

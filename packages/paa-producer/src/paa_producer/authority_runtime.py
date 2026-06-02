@@ -36,6 +36,16 @@ TEAM_WORKER_CLI_CHOICES = [role.key for role in active_team_worker_roles(repo_ro
 TEAM_WORKER_DECISION_CHOICES = ['delivery-architect', *TEAM_WORKER_CLI_CHOICES, 'qa', 'authority-architect']
 
 
+def packet_compiler_agent_name_for_worker_role(role_display_name: str | None) -> str:
+    if role_display_name in {'Python Dev', 'Frontend Dev', 'Backend Dev', 'Infra Dev', 'Docs Dev', 'Dev'}:
+        return 'Dev Agent'
+    if role_display_name == 'QA':
+        return 'QA Agent'
+    if role_display_name == 'TechLead':
+        return 'TechLead Agent'
+    return 'Dev Agent'
+
+
 def resolve_manifest(explicit=None):
     if explicit:
         path = Path(explicit).expanduser().resolve()
@@ -142,15 +152,7 @@ def persist_packet_compilation(
     if schema_type == 'worker_result_packet':
         from_role = packet.get('from_role')
         role = team_worker_role_by_key(from_role, repo_root=repo_root_from_cwd()) if from_role else None
-        agent_name = role.automation_id.replace('-', ' ').title().replace(' Automation', ' Automation') if role else 'Python Team Automation'
-        if role:
-            agent_name = {
-                'python-team-automation': 'Python Team Automation',
-                'frontend-dev-automation': 'Frontend Dev Automation',
-                'backend-dev-automation': 'Backend Dev Automation',
-                'infra-dev-automation': 'Infra Dev Automation',
-                'docs-dev-automation': 'Docs Dev Automation',
-            }.get(role.automation_id, agent_name)
+        agent_name = packet_compiler_agent_name_for_worker_role(role.display_name if role else None)
     else:
         agent_name = PACKET_COMPILER_AGENT_BY_SCHEMA[schema_type]
     artifacts = {

@@ -17,7 +17,7 @@ from paa_core.services.packet_reference_resolution.contracts import (
     PacketReferenceResolutionService,
     RuntimePathAdapter,
 )
-from paa_core.repositories.runtime_event import QueueMessageRecord
+from paa_core.repositories.runtime_event import AutomationRunRecord, QueueMessageRecord
 
 
 class PacketReferenceResolutionServiceContractTests(unittest.TestCase):
@@ -41,13 +41,24 @@ class PacketReferenceResolutionServiceContractTests(unittest.TestCase):
 
 
 class _FakeRuntimeEventRepository:
-    def __init__(self, *, queue_message: QueueMessageRecord | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        queue_message: QueueMessageRecord | None = None,
+        automation_run: AutomationRunRecord | None = None,
+    ) -> None:
         self.queue_message = queue_message
+        self.automation_run = automation_run
         self.message_id_calls: list[str] = []
+        self.automation_message_id_calls: list[str] = []
 
     def get_queue_message_by_external(self, message_id_external: str):
         self.message_id_calls.append(message_id_external)
         return self.queue_message
+
+    def get_latest_automation_run_for_message_id(self, message_id_external: str):
+        self.automation_message_id_calls.append(message_id_external)
+        return self.automation_run
 
 
 class _FakePacketArtifactReader:
@@ -71,7 +82,8 @@ class _FakeRuntimePathAdapter:
 
 
 class PacketReferenceResolutionServiceTests(unittest.TestCase):
-    def test_resolve_packet_reference_supports_message_id_lookup(self) -> None:
+    def test_resolve_packet_reference_supports_message_id_lookup_with_artifact_path_resolution(self) -> None:
+        reader = _FakePacketArtifactReader({'methodology_execution_id': 'exec-1', 'source_packet_path': '/tmp/worker-result.json'})
         service = self._build_service(
             queue_message=QueueMessageRecord(
                 queue_message_id='queue-message-1',
@@ -88,7 +100,25 @@ class PacketReferenceResolutionServiceTests(unittest.TestCase):
                 metadata={},
                 created_at=None,
                 updated_at=None,
-            )
+            ),
+            automation_run=AutomationRunRecord(
+                automation_run_id='automation-run-1',
+                agent_id='agent-1',
+                work_item_id='work-item-1',
+                handoff_id='handoff-1',
+                trigger_type='packet_compilation:worker_result_packet',
+                status='completed',
+                started_at=None,
+                finished_at=None,
+                summary='Compiled worker result packet.',
+                artifacts={
+                    'message_id': 'msg-1',
+                    'packet_output_path': '/tmp/worker-result.json',
+                },
+                created_at=None,
+                updated_at=None,
+            ),
+            packet_artifact_reader=reader,
         )
 
         result = service.resolve_packet_reference(
@@ -102,8 +132,9 @@ class PacketReferenceResolutionServiceTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.resolution_summary.resolution_source, 'message-id')
         self.assertEqual(result.resolution_summary.packet_reference, 'msg-1')
-        self.assertIsNone(result.resolution_summary.resolved_packet_path)
-        self.assertIsNone(result.normalized_packet_payload)
+        self.assertEqual(result.resolution_summary.resolved_packet_path, '/tmp/worker-result.json')
+        self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-1', 'source_packet_path': '/tmp/worker-result.json'})
+        self.assertEqual(reader.calls, ['/tmp/worker-result.json'])
 
     def test_resolve_packet_reference_supports_packet_path_with_payload_reader(self) -> None:
         reader = _FakePacketArtifactReader({'methodology_execution_id': 'exec-2'})
@@ -120,6 +151,22 @@ class PacketReferenceResolutionServiceTests(unittest.TestCase):
         self.assertEqual(result.resolution_summary.resolved_packet_path, 'packets/worker-result.json')
         self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-2'})
         self.assertEqual(reader.calls, ['packets/worker-result.json'])
+
+    def test_resolve_packet_reference_supports_techlead_assignment_packet_path(self) -> None:
+        reader = _FakePacketArtifactReader({'methodology_execution_id': 'exec-qa-1'})
+        service = self._build_service(packet_artifact_reader=reader)
+
+        result = service.resolve_packet_reference(
+            PacketReferenceResolutionRequest(
+                packet_path='packets/techlead-assignment.json',
+                packet_schema_type='techlead_assignment_packet',
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.resolution_summary.resolved_packet_path, 'packets/techlead-assignment.json')
+        self.assertEqual(result.normalized_packet_payload, {'methodology_execution_id': 'exec-qa-1'})
+        self.assertEqual(reader.calls, ['packets/techlead-assignment.json'])
 
     def test_resolve_packet_reference_supports_runtime_packet_reference_resolution(self) -> None:
         reader = _FakePacketArtifactReader({'methodology_execution_id': 'exec-3'})
@@ -193,7 +240,7 @@ class PacketReferenceResolutionServiceTests(unittest.TestCase):
         result = service.resolve_packet_reference(
             PacketReferenceResolutionRequest(
                 packet_path='packets/qa.json',
-                packet_schema_type='qa_verification_packet',
+                packet_schema_type='architect_cycle_packet',
             )
         )
 
@@ -227,11 +274,15 @@ class PacketReferenceResolutionServiceTests(unittest.TestCase):
         self,
         *,
         queue_message: QueueMessageRecord | None = None,
+        automation_run: AutomationRunRecord | None = None,
         packet_artifact_reader: _FakePacketArtifactReader | None = None,
         runtime_path_adapter: _FakeRuntimePathAdapter | None = None,
     ) -> DefaultPacketReferenceResolutionService:
         return DefaultPacketReferenceResolutionService(
-            runtime_event_repository=_FakeRuntimeEventRepository(queue_message=queue_message),
+            runtime_event_repository=_FakeRuntimeEventRepository(
+                queue_message=queue_message,
+                automation_run=automation_run,
+            ),
             packet_artifact_reader=packet_artifact_reader,
             runtime_path_adapter=runtime_path_adapter,
         )

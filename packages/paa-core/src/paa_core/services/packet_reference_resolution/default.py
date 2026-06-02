@@ -26,7 +26,9 @@ class _NullStructuredLogger:
 class DefaultPacketReferenceResolutionService:
     """Resolve the first supported minimal packet-reference slice."""
 
-    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset({'worker_result_packet'})
+    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset(
+        {'worker_result_packet', 'techlead_assignment_packet', 'qa_verification_packet'}
+    )
 
     def __init__(
         self,
@@ -148,6 +150,17 @@ class DefaultPacketReferenceResolutionService:
                 metadata={'packet_schema_type': queue_message.schema_type},
             )
 
+        automation_run = self.runtime_event_repository.get_latest_automation_run_for_message_id(
+            queue_message.message_id_external or queue_message.queue_message_id
+        )
+        resolved_packet_path = self._extract_artifact_packet_path(automation_run.artifacts) if automation_run else None
+        normalized_payload = self._read_payload(resolved_packet_path) if resolved_packet_path else None
+        notes = ['message-id']
+        if resolved_packet_path:
+            notes.append('resolved-artifact-path')
+        else:
+            notes.append('pointer-only')
+
         result = PacketReferenceResolutionResult(
             request=request,
             resolution_summary=PacketReferenceResolutionSummary(
@@ -156,23 +169,25 @@ class DefaultPacketReferenceResolutionService:
                 packet_schema_type=queue_message.schema_type,
                 queue_name=queue_message.queue_name,
                 packet_reference=queue_message.message_id_external or queue_message.queue_message_id,
-                resolved_packet_path=None,
+                resolved_packet_path=resolved_packet_path,
                 resolution_supported=True,
                 blocking_reasons=(),
-                notes=('pointer-only', 'message-id'),
+                notes=tuple(notes),
             ),
-            normalized_packet_payload=None,
+            normalized_packet_payload=normalized_payload,
             ok=True,
             metadata={
                 'service_component': 'PacketReferenceResolutionService',
                 'queue_message_id': queue_message.queue_message_id,
                 'queue_message_status': queue_message.status,
+                'automation_run_id': automation_run.automation_run_id if automation_run else None,
             },
         )
         self._logger.info(
             'packet_reference_resolution.resolve.complete',
             resolution_source='message-id',
             packet_message_id=result.resolution_summary.packet_message_id,
+            resolved_packet_path=resolved_packet_path,
             ok=True,
         )
         return result
@@ -254,6 +269,14 @@ class DefaultPacketReferenceResolutionService:
             return None
         payload = self.packet_artifact_reader.read_packet_payload(packet_path)
         return payload if isinstance(payload, dict) else {'packet_payload': payload}
+
+    @staticmethod
+    def _extract_artifact_packet_path(artifacts: dict[str, Any]) -> str | None:
+        for key in ('packet_output_path', 'output_path', 'review_output_path'):
+            value = artifacts.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
 
     def _build_blocked_result(
         self,

@@ -116,6 +116,29 @@ class PacketContextAssemblyServiceTests(unittest.TestCase):
         self.assertEqual(result.packet_payload, {'project_slug': 'paa-platform'})
         self.assertEqual(payload_reader.paths, ['/tmp/packet.json'])
 
+    def test_assemble_packet_context_supports_techlead_assignment_packet_for_qa(self) -> None:
+        projection_service = _FakeProjectionService(_status_projection())
+        resolution_service = _FakeExecutionPackageResolutionService(_qa_resolution_view())
+        service = self._build_service(
+            projection_service=projection_service,
+            resolution_service=resolution_service,
+        )
+
+        result = service.assemble_packet_context(
+            PacketContextAssemblyRequest(
+                packet_schema_type='techlead_assignment_packet',
+                methodology_execution_id='exec-123',
+                runtime_surface='qa',
+                packet_payload={'project_slug': 'paa-platform', 'issue_number': 42},
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.assembly_summary.context_kind, 'qa_assignment_execution')
+        self.assertEqual(result.assembly_summary.required_capabilities, ('packet-read', 'qa-runtime'))
+        self.assertEqual(result.assembly_summary.resolved_capabilities, ('packet-read', 'qa-runtime'))
+        self.assertEqual(resolution_service.surface_requests[0][0], 'qa')
+
     def test_assemble_packet_context_fails_closed_for_missing_execution_id(self) -> None:
         service = self._build_service()
 
@@ -287,6 +310,35 @@ def _blocked_resolution_view() -> ExecutionPackageResolutionView:
                 metadata={},
             ),
         ),
+        metadata={},
+    )
+
+
+def _qa_resolution_view() -> ExecutionPackageResolutionView:
+    return ExecutionPackageResolutionView(
+        execution_surface_key='qa',
+        execution_surface_type='worker_runtime',
+        execution_package_install_id='install-qa-123',
+        package_name='paa-authority',
+        package_version='1.0.0',
+        authority_version_id='authority-123',
+        active_overlay_keys=(),
+        manifest_path='/runtime/manifest.json',
+        package_metadata_path='/runtime/package-metadata.json',
+        docs_root_path='/runtime/docs',
+        artifacts_root_path='/runtime/artifacts',
+        repo_root_path='/repo',
+        runtime_root_path='/runtime',
+        capability_summary=ExecutionPackageCapabilitySummary(
+            allowed=True,
+            missing_capabilities=(),
+            blocking_reasons=(),
+            satisfied_capabilities=('packet-read', 'qa-runtime'),
+            notes=(),
+            metadata={},
+        ),
+        warnings=(),
+        gaps=(),
         metadata={},
     )
 

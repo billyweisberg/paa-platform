@@ -85,6 +85,32 @@ FROM (
         rows = self._query_json_rows(sql)
         return self._automation_run_from_row(rows[0]) if rows else None
 
+    def get_latest_automation_run_for_message_id(self, message_id_external: str) -> AutomationRunRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    ar.automation_run_id::text,
+    ar.agent_id::text,
+    ar.work_item_id::text,
+    ar.handoff_id::text,
+    ar.trigger_type,
+    ar.status::text AS status,
+    ar.started_at::text,
+    ar.finished_at::text,
+    ar.summary,
+    ar.artifacts_json AS artifacts,
+    ar.created_at::text,
+    ar.updated_at::text
+  FROM paa.automation_runs ar
+  WHERE ar.artifacts_json->>'message_id' = {sql_literal(message_id_external)}
+  ORDER BY ar.created_at DESC, ar.updated_at DESC
+  LIMIT 1
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        return self._automation_run_from_row(rows[0]) if rows else None
+
     def list_transition_inputs_for_work_item(self, work_item_id: str) -> list[TransitionInputRecord]:
         sql = f"""
 SELECT row_to_json(t)

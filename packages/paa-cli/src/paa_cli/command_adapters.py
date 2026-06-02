@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 import json
 
+from paa_core.runtime_paths import resolved_repo_runtime_queue_topology
 from paa_producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
     DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
@@ -22,6 +23,9 @@ from paa_producer.implementation_plan_progress import (
 )
 
 from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
+from paa_core.services.packet_reference_resolution import (
+    PacketReferenceResolutionRequest,
+)
 
 from .models import (
     OperatorCommandRequest,
@@ -570,7 +574,161 @@ def _optional_string(value: object | None) -> str | None:
     return str(value)
 
 
-__all__ = ['ComponentCommandAdapter', 'PlanCommandAdapter', 'QueueCommandAdapter', 'ReportCommandAdapter', 'StatusCommandAdapter', 'WorkerCommandAdapter']
+class RoleCommandAdapter:
+    """Handle generic runtime role identity commands."""
+
+    _ALLOWED_CATEGORIES = frozenset({'architecture', 'engineering', 'verification', 'operations', 'coordination'})
+
+    def __init__(self, *, runtime_identity_repository: object) -> None:
+        self._runtime_identity_repository = runtime_identity_repository
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name == 'add':
+            return self._add(request)
+        return _unsupported_command_result(request)
+
+    def _add(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        project_slug = request.arguments.get('project_slug')
+        if not project_slug:
+            return _missing_argument_result(request, 'project_slug')
+        name = request.arguments.get('name')
+        if not name:
+            return _missing_argument_result(request, 'name')
+        category = str(request.arguments.get('category') or '').strip()
+        if not category:
+            return _missing_argument_result(request, 'category')
+        if category not in self._ALLOWED_CATEGORIES:
+            return _invalid_argument_result(
+                request,
+                'category',
+                'Allowed values: architecture, engineering, verification, operations, coordination.',
+            )
+
+        from paa_core.repositories.runtime_identity import RoleUpsertSpec
+
+        try:
+            record = self._runtime_identity_repository.upsert_role(
+                RoleUpsertSpec(
+                    project_slug=str(project_slug),
+                    name=str(name),
+                    category=category,
+                    description=_optional_string(request.arguments.get('description')),
+                    is_human_capable=bool(request.arguments.get('is_human_capable', True)),
+                    is_automation_capable=bool(request.arguments.get('is_automation_capable', True)),
+                    sort_order=int(request.arguments.get('sort_order', 100)),
+                    active=bool(request.arguments.get('active', True)),
+                )
+            )
+        except LookupError as exc:
+            return _invalid_argument_result(request, 'project_slug', str(exc))
+
+        payload = {
+            'project_slug': str(project_slug),
+            'role_id': record.role_id,
+            'name': record.name,
+            'category': record.category,
+            'is_human_capable': record.is_human_capable,
+            'is_automation_capable': record.is_automation_capable,
+            'sort_order': record.sort_order,
+            'active': record.active,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Role Add',
+                    messages=(OperatorOutputMessage(level='info', text='Runtime role upsert completed.'),),
+                    tables=(_summary_table('Role Add Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
+
+
+class AgentCommandAdapter:
+    """Handle generic runtime agent identity commands."""
+
+    _ALLOWED_AGENT_TYPES = frozenset({'human', 'automation', 'service'})
+
+    def __init__(self, *, runtime_identity_repository: object) -> None:
+        self._runtime_identity_repository = runtime_identity_repository
+
+    def run(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        if request.command.command_name == 'add':
+            return self._add(request)
+        return _unsupported_command_result(request)
+
+    def _add(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        project_slug = request.arguments.get('project_slug')
+        if not project_slug:
+            return _missing_argument_result(request, 'project_slug')
+        name = request.arguments.get('name')
+        if not name:
+            return _missing_argument_result(request, 'name')
+        agent_type = str(request.arguments.get('agent_type') or '').strip()
+        if not agent_type:
+            return _missing_argument_result(request, 'agent_type')
+        if agent_type not in self._ALLOWED_AGENT_TYPES:
+            return _invalid_argument_result(
+                request,
+                'agent_type',
+                'Allowed values: human, automation, service.',
+            )
+        metadata: dict[str, Any] | None = None
+        if request.arguments.get('metadata_json') is not None:
+            try:
+                metadata = _optional_json_object(request.arguments.get('metadata_json'))
+            except ValueError as exc:
+                return _invalid_argument_result(request, 'metadata_json', str(exc))
+
+        from paa_core.repositories.runtime_identity import AgentUpsertSpec
+
+        try:
+            record = self._runtime_identity_repository.upsert_agent(
+                AgentUpsertSpec(
+                    project_slug=str(project_slug),
+                    name=str(name),
+                    role_name=_optional_string(request.arguments.get('role_name')),
+                    agent_type=agent_type,
+                    runtime_kind=_optional_string(request.arguments.get('runtime_kind')),
+                    active=bool(request.arguments.get('active', True)),
+                    metadata=metadata,
+                )
+            )
+        except LookupError as exc:
+            return _invalid_argument_result(request, 'role_name', str(exc))
+
+        payload = {
+            'project_slug': str(project_slug),
+            'agent_id': record.agent_id,
+            'name': record.name,
+            'role_id': record.role_id,
+            'agent_type': record.agent_type,
+            'runtime_kind': record.runtime_kind,
+            'active': record.active,
+        }
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Agent Add',
+                    messages=(OperatorOutputMessage(level='info', text='Runtime agent upsert completed.'),),
+                    tables=(_summary_table('Agent Add Summary', payload),),
+                    data=payload,
+                ),
+            ),
+            metadata=dict(payload),
+        )
+
+
+__all__ = ['AgentCommandAdapter', 'ComponentCommandAdapter', 'PlanCommandAdapter', 'QueueCommandAdapter', 'ReportCommandAdapter', 'RoleCommandAdapter', 'StatusCommandAdapter', 'WorkerCommandAdapter']
 
 
 class QueueCommandAdapter:
@@ -653,6 +811,11 @@ class QueueCommandAdapter:
             packet_payload = _optional_json_object(request.arguments.get('packet_payload_json'))
         except ValueError as exc:
             return _invalid_argument_result(request, 'packet_payload_json', str(exc))
+        supported_queue_names = (queue_name,)
+        repo_root_value = _optional_string(request.invocation_context.repo_root)
+        if repo_root_value:
+            topology = resolved_repo_runtime_queue_topology(Path(repo_root_value).resolve())
+            supported_queue_names = tuple(topology.queue_names.values())
         service = DefaultQueueClaimRuntimeService(
             queue_transport_adapter=_RequestBoundQueueTransportAdapter(
                 packet_message_id=_optional_string(request.arguments.get('packet_message_id')),
@@ -665,6 +828,7 @@ class QueueCommandAdapter:
             ),
             packet_envelope_validator=self._packet_envelope_validator or _PassthroughPacketEnvelopeValidator(),
             queue_claim_state_adapter=self._queue_claim_state_adapter,
+            supported_queue_names=supported_queue_names,
         )
         return service.assemble_queue_intake(
             QueueClaimRuntimeRequest(
@@ -686,12 +850,14 @@ class WorkerCommandAdapter:
         self,
         *,
         queue_packet_runtime_controller: object,
+        packet_reference_resolution_service: object,
         queue_packet_reader: object | None = None,
         packet_envelope_validator: object | None = None,
         queue_claim_state_adapter: object | None = None,
         runtime_event_repository: object | None = None,
     ) -> None:
         self._runtime_controller = queue_packet_runtime_controller
+        self._packet_reference_resolution_service = packet_reference_resolution_service
         self._queue_adapter = QueueCommandAdapter(
             queue_packet_runtime_controller=queue_packet_runtime_controller,
             queue_packet_reader=queue_packet_reader,
@@ -719,6 +885,75 @@ class WorkerCommandAdapter:
         )
         if isinstance(queue_claim_result, OperatorCommandResult):
             return queue_claim_result
+        resolution_result = self._packet_reference_resolution_service.resolve_packet_reference(
+            PacketReferenceResolutionRequest(
+                packet_message_id=(
+                    queue_claim_result.preview_summary.packet_message_id
+                    if queue_claim_result.preview_summary
+                    else _optional_string(request.arguments.get('packet_message_id'))
+                ),
+                packet_path=_optional_string(request.arguments.get('packet_path')),
+                packet_reference=(
+                    queue_claim_result.preview_summary.packet_reference
+                    if queue_claim_result.preview_summary
+                    else None
+                ),
+                queue_name=str(queue_name),
+                packet_schema_type=str(packet_schema_type),
+                actor_name=_optional_string(request.arguments.get('actor_name')),
+                host_name=_optional_string(request.arguments.get('host_name')),
+                metadata={'repo_root': request.invocation_context.repo_root},
+            )
+        )
+        if not resolution_result.ok and queue_claim_result.normalized_packet_payload is None:
+            return OperatorCommandResult(
+                command=request.command,
+                supported=True,
+                success=False,
+                exit_code=2,
+                sections=(
+                    OperatorOutputSection(
+                        title='Worker Dispatch',
+                        messages=(OperatorOutputMessage(level='warning', text='Worker dispatch could not resolve the packet reference.'),),
+                        tables=(
+                            _summary_table(
+                                'Worker Dispatch Summary',
+                                {
+                                    'queue_name': str(queue_name),
+                                    'packet_schema_type': str(packet_schema_type),
+                                    'packet_message_id': (
+                                        resolution_result.resolution_summary.packet_message_id
+                                        or _optional_string(request.arguments.get('packet_message_id'))
+                                    ),
+                                    'packet_path': resolution_result.resolution_summary.resolved_packet_path,
+                                    'target_worker_host': 'TechLeadWorkerService',
+                                    'dispatch_supported': False,
+                                    'reason': resolution_result.reason,
+                                    'normalized_queue_side_effect_summary': None,
+                                },
+                            ),
+                        ),
+                        data={
+                            'queue_name': str(queue_name),
+                            'packet_schema_type': str(packet_schema_type),
+                            'packet_message_id': (
+                                resolution_result.resolution_summary.packet_message_id
+                                or _optional_string(request.arguments.get('packet_message_id'))
+                            ),
+                            'packet_path': resolution_result.resolution_summary.resolved_packet_path,
+                            'target_worker_host': 'TechLeadWorkerService',
+                            'dispatch_supported': False,
+                            'reason': resolution_result.reason,
+                            'normalized_queue_side_effect_summary': None,
+                        },
+                    ),
+                ),
+                failure=OperatorFailure(
+                    code=resolution_result.reason or 'packet_reference_resolution_failed',
+                    summary=resolution_result.details or 'Worker dispatch could not resolve the packet reference.',
+                    details=resolution_result.resolution_summary.blocking_reasons,
+                ),
+            )
         from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
 
         result = self._runtime_controller.handle_packet(
@@ -726,18 +961,15 @@ class WorkerCommandAdapter:
                 queue_name=str(queue_name),
                 packet_schema_type=str(packet_schema_type),
                 packet_message_id=(
-                    queue_claim_result.preview_summary.packet_message_id
-                    if queue_claim_result.preview_summary
-                    else _optional_string(request.arguments.get('packet_message_id'))
+                    resolution_result.resolution_summary.packet_message_id
+                    or (
+                        queue_claim_result.preview_summary.packet_message_id
+                        if queue_claim_result.preview_summary
+                        else _optional_string(request.arguments.get('packet_message_id'))
+                    )
                 ),
-                packet_path=(
-                    str(queue_claim_result.preview_summary.packet_reference)
-                    if queue_claim_result.preview_summary
-                    and queue_claim_result.preview_summary.packet_reference
-                    and _optional_string(request.arguments.get('packet_path'))
-                    else None
-                ),
-                packet_payload=queue_claim_result.normalized_packet_payload,
+                packet_path=resolution_result.resolution_summary.resolved_packet_path,
+                packet_payload=resolution_result.normalized_packet_payload or queue_claim_result.normalized_packet_payload,
                 runtime_mode='dry_run' if bool(request.invocation_context.dry_run) else 'live',
                 actor_name=_optional_string(request.arguments.get('actor_name')),
                 host_name=_optional_string(request.arguments.get('host_name')),

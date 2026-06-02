@@ -27,8 +27,9 @@ class DefaultQueueClaimRuntimeService:
     """Preview or claim the first supported queue packet slice."""
 
     _SUPPORTED_INTAKE_MODES = frozenset({'preview', 'claim_next'})
-    _SUPPORTED_QUEUE_NAME = 'fractal-core-architecture'
-    _SUPPORTED_PACKET_SCHEMA_TYPE = 'worker_result_packet'
+    _SUPPORTED_PACKET_SCHEMA_TYPES = frozenset(
+        {'worker_result_packet', 'techlead_assignment_packet', 'qa_verification_packet'}
+    )
 
     def __init__(
         self,
@@ -36,11 +37,13 @@ class DefaultQueueClaimRuntimeService:
         queue_transport_adapter: QueueTransportAdapter,
         packet_envelope_validator: PacketEnvelopeValidator,
         queue_claim_state_adapter: QueueClaimStateAdapter | None = None,
+        supported_queue_names: tuple[str, ...] | None = None,
         logger: StructuredLogger | None = None,
     ) -> None:
         self._queue_transport_adapter = queue_transport_adapter
         self._packet_envelope_validator = packet_envelope_validator
         self._queue_claim_state_adapter = queue_claim_state_adapter
+        self._supported_queue_names = tuple(supported_queue_names or ('fractal-core-architecture',))
         self._logger = logger if logger is not None else _NullStructuredLogger()
 
     @property
@@ -59,6 +62,10 @@ class DefaultQueueClaimRuntimeService:
     def logger(self) -> StructuredLogger:
         return self._logger
 
+    @property
+    def supported_queue_names(self) -> tuple[str, ...]:
+        return self._supported_queue_names
+
     def supports_intake_mode(self, intake_mode: str) -> bool:
         return intake_mode.strip() in self._SUPPORTED_INTAKE_MODES
 
@@ -71,11 +78,14 @@ class DefaultQueueClaimRuntimeService:
             claimant_name=request.claimant_name,
         )
 
-        if request.queue_name != self._SUPPORTED_QUEUE_NAME:
+        if request.queue_name not in self.supported_queue_names:
             return self._build_blocked_result(
                 request,
                 reason='unsupported_queue_name',
-                details=f'Queue {request.queue_name!r} is not supported in the first queue-claim slice.',
+                details=(
+                    f'Queue {request.queue_name!r} is not supported in the first queue-claim slice. '
+                    f'Supported queues: {", ".join(self.supported_queue_names)}.'
+                ),
                 preview_supported=False,
                 claim_supported=False,
                 blocking_reasons=('unsupported_queue_name',),
@@ -134,7 +144,7 @@ class DefaultQueueClaimRuntimeService:
         packet_reference = self._packet_reference(packet)
         normalized_envelope = self._normalized_envelope(packet)
         normalized_payload = self._normalized_payload(packet)
-        if packet_schema_type != self._SUPPORTED_PACKET_SCHEMA_TYPE:
+        if packet_schema_type not in self._SUPPORTED_PACKET_SCHEMA_TYPES:
             return self._build_blocked_result(
                 request,
                 reason='unsupported_packet_schema_type',

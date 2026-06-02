@@ -13,7 +13,9 @@ else:  # pragma: no branch
     _TYPER_IMPORT_ERROR = None
 
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
+from paa_core.repositories.runtime_identity import PostgresRuntimeIdentityRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
+from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.services.queue_packet_runtime_controller import DefaultQueuePacketRuntimeController
 from paa_core.services.techlead_acceptance_decision import DefaultTechLeadAcceptanceDecisionService
 from paa_core.services.techlead_assignment_decision import DefaultTechLeadAssignmentDecisionService
@@ -33,10 +35,12 @@ from paa_core.services.methodology_execution_projection import (
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
 
 from .command_adapters import (
+    AgentCommandAdapter,
     ComponentCommandAdapter,
     PlanCommandAdapter,
     QueueCommandAdapter,
     ReportCommandAdapter,
+    RoleCommandAdapter,
     StatusCommandAdapter,
     WorkerCommandAdapter,
 )
@@ -254,6 +258,10 @@ class _JsonFileQueuePacketReader:
         path = Path(str(packet_reference)).expanduser().resolve()
         return json.loads(path.read_text())
 
+    def read_packet_payload(self, packet_path: str) -> dict[str, object]:
+        payload = self.read_packet(packet_path)
+        return payload if isinstance(payload, dict) else {'packet_payload': payload}
+
 
 class _UnsupportedWorkerHost:
     def __init__(self, name: str) -> None:
@@ -270,6 +278,7 @@ class _UnsupportedWorkerHost:
 def build_default_cli() -> DefaultPAAOperatorCLI:
     logger = NullStructuredLogger()
     methodology_execution_repository = PostgresMethodologyExecutionRepository()
+    runtime_identity_repository = PostgresRuntimeIdentityRepository()
     runtime_event_repository = PostgresRuntimeEventRepository()
     methodology_execution_state_service = DefaultMethodologyExecutionStateService(
         methodology_execution_repository=methodology_execution_repository,
@@ -307,6 +316,12 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
         queue_packet_delivery_adapter=None,
         logger=logger,
     )
+    packet_reference_resolution_service = DefaultPacketReferenceResolutionService(
+        runtime_event_repository=runtime_event_repository,
+        packet_artifact_reader=_JsonFileQueuePacketReader(),
+        runtime_path_adapter=None,
+        logger=logger,
+    )
     return DefaultPAAOperatorCLI(
         logger=logger,
         environment_resolver=EnvironmentResolver(),
@@ -314,6 +329,14 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
             (
                 CommandRegistration(command_family='component', adapter=ComponentCommandAdapter()),
                 CommandRegistration(command_family='plan', adapter=PlanCommandAdapter()),
+                CommandRegistration(
+                    command_family='role',
+                    adapter=RoleCommandAdapter(runtime_identity_repository=runtime_identity_repository),
+                ),
+                CommandRegistration(
+                    command_family='agent',
+                    adapter=AgentCommandAdapter(runtime_identity_repository=runtime_identity_repository),
+                ),
                 CommandRegistration(
                     command_family='status',
                     adapter=StatusCommandAdapter(
@@ -338,6 +361,7 @@ def build_default_cli() -> DefaultPAAOperatorCLI:
                     command_family='worker',
                     adapter=WorkerCommandAdapter(
                         queue_packet_runtime_controller=queue_packet_runtime_controller,
+                        packet_reference_resolution_service=packet_reference_resolution_service,
                         queue_packet_reader=_JsonFileQueuePacketReader(),
                         runtime_event_repository=runtime_event_repository,
                     ),
@@ -435,6 +459,8 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         help='Methodology pointer explain reads plus compatibility aliases for older report commands.',
         no_args_is_help=True,
     )
+    role_app = typer.Typer(help='Project-scoped runtime role identity commands.', no_args_is_help=True)
+    agent_app = typer.Typer(help='Project-scoped runtime agent identity commands.', no_args_is_help=True)
     queue_app = typer.Typer(help='Queue packet preview surfaces over the runtime controller.', no_args_is_help=True)
     worker_app = typer.Typer(help='Worker dispatch preview surfaces over the runtime controller.', no_args_is_help=True)
 
@@ -753,6 +779,76 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+    @role_app.command('add')
+    def role_add(
+        project_slug: str = typer.Option(..., '--project-slug', help='Owning project slug.'),
+        name: str = typer.Option(..., '--name', help='Runtime role display name.'),
+        category: str = typer.Option(..., '--category', help='Role category enum value.'),
+        description: str | None = typer.Option(None, '--description', help='Optional role description.'),
+        is_human_capable: bool = typer.Option(True, '--human-capable/--no-human-capable'),
+        is_automation_capable: bool = typer.Option(True, '--automation-capable/--no-automation-capable'),
+        sort_order: int = typer.Option(100, '--sort-order', help='Role display order.'),
+        active: bool = typer.Option(True, '--active/--inactive'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='role',
+            command_name='add',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={
+                'project_slug': project_slug,
+                'name': name,
+                'category': category,
+                'description': description,
+                'is_human_capable': is_human_capable,
+                'is_automation_capable': is_automation_capable,
+                'sort_order': sort_order,
+                'active': active,
+            },
+        )
+        raise typer.Exit(code=code)
+
+    @agent_app.command('add')
+    def agent_add(
+        project_slug: str = typer.Option(..., '--project-slug', help='Owning project slug.'),
+        name: str = typer.Option(..., '--name', help='Runtime agent name.'),
+        role_name: str | None = typer.Option(None, '--role-name', help='Optional persisted role name to bind.'),
+        agent_type: str = typer.Option(..., '--agent-type', help='Agent type enum value.'),
+        runtime_kind: str | None = typer.Option('codex', '--runtime-kind', help='Optional runtime kind label.'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional metadata JSON object.'),
+        active: bool = typer.Option(True, '--active/--inactive'),
+        repo_root: str | None = typer.Option(None, '--repo-root'),
+        output: str = typer.Option('table', '--output', help='Output mode: table, json, or summary.'),
+        dry_run: bool = typer.Option(False, '--dry-run'),
+        strict_mode: bool = typer.Option(True, '--strict/--no-strict'),
+    ) -> None:
+        code = _invoke(
+            cli,
+            command_family='agent',
+            command_name='add',
+            repo_root=repo_root,
+            output_mode=output,
+            dry_run=dry_run,
+            strict_mode=strict_mode,
+            arguments={
+                'project_slug': project_slug,
+                'name': name,
+                'role_name': role_name,
+                'agent_type': agent_type,
+                'runtime_kind': runtime_kind,
+                'metadata_json': metadata_json,
+                'active': active,
+            },
+        )
+        raise typer.Exit(code=code)
+
 
     @queue_app.command('preview')
     def queue_preview(
@@ -846,6 +942,8 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')
     app.add_typer(report_app, name='report')
+    app.add_typer(role_app, name='role')
+    app.add_typer(agent_app, name='agent')
     app.add_typer(queue_app, name='queue')
     app.add_typer(worker_app, name='worker')
     return app
