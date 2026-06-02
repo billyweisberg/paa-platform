@@ -56,6 +56,12 @@ from paa_core.services.workflow_lifecycle import (
     DefaultWorkflowLifecycleService,
     WorkflowLifecycleRequest,
 )
+from paa_core.services.runtime_worktree import (
+    DefaultRuntimeWorktreeService,
+    RuntimeWorktreeBranchRequest,
+    RuntimeWorktreeInspectRequest,
+    RuntimeWorktreePrepareRequest,
+)
 from paa_core.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_display_name,
@@ -4278,225 +4284,41 @@ def prepare_role_branch(args):
         args.package_id_external,
         args.brief_id_external,
     )
-    if not lineage_view.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'ambiguous_lineage_view',
-            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
-            'lineage_view': lineage_view,
-        }
-
-    issue_number = lineage_view['issue_number']
-    lineage = lineage_view['lineage']
-    canonical_branch = normalize_canonical_branch(repo_root, issue_number, lineage, args.canonical_branch)
-    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
-    source_ref, source_commit = resolve_canonical_source_ref(repo_root, canonical_branch)
-    if source_ref is None or source_commit is None:
-        return {
-            'ok': False,
-            'reason': 'canonical_branch_unresolved',
-            'details': f'Could not resolve canonical branch {canonical_branch!r} locally or from origin.',
-            'lineage_view': lineage_view,
-            'canonical_branch': canonical_branch,
-            'role_branch': role_branch,
-        }
-
-    branch_exists_before = git_local_branch_exists(repo_root, role_branch)
-    branch_head_before = git_resolve_ref(repo_root, role_branch) if branch_exists_before else None
-    checked_out_paths = git_branch_usage(repo_root, role_branch)
-    mutation_required = (not branch_exists_before) or (branch_head_before != source_commit)
-
-    if args.action == 'ensure' and branch_exists_before and branch_head_before != source_commit:
-        return {
-            'ok': False,
-            'reason': 'role_branch_exists_with_different_tip',
-            'details': f'Role branch {role_branch!r} already exists at a different commit. Use --action reset to realign it to {canonical_branch!r}.',
-            'lineage_view': lineage_view,
-            'canonical_branch': canonical_branch,
-            'canonical_source_ref': source_ref,
-            'canonical_source_commit': source_commit,
-            'role_branch': role_branch,
-            'branch_head_before': branch_head_before,
-            'branch_checked_out_in': checked_out_paths,
-        }
-
-    if args.action == 'reset' and mutation_required and checked_out_paths:
-        return {
-            'ok': False,
-            'reason': 'role_branch_checked_out_in_worktree',
-            'details': f'Cannot reset role branch {role_branch!r} while it is checked out in an active worktree.',
-            'lineage_view': lineage_view,
-            'canonical_branch': canonical_branch,
-            'canonical_source_ref': source_ref,
-            'canonical_source_commit': source_commit,
-            'role_branch': role_branch,
-            'branch_head_before': branch_head_before,
-            'branch_checked_out_in': checked_out_paths,
-        }
-
-    mutated = False
-    created = False
-    reset = False
-    if args.action == 'ensure':
-        if not branch_exists_before:
-            run_text(['git', 'branch', role_branch, source_ref], cwd=repo_root)
-            mutated = True
-            created = True
-    elif args.action == 'reset':
-        if not branch_exists_before or branch_head_before != source_commit:
-            run_text(['git', 'branch', '-f', role_branch, source_ref], cwd=repo_root)
-            mutated = True
-            created = not branch_exists_before
-            reset = branch_exists_before
-
-    branch_head_after = git_resolve_ref(repo_root, role_branch)
-    return {
-        'ok': branch_head_after == source_commit,
-        'action': args.action,
-        'repo_root': str(repo_root),
-        'issue_number': issue_number,
-        'workflow_stage': lineage_view.get('workflow_stage'),
-        'target_role': args.target_role,
-        'canonical_branch': canonical_branch,
-        'canonical_source_ref': source_ref,
-        'canonical_source_commit': source_commit,
-        'role_branch': role_branch,
-        'branch_owner_role': lineage.get('branch_owner_role') or 'TechLead',
-        'worktree_hint': lineage.get('worktree_hint') or role_branch,
-        'mutated': mutated,
-        'created': created,
-        'reset': reset,
-        'branch_exists_before': branch_exists_before,
-        'branch_head_before': branch_head_before,
-        'branch_head_after': branch_head_after,
-        'branch_checked_out_in': checked_out_paths,
-        'lineage_view': lineage_view,
-        'next_step_hint': 'create_or_reuse_worktree_for_role' if branch_head_after == source_commit else 'investigate_branch_alignment',
-    }
+    lineage_view.setdefault('package_id_external', args.package_id_external)
+    lineage_view.setdefault('brief_id_external', args.brief_id_external)
+    return DefaultRuntimeWorktreeService().prepare_role_branch(
+        RuntimeWorktreeBranchRequest(
+            repo_root=repo_root,
+            target_role=args.target_role,
+            lineage_view=lineage_view,
+            action=args.action,
+            canonical_branch=args.canonical_branch,
+            role_branch=args.role_branch,
+        )
+    )
 
 
 def prepare_role_worktree(args):
     repo_root = args.repo_root.resolve()
-    branch_args = SimpleNamespace(
-        repo_root=repo_root,
-        project_slug=args.project_slug,
-        package_id_external=args.package_id_external,
-        brief_id_external=args.brief_id_external,
-        target_role=args.target_role,
-        action=args.branch_action,
-        canonical_branch=args.canonical_branch,
-        role_branch=args.role_branch,
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
     )
-    branch_result = prepare_role_branch(branch_args)
-    if not branch_result.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'role_branch_prepare_failed',
-            'details': 'Role worktree preparation requires a successful role-branch preparation result.',
-            'branch_prepare': branch_result,
-        }
-
-    role_branch = branch_result['role_branch']
-    existing_branch_worktree = git_worktree_for_branch(repo_root, role_branch)
-    requested_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
-
-    if existing_branch_worktree is not None:
-        existing_path = Path(existing_branch_worktree['path']).resolve()
-        if args.worktree_path and existing_path != requested_path:
-            return {
-                'ok': False,
-                'reason': 'role_branch_checked_out_elsewhere',
-                'details': f'Role branch {role_branch!r} is already checked out in another worktree.',
-                'branch_prepare': branch_result,
-                'worktree_path': str(requested_path),
-                'existing_worktree_path': str(existing_path),
-            }
-        return {
-            'ok': True,
-            'action': 'reuse',
-            'repo_root': str(repo_root),
-            'target_role': args.target_role,
-            'role_branch': role_branch,
-            'worktree_path': str(existing_path),
-            'worktree_head': existing_branch_worktree.get('head'),
-            'worktree_ownership': worktree_ownership_record(
-                repo_root,
-                args.target_role,
-                role_branch,
-                existing_path,
-                worktree_entry=existing_branch_worktree,
-            ),
-            'branch_prepare': branch_result,
-            'created': False,
-            'reused': True,
-            'next_step_hint': 'enter_worktree_and_execute_role',
-        }
-
-    existing_path_worktree = git_worktree_for_path(repo_root, requested_path)
-    if existing_path_worktree is not None:
-        existing_branch = existing_path_worktree.get('branch')
-        if existing_branch != role_branch:
-            return {
-                'ok': False,
-                'reason': 'worktree_path_already_bound_to_different_branch',
-                'details': f'Worktree path {str(requested_path)!r} is already registered for another branch.',
-                'branch_prepare': branch_result,
-                'worktree_path': str(requested_path),
-                'existing_branch': existing_branch,
-            }
-        return {
-            'ok': True,
-            'action': 'reuse',
-            'repo_root': str(repo_root),
-            'target_role': args.target_role,
-            'role_branch': role_branch,
-            'worktree_path': str(requested_path),
-            'worktree_head': existing_path_worktree.get('head'),
-            'worktree_ownership': worktree_ownership_record(
-                repo_root,
-                args.target_role,
-                role_branch,
-                requested_path,
-                worktree_entry=existing_path_worktree,
-            ),
-            'branch_prepare': branch_result,
-            'created': False,
-            'reused': True,
-            'next_step_hint': 'enter_worktree_and_execute_role',
-        }
-
-    if requested_path.exists():
-        return {
-            'ok': False,
-            'reason': 'worktree_path_exists_not_registered',
-            'details': f'Worktree path {str(requested_path)!r} already exists but is not registered as a git worktree for this repo.',
-            'branch_prepare': branch_result,
-            'worktree_path': str(requested_path),
-        }
-
-    requested_path.parent.mkdir(parents=True, exist_ok=True)
-    run_text(['git', 'worktree', 'add', str(requested_path), role_branch], cwd=repo_root)
-    created_worktree = git_worktree_for_path(repo_root, requested_path)
-    return {
-        'ok': created_worktree is not None,
-        'action': 'create',
-        'repo_root': str(repo_root),
-        'target_role': args.target_role,
-        'role_branch': role_branch,
-        'worktree_path': str(requested_path),
-        'worktree_head': created_worktree.get('head') if created_worktree else None,
-        'worktree_ownership': worktree_ownership_record(
-            repo_root,
-            args.target_role,
-            role_branch,
-            requested_path,
-            worktree_entry=created_worktree,
-        ),
-        'branch_prepare': branch_result,
-        'created': True,
-        'reused': False,
-        'next_step_hint': 'enter_worktree_and_execute_role',
-    }
+    lineage_view.setdefault('package_id_external', args.package_id_external)
+    lineage_view.setdefault('brief_id_external', args.brief_id_external)
+    return DefaultRuntimeWorktreeService().prepare_role_worktree(
+        RuntimeWorktreePrepareRequest(
+            repo_root=repo_root,
+            target_role=args.target_role,
+            lineage_view=lineage_view,
+            branch_action=args.branch_action,
+            canonical_branch=args.canonical_branch,
+            role_branch=args.role_branch,
+            worktree_path=args.worktree_path,
+        )
+    )
 
 
 def handoff_to_role_worktree(args):
@@ -4572,102 +4394,19 @@ def inspect_role_worktree(args):
         args.package_id_external,
         args.brief_id_external,
     )
-    if not lineage_view.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'ambiguous_lineage_view',
-            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
-            'lineage_view': lineage_view,
-        }
-
-    issue_number = lineage_view['issue_number']
-    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
-    worktree_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
-    worktree_entry = git_worktree_for_path(repo_root, worktree_path)
-    if worktree_entry is None:
-        return {
-            'ok': False,
-            'reason': 'worktree_not_registered',
-            'details': f'No registered git worktree was found at {str(worktree_path)!r}.',
-            'lineage_view': lineage_view,
-            'role_branch': role_branch,
-            'worktree_path': str(worktree_path),
-        }
-
-    checked_out_branch = worktree_entry.get('branch')
-    if checked_out_branch != role_branch:
-        return {
-            'ok': False,
-            'reason': 'worktree_branch_mismatch',
-            'details': f'Worktree at {str(worktree_path)!r} is not checked out on the expected role branch.',
-            'lineage_view': lineage_view,
-            'role_branch': role_branch,
-            'checked_out_branch': checked_out_branch,
-            'worktree_path': str(worktree_path),
-        }
-
-    human_role = role_label_for_cli(args.target_role)
-    default_output_path, default_review_output_path = default_assignment_paths(repo_root, issue_number, human_role)
-    assignment_path = (args.assignment_path.resolve() if args.assignment_path else default_output_path.resolve())
-    review_output_path = (args.review_output.resolve() if args.review_output else default_review_output_path.resolve())
-    if not assignment_path.exists():
-        return {
-            'ok': False,
-            'reason': 'assignment_artifact_missing',
-            'details': f'No assignment artifact was found at {str(assignment_path)!r}.',
-            'lineage_view': lineage_view,
-            'role_branch': role_branch,
-            'worktree_path': str(worktree_path),
-            'assignment_path': str(assignment_path),
-        }
-
-    packet = handoff_runtime.load_json(assignment_path)
-    payload = packet.get('payload') or {}
-    packet_target_role = payload.get('target_role')
-    if packet_target_role != human_role:
-        return {
-            'ok': False,
-            'reason': 'assignment_target_mismatch',
-            'details': f'Assignment artifact target {packet_target_role!r} does not match the requested role {human_role!r}.',
-            'lineage_view': lineage_view,
-            'role_branch': role_branch,
-            'worktree_path': str(worktree_path),
-            'assignment_path': str(assignment_path),
-            'packet_target_role': packet_target_role,
-        }
-
-    current_branch = git_current_branch(worktree_path)
-    return {
-        'ok': True,
-        'repo_root': str(repo_root),
-        'package_id_external': args.package_id_external,
-        'brief_id_external': args.brief_id_external,
-        'target_role': human_role,
-        'role_branch': role_branch,
-        'worktree_path': str(worktree_path),
-        'current_branch': current_branch,
-        'worktree_ownership': worktree_ownership_record(
-            repo_root,
-            args.target_role,
-            role_branch,
-            worktree_path,
-            worktree_entry=worktree_entry,
-        ),
-        'assignment_artifact': {
-            'path': str(assignment_path),
-            'review_output_path': str(review_output_path),
-            'message_id': packet.get('message_id'),
-            'schema_type': packet.get('schema_type'),
-            'assignment_type': payload.get('assignment_type'),
-            'assignment_summary': payload.get('assignment_summary'),
-            'allowed_result_types': payload.get('allowed_result_types') or [],
-            'canonical_branch': payload.get('canonical_branch'),
-            'role_branch': payload.get('role_branch'),
-            'worktree_hint': payload.get('worktree_hint'),
-        },
-        'lineage_view': lineage_view,
-        'next_step_hint': 'open_worktree_and_begin_role_execution_manually',
-    }
+    lineage_view.setdefault('package_id_external', args.package_id_external)
+    lineage_view.setdefault('brief_id_external', args.brief_id_external)
+    return DefaultRuntimeWorktreeService().inspect_role_worktree(
+        RuntimeWorktreeInspectRequest(
+            repo_root=repo_root,
+            target_role=args.target_role,
+            lineage_view=lineage_view,
+            role_branch=args.role_branch,
+            worktree_path=args.worktree_path,
+            assignment_path=args.assignment_path,
+            review_output_path=args.review_output,
+        )
+    )
 
 
 def worktree_ownership(args):
@@ -4678,59 +4417,34 @@ def worktree_ownership(args):
         args.package_id_external,
         args.brief_id_external,
     )
-    if not lineage_view.get('ok'):
-        return {
-            'ok': False,
-            'reason': 'ambiguous_lineage_view',
-            'details': f"Lineage helper could not produce an unambiguous lineage view: {', '.join(lineage_view.get('ambiguity_reasons') or [])}",
-            'lineage_view': lineage_view,
-        }
-
-    issue_number = lineage_view['issue_number']
-    role_branch = role_branch_name(issue_number, args.target_role, args.role_branch)
-    worktree_path = (args.worktree_path.resolve() if args.worktree_path else default_role_worktree_path(repo_root, role_branch))
-    worktree_entry = git_worktree_for_path(repo_root, worktree_path)
-    ownership = worktree_ownership_record(
-        repo_root,
-        args.target_role,
-        role_branch,
-        worktree_path,
-        worktree_entry=worktree_entry,
+    lineage_view.setdefault('package_id_external', args.package_id_external)
+    lineage_view.setdefault('brief_id_external', args.brief_id_external)
+    return DefaultRuntimeWorktreeService().worktree_ownership_view(
+        repo_root=repo_root,
+        target_role=args.target_role,
+        lineage_view=lineage_view,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
     )
-    return {
-        'ok': True,
-        'repo_root': str(repo_root),
-        'package_id_external': args.package_id_external,
-        'brief_id_external': args.brief_id_external,
-        'issue_number': issue_number,
-        'workflow_stage': lineage_view.get('workflow_stage'),
-        'worktree_ownership': ownership,
-        'worktree_staleness': worktree_staleness_assessment(
-            (lineage_view.get('lineage') or {}).get('lineage_state'),
-            ownership,
-        ),
-        'lineage_view': lineage_view,
-        'next_step_hint': 'role_automation_may_prepare_or_reuse_its_owned_worktree' if not ownership.get('registered') else 'role_automation_may_enter_owned_worktree',
-    }
 
 
 def worktree_stale(args):
-    ownership_view = worktree_ownership(args)
-    if not ownership_view.get('ok'):
-        return ownership_view
-    assessment = ownership_view.get('worktree_staleness')
-    return {
-        'ok': True,
-        'repo_root': ownership_view.get('repo_root'),
-        'package_id_external': ownership_view.get('package_id_external'),
-        'brief_id_external': ownership_view.get('brief_id_external'),
-        'issue_number': ownership_view.get('issue_number'),
-        'workflow_stage': ownership_view.get('workflow_stage'),
-        'worktree_ownership': ownership_view.get('worktree_ownership'),
-        'worktree_staleness': assessment,
-        'lineage_view': ownership_view.get('lineage_view'),
-        'next_step_hint': assessment.get('recommended_action') if assessment else None,
-    }
+    repo_root = args.repo_root.resolve()
+    lineage_view = build_lineage_view(
+        repo_root,
+        args.project_slug,
+        args.package_id_external,
+        args.brief_id_external,
+    )
+    lineage_view.setdefault('package_id_external', args.package_id_external)
+    lineage_view.setdefault('brief_id_external', args.brief_id_external)
+    return DefaultRuntimeWorktreeService().worktree_stale_view(
+        repo_root=repo_root,
+        target_role=args.target_role,
+        lineage_view=lineage_view,
+        role_branch=args.role_branch,
+        worktree_path=args.worktree_path,
+    )
 
 
 def reset_required_lifecycle(args):
