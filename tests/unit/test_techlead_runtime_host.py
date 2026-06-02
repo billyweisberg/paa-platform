@@ -73,6 +73,20 @@ class _FakeAssignmentPublisher:
         return self.result
 
 
+class _FakeQueueClaimLifecycleAdapter:
+    def __init__(self) -> None:
+        self.acks: list[str] = []
+        self.requeues: list[str] = []
+
+    def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
+        self.acks.append(claim_id)
+        return {'ok': True, 'claim_id': claim_id, 'status': 'done'}
+
+    def requeue_claim(self, claim_id: str) -> dict[str, object]:
+        self.requeues.append(claim_id)
+        return {'ok': True, 'claim_id': claim_id, 'status': 'requeued'}
+
+
 class TechLeadRuntimeHostTests(unittest.TestCase):
     def test_run_once_claims_resolves_and_dispatches_one_packet(self) -> None:
         claim_result = QueueClaimRuntimeResult(
@@ -145,6 +159,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=_FakeQueueClaimLifecycleAdapter(),
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=None,
@@ -184,6 +199,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=_FakeQueueClaimLifecycleAdapter(),
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(
                 PacketReferenceResolutionResult(
                     request=PacketReferenceResolutionRequest(packet_message_id='msg-1'),
@@ -313,9 +329,11 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             metadata={'dispatch': True},
         )
         publisher = _FakeAssignmentPublisher()
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=publisher,
@@ -328,6 +346,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_assignment['message_id'], 'assign-1')
         self.assertEqual(len(publisher.calls), 1)
+        self.assertEqual(lifecycle.acks, ['claim-1'])
 
     def test_run_once_can_emit_dev_assignment_from_techlead_decision_packet(self) -> None:
         claim_result = QueueClaimRuntimeResult(
@@ -415,9 +434,11 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
             metadata={'dispatch': True},
         )
         publisher = _FakeAssignmentPublisher(result={'ok': True, 'message_id': 'assign-dev-1', 'resolved_queue': 'paa-dev'})
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=publisher,
@@ -430,6 +451,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_assignment['message_id'], 'assign-dev-1')
         self.assertEqual(len(publisher.calls), 1)
+        self.assertEqual(lifecycle.acks, ['claim-decision-1'])
 
     def test_run_once_claims_and_dispatches_returned_qa_verification_packet(self) -> None:
         claim_result = QueueClaimRuntimeResult(
@@ -504,6 +526,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=_FakeQueueClaimLifecycleAdapter(),
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=controller,
             assignment_publisher=None,
@@ -615,6 +638,7 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
         host = TechLeadRuntimeHost(
             queue_name='paa-techlead',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(results=[missing_result, found_result]),
+            queue_claim_lifecycle_adapter=_FakeQueueClaimLifecycleAdapter(),
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(dispatch_result),
             assignment_publisher=None,
@@ -627,6 +651,78 @@ class TechLeadRuntimeHostTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual(result.packet_message_id, 'msg-2')
+
+    def test_run_once_requeues_claim_when_resolution_fails(self) -> None:
+        claim_result = QueueClaimRuntimeResult(
+            request=QueueClaimRuntimeRequest(queue_name='paa-techlead', intake_mode='claim_next'),
+            preview_summary=None,
+            claim_summary=QueuePacketClaimSummary(
+                queue_name='paa-techlead',
+                claim_id='claim-fail-1',
+                claimant_name='TechLead Agent',
+                packet_message_id='msg-fail-1',
+                packet_reference='msg-fail-1',
+                claim_supported=True,
+                blocking_reasons=(),
+                notes=('claimed',),
+            ),
+            normalized_packet_envelope={'packet_message_id': 'msg-fail-1', 'packet_schema_type': 'worker_result_packet', 'packet_reference': 'msg-fail-1'},
+            normalized_packet_payload=None,
+            ok=True,
+            metadata={'claim': True},
+        )
+        resolution_result = PacketReferenceResolutionResult(
+            request=PacketReferenceResolutionRequest(packet_message_id='msg-fail-1'),
+            resolution_summary=PacketReferenceResolutionSummary(
+                resolution_source='message-id',
+                packet_message_id='msg-fail-1',
+                packet_schema_type='worker_result_packet',
+                queue_name='paa-techlead',
+                packet_reference='msg-fail-1',
+                resolved_packet_path=None,
+                resolution_supported=False,
+                blocking_reasons=('unresolved_packet_reference',),
+                notes=('fail-closed',),
+            ),
+            normalized_packet_payload=None,
+            ok=False,
+            reason='unresolved_packet_reference',
+            details='Missing packet artifact.',
+            metadata=None,
+        )
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
+        host = TechLeadRuntimeHost(
+            queue_name='paa-techlead',
+            queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
+            packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
+            queue_packet_runtime_controller=_FakeQueuePacketRuntimeController(
+                QueuePacketRuntimeResult(
+                    request=QueuePacketRuntimeRequest(queue_name='paa-techlead', packet_schema_type='worker_result_packet'),
+                    dispatch_summary=QueuePacketDispatchSummary(
+                        handler_key='noop',
+                        packet_schema_type='worker_result_packet',
+                        target_worker_host=None,
+                        dispatch_supported=False,
+                        queue_side_effect_required=False,
+                        ack_required=False,
+                        blocking_reasons=('noop',),
+                        notes=(),
+                    ),
+                    selected_worker_result=None,
+                    normalized_queue_side_effect_summary=None,
+                    ok=False,
+                )
+            ),
+            assignment_publisher=None,
+            actor_name='TechLead Agent',
+            host_name='techlead-runtime-host',
+        )
+
+        result = host.run_once(intake_mode='claim_next')
+
+        self.assertFalse(result.ok)
+        self.assertEqual(lifecycle.requeues, ['claim-fail-1'])
 
 
 if __name__ == '__main__':

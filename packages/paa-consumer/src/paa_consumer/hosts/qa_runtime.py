@@ -118,6 +118,44 @@ class _QueueClaimStateAdapter:
         return {'claim_id': claim_id}
 
 
+class _QueueClaimLifecycleAdapter:
+    def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
+        path, claim = handoff_runtime.load_claim(claim_id)
+        claim['status'] = 'done'
+        claim['acked_at'] = handoff_runtime.utc_now()
+        handoff_runtime.save_json(path, claim)
+        handoff_runtime.update_queue_message_status(
+            (claim.get('original_envelope') or {}).get('message_id'),
+            'acknowledged',
+            'completed',
+            'acknowledged_at',
+        )
+        return {'ok': True, 'claim_id': claim_id, 'status': claim['status']}
+
+    def requeue_claim(self, claim_id: str) -> dict[str, object]:
+        path, claim = handoff_runtime.load_claim(claim_id)
+        envelope = claim.get('original_envelope')
+        client = handoff_runtime.RabbitMQManagementClient(
+            user=handoff_runtime.DEFAULT_USER,
+            password=handoff_runtime.DEFAULT_PASSWORD,
+            host=handoff_runtime.DEFAULT_HOST,
+            port=handoff_runtime.DEFAULT_MANAGEMENT_PORT,
+            vhost=handoff_runtime.DEFAULT_VHOST,
+        )
+        _, result = client.publish(handoff_runtime.DEFAULT_EXCHANGE, claim['queue'], envelope)
+        claim['status'] = 'requeued'
+        claim['requeued_at'] = handoff_runtime.utc_now()
+        claim['requeue_result'] = dict(result)
+        handoff_runtime.save_json(path, claim)
+        handoff_runtime.update_queue_message_status(
+            (claim.get('original_envelope') or {}).get('message_id'),
+            'requeued',
+            'requeued',
+            'updated_at',
+        )
+        return {'ok': bool(result.get('routed')), 'claim_id': claim_id, 'status': claim['status']}
+
+
 class _PassthroughPacketEnvelopeValidator:
     def validate_packet_envelope(self, packet: object) -> object:
         return {'ok': packet is not None}
@@ -358,6 +396,7 @@ class QARuntimeHost:
         *,
         queue_name: str,
         queue_claim_runtime_service: object,
+        queue_claim_lifecycle_adapter: object | None,
         packet_reference_resolution_service: object,
         qa_worker_service: object,
         verification_publisher: object | None,
@@ -367,6 +406,7 @@ class QARuntimeHost:
     ) -> None:
         self._queue_name = queue_name
         self._queue_claim_runtime_service = queue_claim_runtime_service
+        self._queue_claim_lifecycle_adapter = queue_claim_lifecycle_adapter
         self._packet_reference_resolution_service = packet_reference_resolution_service
         self._qa_worker_service = qa_worker_service
         self._verification_publisher = verification_publisher
@@ -404,6 +444,11 @@ class QARuntimeHost:
             )
         )
         if not resolution_result.ok:
+            lifecycle_result = self._finalize_claim(
+                intake_mode=intake_mode,
+                claim_id=(claim_result.claim_summary.claim_id if claim_result.claim_summary else None),
+                success=False,
+            )
             return QARuntimeLoopResult(
                 queue_name=self._queue_name,
                 intake_mode=intake_mode,
@@ -415,7 +460,10 @@ class QARuntimeHost:
                 packet_path=resolution_result.resolution_summary.resolved_packet_path,
                 reason=resolution_result.reason,
                 details=resolution_result.details,
-                metadata=resolution_result.metadata,
+                metadata={
+                    'resolution': resolution_result.metadata,
+                    'claim_lifecycle': lifecycle_result,
+                },
             )
 
         payload = resolution_result.normalized_packet_payload or claim_result.normalized_packet_payload or {}
@@ -442,6 +490,12 @@ class QARuntimeHost:
                 source_packet_message_id=resolution_result.resolution_summary.packet_message_id,
                 source_packet_path=resolution_result.resolution_summary.resolved_packet_path,
             )
+        lifecycle_success = qa_result.ok and (emitted_verification is None or bool(emitted_verification.get('ok')))
+        lifecycle_result = self._finalize_claim(
+            intake_mode=intake_mode,
+            claim_id=(claim_result.claim_summary.claim_id if claim_result.claim_summary else None),
+            success=lifecycle_success,
+        )
         return QARuntimeLoopResult(
             queue_name=self._queue_name,
             intake_mode=intake_mode,
@@ -458,8 +512,22 @@ class QARuntimeHost:
                 'claim': claim_result.metadata,
                 'resolution': resolution_result.metadata,
                 'verification': qa_result.metadata,
+                'claim_lifecycle': lifecycle_result,
             },
         )
+
+    def _finalize_claim(
+        self,
+        *,
+        intake_mode: str,
+        claim_id: str | None,
+        success: bool,
+    ) -> dict[str, object] | None:
+        if intake_mode != 'claim_next' or not claim_id or self._queue_claim_lifecycle_adapter is None:
+            return None
+        if success:
+            return self._queue_claim_lifecycle_adapter.acknowledge_claim(claim_id)
+        return self._queue_claim_lifecycle_adapter.requeue_claim(claim_id)
 
     def _claim_with_retry(self, *, intake_mode: str) -> object:
         attempts = 3 if intake_mode == 'claim_next' else 1
@@ -663,6 +731,7 @@ def build_qa_runtime_host(
     return QARuntimeHost(
         queue_name=topology.queue_names['qa'],
         queue_claim_runtime_service=queue_claim_runtime_service,
+        queue_claim_lifecycle_adapter=_QueueClaimLifecycleAdapter(),
         packet_reference_resolution_service=packet_reference_resolution_service,
         qa_worker_service=qa_worker_service,
         verification_publisher=_QAVerificationPublisher(

@@ -75,6 +75,20 @@ class _FakeWorkerResultPublisher:
         return self.result
 
 
+class _FakeQueueClaimLifecycleAdapter:
+    def __init__(self) -> None:
+        self.acks: list[str] = []
+        self.requeues: list[str] = []
+
+    def acknowledge_claim(self, claim_id: str) -> dict[str, object]:
+        self.acks.append(claim_id)
+        return {'ok': True, 'claim_id': claim_id, 'status': 'done'}
+
+    def requeue_claim(self, claim_id: str) -> dict[str, object]:
+        self.requeues.append(claim_id)
+        return {'ok': True, 'claim_id': claim_id, 'status': 'requeued'}
+
+
 class DevRuntimeHostTests(unittest.TestCase):
     def test_run_once_claims_resolves_and_executes_one_packet(self) -> None:
         claim_result = QueueClaimRuntimeResult(
@@ -148,6 +162,7 @@ class DevRuntimeHostTests(unittest.TestCase):
         host = DevRuntimeHost(
             queue_name='paa-dev',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=_FakeQueueClaimLifecycleAdapter(),
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             dev_worker_service=_FakeDevWorkerService(worker_result),
             worker_result_publisher=None,
@@ -223,9 +238,11 @@ class DevRuntimeHostTests(unittest.TestCase):
             metadata=None,
         )
         publisher = _FakeWorkerResultPublisher()
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
         host = DevRuntimeHost(
             queue_name='paa-dev',
             queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
             packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
             dev_worker_service=_FakeDevWorkerService(worker_result),
             worker_result_publisher=publisher,
@@ -238,6 +255,86 @@ class DevRuntimeHostTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.emitted_worker_result, {'ok': True, 'message_id': 'dev-1', 'resolved_queue': 'paa-techlead'})
         self.assertEqual(len(publisher.calls), 1)
+        self.assertEqual(lifecycle.acks, ['claim-dev-2'])
+
+    def test_run_once_requeues_claim_when_execution_fails(self) -> None:
+        claim_result = QueueClaimRuntimeResult(
+            request=QueueClaimRuntimeRequest(queue_name='paa-dev', intake_mode='claim_next'),
+            preview_summary=None,
+            claim_summary=QueuePacketClaimSummary(
+                queue_name='paa-dev',
+                claim_id='claim-dev-fail-1',
+                claimant_name='Dev Agent',
+                packet_message_id='msg-dev-fail-1',
+                packet_reference='msg-dev-fail-1',
+                claim_supported=True,
+                blocking_reasons=(),
+                notes=('claimed',),
+            ),
+            normalized_packet_envelope={'packet_message_id': 'msg-dev-fail-1', 'packet_schema_type': 'techlead_assignment_packet', 'packet_reference': 'msg-dev-fail-1'},
+            normalized_packet_payload=None,
+            ok=True,
+            metadata={'claim': True},
+        )
+        resolution_result = PacketReferenceResolutionResult(
+            request=PacketReferenceResolutionRequest(packet_message_id='msg-dev-fail-1'),
+            resolution_summary=PacketReferenceResolutionSummary(
+                resolution_source='message-id',
+                packet_message_id='msg-dev-fail-1',
+                packet_schema_type='techlead_assignment_packet',
+                queue_name='paa-dev',
+                packet_reference='msg-dev-fail-1',
+                resolved_packet_path='/tmp/dev-assignment.json',
+                resolution_supported=True,
+                blocking_reasons=(),
+                notes=('message-id',),
+            ),
+            normalized_packet_payload={'methodology_execution_id': 'exec-dev-fail-1', 'issue_number': 6},
+            ok=True,
+            metadata=None,
+        )
+        worker_result = DevWorkerResult(
+            request=DevWorkerRequest(packet_schema_type='techlead_assignment_packet'),
+            methodology_execution_id='exec-dev-fail-1',
+            current_execution_summary=None,
+            packet_context_result=None,
+            execution_summary=DevWorkerExecutionSummary(
+                handler_key='dev-assignment-dry-run',
+                packet_schema_type='techlead_assignment_packet',
+                runtime_mode='dry_run',
+                execution_supported=False,
+                execution_runner_used='Runner',
+                packet_context_required=True,
+                packet_context_ok=True,
+                worker_result_packet_required=True,
+                methodology_transition_required=False,
+                blocking_reasons=('blocked',),
+                notes=('dry-run-only',),
+            ),
+            execution_result=None,
+            methodology_transition_result=None,
+            normalized_packet_output_summary=None,
+            ok=False,
+            reason='blocked',
+            details='Execution blocked.',
+            metadata=None,
+        )
+        lifecycle = _FakeQueueClaimLifecycleAdapter()
+        host = DevRuntimeHost(
+            queue_name='paa-dev',
+            queue_claim_runtime_service=_FakeQueueClaimRuntimeService(claim_result),
+            queue_claim_lifecycle_adapter=lifecycle,
+            packet_reference_resolution_service=_FakePacketReferenceResolutionService(resolution_result),
+            dev_worker_service=_FakeDevWorkerService(worker_result),
+            worker_result_publisher=None,
+            actor_name='Dev Agent',
+            host_name='dev-runtime-host',
+        )
+
+        result = host.run_once(intake_mode='claim_next')
+
+        self.assertFalse(result.ok)
+        self.assertEqual(lifecycle.requeues, ['claim-dev-fail-1'])
 
     def test_worker_result_publisher_message_ids_are_unique_per_run(self) -> None:
         publisher = _WorkerResultPublisher(
