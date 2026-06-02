@@ -624,8 +624,13 @@ class TechLeadSelfHostedTests(unittest.TestCase):
 
             with patch('paa_consumer.techlead.derive_next_assignment_context', return_value=context), \
                  patch('paa_consumer.techlead.workflow_lifecycle_apply_for_packet', side_effect=_apply), \
-                 patch('paa_consumer.techlead.run_json', return_value={'message_id': 'assign-1', 'automation_run_id': 'run-1'}), \
-                 patch('paa_consumer.techlead.run_json_with_errors', return_value=(0, {'resolved_queue': 'fractal-core-qa'}, None)):
+                 patch('paa_consumer.techlead.DefaultRuntimeAssignmentBridgeService.emit_next_assignment', return_value={
+                     'ok': True,
+                     'message_id': 'assign-1',
+                     'automation_run_id': 'run-1',
+                     'resolved_queue': 'fractal-core-qa',
+                     'sent': False,
+                 }):
                 result = techlead.emit_next_assignment(args)
 
         self.assertTrue(result['ok'])

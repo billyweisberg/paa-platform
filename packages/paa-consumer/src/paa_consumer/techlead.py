@@ -74,6 +74,10 @@ from paa_core.services.runtime_decision_bridge import (
     DefaultRuntimeDecisionBridgeService,
     RuntimeDecisionBridgeRequest,
 )
+from paa_core.services.runtime_assignment_bridge import (
+    DefaultRuntimeAssignmentBridgeService,
+    RuntimeAssignmentBridgeRequest,
+)
 from paa_core.services.runtime_closeout import (
     DefaultRuntimeCloseoutService,
     RuntimeQaCloseoutRequest,
@@ -1991,11 +1995,12 @@ def derive_workflow(current_task, issue, pr, qa_packet, queues):
         })
         return stage, owner, escalations, recommended, unattended_safe
 
-    if queues[techlead_queue_name(repo_root)]['messages_ready'] > 0:
+    architecture_queue = queues.get(techlead_queue_name()) or queues.get('fractal-core-architecture') or {}
+    if architecture_queue.get('messages_ready', 0) > 0:
         stage = 'ready_for_acceptance'
         owner = 'Architect'
         unattended_safe = False
-        preview = queues[techlead_queue_name(repo_root)].get('preview') or []
+        preview = architecture_queue.get('preview') or []
         packet = preview[0]['payload_preview'] if preview else {}
         details = {
             'message_id': packet.get('message_id_external', packet.get('message_id')),
@@ -3399,7 +3404,7 @@ def emit_next_assignment(args):
             db_name=args.db_name,
             db_user=args.db_user,
         )
-        if workflow_transition is not None and not workflow_transition.applied:
+    if workflow_transition is not None and not workflow_transition.applied:
             return {
                 'ok': False,
                 'workflow_stage': context['workflow_stage'],
@@ -3413,130 +3418,45 @@ def emit_next_assignment(args):
                     'metadata': dict(workflow_transition.metadata),
                 },
             }
-    default_output_path, default_review_output_path = default_assignment_paths(
-        repo_root,
-        context['issue_number'],
-        context['target_role'],
+    result = DefaultRuntimeAssignmentBridgeService().emit_next_assignment(
+        RuntimeAssignmentBridgeRequest(
+            repo_root=repo_root,
+            project_slug=args.project_slug,
+            package_id_external=args.package_id_external,
+            brief_id_external=args.brief_id_external,
+            github_repo=github_repo_for_root(repo_root),
+            issue_number=context['issue_number'],
+            issue_url=context['issue_url'],
+            pr_number=context['pr_number'],
+            pr_url=context['pr_url'],
+            branch=context['branch'],
+            workflow_stage=context['workflow_stage'],
+            target_role=context['target_role'],
+            target_role_cli=context['target_role_cli'],
+            assignment_type=context['assignment_type'],
+            assignment_summary=context['assignment_summary'],
+            allowed_result_types=tuple(context['allowed_result_types']),
+            source_packet_message_id=context.get('source_packet_message_id'),
+            source_packet_path=context.get('source_packet_path'),
+            source_packet_queue=context.get('source_packet_queue'),
+            source_packet_schema_type=context.get('source_packet_schema_type'),
+            output_path=args.output,
+            review_output_path=args.review_output,
+            send=bool(args.send),
+        )
     )
-    output_path = args.output or default_output_path
-    review_output_path = args.review_output or default_review_output_path
-    output_path = output_path.resolve()
-    review_output_path = review_output_path.resolve()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    review_output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    auth_script = repo_auth_script(repo_root)
-    auth_current = repo_auth_current(repo_root)
-    queue_script = repo_queue_script(repo_root)
-    compile_cmd = [
-        str(auth_script),
-        'authority',
-        'materialize-techlead-assignment-packet',
-        '--manifest', str(auth_current),
-        '--project-slug', args.project_slug,
-        '--package-id-external', args.package_id_external,
-        '--brief-id-external', args.brief_id_external,
-        '--repo', github_repo_for_root(repo_root),
-        '--issue-number', str(context['issue_number']),
-        '--issue-url', str(context['issue_url']),
-        '--pr-number', str(context['pr_number']),
-        '--pr-url', str(context['pr_url']),
-        '--branch', str(context['branch']),
-        '--target-role', context['target_role_cli'],
-        '--assignment-type', context['assignment_type'],
-        '--assignment-summary', context['assignment_summary'],
-        '--output', str(output_path),
-        '--review-output', str(review_output_path),
-        '--persist-db',
-    ]
-    if context.get('source_packet_path'):
-        compile_cmd.extend(['--source-packet-path', str(context['source_packet_path'])])
-    if context.get('source_packet_message_id'):
-        compile_cmd.extend(['--source-packet-message-id', str(context['source_packet_message_id'])])
-    for allowed_result_type in context['allowed_result_types']:
-        compile_cmd.extend(['--allowed-result-type', allowed_result_type])
-
-    compile_result = run_json(compile_cmd)
-    validate_cmd = [
-        str(queue_script),
-        'techlead-validate-packet',
-        '--message-file', str(output_path),
-    ]
-    validate_code, validate_result, validate_error = run_json_with_errors(validate_cmd)
-    result = {
-        'ok': validate_code == 0,
-        'workflow_stage': context['workflow_stage'],
-        'derived_decision': {
-            'target_role': context['target_role'],
-            'assignment_type': context['assignment_type'],
-            'allowed_result_types': context['allowed_result_types'],
-        },
-        'package_id_external': args.package_id_external,
-        'brief_id_external': args.brief_id_external,
-        'output_path': str(output_path),
-        'review_output_path': str(review_output_path),
-        'message_id': compile_result.get('message_id'),
-        'automation_run_id': compile_result.get('automation_run_id'),
-        'resolved_queue': validate_result.get('resolved_queue') if validate_result else None,
-        'sent': False,
-        'compile': compile_result,
-        'validate': validate_result,
-        'source_packet_ref': {
-            'message_id': context.get('source_packet_message_id'),
-            'path': context.get('source_packet_path'),
-        },
-        'workflow_transition': (
-            None
-            if workflow_transition is None
-            else {
-                'requested_transition_type': workflow_transition.requested_transition_type,
-                'applied': workflow_transition.applied,
-                'workflow_stage': workflow_transition.state_view.workflow_stage
-                if workflow_transition.state_view
-                else None,
-                'recommended_next_action': workflow_transition.recommended_next_action,
-            }
-        ),
-    }
-    if validate_code != 0:
-        result['error'] = validate_error
-        return result
-    if args.send:
-        send_cmd = [
-            str(queue_script),
-            'techlead-send-packet',
-            '--repo-root', str(repo_root),
-            '--message-file', str(output_path),
-        ]
-        send_code, send_result, send_error = run_json_with_errors(send_cmd)
-        result['send'] = send_result
-        result['sent'] = send_code == 0 and bool(send_result and send_result.get('ok'))
-        if send_code != 0:
-            result['ok'] = False
-            result['error'] = send_error
-            return result
-        source_packet_message_id = context.get('source_packet_message_id')
-        source_packet_path = context.get('source_packet_path')
-        source_packet_queue = context.get('source_packet_queue')
-        source_packet_ack = None
-        if source_packet_message_id and (source_packet_path or source_packet_queue):
-            source_queue = source_packet_queue
-            if source_packet_path:
-                from paa_consumer.inbox import resolve_packet_queue
-                source_packet = handoff_runtime.load_json(Path(source_packet_path).resolve())
-                source_queue = resolve_packet_queue(source_packet)
-            if source_queue:
-                source_packet_ack = acknowledge_source_assignment(
-                    repo_root,
-                    source_packet_message_id,
-                    source_queue,
-                    claimed_by='techlead-emit-next-assignment',
-                )
-                result['source_packet_ack'] = source_packet_ack
-                if not source_packet_ack.get('ok'):
-                    result['ok'] = False
-                    result['error'] = 'sent_next_assignment_but_failed_to_close_source_packet'
-                    return result
+    result['workflow_transition'] = (
+        None
+        if workflow_transition is None
+        else {
+            'requested_transition_type': workflow_transition.requested_transition_type,
+            'applied': workflow_transition.applied,
+            'workflow_stage': workflow_transition.state_view.workflow_stage
+            if workflow_transition.state_view
+            else None,
+            'recommended_next_action': workflow_transition.recommended_next_action,
+        }
+    )
     return result
 
 
