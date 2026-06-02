@@ -1,4 +1,4 @@
-.PHONY: docs-lint-governed docs-lint-language docs-lint-code docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference runtime-supervisor
+.PHONY: docs-lint-governed docs-lint-language docs-lint-code docs-current-design docs-current-plan docs-current-build docs-current-test docs-current-deploy docs-current-operate docs-current-reference runtime-supervisor runtime-supervisor-start runtime-supervisor-stop runtime-supervisor-status runtime-supervisor-logs
 
 docs-lint-governed:
 	bash /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/docs/lint_governed_docs.sh
@@ -48,3 +48,15 @@ docs-current-reference:
 
 runtime-supervisor:
 	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_runtime_supervisor.sh
+
+runtime-supervisor-start:
+	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh start
+
+runtime-supervisor-stop:
+	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh stop || true
+
+runtime-supervisor-status:
+	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh status
+
+runtime-supervisor-logs:
+	/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh logs

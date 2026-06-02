@@ -39,10 +39,19 @@ Optional environment overrides:
 
 ## Runtime Supervisor
 
-Standard local runtime entrypoint:
+Foreground launcher:
 
 ```bash
 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_runtime_supervisor.sh
+```
+
+Managed local controller:
+
+```bash
+/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh start
+/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh status
+/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh logs
+/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh stop
 ```
 
 What it does:
@@ -53,6 +62,8 @@ What it does:
   - `TechLead`
   - `Dev`
   - `QA`
+- stores PID and logs under:
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/.project/data/paa/runtime-supervisor/`
 
 Bounded proof run:
 
@@ -60,7 +71,13 @@ Bounded proof run:
 /Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/run_runtime_supervisor.sh --max-iterations 1
 ```
 
-The script assumes:
+Managed bounded run:
+
+```bash
+/Users/billyweisberg/Repos/billyweisberg/paa-platform/scripts/runtime/runtime_supervisor_ctl.sh restart -- --max-iterations 3
+```
+
+The scripts assume:
 
 - local Postgres is available
 - local RabbitMQ is available
