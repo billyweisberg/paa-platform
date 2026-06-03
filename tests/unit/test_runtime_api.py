@@ -14,6 +14,7 @@ from paa_core.api.runtime.dependencies import (
     get_automation_preflight_service,
     get_queue_admin_service,
     get_runtime_admin_service,
+    get_runtime_dispatch_service,
     get_runtime_report_service,
     get_runtime_validation_service,
 )
@@ -80,6 +81,23 @@ class _FakeRuntimeAdminService:
     def restart_supervisor(self, request):
         return RuntimeOperationResult(payload={'ok': True, 'action': 'restart', 'repo_root': str(request.repo_root)})
 
+    def run_techlead_host(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'host': 'techlead', 'host_name': request.host_name})
+
+    def run_dev_host(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'host': 'dev', 'host_name': request.host_name})
+
+    def run_qa_host(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'host': 'qa', 'host_name': request.host_name})
+
+
+class _FakeRuntimeDispatchService:
+    def dispatch_packet(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'dispatch': 'generic', 'message_file': str(request.message_file)})
+
+    def dispatch_techlead_packet(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'dispatch': 'techlead', 'message_file': str(request.message_file)})
+
 
 class _FakeRuntimeValidationService:
     def validate_runtime(self, request):
@@ -106,6 +124,7 @@ class RuntimeApiTests(unittest.TestCase):
         self.app = build_runtime_api_app()
         self.app.dependency_overrides[get_queue_admin_service] = lambda: _FakeQueueAdminService()
         self.app.dependency_overrides[get_runtime_admin_service] = lambda: _FakeRuntimeAdminService()
+        self.app.dependency_overrides[get_runtime_dispatch_service] = lambda: _FakeRuntimeDispatchService()
         self.app.dependency_overrides[get_runtime_validation_service] = lambda: _FakeRuntimeValidationService()
         self.app.dependency_overrides[get_runtime_report_service] = lambda: _FakeRuntimeReportService()
         self.app.dependency_overrides[get_automation_preflight_service] = lambda: _FakeAutomationPreflightService()
@@ -121,6 +140,14 @@ class RuntimeApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['action'], 'start')
 
+    def test_run_techlead_host(self) -> None:
+        response = self.client.post(
+            '/runtime/hosts/techlead',
+            json={'repo_root': str(ROOT), 'actor_name': 'TechLead Agent', 'host_name': 'techlead-runtime-host'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['host'], 'techlead')
+
     def test_queue_ensure_topology(self) -> None:
         response = self.client.post('/runtime/queues/ensure-topology', json={'repo_root': str(ROOT)})
         self.assertEqual(response.status_code, 200)
@@ -135,6 +162,22 @@ class RuntimeApiTests(unittest.TestCase):
         response = self.client.get('/runtime/reports/techlead-service-map')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['extracted_service_count'], 7)
+
+    def test_dispatch_runtime_packet(self) -> None:
+        response = self.client.post(
+            '/runtime/packets/dispatch',
+            json={'repo_root': str(ROOT), 'message_file': str(ROOT / 'message.json')},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['dispatch'], 'generic')
+
+    def test_dispatch_techlead_runtime_packet(self) -> None:
+        response = self.client.post(
+            '/runtime/packets/dispatch-techlead',
+            json={'repo_root': str(ROOT), 'message_file': str(ROOT / 'message.json')},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['dispatch'], 'techlead')
 
     def test_automation_preflight(self) -> None:
         response = self.client.post(

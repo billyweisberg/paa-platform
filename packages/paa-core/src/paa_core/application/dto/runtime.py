@@ -44,3 +44,9 @@ class RuntimeHostRunRequest:
     emit_next_assignment: bool = False
     emit_worker_result: bool = False
     emit_verification: bool = False
+
+
+@dataclass(frozen=True)
+class RuntimeDispatchRequest:
+    repo_root: Path
+    message_file: Path

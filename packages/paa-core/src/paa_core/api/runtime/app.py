@@ -9,6 +9,8 @@ except ImportError as exc:  # pragma: no cover
 else:
     _FASTAPI_IMPORT_ERROR = None
 
+from paa_core.api.runtime.routers.hosts import router as host_router
+from paa_core.api.runtime.routers.packets import router as packet_router
 from paa_core.api.runtime.routers.queues import router as queue_router
 from paa_core.api.runtime.routers.reports import router as report_router
 from paa_core.api.runtime.routers.status import router as status_router
@@ -33,6 +35,8 @@ def build_runtime_api_app():
         return {'ok': True, 'service': 'paa-runtime-api'}
 
     app.include_router(supervisor_router)
+    app.include_router(host_router)
+    app.include_router(packet_router)
     app.include_router(queue_router)
     app.include_router(status_router)
     app.include_router(report_router)
