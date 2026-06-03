@@ -28,6 +28,12 @@ class RuntimeStatusRequest:
 
 
 @dataclass(frozen=True)
+class RuntimeInstallRequest:
+    repo_root: Path
+    project_pack: str = 'fractal-core'
+
+
+@dataclass(frozen=True)
 class RuntimeLogsRequest:
     repo_root: Path
     lines: int = 200

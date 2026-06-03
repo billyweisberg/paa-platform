@@ -11,14 +11,17 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.api.runtime.app import build_runtime_api_app
 from paa_core.api.runtime.dependencies import (
+    get_authority_install_service,
     get_automation_preflight_service,
     get_operator_command_service,
     get_queue_admin_service,
     get_runtime_admin_service,
     get_runtime_dispatch_service,
+    get_runtime_install_service,
     get_runtime_report_service,
     get_runtime_validation_service,
 )
+from paa_core.application.dto.authority import AuthorityInstallResultView
 from paa_core.application.dto.queue import QueueOperationResult
 from paa_core.application.dto.operator import (
     OperatorCommand,
@@ -146,12 +149,30 @@ class _FakeOperatorCommandService:
         return command_family in {'component', 'plan', 'status', 'report', 'role', 'agent', 'queue', 'worker'}
 
 
+class _FakeAuthorityInstallService:
+    def install_package(self, request):
+        return AuthorityInstallResultView(
+            payload={'ok': True, 'repo_root': str(request.repo_root), 'package_root': str(request.package_root)},
+            exit_code=0,
+        )
+
+
+class _FakeRuntimeInstallService:
+    def install_runtime(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'action': 'install', 'project_pack': request.project_pack})
+
+    def update_runtime(self, request):
+        return RuntimeOperationResult(payload={'ok': True, 'action': 'update', 'project_pack': request.project_pack})
+
+
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = build_runtime_api_app()
+        self.app.dependency_overrides[get_authority_install_service] = lambda: _FakeAuthorityInstallService()
         self.app.dependency_overrides[get_queue_admin_service] = lambda: _FakeQueueAdminService()
         self.app.dependency_overrides[get_runtime_admin_service] = lambda: _FakeRuntimeAdminService()
         self.app.dependency_overrides[get_runtime_dispatch_service] = lambda: _FakeRuntimeDispatchService()
+        self.app.dependency_overrides[get_runtime_install_service] = lambda: _FakeRuntimeInstallService()
         self.app.dependency_overrides[get_runtime_validation_service] = lambda: _FakeRuntimeValidationService()
         self.app.dependency_overrides[get_runtime_report_service] = lambda: _FakeRuntimeReportService()
         self.app.dependency_overrides[get_automation_preflight_service] = lambda: _FakeAutomationPreflightService()
@@ -185,6 +206,24 @@ class RuntimeApiTests(unittest.TestCase):
         response = self.client.post('/runtime/status/validate', json={'repo_root': str(ROOT)})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['ok'])
+
+    def test_authority_install_package(self) -> None:
+        response = self.client.post(
+            '/runtime/authority/install-package',
+            json={'repo_root': str(ROOT), 'package_root': str(ROOT / 'package')},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+
+    def test_install_runtime(self) -> None:
+        response = self.client.post('/runtime/ops/install-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['action'], 'install')
+
+    def test_update_runtime(self) -> None:
+        response = self.client.post('/runtime/ops/update-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['action'], 'update')
 
     def test_runtime_report(self) -> None:
         response = self.client.get('/runtime/reports/techlead-service-map')

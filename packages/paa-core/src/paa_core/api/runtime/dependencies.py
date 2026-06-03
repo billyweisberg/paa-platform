@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
+    DefaultAuthorityInstallApplicationService,
     DefaultOperatorCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
     DefaultRuntimeDispatchApplicationService,
+    DefaultRuntimeInstallApplicationService,
     DefaultRuntimeReportApplicationService,
     DefaultRuntimeValidationApplicationService,
     build_default_operator_command_service,
@@ -24,6 +26,10 @@ def get_operator_command_service() -> DefaultOperatorCommandApplicationService:
     return build_default_operator_command_service(logger=_NullStructuredLogger())
 
 
+def get_authority_install_service() -> DefaultAuthorityInstallApplicationService:
+    return DefaultAuthorityInstallApplicationService()
+
+
 def get_queue_admin_service() -> DefaultQueueAdminApplicationService:
     return DefaultQueueAdminApplicationService()
 
@@ -34,6 +40,10 @@ def get_runtime_admin_service() -> DefaultRuntimeAdminApplicationService:
 
 def get_runtime_dispatch_service() -> DefaultRuntimeDispatchApplicationService:
     return DefaultRuntimeDispatchApplicationService()
+
+
+def get_runtime_install_service() -> DefaultRuntimeInstallApplicationService:
+    return DefaultRuntimeInstallApplicationService()
 
 
 def get_runtime_report_service() -> DefaultRuntimeReportApplicationService:

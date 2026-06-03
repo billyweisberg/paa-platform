@@ -948,11 +948,11 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(payload['extracted_service_count'], 7)
         fake_service.techlead_service_map.assert_called_once_with()
 
-    def test_authority_install_package_uses_core_install(self) -> None:
+    def test_authority_install_package_uses_runtime_api_client(self) -> None:
         app, _, _ = self._typer_cli()
         fake_service = Mock()
         from paa_core.application.dto.authority import AuthorityInstallResultView
-        fake_service.install_package.return_value = AuthorityInstallResultView(
+        fake_service.install_authority_package.return_value = AuthorityInstallResultView(
             payload={
                 'ok': True,
                 'repo_root': str(ROOT),
@@ -963,7 +963,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             exit_code=0,
         )
 
-        with unittest.mock.patch('paa_cli.app._build_authority_install_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 [
@@ -979,7 +979,41 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         payload = json.loads(result.stdout)
         self.assertTrue(payload['ok'])
-        fake_service.install_package.assert_called_once()
+        fake_service.install_authority_package.assert_called_once()
+
+    def test_ops_install_runtime_uses_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_service = Mock()
+        from paa_core.application.dto.runtime import RuntimeOperationResult
+        fake_service.install_runtime.return_value = RuntimeOperationResult(
+            payload={'ok': True, 'install_mode': 'fresh', 'project_pack': 'fractal-core'},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['ops', 'install-runtime', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        fake_service.install_runtime.assert_called_once()
+
+    def test_ops_update_runtime_uses_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+        fake_service = Mock()
+        from paa_core.application.dto.runtime import RuntimeOperationResult
+        fake_service.update_runtime.return_value = RuntimeOperationResult(
+            payload={'ok': True, 'install_mode': 'update', 'project_pack': 'fractal-core'},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['ops', 'update-runtime', '--repo-root', str(ROOT)])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        fake_service.update_runtime.assert_called_once()
 
     def test_ops_validate_runtime_uses_core_guardrails(self) -> None:
         app, _, _ = self._typer_cli()

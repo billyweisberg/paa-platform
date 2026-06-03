@@ -32,6 +32,7 @@ from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.runtime import (
     RuntimeHostRunRequest,
+    RuntimeInstallRequest,
     RuntimeLogsRequest,
     RuntimeStatusRequest,
     RuntimeSupervisorRequest,
@@ -41,8 +42,7 @@ from paa_core.application.dto.workflow import AutomationPreflightRequest
 from paa_core.api.runtime.client import HttpRuntimeApiClient, InProcessRuntimeApiClient, RuntimeApiClient
 from paa_core.application.operator_result_normalizer import CommandResultNormalizer
 from paa_core.application.operator_router import CommandRouter
-from paa_core.application.services import DefaultAuthorityInstallApplicationService, DefaultOperatorCommandApplicationService
-from paa_core.install import install_runtime_support
+from paa_core.application.services import DefaultOperatorCommandApplicationService
 from .contracts import PAAOperatorCLI, StructuredLogger
 from .environment import EnvironmentResolutionInput, EnvironmentResolver
 from .rendering import OutputRenderer
@@ -55,10 +55,6 @@ def _build_runtime_api_client() -> RuntimeApiClient:
     if runtime_api_url:
         return HttpRuntimeApiClient(base_url=runtime_api_url)
     return InProcessRuntimeApiClient()
-
-
-def _build_authority_install_application_service() -> DefaultAuthorityInstallApplicationService:
-    return DefaultAuthorityInstallApplicationService()
 
 
 def _emit_json_result(result: object) -> None:
@@ -1047,7 +1043,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         authority_install_root: str | None = typer.Option(None, '--authority-install-root'),
     ) -> None:
         destination = Path(authority_install_root).resolve() if authority_install_root else None
-        result = _build_authority_install_application_service().install_package(
+        result = _build_runtime_api_client().install_authority_package(
             AuthorityInstallRequest(
                 repo_root=Path(repo_root).resolve(),
                 package_root=Path(package_root).resolve(),
@@ -1062,32 +1058,22 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         repo_root: str = typer.Option(..., '--repo-root'),
         project_pack: str = typer.Option('fractal-core', '--project-pack'),
     ) -> None:
-        result = install_runtime_support(Path(repo_root).resolve(), project_pack=project_pack)
-        typer.echo(json.dumps({
-            'ok': True,
-            'install_mode': result.install_mode,
-            'repo_root': str(result.repo_root),
-            'codex_install_root': str(result.codex_install_root),
-            'runtime_data_root': str(result.runtime_data_root),
-            'platform_revision': result.platform_revision,
-            'project_pack': result.project_pack,
-        }, indent=2))
+        result = _build_runtime_api_client().install_runtime(
+            RuntimeInstallRequest(repo_root=Path(repo_root).resolve(), project_pack=project_pack)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @ops_app.command('update-runtime')
     def ops_update_runtime(
         repo_root: str = typer.Option(..., '--repo-root'),
         project_pack: str = typer.Option('fractal-core', '--project-pack'),
     ) -> None:
-        result = install_runtime_support(Path(repo_root).resolve(), project_pack=project_pack)
-        typer.echo(json.dumps({
-            'ok': True,
-            'install_mode': result.install_mode,
-            'repo_root': str(result.repo_root),
-            'codex_install_root': str(result.codex_install_root),
-            'runtime_data_root': str(result.runtime_data_root),
-            'platform_revision': result.platform_revision,
-            'project_pack': result.project_pack,
-        }, indent=2))
+        result = _build_runtime_api_client().update_runtime(
+            RuntimeInstallRequest(repo_root=Path(repo_root).resolve(), project_pack=project_pack)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @ops_app.command('validate-runtime')
     def ops_validate_runtime(

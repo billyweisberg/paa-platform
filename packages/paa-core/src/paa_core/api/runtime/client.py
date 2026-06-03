@@ -7,6 +7,7 @@ from typing import Any, Protocol, cast
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from paa_core.application.dto.authority import AuthorityInstallRequest, AuthorityInstallResultView
 from paa_core.application.dto.queue import (
     QueueCheckRequest,
     QueueClaimActionRequest,
@@ -30,6 +31,7 @@ from paa_core.application.dto.operator import (
     OperatorOutputTable,
 )
 from paa_core.application.dto.runtime import (
+    RuntimeInstallRequest,
     RuntimeHostRunRequest,
     RuntimeLogsRequest,
     RuntimeOperationResult,
@@ -39,10 +41,12 @@ from paa_core.application.dto.runtime import (
 from paa_core.application.dto.status import RuntimeSmokeRequest, RuntimeStatusResultView, RuntimeValidationRequest, TechLeadServiceMapResultView
 from paa_core.application.dto.workflow import AutomationPreflightRequest, AutomationPreflightResultView
 from paa_core.application.services import (
+    DefaultAuthorityInstallApplicationService,
     DefaultAutomationPreflightApplicationService,
     DefaultOperatorCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
+    DefaultRuntimeInstallApplicationService,
     DefaultRuntimeReportApplicationService,
     DefaultRuntimeValidationApplicationService,
     build_default_operator_command_service,
@@ -65,6 +69,9 @@ def _to_jsonable(value: object) -> object:
 
 
 class RuntimeApiClient(Protocol):
+    def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView: ...
+    def install_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult: ...
+    def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult: ...
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
     def supports_operator_command_family(self, command_family: str) -> bool: ...
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult: ...
@@ -100,17 +107,30 @@ class InProcessRuntimeApiClient:
         *,
         queue_admin: DefaultQueueAdminApplicationService | None = None,
         runtime_admin: DefaultRuntimeAdminApplicationService | None = None,
+        runtime_install: DefaultRuntimeInstallApplicationService | None = None,
         runtime_report: DefaultRuntimeReportApplicationService | None = None,
         runtime_validation: DefaultRuntimeValidationApplicationService | None = None,
         automation_preflight: DefaultAutomationPreflightApplicationService | None = None,
         operator_commands: DefaultOperatorCommandApplicationService | None = None,
+        authority_install: DefaultAuthorityInstallApplicationService | None = None,
     ) -> None:
         self._queue_admin = queue_admin or DefaultQueueAdminApplicationService()
         self._runtime_admin = runtime_admin or DefaultRuntimeAdminApplicationService()
+        self._runtime_install = runtime_install or DefaultRuntimeInstallApplicationService()
         self._runtime_report = runtime_report or DefaultRuntimeReportApplicationService()
         self._runtime_validation = runtime_validation or DefaultRuntimeValidationApplicationService()
         self._automation_preflight = automation_preflight or DefaultAutomationPreflightApplicationService()
         self._operator_commands = operator_commands or build_default_operator_command_service(logger=_NullStructuredLogger())
+        self._authority_install = authority_install or DefaultAuthorityInstallApplicationService()
+
+    def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
+        return self._authority_install.install_package(request)
+
+    def install_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult:
+        return self._runtime_install.install_runtime(request)
+
+    def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult:
+        return self._runtime_install.update_runtime(request)
 
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         return self._operator_commands.run_command(request)
@@ -225,6 +245,18 @@ class HttpRuntimeApiClient:
     def supports_operator_command_family(self, command_family: str) -> bool:
         payload = self._get_json(f'/runtime/operators/supports/{command_family}')
         return bool(payload.get('supported', False))
+
+    def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
+        payload = self._post_json('/runtime/authority/install-package', request)
+        return AuthorityInstallResultView(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def install_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult:
+        payload = self._post_json('/runtime/ops/install-runtime', request)
+        return RuntimeOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult:
+        payload = self._post_json('/runtime/ops/update-runtime', request)
+        return RuntimeOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult:
         payload = self._post_json('/runtime/queues/ensure-topology', request)
