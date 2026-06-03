@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from paa_core.db import run_psql, sql_literal
-from paa_producer.issue_loader import (
+from paa_core.producer.issue_loader import (
     IssueArtifactBundle,
     _brief_insert_sql,
     _design_package_insert_sql,

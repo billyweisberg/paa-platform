@@ -14,7 +14,7 @@ from paa_core.config import load_producer_project_config
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_core.runtime_paths import default_installed_artifact_path, default_installed_manifest_path, producer_manifest_candidates
 from paa_core.team_worker_roles import active_team_worker_roles, team_worker_role_by_display_name, team_worker_role_by_key
-from paa_producer.issue_loader import load_issue_into_paa
+from paa_core.producer.issue_loader import load_issue_into_paa
 
 MANIFEST_ENV = 'FRACTAL_CORE_AUTHORITY_MANIFEST'
 CURRENT_MANIFEST = default_installed_manifest_path()

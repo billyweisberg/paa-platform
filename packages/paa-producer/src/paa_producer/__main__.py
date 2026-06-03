@@ -20,7 +20,7 @@ from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.implementation_plan_deriver import derive_implementation_plan
 from paa_producer.derive_artifacts import derive_inventory
-from paa_producer.issue_loader import load_issue_into_paa
+from paa_core.producer.issue_loader import load_issue_into_paa
 from paa_producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
     DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
@@ -35,8 +35,8 @@ from paa_producer.implementation_plan_progress import (
 from paa_producer.implementation_plan_activity_state import (
     set_implementation_plan_activity_state,
 )
-from paa_producer.obligation_loader import materialize_verification_obligations
-from paa_producer.publish import publish_from_project_config
+from paa_core.producer.obligation_loader import materialize_verification_obligations
+from paa_core.producer.publish import publish_from_project_config
 from paa_producer.smoke_test import run_smoke_test
 
 
