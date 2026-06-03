@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.runtime_acceptance import (
+from paa_core.runtime.bridges.acceptance import (
     DefaultRuntimeAcceptanceService,
     RuntimeAcceptanceRequest,
 )

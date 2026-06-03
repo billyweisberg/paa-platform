@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from paa_core.services.runtime_workflow import DefaultRuntimeWorkflowService
+from paa_core.runtime.bridges.workflow import DefaultRuntimeWorkflowService
 
 
 class RuntimeWorkflowServiceTests(unittest.TestCase):

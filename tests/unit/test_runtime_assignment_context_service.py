@@ -8,7 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.runtime_assignment_context import (
+from paa_core.runtime.bridges.assignment_context import (
     DefaultRuntimeAssignmentContextService,
     RuntimeAssignmentContextRequest,
 )

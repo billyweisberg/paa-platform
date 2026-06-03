@@ -9,7 +9,7 @@ from pathlib import Path
 PLATFORM_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PLATFORM_ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.runtime_worktree import (  # noqa: E402
+from paa_core.runtime.bridges.worktree import (  # noqa: E402
     DefaultRuntimeWorktreeService,
     RuntimeWorktreeCleanupRequest,
 )
