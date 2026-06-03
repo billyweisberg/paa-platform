@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 
 from paa_core.runtime.control.supervisor import runtime_supervisor_status
-from paa_core.runtime_guardrails import validate_runtime_install
-from paa_core.runtime_paths import resolved_repo_runtime_queue_topology
+from paa_core.runtime.support.runtime_guardrails import validate_runtime_install
+from paa_core.runtime.support.runtime_paths import resolved_repo_runtime_queue_topology
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 
 

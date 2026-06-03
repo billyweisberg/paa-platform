@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from paa_core.runtime_paths import repo_paa_root, repo_root_from_cwd
+from paa_core.runtime.support.runtime_paths import repo_paa_root, repo_root_from_cwd
 
 
 DEFAULT_TEAM_WORKER_ROLES: dict[str, Any] = {

@@ -9,7 +9,7 @@ import subprocess
 from typing import Any, Callable, cast
 
 from paa_core.runtime.transport.packet_dispatch import resolve_packet_queue
-from paa_core.runtime_paths import repo_authority_manifest_path, repo_producer_bin
+from paa_core.runtime.support.runtime_paths import repo_authority_manifest_path, repo_producer_bin
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 
 

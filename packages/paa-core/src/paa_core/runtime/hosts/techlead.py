@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Protocol, cast
 
 from paa_core.runtime.transport.claim_ledger import FileQueueClaimLedgerRepository, utc_now
-from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_unified_runtime_project_config
+from paa_core.runtime.support.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE, load_unified_runtime_project_config
 from paa_core.policies.deployment_capability import DefaultDeploymentCapabilityPolicy
 from paa_core.runtime.transport.rabbitmq import RabbitMQManagementClient, build_default_management_client
 from paa_core.repositories.execution_package import PostgresExecutionPackageRepository
@@ -26,7 +26,7 @@ from paa_core.repositories.workflow_state import (
     WorkflowStateUpsertSpec,
     WorkflowTransitionAppendSpec,
 )
-from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
+from paa_core.runtime.support.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
 from paa_core.services.dev_worker import DevWorkerService
 from paa_core.runtime.packets.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,

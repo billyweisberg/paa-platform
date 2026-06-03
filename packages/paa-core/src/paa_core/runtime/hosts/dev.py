@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import Any, Protocol, cast
 
 from paa_core.runtime.transport.claim_ledger import FileQueueClaimLedgerRepository, utc_now
-from paa_core.config import load_unified_runtime_project_config
+from paa_core.runtime.support.config import load_unified_runtime_project_config
 from paa_core.policies.deployment_capability import DeploymentCapabilityPolicy, DefaultDeploymentCapabilityPolicy
 from paa_core.runtime.transport.rabbitmq import DEFAULT_EXCHANGE, RabbitMQManagementClient, build_default_management_client
 from paa_core.repositories.execution_package import ExecutionPackageRepository, PostgresExecutionPackageRepository
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
-from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
+from paa_core.runtime.support.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
 from paa_core.services.dev_worker import DefaultDevWorkerService, DevWorkerRequest, DevWorkerResult, DevWorkerService
 from paa_core.runtime.packets.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,

@@ -9,7 +9,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from paa_core.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE
+from paa_core.runtime.support.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE
 
 DEFAULT_HOST = os.environ.get("FRACTAL_CORE_RABBITMQ_HOST", "127.0.0.1")
 DEFAULT_MANAGEMENT_PORT = int(os.environ.get("FRACTAL_CORE_RABBITMQ_MANAGEMENT_PORT", "15672"))

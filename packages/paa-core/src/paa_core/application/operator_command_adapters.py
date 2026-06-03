@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 import json
 
-from paa_core.runtime_paths import resolved_repo_runtime_queue_topology
+from paa_core.runtime.support.runtime_paths import resolved_repo_runtime_queue_topology
 from paa_producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
     DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,

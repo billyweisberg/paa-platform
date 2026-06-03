@@ -7,13 +7,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.config import (
+from paa_core.runtime.support.config import (
     DEFAULT_RUNTIME_QUEUE_EXCHANGE,
     DEFAULT_RUNTIME_QUEUE_NAMES,
     runtime_queue_name_for_role,
     runtime_queue_name_for_schema,
 )
-from paa_core.runtime_paths import resolved_repo_runtime_queue_topology
+from paa_core.runtime.support.runtime_paths import resolved_repo_runtime_queue_topology
 
 
 class RuntimeQueueTopologyTests(unittest.TestCase):
