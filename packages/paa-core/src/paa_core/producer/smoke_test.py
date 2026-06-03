@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from paa_core.config import load_producer_project_config
-from paa_producer.authority_runtime import load_manifest, resolve_producer_project_config_path
+from paa_core.producer.authority_support import load_manifest, resolve_producer_project_config_path
 
 
 def run_smoke_test(repo_root: Path, *, output_path: Path | None = None) -> dict[str, object]:
