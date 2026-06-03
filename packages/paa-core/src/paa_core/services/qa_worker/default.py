@@ -8,7 +8,7 @@ from paa_core.services.methodology_execution_projection import (
     MethodologyExecutionStatusProjection,
 )
 from paa_core.services.methodology_execution_state import MethodologyExecutionStateService
-from paa_core.services.packet_context_assembly import (
+from paa_core.runtime.packets.context_assembly import (
     PacketContextAssemblyRequest,
     PacketContextAssemblyResult,
     PacketContextAssemblyService,

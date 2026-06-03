@@ -25,8 +25,8 @@ from paa_core.repositories.workflow_state import (
     WorkflowStateUpsertSpec,
     WorkflowTransitionAppendSpec,
 )
-from paa_core.services.execution_package_resolution import ExecutionPackageResolutionService
-from paa_core.services.execution_package_resolution.models import ExecutionPackageResolutionRequest
+from paa_core.runtime.packets.execution_package_resolution import ExecutionPackageResolutionService
+from paa_core.runtime.packets.execution_package_resolution.models import ExecutionPackageResolutionRequest
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 
 from .models import (

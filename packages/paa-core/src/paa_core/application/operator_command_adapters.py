@@ -24,7 +24,7 @@ from paa_producer.implementation_plan_progress import (
 )
 
 from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
-from paa_core.services.packet_reference_resolution import (
+from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionRequest,
 )
 

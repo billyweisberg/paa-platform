@@ -17,7 +17,7 @@ from paa_core.repositories.workflow_state import (  # noqa: E402
     QueueClaimRecord,
     WorkflowStateRecord,
 )
-from paa_core.services.execution_package_resolution import (  # noqa: E402
+from paa_core.runtime.packets.execution_package_resolution import (  # noqa: E402
     ExecutionPackageCapabilitySummary,
     ExecutionPackageResolutionView,
 )

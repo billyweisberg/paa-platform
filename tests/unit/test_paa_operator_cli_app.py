@@ -38,7 +38,7 @@ from paa_cli.models import (
     OperatorOutputTable,
 )
 from paa_cli.router import CommandRegistration, CommandRouter
-from paa_core.services.packet_reference_resolution import DefaultPacketReferenceResolutionService
+from paa_core.runtime.packets.reference_resolution import DefaultPacketReferenceResolutionService
 from paa_core.repositories.runtime_identity import AgentRecord, RoleRecord
 
 

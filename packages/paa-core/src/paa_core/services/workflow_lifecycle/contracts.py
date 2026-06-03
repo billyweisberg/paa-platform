@@ -9,7 +9,7 @@ from paa_core.policies.reset_recovery import ResetRecoveryPolicy
 from paa_core.policies.workflow_transition import WorkflowTransitionPolicy
 from paa_core.repositories.runtime_event import RuntimeEventRepository
 from paa_core.repositories.workflow_state import WorkflowStateRepository
-from paa_core.services.execution_package_resolution import ExecutionPackageResolutionService
+from paa_core.runtime.packets.execution_package_resolution import ExecutionPackageResolutionService
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 
 from .models import (

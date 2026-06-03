@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.runtime.hosts.dev import DevRuntimeHost, _WorkerResultPublisher
 from paa_core.services.dev_worker import DevWorkerExecutionSummary, DevWorkerRequest, DevWorkerResult
-from paa_core.services.packet_reference_resolution import (
+from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionResult,
     PacketReferenceResolutionSummary,

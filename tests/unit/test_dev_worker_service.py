@@ -18,13 +18,13 @@ from paa_core.services.dev_worker.contracts import (
     DevWorkerService,
     WorkerResultPacketAssembler,
 )
-from paa_core.services.execution_package_resolution import (
+from paa_core.runtime.packets.execution_package_resolution import (
     ExecutionPackageCapabilitySummary,
     ExecutionPackageGap,
     ExecutionPackageResolutionView,
 )
 from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
-from paa_core.services.packet_context_assembly import DefaultPacketContextAssemblyService
+from paa_core.runtime.packets.context_assembly import DefaultPacketContextAssemblyService
 
 
 class DevWorkerServiceContractTests(unittest.TestCase):

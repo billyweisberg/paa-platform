@@ -8,18 +8,18 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.execution_package_resolution import (
+from paa_core.runtime.packets.execution_package_resolution import (
     ExecutionPackageCapabilitySummary,
     ExecutionPackageGap,
     ExecutionPackageResolutionView,
 )
 from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
-from paa_core.services.packet_context_assembly import (
+from paa_core.runtime.packets.context_assembly import (
     DefaultPacketContextAssemblyService,
     PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
     PacketContextAssemblyRequest,
 )
-from paa_core.services.packet_context_assembly.contracts import (
+from paa_core.runtime.packets.context_assembly.contracts import (
     PacketContextAssemblyService,
     PacketPayloadReader,
 )

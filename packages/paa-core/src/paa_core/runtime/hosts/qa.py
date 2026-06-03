@@ -18,7 +18,7 @@ from paa_core.repositories.execution_package import ExecutionPackageRepository, 
 from paa_core.repositories.methodology_execution import PostgresMethodologyExecutionRepository
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
-from paa_core.services.execution_package_resolution import (
+from paa_core.runtime.packets.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
     ExecutionPackageGap,
@@ -28,8 +28,8 @@ from paa_core.services.execution_package_resolution import (
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
 from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
 from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
-from paa_core.services.packet_context_assembly import DefaultPacketContextAssemblyService
-from paa_core.services.packet_reference_resolution import (
+from paa_core.runtime.packets.context_assembly import DefaultPacketContextAssemblyService
+from paa_core.runtime.packets.reference_resolution import (
     DefaultPacketReferenceResolutionService,
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionService,

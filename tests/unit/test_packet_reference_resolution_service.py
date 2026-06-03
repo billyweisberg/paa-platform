@@ -7,12 +7,12 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.packet_reference_resolution import (
+from paa_core.runtime.packets.reference_resolution import (
     DefaultPacketReferenceResolutionService,
     PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
     PacketReferenceResolutionRequest,
 )
-from paa_core.services.packet_reference_resolution.contracts import (
+from paa_core.runtime.packets.reference_resolution.contracts import (
     PacketArtifactReader,
     PacketReferenceResolutionService,
     RuntimePathAdapter,

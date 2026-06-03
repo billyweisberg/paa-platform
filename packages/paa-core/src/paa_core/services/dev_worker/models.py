@@ -7,7 +7,7 @@ from typing import Any
 
 from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
 from paa_core.services.methodology_execution_state import MethodologyExecutionStateResult
-from paa_core.services.packet_context_assembly import PacketContextAssemblyResult
+from paa_core.runtime.packets.context_assembly import PacketContextAssemblyResult
 
 
 @dataclass(frozen=True)

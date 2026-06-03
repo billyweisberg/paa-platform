@@ -14,10 +14,10 @@ from paa_core.services.methodology_execution_projection import (
 from paa_core.services.methodology_execution_preflight import (
     METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
 )
-from paa_core.services.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
+from paa_core.runtime.packets.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
 
 try:
-    from paa_cli import PAA_OPERATOR_CLI_METADATA
+    from paa_cli.metadata import PAA_OPERATOR_CLI_METADATA
 except ImportError:  # pragma: no cover - optional package import during partial environments
     PAA_OPERATOR_CLI_METADATA = None
 from paa_core.services.techlead_acceptance_decision import (
@@ -44,7 +44,7 @@ from paa_core.services.techlead_worker_review_routing import (
 from paa_core.services.techlead_worker import (
     TECHLEAD_WORKER_SERVICE_METADATA,
 )
-from paa_core.services.packet_context_assembly import (
+from paa_core.runtime.packets.context_assembly import (
     PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
 )
 from paa_core.services.dev_worker import (
@@ -59,7 +59,7 @@ from paa_core.services.queue_packet_runtime_controller import (
 from paa_core.services.queue_claim_runtime import (
     QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
 )
-from paa_core.services.packet_reference_resolution import (
+from paa_core.runtime.packets.reference_resolution import (
     PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
 )
 from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA

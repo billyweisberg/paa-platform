@@ -8,13 +8,13 @@ from typing import get_type_hints
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.packet_context_assembly import (
+from paa_core.runtime.packets.context_assembly import (
     PacketContextAssemblyRequest,
     PacketContextAssemblyResult,
     PacketContextAssemblySummary,
     PacketContextGapSummary,
 )
-from paa_core.services.packet_context_assembly.contracts import PacketContextAssemblyService
+from paa_core.runtime.packets.context_assembly.contracts import PacketContextAssemblyService
 
 
 class PacketContextAssemblyServiceModelsTests(unittest.TestCase):

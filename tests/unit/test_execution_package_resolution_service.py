@@ -12,7 +12,7 @@ from paa_core.repositories.execution_package import (
     ExecutionPackageOverlayRecord,
     InstalledExecutionContextRecord,
 )
-from paa_core.services.execution_package_resolution import (
+from paa_core.runtime.packets.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionRequest,
 )
