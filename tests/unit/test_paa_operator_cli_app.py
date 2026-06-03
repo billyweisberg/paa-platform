@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 import unittest
@@ -15,6 +16,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
 from paa_cli.app import build_app, build_default_cli
+from paa_core.api.runtime.client import HttpRuntimeApiClient
 from paa_cli.command_adapters import (
     AgentCommandAdapter,
     ComponentCommandAdapter,
@@ -802,7 +804,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.runtime import RuntimeOperationResult
         fake_service.start_supervisor.return_value = RuntimeOperationResult(payload={'ok': True, 'pid': 111}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['runtime', 'start', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -815,7 +817,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.runtime import RuntimeOperationResult
         fake_service.supervisor_status.return_value = RuntimeOperationResult(payload={'ok': True, 'running': True, 'pid': 222}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['runtime', 'status', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -835,7 +837,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             'iterations': [],
         }, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['runtime', 'techlead', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -848,7 +850,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.queue import QueueOperationResult
         fake_service.ensure_topology.return_value = QueueOperationResult(payload={'ok': True, 'queues': ['paa-techlead']}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_queue_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'ensure-topology', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -860,7 +862,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.queue import QueueOperationResult
         fake_service.purge.return_value = QueueOperationResult(payload={'ok': True, 'purged_queues': ['paa-techlead']}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_queue_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'purge', '--repo-root', str(ROOT), '--queue', 'paa-techlead'])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -872,7 +874,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.queue import QueueOperationResult
         fake_service.claim_next.return_value = QueueOperationResult(payload={'ok': True, 'claimed': False}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_queue_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['queue', 'claim-next', '--repo-root', str(ROOT), '--queue', 'paa-techlead'])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -884,7 +886,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         from paa_core.application.dto.queue import QueueOperationResult
         fake_service.send_packet.return_value = QueueOperationResult(payload={'ok': True, 'resolved_queue': 'paa-techlead'}, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_queue_admin_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 ['queue', 'send-packet', '--repo-root', str(ROOT), '--message-file', str(ROOT / 'packet.json')],
@@ -897,7 +899,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         app, _, _ = self._typer_cli()
         fake_service = Mock()
         from paa_core.application.dto.workflow import AutomationPreflightRequest, AutomationPreflightResultView
-        fake_service.evaluate.return_value = AutomationPreflightResultView(payload={
+        fake_service.evaluate_automation_preflight.return_value = AutomationPreflightResultView(payload={
             'ok': True,
             'should_invoke_model': False,
             'skip_model_invocation': True,
@@ -906,20 +908,28 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             'current_owner_role': 'Unknown',
         }, exit_code=0)
 
-        with unittest.mock.patch('paa_cli.app._build_automation_preflight_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 ['ops', 'automation-preflight', '--repo-root', str(ROOT), '--target-role', 'techlead'],
             )
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        fake_service.evaluate.assert_called_once_with(
+        fake_service.evaluate_automation_preflight.assert_called_once_with(
             AutomationPreflightRequest(
                 repo_root=ROOT,
                 target_role='techlead',
                 project_slug='paa-platform',
             )
         )
+
+    def test_runtime_api_client_builder_uses_http_client_when_configured(self) -> None:
+        from paa_cli.app import _build_runtime_api_client
+
+        with unittest.mock.patch.dict(os.environ, {'PAA_RUNTIME_API_URL': 'http://127.0.0.1:8080'}):
+            client = _build_runtime_api_client()
+
+        self.assertIsInstance(client, HttpRuntimeApiClient)
 
     def test_report_techlead_service_map_uses_core_builder(self) -> None:
         app, _, _ = self._typer_cli()
@@ -930,7 +940,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             exit_code=0,
         )
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_report_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['report', 'techlead-service-map'])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -980,7 +990,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             exit_code=0,
         )
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_validation_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['ops', 'validate-runtime', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -997,7 +1007,7 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
             exit_code=0,
         )
 
-        with unittest.mock.patch('paa_cli.app._build_runtime_validation_application_service', return_value=fake_service):
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(app, ['verify', 'runtime-smoke', '--repo-root', str(ROOT)])
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
