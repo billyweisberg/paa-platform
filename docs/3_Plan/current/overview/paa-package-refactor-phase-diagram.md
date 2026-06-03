@@ -60,6 +60,7 @@ packages/
     └── src/paa_core/
         ├── application/                                        [Phase 1 - build first]
         │   ├── contracts/                                      [Phase 1 - build first]
+        │   │   ├── operator_commands.py                       [Phase 1]
         │   │   ├── queue_admin.py                              [Phase 1]
         │   │   ├── runtime_admin.py                            [Phase 1]
         │   │   ├── runtime_dispatch.py                         [Phase 1]
@@ -73,6 +74,7 @@ packages/
         │   │   ├── producer_derivation.py                      [Phase 1]
         │   │   └── producer_review.py                          [Phase 1]
         │   ├── dto/                                            [Phase 1 - build first]
+        │   │   ├── operator.py                                 [Phase 1]
         │   │   ├── queue.py                                    [Phase 1]
         │   │   ├── runtime.py                                  [Phase 1]
         │   │   ├── authority.py                                [Phase 1]
@@ -80,6 +82,7 @@ packages/
         │   │   └── workflow.py                                 [Phase 1]
         │   │   └── producer.py                                 [Phase 1]
         │   └── services/                                       [Phase 1 - build first]
+        │       ├── operator_commands.py                        [Phase 1]
         │       ├── queue_admin.py                              [Phase 1]
         │       ├── runtime_admin.py                            [Phase 1]
         │       ├── runtime_dispatch.py                         [Phase 1]
@@ -98,6 +101,7 @@ packages/
         │       ├── app.py                                      [Phase 2]
         │       ├── dependencies.py                             [Phase 2]
         │       └── routers/
+        │           ├── operators.py                            [Phase 2]
         │           ├── supervisor.py                           [Phase 2]
         │           ├── queues.py                               [Phase 2]
         │           ├── packets.py                              [Phase 2]

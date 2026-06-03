@@ -129,6 +129,7 @@ packages/
     src/paa_core/
       application/
         contracts/
+          operator_commands.py
           queue_admin.py
           runtime_admin.py
           runtime_dispatch.py
@@ -139,12 +140,14 @@ packages/
           producer_derivation.py
           producer_review.py
         dto/
+          operator.py
           queue.py
           runtime.py
           authority.py
           status.py
           producer.py
         services/
+          operator_commands.py
           queue_admin.py
           runtime_admin.py
           runtime_dispatch.py
@@ -161,6 +164,7 @@ packages/
           app.py
           dependencies.py
           routers/
+            operators.py
             supervisor.py
             queues.py
             packets.py
