@@ -1,14 +1,3 @@
-"""Placeholder home for future producer-side artifact derivation commands."""
+"""Compatibility wrapper for producer artifact derivation helpers."""
 
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-
-def derive_inventory(repo_root: Path) -> dict[str, object]:
-    return {
-        'ok': True,
-        'repo_root': str(repo_root),
-        'message': 'Artifact derivation commands are now platform-owned; project-specific derivation logic belongs here next.',
-    }
+from paa_core.producer.derive_artifacts import *  # noqa: F403

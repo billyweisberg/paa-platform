@@ -15,11 +15,11 @@ from paa_producer.architect_packet_preparer import PacketPreparationOptions, pre
 from paa_producer.brief_target_author import author_brief_targets
 from paa_producer.coder_brief_assembler import assemble_coder_brief
 from paa_producer.brief_reviewer import review_coder_brief
-from paa_producer.commands import PRODUCER_COMMANDS
+from paa_core.producer.commands import PRODUCER_COMMANDS
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.implementation_plan_deriver import derive_implementation_plan
-from paa_producer.derive_artifacts import derive_inventory
+from paa_core.producer.derive_artifacts import derive_inventory
 from paa_core.producer.issue_loader import load_issue_into_paa
 from paa_producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
@@ -37,7 +37,7 @@ from paa_producer.implementation_plan_activity_state import (
 )
 from paa_core.producer.obligation_loader import materialize_verification_obligations
 from paa_core.producer.publish import publish_from_project_config
-from paa_producer.smoke_test import run_smoke_test
+from paa_core.producer.smoke_test import run_smoke_test
 
 
 def main() -> int:
