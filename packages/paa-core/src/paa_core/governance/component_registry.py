@@ -53,10 +53,10 @@ from paa_core.runtime.workers.dev_worker import (
 from paa_core.runtime.workers.qa_worker import (
     QA_WORKER_SERVICE_METADATA,
 )
-from paa_core.services.queue_packet_runtime_controller import (
+from paa_core.runtime.orchestration.queue_packet_runtime_controller import (
     QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA,
 )
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
 )
 from paa_core.runtime.packets.reference_resolution import (

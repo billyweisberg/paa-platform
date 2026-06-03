@@ -161,7 +161,7 @@ class _StubPreflightService:
 
 class _StubQueuePacketRuntimeController:
     def handle_packet(self, request):
-        from paa_core.services.queue_packet_runtime_controller import (
+        from paa_core.runtime.orchestration.queue_packet_runtime_controller import (
             QueuePacketDispatchSummary,
             QueuePacketRuntimeResult,
         )

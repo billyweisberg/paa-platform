@@ -23,7 +23,7 @@ from paa_producer.implementation_plan_progress import (
     reconcile_implementation_plan_progress,
 )
 
-from paa_core.services.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
+from paa_core.runtime.orchestration.queue_claim_runtime import DefaultQueueClaimRuntimeService, QueueClaimRuntimeRequest
 from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionRequest,
 )
@@ -955,7 +955,7 @@ class WorkerCommandAdapter:
                     details=resolution_result.resolution_summary.blocking_reasons,
                 ),
             )
-        from paa_core.services.queue_packet_runtime_controller import QueuePacketRuntimeRequest
+        from paa_core.runtime.orchestration.queue_packet_runtime_controller import QueuePacketRuntimeRequest
 
         result = self._runtime_controller.handle_packet(
             QueuePacketRuntimeRequest(

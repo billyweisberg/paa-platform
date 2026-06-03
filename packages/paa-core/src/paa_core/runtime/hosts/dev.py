@@ -36,7 +36,7 @@ from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionResult,
     PacketReferenceResolutionService,
 )
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     DefaultQueueClaimRuntimeService,
     QueueClaimRuntimeRequest,
     QueueClaimRuntimeResult,

@@ -48,13 +48,13 @@ from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionService,
 )
 from paa_core.runtime.workers.qa_worker import QAWorkerService
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     DefaultQueueClaimRuntimeService,
     QueueClaimRuntimeRequest,
     QueueClaimRuntimeResult,
     QueueClaimRuntimeService,
 )
-from paa_core.services.queue_packet_runtime_controller import (
+from paa_core.runtime.orchestration.queue_packet_runtime_controller import (
     DefaultQueuePacketRuntimeController,
     QueuePacketRuntimeRequest,
     QueuePacketRuntimeController,

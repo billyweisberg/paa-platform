@@ -13,7 +13,7 @@ from paa_core.services.queue_claim_runtime import (
     QUEUE_CLAIM_RUNTIME_SERVICE_METADATA,
     QueueClaimRuntimeRequest,
 )
-from paa_core.services.queue_claim_runtime.contracts import (
+from paa_core.runtime.orchestration.queue_claim_runtime.contracts import (
     PacketEnvelopeValidator,
     QueueClaimRuntimeService,
     QueueClaimStateAdapter,

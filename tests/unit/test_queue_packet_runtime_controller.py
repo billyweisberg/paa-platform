@@ -13,7 +13,7 @@ from paa_core.services.queue_packet_runtime_controller import (
     QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA,
     QueuePacketRuntimeRequest,
 )
-from paa_core.services.queue_packet_runtime_controller.contracts import (
+from paa_core.runtime.orchestration.queue_packet_runtime_controller.contracts import (
     QueuePacketDeliveryAdapter,
     QueuePacketReader,
     QueuePacketRuntimeController,
