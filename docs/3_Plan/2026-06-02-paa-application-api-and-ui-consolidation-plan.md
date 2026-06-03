@@ -63,6 +63,9 @@ The CLI rule must be interpreted strictly:
 - producer commands are part of that CLI
 - `paa_producer` is transitional residue only and must be removed as a peer CLI
 
+There is one narrow host exception:
+- local bootstrap and process-control commands may operate directly on local application/runtime control when they are responsible for starting or stopping the system that would host the HTTP API
+
 That means the host surfaces must be adapters over application services, not ad hoc callers of internal modules.
 
 ## Required Host Surfaces
@@ -80,6 +83,11 @@ Rule:
 - Typer does not call low-level runtime helpers directly
 - Typer does not call producer backend modules directly
 - Typer uses a client / proxy surface that targets the HTTP API or an in-process equivalent of that same API contract
+
+Allowed exception:
+- local bootstrap/process-control commands may call local control services directly when they are responsible for bringing the HTTP API process up or down
+- this exception is limited to startup, shutdown, restart, install, and similar local lifecycle operations
+- it does not apply to normal producer, queue, workflow, reporting, or orchestration commands
 
 ### 2. FastAPI runtime gateway
 Purpose:
@@ -310,6 +318,27 @@ For architecture slices:
 - do not spend time writing unit tests that only restate helper behavior without proving the real system path
 - if a slice is not integrated enough for a meaningful integration test yet, use `basedpyright` and lint and continue implementing
 - add the integration test as soon as the command path or API route becomes real
+
+### Rule 7. Bootstrap commands are the only intentional direct path
+The intended default is:
+
+```text
+paa command
+  -> client / proxy
+  -> HTTP API
+  -> controller
+  -> application service
+```
+
+The only intentional direct path is:
+
+```text
+paa runtime start|stop|restart
+paa ops install-runtime|update-runtime
+  -> local control/bootstrap service
+```
+
+That direct path exists only so the CLI can start or stop the very process that hosts the HTTP API.
 
 ## Execution Order
 

@@ -53,6 +53,34 @@ Not:
 `paa_producer` may exist only as transitional residue while the cutover completes.
 It is not part of the target system shape.
 
+## Bootstrap Exception
+
+There is one narrow exception to the normal CLI flow.
+
+Most commands follow:
+
+```text
+paa
+  -> client / proxy
+  -> HTTP API
+  -> controllers
+  -> application services
+  -> business logic
+```
+
+But a small set of local bootstrap and process-control commands may operate directly against local application/runtime control without requiring the HTTP gateway to already be running.
+
+Examples:
+- local runtime start
+- local runtime stop
+- local supervisor process control
+- local bootstrap/install/update flows needed to bring the system up
+
+Constraint:
+- this exception is only for local bootstrap and process lifecycle control
+- it is not a general bypass for producer, queue, workflow, or orchestration commands
+- once the system is running, normal operational commands should use the client/proxy -> HTTP API path
+
 ## Top-Level Package Roles
 
 ### `paa_cli`
@@ -307,6 +335,17 @@ paa producer ...
   -> paa_core.application producer services
   -> paa_core.producer business logic
 ```
+
+Bootstrap/process-control exception:
+
+```text
+paa runtime start|stop|restart
+paa ops install-runtime|update-runtime
+  -> local bootstrap/process-control path
+  -> paa_core.application or paa_core.runtime.control
+```
+
+This exception exists so the CLI can bring the local system up or down even when the HTTP API is not yet available.
 
 ## Validation Architecture
 
