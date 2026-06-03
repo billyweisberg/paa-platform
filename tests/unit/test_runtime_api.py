@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 from paa_core.api.runtime.app import build_runtime_api_app
 from paa_core.api.runtime.dependencies import (
     get_automation_preflight_service,
+    get_operator_command_service,
     get_queue_admin_service,
     get_runtime_admin_service,
     get_runtime_dispatch_service,
@@ -19,6 +20,12 @@ from paa_core.api.runtime.dependencies import (
     get_runtime_validation_service,
 )
 from paa_core.application.dto.queue import QueueOperationResult
+from paa_core.application.dto.operator import (
+    OperatorCommand,
+    OperatorCommandResult,
+    OperatorOutputMessage,
+    OperatorOutputSection,
+)
 from paa_core.application.dto.runtime import RuntimeOperationResult
 from paa_core.application.dto.status import RuntimeStatusResultView, TechLeadServiceMapResultView
 from paa_core.application.dto.workflow import AutomationPreflightResultView
@@ -119,6 +126,26 @@ class _FakeAutomationPreflightService:
         )
 
 
+class _FakeOperatorCommandService:
+    def run_command(self, request):
+        return OperatorCommandResult(
+            command=request.command,
+            supported=True,
+            success=True,
+            exit_code=0,
+            sections=(
+                OperatorOutputSection(
+                    title='Operator Command',
+                    messages=(OperatorOutputMessage(level='info', text=f"ran {request.command.command_family}:{request.command.command_name}"),),
+                    data={'arguments': request.arguments},
+                ),
+            ),
+        )
+
+    def supports_command_family(self, command_family: str) -> bool:
+        return command_family in {'component', 'plan', 'status', 'report', 'role', 'agent', 'queue', 'worker'}
+
+
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = build_runtime_api_app()
@@ -128,6 +155,7 @@ class RuntimeApiTests(unittest.TestCase):
         self.app.dependency_overrides[get_runtime_validation_service] = lambda: _FakeRuntimeValidationService()
         self.app.dependency_overrides[get_runtime_report_service] = lambda: _FakeRuntimeReportService()
         self.app.dependency_overrides[get_automation_preflight_service] = lambda: _FakeAutomationPreflightService()
+        self.app.dependency_overrides[get_operator_command_service] = lambda: _FakeOperatorCommandService()
         self.client = TestClient(self.app)
 
     def test_healthz(self) -> None:
@@ -186,6 +214,24 @@ class RuntimeApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['target_role'], 'TechLead')
+
+    def test_operator_command(self) -> None:
+        response = self.client.post(
+            '/runtime/operators/command',
+            json={
+                'command': {'command_family': 'status', 'command_name': 'inspect', 'subcommand_name': None},
+                'invocation_context': {'repo_root': str(ROOT), 'output_mode': 'table', 'dry_run': False, 'strict_mode': True, 'metadata': {}},
+                'arguments': {'methodology_execution_id': 'exec-1'},
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertEqual(response.json()['sections'][0]['title'], 'Operator Command')
+
+    def test_operator_supports_family(self) -> None:
+        response = self.client.get('/runtime/operators/supports/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['supported'])
 
 
 if __name__ == '__main__':

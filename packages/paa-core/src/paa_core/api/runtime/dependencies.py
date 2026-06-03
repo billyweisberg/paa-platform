@@ -2,12 +2,26 @@ from __future__ import annotations
 
 from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
+    DefaultOperatorCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
     DefaultRuntimeDispatchApplicationService,
     DefaultRuntimeReportApplicationService,
     DefaultRuntimeValidationApplicationService,
+    build_default_operator_command_service,
 )
+
+
+class _NullStructuredLogger:
+    def info(self, event: str, **fields: object) -> None:
+        del event, fields
+
+    def warning(self, event: str, **fields: object) -> None:
+        del event, fields
+
+
+def get_operator_command_service() -> DefaultOperatorCommandApplicationService:
+    return build_default_operator_command_service(logger=_NullStructuredLogger())
 
 
 def get_queue_admin_service() -> DefaultQueueAdminApplicationService:

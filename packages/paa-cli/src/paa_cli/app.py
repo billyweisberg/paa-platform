@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Final
+from typing import Any, Final, cast
 
 try:
     import typer
@@ -28,6 +28,7 @@ from paa_core.application.dto.queue import (
     QueueValidateRequest,
 )
 from paa_core.application.dto.authority import AuthorityInstallRequest
+from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.runtime import (
     RuntimeHostRunRequest,
@@ -40,7 +41,7 @@ from paa_core.application.dto.workflow import AutomationPreflightRequest
 from paa_core.api.runtime.client import HttpRuntimeApiClient, InProcessRuntimeApiClient, RuntimeApiClient
 from paa_core.application.operator_result_normalizer import CommandResultNormalizer
 from paa_core.application.operator_router import CommandRouter
-from paa_core.application.services import DefaultAuthorityInstallApplicationService, DefaultOperatorCommandApplicationService, build_default_operator_command_service
+from paa_core.application.services import DefaultAuthorityInstallApplicationService, DefaultOperatorCommandApplicationService
 from paa_core.install import install_runtime_support
 from .contracts import PAAOperatorCLI, StructuredLogger
 from .environment import EnvironmentResolutionInput, EnvironmentResolver
@@ -61,7 +62,7 @@ def _build_authority_install_application_service() -> DefaultAuthorityInstallApp
 
 
 def _emit_json_result(result: object) -> None:
-    payload = asdict(result) if is_dataclass(result) else result
+    payload = asdict(cast(Any, result)) if is_dataclass(result) else result
     typer.echo(json.dumps(payload, indent=2))
 
 
@@ -84,7 +85,8 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
         logger: StructuredLogger,
         environment_resolver: EnvironmentResolver,
         renderer: OutputRenderer,
-        operator_command_service: object | None = None,
+        runtime_api_client: RuntimeApiClient | None = None,
+        operator_command_service: OperatorCommandService | None = None,
         router: CommandRouter | None = None,
         normalizer: CommandResultNormalizer | None = None,
         methodology_execution_preflight_service: object | None = None,
@@ -92,15 +94,17 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
         self._logger = logger
         self.environment_resolver = environment_resolver
         self.renderer = renderer
+        self.runtime_api_client = runtime_api_client or _build_runtime_api_client()
         if operator_command_service is None:
             if router is None or normalizer is None:
-                raise ValueError('router and normalizer are required when operator_command_service is not supplied')
-            operator_command_service = DefaultOperatorCommandApplicationService(
-                logger=logger,
-                router=router,
-                normalizer=normalizer,
-                methodology_execution_preflight_service=methodology_execution_preflight_service,
-            )
+                operator_command_service = None
+            else:
+                operator_command_service = DefaultOperatorCommandApplicationService(
+                    logger=logger,
+                    router=router,
+                    normalizer=normalizer,
+                    methodology_execution_preflight_service=methodology_execution_preflight_service,
+                )
         self.operator_command_service = operator_command_service
         self.methodology_execution_preflight_service = getattr(
             operator_command_service,
@@ -113,10 +117,14 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
         return self._logger
 
     def run_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
-        return self.operator_command_service.run_command(request)
+        if self.operator_command_service is not None:
+            return self.operator_command_service.run_command(request)
+        return self.runtime_api_client.run_operator_command(request)
 
     def supports_command_family(self, command_family: str) -> bool:
-        return self.operator_command_service.supports_command_family(command_family)
+        if self.operator_command_service is not None:
+            return self.operator_command_service.supports_command_family(command_family)
+        return self.runtime_api_client.supports_operator_command_family(command_family)
 
     def render_result(self, result: OperatorCommandResult, *, output_mode: str) -> str:
         return self.renderer.render(result, output_mode=output_mode)
@@ -124,11 +132,16 @@ class DefaultPAAOperatorCLI(PAAOperatorCLI):
 
 def build_default_cli() -> DefaultPAAOperatorCLI:
     logger = NullStructuredLogger()
+    runtime_api_client = _build_runtime_api_client()
+    methodology_execution_preflight_service = None
+    if isinstance(runtime_api_client, InProcessRuntimeApiClient):
+        methodology_execution_preflight_service = runtime_api_client._operator_commands.methodology_execution_preflight_service
     return DefaultPAAOperatorCLI(
         logger=logger,
         environment_resolver=EnvironmentResolver(),
         renderer=OutputRenderer(),
-        operator_command_service=build_default_operator_command_service(logger=logger),
+        runtime_api_client=runtime_api_client,
+        methodology_execution_preflight_service=methodology_execution_preflight_service,
     )
 
 

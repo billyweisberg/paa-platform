@@ -19,6 +19,16 @@ from paa_core.application.dto.queue import (
     QueueSendRequest,
     QueueValidateRequest,
 )
+from paa_core.application.dto.operator import (
+    OperatorCommand,
+    OperatorCommandRequest,
+    OperatorCommandResult,
+    OperatorFailure,
+    OperatorInvocationContext,
+    OperatorOutputMessage,
+    OperatorOutputSection,
+    OperatorOutputTable,
+)
 from paa_core.application.dto.runtime import (
     RuntimeHostRunRequest,
     RuntimeLogsRequest,
@@ -30,10 +40,12 @@ from paa_core.application.dto.status import RuntimeSmokeRequest, RuntimeStatusRe
 from paa_core.application.dto.workflow import AutomationPreflightRequest, AutomationPreflightResultView
 from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
+    DefaultOperatorCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
     DefaultRuntimeReportApplicationService,
     DefaultRuntimeValidationApplicationService,
+    build_default_operator_command_service,
 )
 
 
@@ -53,6 +65,8 @@ def _to_jsonable(value: object) -> object:
 
 
 class RuntimeApiClient(Protocol):
+    def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
+    def supports_operator_command_family(self, command_family: str) -> bool: ...
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult: ...
     def state_info(self, request: QueueRepoRootRequest) -> QueueOperationResult: ...
     def check(self, request: QueueCheckRequest) -> QueueOperationResult: ...
@@ -89,12 +103,20 @@ class InProcessRuntimeApiClient:
         runtime_report: DefaultRuntimeReportApplicationService | None = None,
         runtime_validation: DefaultRuntimeValidationApplicationService | None = None,
         automation_preflight: DefaultAutomationPreflightApplicationService | None = None,
+        operator_commands: DefaultOperatorCommandApplicationService | None = None,
     ) -> None:
         self._queue_admin = queue_admin or DefaultQueueAdminApplicationService()
         self._runtime_admin = runtime_admin or DefaultRuntimeAdminApplicationService()
         self._runtime_report = runtime_report or DefaultRuntimeReportApplicationService()
         self._runtime_validation = runtime_validation or DefaultRuntimeValidationApplicationService()
         self._automation_preflight = automation_preflight or DefaultAutomationPreflightApplicationService()
+        self._operator_commands = operator_commands or build_default_operator_command_service(logger=_NullStructuredLogger())
+
+    def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        return self._operator_commands.run_command(request)
+
+    def supports_operator_command_family(self, command_family: str) -> bool:
+        return self._operator_commands.supports_command_family(command_family)
 
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult:
         return self._queue_admin.ensure_topology(request)
@@ -196,6 +218,14 @@ class HttpRuntimeApiClient:
         with urlopen(request) as response:  # noqa: S310
             return json.loads(response.read().decode('utf-8'))
 
+    def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
+        payload = self._post_json('/runtime/operators/command', request)
+        return _operator_command_result_from_payload(payload)
+
+    def supports_operator_command_family(self, command_family: str) -> bool:
+        payload = self._get_json(f'/runtime/operators/supports/{command_family}')
+        return bool(payload.get('supported', False))
+
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult:
         payload = self._post_json('/runtime/queues/ensure-topology', request)
         return QueueOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
@@ -295,6 +325,65 @@ class HttpRuntimeApiClient:
     def evaluate_automation_preflight(self, request: AutomationPreflightRequest) -> AutomationPreflightResultView:
         payload = self._post_json('/runtime/workflow/automation-preflight', request)
         return AutomationPreflightResultView(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+
+class _NullStructuredLogger:
+    def info(self, event: str, **fields: object) -> None:
+        del event, fields
+
+    def warning(self, event: str, **fields: object) -> None:
+        del event, fields
+
+
+def _operator_command_result_from_payload(payload: dict[str, Any]) -> OperatorCommandResult:
+    command_payload = cast(dict[str, Any], payload['command'])
+    failure_payload = cast(dict[str, Any] | None, payload.get('failure'))
+    sections_payload = cast(list[dict[str, Any]], payload.get('sections', []))
+    return OperatorCommandResult(
+        command=OperatorCommand(
+            command_family=str(command_payload['command_family']),
+            command_name=str(command_payload['command_name']),
+            subcommand_name=str(command_payload['subcommand_name']) if command_payload.get('subcommand_name') is not None else None,
+        ),
+        supported=bool(payload['supported']),
+        success=bool(payload['success']),
+        exit_code=int(payload['exit_code']),
+        sections=tuple(_operator_output_section_from_payload(section) for section in sections_payload),
+        failure=_operator_failure_from_payload(failure_payload),
+        metadata=cast(dict[str, Any], payload.get('metadata', {})),
+    )
+
+
+def _operator_output_section_from_payload(payload: dict[str, Any]) -> OperatorOutputSection:
+    messages_payload = cast(list[dict[str, Any]], payload.get('messages', []))
+    tables_payload = cast(list[dict[str, Any]], payload.get('tables', []))
+    return OperatorOutputSection(
+        title=str(payload['title']),
+        messages=tuple(
+            OperatorOutputMessage(level=str(message['level']), text=str(message['text'])) for message in messages_payload
+        ),
+        tables=tuple(
+            OperatorOutputTable(
+                title=str(table['title']),
+                columns=tuple(str(column) for column in cast(list[Any], table.get('columns', []))),
+                rows=tuple(tuple(str(cell) for cell in cast(list[Any], row)) for row in cast(list[list[Any]], table.get('rows', []))),
+            )
+            for table in tables_payload
+        ),
+        data=cast(dict[str, Any], payload.get('data', {})),
+    )
+
+
+def _operator_failure_from_payload(payload: dict[str, Any] | None) -> OperatorFailure | None:
+    if payload is None:
+        return None
+    return OperatorFailure(
+        code=str(payload['code']),
+        summary=str(payload['summary']),
+        details=tuple(str(detail) for detail in cast(list[Any], payload.get('details', []))),
+        blocking=bool(payload.get('blocking', True)),
+        metadata=cast(dict[str, Any], payload.get('metadata', {})),
+    )
 
 
 __all__ = ['HttpRuntimeApiClient', 'InProcessRuntimeApiClient', 'RuntimeApiClient']
