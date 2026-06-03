@@ -37,6 +37,22 @@ The package map should answer:
 - what is producer-only authority logic
 - what is deprecated residue
 
+## Hard CLI Constraint
+
+There is one user-facing CLI surface:
+- `paa`
+
+That rule applies to producer commands too.
+
+The target command shape is:
+- `paa producer ...`
+
+Not:
+- `paa_producer ...`
+
+`paa_producer` may exist only as transitional residue while the cutover completes.
+It is not part of the target system shape.
+
 ## Top-Level Package Roles
 
 ### `paa_cli`
@@ -48,7 +64,7 @@ Owns:
 - rendering
 - output shaping
 - command-family registration
-- thin dispatch into `paa_core.application`
+- thin dispatch into an API client / proxy that targets `paa_core.api`
 
 Does not own:
 - runtime business logic
@@ -95,6 +111,7 @@ packages/
   paa-cli/
     src/paa_cli/
       app.py
+      runtime_api_client.py
       router.py
       command_adapters.py
       rendering.py
@@ -112,11 +129,16 @@ packages/
           runtime_dispatch.py
           runtime_status.py
           authority_install.py
+          producer_commands.py
+          producer_authority.py
+          producer_derivation.py
+          producer_review.py
         dto/
           queue.py
           runtime.py
           authority.py
           status.py
+          producer.py
         services/
           queue_admin.py
           runtime_admin.py
@@ -124,6 +146,10 @@ packages/
           runtime_status.py
           authority_install.py
           automation_preflight.py
+          producer_commands.py
+          producer_authority.py
+          producer_derivation.py
+          producer_review.py
 
       api/
         runtime/
@@ -135,6 +161,7 @@ packages/
             packets.py
             workflow.py
             status.py
+            producer.py
 
       runtime/
         hosts/
@@ -184,16 +211,26 @@ packages/
           readiness.py
 
       producer/
+        commands.py
+        authority_support.py
+        authority_packet_support.py
+        authority_resolution.py
         authority_runtime.py
         architect_packet_preparer.py
+        brief_reviewer.py
+        brief_target_author.py
         design_package_deriver.py
         coder_brief_assembler.py
+        component_spec_materializer.py
+        derivation_readiness.py
+        derive_artifacts.py
         implementation_plan_deriver.py
+        implementation_plan_activity_state.py
         implementation_plan_progress.py
         publish.py
         issue_loader.py
         obligation_loader.py
-        smoke.py
+        smoke_test.py
 
       policies/
         acceptance/
@@ -238,6 +275,8 @@ The target host stack is:
 
 ```text
 Typer CLI
+  -> API client / proxy
+  -> FastAPI runtime gateway
   -> paa_core.application services
 
 FastAPI runtime gateway
@@ -247,6 +286,17 @@ Web app frontend
   -> FastAPI runtime gateway
 ```
 
+Producer commands follow the same stack:
+
+```text
+paa producer ...
+  -> API client / proxy
+  -> FastAPI runtime gateway
+  -> producer controllers
+  -> paa_core.application producer services
+  -> paa_core.producer business logic
+```
+
 The web app should not:
 - call repositories directly
 - call runtime hosts directly
@@ -254,6 +304,7 @@ The web app should not:
 
 The CLI should not:
 - call low-level queue/runtime helpers directly
+- call producer backend modules directly
 - bypass application service contracts
 
 The FastAPI layer should be:

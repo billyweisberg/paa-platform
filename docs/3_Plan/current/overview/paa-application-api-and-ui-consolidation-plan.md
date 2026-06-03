@@ -63,6 +63,11 @@ The real target is a system with:
 - one shared application-service layer
 - one shared set of DTO contracts
 
+The CLI rule must be interpreted strictly:
+- there is one user-facing CLI: `paa`
+- producer commands are part of that CLI
+- `paa_producer` is transitional residue only and must be removed as a peer CLI
+
 That means the host surfaces must be adapters over application services, not ad hoc callers of internal modules.
 
 ## Required Host Surfaces
@@ -78,6 +83,8 @@ Purpose:
 Rule:
 - Typer calls application services only
 - Typer does not call low-level runtime helpers directly
+- Typer does not call producer backend modules directly
+- Typer uses a client / proxy surface that targets the HTTP API or an in-process equivalent of that same API contract
 
 ### 2. FastAPI runtime gateway
 Purpose:
@@ -121,6 +128,10 @@ Examples:
 - `RuntimeValidationService`
 - `RuntimeReportService`
 - `AutomationPreflightService`
+- `ProducerCommandService`
+- `ProducerAuthorityService`
+- `ProducerDerivationService`
+- `ProducerReviewService`
 
 ### API B. External HTTP runtime API
 This is the FastAPI surface.
@@ -141,6 +152,11 @@ Examples:
 - `POST /runtime/packets/dispatch`
 - `GET /runtime/status/report`
 - `POST /runtime/workflow/acceptance`
+- `POST /runtime/producer/derive-artifacts`
+- `POST /runtime/producer/publish-authority-package`
+- `POST /runtime/producer/smoke-test`
+- `POST /runtime/producer/load-issue-into-paa`
+- `POST /runtime/producer/materialize-verification-obligations`
 
 The web UI should treat this HTTP API as its backend contract.
 
@@ -171,12 +187,17 @@ packages/
           runtime_validation.py
           runtime_report.py
           automation_preflight.py
+          producer_commands.py
+          producer_authority.py
+          producer_derivation.py
+          producer_review.py
         dto/
           queue.py
           runtime.py
           authority.py
           status.py
           workflow.py
+          producer.py
         services/
           queue_admin.py
           runtime_admin.py
@@ -186,6 +207,10 @@ packages/
           runtime_validation.py
           runtime_report.py
           automation_preflight.py
+          producer_commands.py
+          producer_authority.py
+          producer_derivation.py
+          producer_review.py
 
       api/
         runtime/
@@ -198,6 +223,7 @@ packages/
             workflow.py
             status.py
             reports.py
+            producer.py
 
       runtime/
         hosts/
@@ -232,6 +258,8 @@ If a host surface needs to:
 - generate a runtime status report
 - run preflight
 - install or validate runtime
+- publish producer authority
+- derive or review producer artifacts
 
 it should call an application service, not a low-level helper directly.
 
@@ -251,8 +279,18 @@ Do not recreate:
 - queue orchestration
 - workflow logic
 - packet routing logic
+- producer authority / derivation business logic
 
 inside FastAPI routers.
+
+### Rule 4A. Producer is part of the runtime system surface
+Producer is not a separate top-level tool or a sidecar backend.
+
+That means:
+- `paa producer ...` is part of the same command surface as runtime and queue commands
+- producer HTTP routes are part of the same FastAPI gateway
+- producer application services are part of the same application API
+- producer backend code lives under `paa_core.producer`
 
 ### Rule 5. Package relocation follows API stabilization
 Create the service and DTO seams first.

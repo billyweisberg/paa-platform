@@ -34,6 +34,7 @@ Summary: Provides the phased execution diagram for the target PAA package struct
 2. Do not build the web UI against raw runtime internals.
 3. FastAPI must sit on the same application services used by Typer.
 4. Package relocation follows service/API stabilization, not the other way around.
+5. Producer commands are part of the same `paa` CLI surface and must follow the same proxy/client -> HTTP API -> controller -> application-service path.
 
 ## Phased Target Tree
 
@@ -62,12 +63,17 @@ packages/
         │   │   ├── runtime_validation.py                       [Phase 1]
         │   │   ├── runtime_report.py                           [Phase 1]
         │   │   └── automation_preflight.py                     [Phase 1]
+        │   │   ├── producer_commands.py                        [Phase 1]
+        │   │   ├── producer_authority.py                       [Phase 1]
+        │   │   ├── producer_derivation.py                      [Phase 1]
+        │   │   └── producer_review.py                          [Phase 1]
         │   ├── dto/                                            [Phase 1 - build first]
         │   │   ├── queue.py                                    [Phase 1]
         │   │   ├── runtime.py                                  [Phase 1]
         │   │   ├── authority.py                                [Phase 1]
         │   │   ├── status.py                                   [Phase 1]
         │   │   └── workflow.py                                 [Phase 1]
+        │   │   └── producer.py                                 [Phase 1]
         │   └── services/                                       [Phase 1 - build first]
         │       ├── queue_admin.py                              [Phase 1]
         │       ├── runtime_admin.py                            [Phase 1]
@@ -77,6 +83,10 @@ packages/
         │       ├── runtime_validation.py                       [Phase 1]
         │       ├── runtime_report.py                           [Phase 1]
         │       └── automation_preflight.py                     [Phase 1]
+        │       ├── producer_commands.py                        [Phase 1]
+        │       ├── producer_authority.py                       [Phase 1]
+        │       ├── producer_derivation.py                      [Phase 1]
+        │       └── producer_review.py                          [Phase 1]
         │
         ├── api/                                                [Phase 2 - after application layer]
         │   └── runtime/
@@ -88,7 +98,8 @@ packages/
         │           ├── packets.py                              [Phase 2]
         │           ├── workflow.py                             [Phase 2]
         │           ├── status.py                               [Phase 2]
-        │           └── reports.py                              [Phase 2]
+        │           ├── reports.py                              [Phase 2]
+        │           └── producer.py                             [Phase 2]
         │
         ├── runtime/                                            [Phase 3 - move after APIs stabilize]
         │   ├── hosts/
@@ -138,16 +149,26 @@ packages/
         │       └── readiness.py                                [Phase 3 - move from readiness.py]
         │
         ├── producer/                                           [Phase 4 - fold top-level producer inward]
+        │   ├── commands.py                                     [Phase 4 - move from paa_producer]
+        │   ├── authority_support.py                            [Phase 4 - move from paa_producer support extraction]
+        │   ├── authority_packet_support.py                     [Phase 4 - move from paa_producer support extraction]
+        │   ├── authority_resolution.py                         [Phase 4 - move from paa_producer support extraction]
         │   ├── authority_runtime.py                            [Phase 4 - move from paa_producer]
         │   ├── architect_packet_preparer.py                    [Phase 4 - move from paa_producer]
+        │   ├── brief_reviewer.py                               [Phase 4 - move from paa_producer]
+        │   ├── brief_target_author.py                          [Phase 4 - move from paa_producer]
+        │   ├── component_spec_materializer.py                  [Phase 4 - move from paa_producer]
+        │   ├── derivation_readiness.py                         [Phase 4 - move from paa_producer]
+        │   ├── derive_artifacts.py                             [Phase 4 - move from paa_producer]
         │   ├── design_package_deriver.py                       [Phase 4 - move from paa_producer]
         │   ├── coder_brief_assembler.py                        [Phase 4 - move from paa_producer]
+        │   ├── implementation_plan_activity_state.py           [Phase 4 - move from paa_producer]
         │   ├── implementation_plan_deriver.py                  [Phase 4 - move from paa_producer]
         │   ├── implementation_plan_progress.py                 [Phase 4 - move from paa_producer]
         │   ├── publish.py                                      [Phase 4 - move from paa_producer]
         │   ├── issue_loader.py                                 [Phase 4 - move from paa_producer]
         │   ├── obligation_loader.py                            [Phase 4 - move from paa_producer]
-        │   └── smoke.py                                        [Phase 4 - move from paa_producer/smoke_test.py]
+        │   └── smoke_test.py                                   [Phase 4 - move from paa_producer]
         │
         ├── repositories/                                       [Phase 0 - exists]
         │   ├── component_design/                               [Phase 0 - exists]
