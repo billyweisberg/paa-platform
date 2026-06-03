@@ -37,6 +37,7 @@ It is the sequencing map for the target package refactor so we avoid doing file 
 6. The web app depends on FastAPI, not on core internals.
 7. Integration tests are preferred over unit tests for architecture slices.
 8. If a slice is not integrated enough to test meaningfully, use `basedpyright` and lint and continue implementing until the real command/API path exists.
+9. Local bootstrap and process-control commands may use a direct path only when they are responsible for starting or stopping the process that hosts the HTTP API.
 
 ## Ordered Build Graph
 

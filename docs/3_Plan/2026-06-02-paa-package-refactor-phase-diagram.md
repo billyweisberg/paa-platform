@@ -35,6 +35,7 @@ Summary: Provides the phased execution diagram for the target PAA package struct
 3. FastAPI must sit on the same application services used by Typer.
 4. Package relocation follows service/API stabilization, not the other way around.
 5. Producer commands are part of the same `paa` CLI surface and must follow the same proxy/client -> HTTP API -> controller -> application-service path.
+6. Local bootstrap and process-control commands are the only intentional direct path outside the HTTP API because they must be able to start or stop the process that hosts that API.
 
 ## Phased Target Tree
 
