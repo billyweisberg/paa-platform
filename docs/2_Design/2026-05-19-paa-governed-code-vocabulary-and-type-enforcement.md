@@ -157,7 +157,7 @@ Expected contents:
 
 Recommended first slice:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/workflow_lifecycle/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/execution_package_resolution/`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/repositories/implementation_plan/`
 
 Reason:

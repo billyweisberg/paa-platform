@@ -151,7 +151,7 @@ LIMIT 1;
             element_key="interfaces",
             title="Execution Resolution Service Interfaces",
             definition={
-                "primary_surface": "packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py",
+                "primary_surface": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/contracts.py",
                 "responsibility": "define the service contract surface",
             },
             metadata={"component_name": COMPONENT_NAME},
@@ -165,7 +165,7 @@ LIMIT 1;
             element_key="data_contract",
             title="Execution Resolution DTOs",
             definition={
-                "primary_surface": "packages/paa-core/src/paa_core/services/execution_package_resolution/models.py",
+                "primary_surface": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/models.py",
                 "responsibility": "define normalized resolution request and view models",
             },
             metadata={"component_name": COMPONENT_NAME},
@@ -179,7 +179,7 @@ LIMIT 1;
             element_key="functions",
             title="Execution Resolution Service Functions",
             definition={
-                "primary_surface": "packages/paa-core/src/paa_core/services/execution_package_resolution/default.py",
+                "primary_surface": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py",
                 "responsibility": "implement execution-context resolution behavior",
             },
             metadata={"component_name": COMPONENT_NAME},
@@ -215,7 +215,7 @@ LIMIT 1;
             title="ExecutionPackageResolutionService Interface",
             status="planned",
             sequence_order=10,
-            artifact_ref={"module_path": "packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py"},
+            artifact_ref={"module_path": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/contracts.py"},
             definition={"artifact_kind": "service_interface"},
             metadata={"component_name": COMPONENT_NAME},
         )
@@ -230,7 +230,7 @@ LIMIT 1;
             title="Execution Package Resolution DTOs",
             status="planned",
             sequence_order=20,
-            artifact_ref={"module_path": "packages/paa-core/src/paa_core/services/execution_package_resolution/models.py"},
+            artifact_ref={"module_path": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/models.py"},
             definition={"artifact_kind": "dto"},
             metadata={"component_name": COMPONENT_NAME},
         )
@@ -245,7 +245,7 @@ LIMIT 1;
             title="DefaultExecutionPackageResolutionService",
             status="planned",
             sequence_order=30,
-            artifact_ref={"module_path": "packages/paa-core/src/paa_core/services/execution_package_resolution/default.py"},
+            artifact_ref={"module_path": "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py"},
             definition={"artifact_kind": "service_implementation"},
             metadata={"component_name": COMPONENT_NAME},
         )
@@ -301,9 +301,9 @@ LIMIT 1;
             },
             touch_surfaces={
                 "modules": [
-                    "packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py",
-                    "packages/paa-core/src/paa_core/services/execution_package_resolution/models.py",
-                    "packages/paa-core/src/paa_core/services/execution_package_resolution/default.py",
+                    "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/contracts.py",
+                    "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/models.py",
+                    "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py",
                     "tests/unit/test_execution_package_resolution_service.py",
                 ]
             },
@@ -341,7 +341,7 @@ LIMIT 1;
             sequence_order=10,
             component_element_id=interface_element_id,
             component_element_realization_id=interface_realization_id,
-            target_path="packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py",
+            target_path="packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/contracts.py",
             target_module="contracts.py",
             planned_artifact_type_key="service_interface",
             metadata={"component_name": COMPONENT_NAME},
@@ -357,7 +357,7 @@ LIMIT 1;
             sequence_order=20,
             component_element_id=dto_element_id,
             component_element_realization_id=dto_realization_id,
-            target_path="packages/paa-core/src/paa_core/services/execution_package_resolution/models.py",
+            target_path="packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/models.py",
             target_module="models.py",
             planned_artifact_type_key="dto",
             metadata={"component_name": COMPONENT_NAME},
@@ -373,7 +373,7 @@ LIMIT 1;
             sequence_order=30,
             component_element_id=functions_element_id,
             component_element_realization_id=implementation_realization_id,
-            target_path="packages/paa-core/src/paa_core/services/execution_package_resolution/default.py",
+            target_path="packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py",
             target_module="default.py",
             planned_artifact_type_key="service_implementation",
             metadata={"component_name": COMPONENT_NAME},

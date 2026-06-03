@@ -139,11 +139,11 @@ Excluded responsibilities:
 
 | element_name | realization_kind | artifact_kind | artifact_target | verification_role |
 |---|---|---|---|---|
-| execution_context_resolution_interface | service_interface | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/contracts.py` | interface contract validation |
-| execution_context_resolution_models | dto | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/models.py` | DTO and record-shape validation |
-| execution_context_resolution_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/default.py` | behavioral and policy-integration validation |
+| execution_context_resolution_interface | service_interface | python-module | `packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/contracts.py` | interface contract validation |
+| execution_context_resolution_models | dto | python-module | `packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/models.py` | DTO and record-shape validation |
+| execution_context_resolution_logic | service_implementation | python-module | `packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py` | behavioral and policy-integration validation |
 | execution_context_resolution_verification_surface | test_module | python-module | `tests/unit/test_execution_package_resolution_service.py` | service-level validation and proof |
-| execution_context_resolution_logic | package_export | python-module | `packages/paa-core/src/paa_core/services/execution_package_resolution/__init__.py` | export-surface validation |
+| execution_context_resolution_logic | package_export | python-module | `packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/__init__.py` | export-surface validation |
 
 ## 2. Component State Model
 
@@ -588,7 +588,7 @@ Non-goals:
 ## Next Step
 
 Implement Phase 1 and Phase 2 for:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/execution_package_resolution/`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/`
 
 That first code slice should focus on:
 - service contract

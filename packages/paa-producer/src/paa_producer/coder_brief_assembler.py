@@ -192,7 +192,7 @@ def _derive_forbidden_surfaces(package: dict[str, Any]) -> list[str]:
     if 'workflow-lifecycle-implementation' in out_of_scope:
         forbidden.append('packages/paa-core/src/paa_core/services/workflow_lifecycle/')
     if 'execution-package-resolution-implementation' in out_of_scope:
-        forbidden.append('packages/paa-core/src/paa_core/services/execution_package_resolution/')
+        forbidden.append('packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/')
     if 'producer-derivation-orchestration' in out_of_scope:
         forbidden.append('packages/paa-producer/src/paa_producer/authority_runtime.py')
     if 'runtime-adoption' in out_of_scope:

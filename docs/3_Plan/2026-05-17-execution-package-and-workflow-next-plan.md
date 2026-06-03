@@ -97,7 +97,7 @@ The service shell now exists. The next move is to make it a real read service ov
 - focused unit tests
 
 ### Target files
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/execution_package_resolution/default.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/tests/unit/test_execution_package_resolution_service.py`
 
 ### Minimum scope
@@ -123,7 +123,7 @@ Once resolution reads work, capability evaluation and gap detection can be appli
 - focused unit tests
 
 ### Target files
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/services/execution_package_resolution/default.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/default.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/tests/unit/test_execution_package_resolution_service.py`
 
 ## Step 3. Validate execution-context bridge alignment
