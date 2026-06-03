@@ -40,7 +40,7 @@ from paa_core.services.techlead_closeout_decision import DefaultTechLeadCloseout
 from paa_core.services.techlead_delivery_review_decision import DefaultTechLeadDeliveryReviewDecisionService
 from paa_core.services.techlead_lineage_decision import DefaultTechLeadLineageDecisionService
 from paa_core.services.techlead_reset_recovery_decision import DefaultTechLeadResetRecoveryDecisionService
-from paa_core.services.techlead_worker import DefaultTechLeadWorkerService
+from paa_core.runtime.workers.techlead_worker import DefaultTechLeadWorkerService
 from paa_core.services.techlead_worker_review_routing import DefaultTechLeadWorkerReviewRoutingService
 
 _PREFLIGHTED_FAMILIES = {'component', 'plan'}

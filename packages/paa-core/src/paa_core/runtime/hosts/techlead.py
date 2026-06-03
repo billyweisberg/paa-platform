@@ -27,7 +27,7 @@ from paa_core.repositories.workflow_state import (
     WorkflowTransitionAppendSpec,
 )
 from paa_core.runtime.support.runtime_paths import repo_project_config_path, resolved_repo_runtime_queue_topology
-from paa_core.services.dev_worker import DevWorkerService
+from paa_core.runtime.workers.dev_worker import DevWorkerService
 from paa_core.runtime.packets.execution_package_resolution import (
     DefaultExecutionPackageResolutionService,
     ExecutionPackageResolutionService,
@@ -47,7 +47,7 @@ from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionService,
 )
-from paa_core.services.qa_worker import QAWorkerService
+from paa_core.runtime.workers.qa_worker import QAWorkerService
 from paa_core.services.queue_claim_runtime import (
     DefaultQueueClaimRuntimeService,
     QueueClaimRuntimeRequest,
@@ -65,7 +65,7 @@ from paa_core.services.techlead_closeout_decision import DefaultTechLeadCloseout
 from paa_core.services.techlead_delivery_review_decision import DefaultTechLeadDeliveryReviewDecisionService
 from paa_core.services.techlead_lineage_decision import DefaultTechLeadLineageDecisionService
 from paa_core.services.techlead_reset_recovery_decision import DefaultTechLeadResetRecoveryDecisionService
-from paa_core.services.techlead_worker import (
+from paa_core.runtime.workers.techlead_worker import (
     DefaultTechLeadWorkerService,
     TechLeadWorkerResult,
 )

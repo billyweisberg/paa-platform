@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from paa_core.services.dev_worker import DevWorkerResult
-from paa_core.services.qa_worker import QAWorkerResult
-from paa_core.services.techlead_worker import TechLeadWorkerResult
+from paa_core.runtime.workers.dev_worker import DevWorkerResult
+from paa_core.runtime.workers.qa_worker import QAWorkerResult
+from paa_core.runtime.workers.techlead_worker import TechLeadWorkerResult
 
 
 @dataclass(frozen=True)

@@ -13,7 +13,7 @@ from paa_core.services.dev_worker import (
     DefaultDevWorkerService,
     DevWorkerRequest,
 )
-from paa_core.services.dev_worker.contracts import (
+from paa_core.runtime.workers.dev_worker.contracts import (
     DevExecutionRunner,
     DevWorkerService,
     WorkerResultPacketAssembler,

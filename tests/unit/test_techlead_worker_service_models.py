@@ -13,7 +13,7 @@ from paa_core.services.techlead_worker import (
     TechLeadWorkerRequest,
     TechLeadWorkerResult,
 )
-from paa_core.services.techlead_worker.contracts import TechLeadWorkerService
+from paa_core.runtime.workers.techlead_worker.contracts import TechLeadWorkerService
 
 
 class TechLeadWorkerServiceModelsTests(unittest.TestCase):

@@ -22,7 +22,7 @@ from paa_core.services.techlead_worker import (
     TECHLEAD_WORKER_SERVICE_METADATA,
     TechLeadWorkerRequest,
 )
-from paa_core.services.techlead_worker.contracts import TechLeadWorkerService
+from paa_core.runtime.workers.techlead_worker.contracts import TechLeadWorkerService
 from paa_core.services.techlead_worker_review_routing import (
     TechLeadWorkerReviewRoutingResult,
     TechLeadWorkerReviewRoutingSummary,

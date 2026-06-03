@@ -19,7 +19,7 @@ from paa_core.services.qa_worker import (
     QA_WORKER_SERVICE_METADATA,
     QAWorkerRequest,
 )
-from paa_core.services.qa_worker.contracts import (
+from paa_core.runtime.workers.qa_worker.contracts import (
     QAVerificationPacketAssembler,
     QAVerificationRunner,
     QAWorkerService,

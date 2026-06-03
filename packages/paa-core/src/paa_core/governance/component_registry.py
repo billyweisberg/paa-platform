@@ -41,16 +41,16 @@ from paa_core.services.techlead_assignment_decision import (
 from paa_core.services.techlead_worker_review_routing import (
     TECHLEAD_WORKER_REVIEW_ROUTING_SERVICE_METADATA,
 )
-from paa_core.services.techlead_worker import (
+from paa_core.runtime.workers.techlead_worker import (
     TECHLEAD_WORKER_SERVICE_METADATA,
 )
 from paa_core.runtime.packets.context_assembly import (
     PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,
 )
-from paa_core.services.dev_worker import (
+from paa_core.runtime.workers.dev_worker import (
     DEV_WORKER_SERVICE_METADATA,
 )
-from paa_core.services.qa_worker import (
+from paa_core.runtime.workers.qa_worker import (
     QA_WORKER_SERVICE_METADATA,
 )
 from paa_core.services.queue_packet_runtime_controller import (

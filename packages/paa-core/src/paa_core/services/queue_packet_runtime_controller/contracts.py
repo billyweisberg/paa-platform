@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from paa_core.services.dev_worker import DevWorkerService
+from paa_core.runtime.workers.dev_worker import DevWorkerService
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.qa_worker import QAWorkerService
-from paa_core.services.techlead_worker import TechLeadWorkerService
+from paa_core.runtime.workers.qa_worker import QAWorkerService
+from paa_core.runtime.workers.techlead_worker import TechLeadWorkerService
 
 from .models import QueuePacketRuntimeRequest, QueuePacketRuntimeResult
 
