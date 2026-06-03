@@ -14,6 +14,7 @@ from paa_core.api.runtime.routers.hosts import router as host_router
 from paa_core.api.runtime.routers.ops import router as ops_router
 from paa_core.api.runtime.routers.operators import router as operator_router
 from paa_core.api.runtime.routers.packets import router as packet_router
+from paa_core.api.runtime.routers.producer import router as producer_router
 from paa_core.api.runtime.routers.queues import router as queue_router
 from paa_core.api.runtime.routers.reports import router as report_router
 from paa_core.api.runtime.routers.status import router as status_router
@@ -43,6 +44,7 @@ def build_runtime_api_app():
     app.include_router(ops_router)
     app.include_router(operator_router)
     app.include_router(packet_router)
+    app.include_router(producer_router)
     app.include_router(queue_router)
     app.include_router(status_router)
     app.include_router(report_router)

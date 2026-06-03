@@ -1049,17 +1049,26 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertTrue(payload['ok'])
         fake_service.runtime_smoke.assert_called_once()
 
-    def test_producer_command_dispatches_through_unified_paa_cli(self) -> None:
+    def test_producer_command_dispatches_through_runtime_api_client(self) -> None:
         app, _, _ = self._typer_cli()
 
-        with unittest.mock.patch('paa_cli.app._producer_main', return_value=0) as producer_main:
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.producer import ProducerOperationResult
+        fake_service.derive_artifacts.return_value = ProducerOperationResult(
+            payload={'ok': True, 'command': 'derive-artifacts'},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
             result = self.runner.invoke(
                 app,
                 ['producer', 'derive-artifacts', '--repo-root', str(ROOT)],
             )
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
-        producer_main.assert_called_once_with(['derive-artifacts', '--repo-root', str(ROOT)])
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['command'], 'derive-artifacts')
+        fake_service.derive_artifacts.assert_called_once()
 
     def test_producer_help_is_available_under_paa(self) -> None:
         app, _, _ = self._typer_cli()

@@ -1,6 +1,7 @@
 from .authority_install import AuthorityInstallService
 from .automation_preflight import AutomationPreflightService
 from .operator_commands import OperatorCommandService
+from .producer_commands import ProducerCommandService
 from .queue_admin import QueueAdminService
 from .runtime_dispatch import RuntimeDispatchService
 from .runtime_install import RuntimeInstallService
@@ -12,6 +13,7 @@ __all__ = [
     'AuthorityInstallService',
     'AutomationPreflightService',
     'OperatorCommandService',
+    'ProducerCommandService',
     'QueueAdminService',
     'RuntimeAdminService',
     'RuntimeDispatchService',

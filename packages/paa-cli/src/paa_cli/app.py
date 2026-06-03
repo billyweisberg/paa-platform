@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
-import sys
 from dataclasses import asdict, is_dataclass
-from importlib import import_module
 from pathlib import Path
 from typing import Any, Final, cast
 
@@ -32,6 +31,13 @@ from paa_core.application.dto.queue import (
 from paa_core.application.dto.authority import AuthorityInstallRequest
 from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
+from paa_core.application.dto.producer import (
+    ProducerDeriveArtifactsRequest,
+    ProducerLoadIssueRequest,
+    ProducerMaterializeVerificationObligationsRequest,
+    ProducerPublishAuthorityPackageRequest,
+    ProducerSmokeTestRequest,
+)
 from paa_core.application.dto.runtime import (
     RuntimeHostRunRequest,
     RuntimeInstallRequest,
@@ -64,15 +70,113 @@ def _emit_json_result(result: object) -> None:
     typer.echo(json.dumps(payload, indent=2))
 
 
-def _producer_main(argv: list[str]) -> int:
-    producer_main = getattr(import_module('paa_producer.__main__'), 'main')
-    original_argv = list(sys.argv)
-    try:
-        sys.argv = ['paa-producer', *argv]
-        result = producer_main()
-    finally:
-        sys.argv = original_argv
-    return int(result) if result is not None else 0
+def _producer_repo_root(raw_repo_root: str | None) -> Path:
+    return Path(raw_repo_root).resolve() if raw_repo_root else Path.cwd().resolve()
+
+
+def _producer_project_config(raw_project_config: str | None, *, parser: argparse.ArgumentParser) -> Path:
+    if raw_project_config is None:
+        parser.error('--project-config is required')
+    return Path(raw_project_config).resolve()
+
+
+def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient) -> int:
+    command = argv[0]
+    remainder = argv[1:]
+
+    if command == 'derive-artifacts':
+        parser = argparse.ArgumentParser(prog='paa producer derive-artifacts', allow_abbrev=False)
+        parser.add_argument('--repo-root')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.derive_artifacts(
+            ProducerDeriveArtifactsRequest(repo_root=_producer_repo_root(args.repo_root))
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'publish-authority-package':
+        parser = argparse.ArgumentParser(prog='paa producer publish-authority-package', allow_abbrev=False)
+        parser.add_argument('--repo-root')
+        parser.add_argument('--project-config')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.publish_authority_package(
+            ProducerPublishAuthorityPackageRequest(
+                repo_root=_producer_repo_root(args.repo_root),
+                project_config=_producer_project_config(args.project_config, parser=parser),
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'smoke-test':
+        parser = argparse.ArgumentParser(prog='paa producer smoke-test', allow_abbrev=False)
+        parser.add_argument('--repo-root')
+        parser.add_argument('--output')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.producer_smoke_test(
+            ProducerSmokeTestRequest(
+                repo_root=_producer_repo_root(args.repo_root),
+                output_path=Path(args.output).resolve() if args.output else None,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'load-issue-into-paa':
+        parser = argparse.ArgumentParser(prog='paa producer load-issue-into-paa', allow_abbrev=False)
+        parser.add_argument('--repo-root')
+        parser.add_argument('--project-config')
+        parser.add_argument('--issue-number', required=True, type=int)
+        parser.add_argument('--verification-key-prefix')
+        parser.add_argument('--scope-authority-label')
+        parser.add_argument('--dry-run', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.load_issue_into_paa(
+            ProducerLoadIssueRequest(
+                repo_root=_producer_repo_root(args.repo_root),
+                project_config=_producer_project_config(args.project_config, parser=parser),
+                issue_number=args.issue_number,
+                verification_key_prefix=args.verification_key_prefix,
+                scope_authority_label=args.scope_authority_label,
+                dry_run=args.dry_run,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'materialize-verification-obligations':
+        parser = argparse.ArgumentParser(
+            prog='paa producer materialize-verification-obligations',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--repo-root')
+        parser.add_argument('--project-config')
+        parser.add_argument('--issue-number', required=True, type=int)
+        parser.add_argument('--package-path')
+        parser.add_argument('--verification-key-prefix')
+        parser.add_argument('--scope-authority-label')
+        parser.add_argument('--dry-run', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.materialize_verification_obligations(
+            ProducerMaterializeVerificationObligationsRequest(
+                repo_root=_producer_repo_root(args.repo_root),
+                project_config=_producer_project_config(args.project_config, parser=parser),
+                issue_number=args.issue_number,
+                package_path=Path(args.package_path).resolve() if args.package_path else None,
+                verification_key_prefix=args.verification_key_prefix,
+                scope_authority_label=args.scope_authority_label,
+                dry_run=args.dry_run,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    typer.echo(
+        f"Producer command '{command}' is not yet migrated to the unified runtime API. "
+        'Supported now: derive-artifacts, publish-authority-package, smoke-test, '
+        'load-issue-into-paa, materialize-verification-obligations.'
+    )
+    return 2
 
 
 class NullStructuredLogger:
@@ -1142,7 +1246,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         if not ctx.args:
             typer.echo(ctx.get_help())
             raise typer.Exit(code=0)
-        raise typer.Exit(code=_producer_main(ctx.args))
+        raise typer.Exit(code=_run_producer_command(ctx.args, _build_runtime_api_client()))
 
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')

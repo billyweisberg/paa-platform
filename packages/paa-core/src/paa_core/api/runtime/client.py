@@ -30,6 +30,14 @@ from paa_core.application.dto.operator import (
     OperatorOutputSection,
     OperatorOutputTable,
 )
+from paa_core.application.dto.producer import (
+    ProducerDeriveArtifactsRequest,
+    ProducerLoadIssueRequest,
+    ProducerMaterializeVerificationObligationsRequest,
+    ProducerOperationResult,
+    ProducerPublishAuthorityPackageRequest,
+    ProducerSmokeTestRequest,
+)
 from paa_core.application.dto.runtime import (
     RuntimeInstallRequest,
     RuntimeHostRunRequest,
@@ -44,6 +52,7 @@ from paa_core.application.services import (
     DefaultAuthorityInstallApplicationService,
     DefaultAutomationPreflightApplicationService,
     DefaultOperatorCommandApplicationService,
+    DefaultProducerCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
     DefaultRuntimeInstallApplicationService,
@@ -74,6 +83,14 @@ class RuntimeApiClient(Protocol):
     def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult: ...
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
     def supports_operator_command_family(self, command_family: str) -> bool: ...
+    def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
+    def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult: ...
+    def producer_smoke_test(self, request: ProducerSmokeTestRequest) -> ProducerOperationResult: ...
+    def load_issue_into_paa(self, request: ProducerLoadIssueRequest) -> ProducerOperationResult: ...
+    def materialize_verification_obligations(
+        self,
+        request: ProducerMaterializeVerificationObligationsRequest,
+    ) -> ProducerOperationResult: ...
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult: ...
     def state_info(self, request: QueueRepoRootRequest) -> QueueOperationResult: ...
     def check(self, request: QueueCheckRequest) -> QueueOperationResult: ...
@@ -112,6 +129,7 @@ class InProcessRuntimeApiClient:
         runtime_validation: DefaultRuntimeValidationApplicationService | None = None,
         automation_preflight: DefaultAutomationPreflightApplicationService | None = None,
         operator_commands: DefaultOperatorCommandApplicationService | None = None,
+        producer_commands: DefaultProducerCommandApplicationService | None = None,
         authority_install: DefaultAuthorityInstallApplicationService | None = None,
     ) -> None:
         self._queue_admin = queue_admin or DefaultQueueAdminApplicationService()
@@ -121,6 +139,7 @@ class InProcessRuntimeApiClient:
         self._runtime_validation = runtime_validation or DefaultRuntimeValidationApplicationService()
         self._automation_preflight = automation_preflight or DefaultAutomationPreflightApplicationService()
         self._operator_commands = operator_commands or build_default_operator_command_service(logger=_NullStructuredLogger())
+        self._producer_commands = producer_commands or DefaultProducerCommandApplicationService()
         self._authority_install = authority_install or DefaultAuthorityInstallApplicationService()
 
     def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
@@ -137,6 +156,24 @@ class InProcessRuntimeApiClient:
 
     def supports_operator_command_family(self, command_family: str) -> bool:
         return self._operator_commands.supports_command_family(command_family)
+
+    def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
+        return self._producer_commands.derive_artifacts(request)
+
+    def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult:
+        return self._producer_commands.publish_authority_package(request)
+
+    def producer_smoke_test(self, request: ProducerSmokeTestRequest) -> ProducerOperationResult:
+        return self._producer_commands.smoke_test(request)
+
+    def load_issue_into_paa(self, request: ProducerLoadIssueRequest) -> ProducerOperationResult:
+        return self._producer_commands.load_issue_into_paa(request)
+
+    def materialize_verification_obligations(
+        self,
+        request: ProducerMaterializeVerificationObligationsRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.materialize_verification_obligations(request)
 
     def ensure_topology(self, request: QueueRepoRootRequest) -> QueueOperationResult:
         return self._queue_admin.ensure_topology(request)
@@ -245,6 +282,29 @@ class HttpRuntimeApiClient:
     def supports_operator_command_family(self, command_family: str) -> bool:
         payload = self._get_json(f'/runtime/operators/supports/{command_family}')
         return bool(payload.get('supported', False))
+
+    def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/derive-artifacts', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/publish-authority-package', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def producer_smoke_test(self, request: ProducerSmokeTestRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/smoke-test', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def load_issue_into_paa(self, request: ProducerLoadIssueRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/load-issue-into-paa', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def materialize_verification_obligations(
+        self,
+        request: ProducerMaterializeVerificationObligationsRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/materialize-verification-obligations', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
         payload = self._post_json('/runtime/authority/install-package', request)

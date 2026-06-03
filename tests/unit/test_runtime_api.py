@@ -14,6 +14,7 @@ from paa_core.api.runtime.dependencies import (
     get_authority_install_service,
     get_automation_preflight_service,
     get_operator_command_service,
+    get_producer_command_service,
     get_queue_admin_service,
     get_runtime_admin_service,
     get_runtime_dispatch_service,
@@ -29,6 +30,7 @@ from paa_core.application.dto.operator import (
     OperatorOutputMessage,
     OperatorOutputSection,
 )
+from paa_core.application.dto.producer import ProducerOperationResult
 from paa_core.application.dto.runtime import RuntimeOperationResult
 from paa_core.application.dto.status import RuntimeStatusResultView, TechLeadServiceMapResultView
 from paa_core.application.dto.workflow import AutomationPreflightResultView
@@ -165,6 +167,23 @@ class _FakeRuntimeInstallService:
         return RuntimeOperationResult(payload={'ok': True, 'action': 'update', 'project_pack': request.project_pack})
 
 
+class _FakeProducerCommandService:
+    def derive_artifacts(self, request):
+        return ProducerOperationResult(payload={'ok': True, 'command': 'derive-artifacts', 'repo_root': str(request.repo_root)})
+
+    def publish_authority_package(self, request):
+        return ProducerOperationResult(payload={'ok': True, 'command': 'publish-authority-package', 'project_config': str(request.project_config)})
+
+    def smoke_test(self, request):
+        return ProducerOperationResult(payload={'ok': True, 'command': 'smoke-test', 'repo_root': str(request.repo_root)})
+
+    def load_issue_into_paa(self, request):
+        return ProducerOperationResult(payload={'ok': True, 'command': 'load-issue-into-paa', 'issue_number': request.issue_number})
+
+    def materialize_verification_obligations(self, request):
+        return ProducerOperationResult(payload={'ok': True, 'command': 'materialize-verification-obligations', 'issue_number': request.issue_number})
+
+
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = build_runtime_api_app()
@@ -177,6 +196,7 @@ class RuntimeApiTests(unittest.TestCase):
         self.app.dependency_overrides[get_runtime_report_service] = lambda: _FakeRuntimeReportService()
         self.app.dependency_overrides[get_automation_preflight_service] = lambda: _FakeAutomationPreflightService()
         self.app.dependency_overrides[get_operator_command_service] = lambda: _FakeOperatorCommandService()
+        self.app.dependency_overrides[get_producer_command_service] = lambda: _FakeProducerCommandService()
         self.client = TestClient(self.app)
 
     def test_healthz(self) -> None:
@@ -219,6 +239,19 @@ class RuntimeApiTests(unittest.TestCase):
         response = self.client.post('/runtime/ops/install-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['action'], 'install')
+
+    def test_producer_derive_artifacts(self) -> None:
+        response = self.client.post('/runtime/producer/derive-artifacts', json={'repo_root': str(ROOT)})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['command'], 'derive-artifacts')
+
+    def test_producer_load_issue_into_paa(self) -> None:
+        response = self.client.post(
+            '/runtime/producer/load-issue-into-paa',
+            json={'repo_root': str(ROOT), 'project_config': str(ROOT / 'project.json'), 'issue_number': 12},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['issue_number'], 12)
 
     def test_update_runtime(self) -> None:
         response = self.client.post('/runtime/ops/update-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})

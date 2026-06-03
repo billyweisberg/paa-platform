@@ -4,6 +4,7 @@ from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
     DefaultAuthorityInstallApplicationService,
     DefaultOperatorCommandApplicationService,
+    DefaultProducerCommandApplicationService,
     DefaultQueueAdminApplicationService,
     DefaultRuntimeAdminApplicationService,
     DefaultRuntimeDispatchApplicationService,
@@ -28,6 +29,10 @@ def get_operator_command_service() -> DefaultOperatorCommandApplicationService:
 
 def get_authority_install_service() -> DefaultAuthorityInstallApplicationService:
     return DefaultAuthorityInstallApplicationService()
+
+
+def get_producer_command_service() -> DefaultProducerCommandApplicationService:
+    return DefaultProducerCommandApplicationService()
 
 
 def get_queue_admin_service() -> DefaultQueueAdminApplicationService:
