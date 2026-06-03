@@ -12,7 +12,7 @@ from paa_core.application.dto.queue import (
     QueueSendRequest,
     QueueValidateRequest,
 )
-from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
+from paa_core.runtime.transport.queue_admin import DefaultRuntimeQueueAdminService
 
 
 class DefaultQueueAdminApplicationService:

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from paa_core.runtime.support.runtime_paths import repo_authority_manifest_path, repo_producer_bin
-from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
+from paa_core.runtime.transport.queue_admin import DefaultRuntimeQueueAdminService
 
 
 @dataclass(frozen=True)

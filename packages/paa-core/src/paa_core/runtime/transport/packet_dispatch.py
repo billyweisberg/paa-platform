@@ -7,7 +7,7 @@ from typing import Any
 
 from paa_core.runtime.transport.claim_ledger import load_json
 from paa_core.runtime.transport.packet_envelope import validate_envelope
-from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
+from paa_core.runtime.transport.queue_admin import DefaultRuntimeQueueAdminService
 
 
 def resolve_techlead_packet_queue(message: dict[str, Any], repo_root: Path | None = None) -> str:

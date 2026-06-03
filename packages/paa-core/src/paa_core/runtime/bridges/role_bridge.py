@@ -12,7 +12,7 @@ from paa_core.runtime.transport.claim_ledger import load_json
 from paa_core.runtime.transport.packet_envelope import validate_envelope
 from paa_core.runtime.transport.packet_dispatch import dispatch_packet, resolve_packet_queue
 from paa_core.runtime.support.runtime_paths import repo_producer_bin
-from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
+from paa_core.runtime.transport.queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.runtime.bridges.worktree import (
     DefaultRuntimeWorktreeService,
     RuntimeWorktreeInspectRequest,

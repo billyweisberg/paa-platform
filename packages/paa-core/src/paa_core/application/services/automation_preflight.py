@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from paa_core.application.dto.workflow import AutomationPreflightRequest, AutomationPreflightResultView
-from paa_core.services.automation_preflight import DefaultAutomationPreflightService
+from paa_core.runtime.workflow.automation_preflight import DefaultAutomationPreflightService
 
 
 class DefaultAutomationPreflightApplicationService:
