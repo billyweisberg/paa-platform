@@ -8,14 +8,14 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from paa_core.claim_ledger import FileQueueClaimLedgerRepository, load_json, utc_now
+from paa_core.runtime.transport.claim_ledger import FileQueueClaimLedgerRepository, load_json, utc_now
 from paa_core.config import (
     DEFAULT_RUNTIME_QUEUE_EXCHANGE,
     runtime_queue_name_for_role,
     runtime_queue_name_for_schema,
 )
-from paa_core.packet_envelope import normalize_role_name, validate_envelope
-from paa_core.queue_transport import RabbitMQManagementClient, build_default_management_client
+from paa_core.runtime.transport.packet_envelope import normalize_role_name, validate_envelope
+from paa_core.runtime.transport.rabbitmq import RabbitMQManagementClient, build_default_management_client
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository, RuntimeEventRepository
 from paa_core.runtime_evidence import persist_qa_verification, persist_slice_result
 from paa_core.runtime_paths import repo_queue_state_root, resolved_repo_runtime_queue_topology

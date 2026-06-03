@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from paa_core.application.dto.runtime import RuntimeDispatchRequest, RuntimeOperationResult
-from paa_core.runtime_packet_dispatch import dispatch_packet, dispatch_techlead_packet
+from paa_core.runtime.transport.packet_dispatch import dispatch_packet, dispatch_techlead_packet
 
 
 class DefaultRuntimeDispatchApplicationService:

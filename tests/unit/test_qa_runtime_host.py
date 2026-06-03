@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.qa_runtime_host import QARuntimeHost, _QAVerificationPublisher
+from paa_core.runtime.hosts.qa import QARuntimeHost, _QAVerificationPublisher
 from paa_core.services.packet_reference_resolution import (
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionResult,

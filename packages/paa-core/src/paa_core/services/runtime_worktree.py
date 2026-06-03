@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from paa_core.claim_ledger import load_json
+from paa_core.runtime.transport.claim_ledger import load_json
 from paa_core.team_worker_roles import active_team_worker_roles
 
 

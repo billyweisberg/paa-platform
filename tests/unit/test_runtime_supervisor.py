@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.runtime_hosts import RuntimeSupervisor
+from paa_core.runtime.hosts.supervisor import RuntimeSupervisor
 
 
 class _FakeHost:

@@ -14,7 +14,7 @@ from paa_core.runtime_control import (
     start_runtime_supervisor,
     stop_runtime_supervisor,
 )
-from paa_core.runtime_hosts import (
+from paa_core.runtime.hosts.supervisor import (
     build_dev_runtime_host,
     build_qa_runtime_host,
     build_runtime_supervisor,

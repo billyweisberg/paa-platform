@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable
 
-from paa_core.packet_envelope import normalize_role_name
+from paa_core.runtime.transport.packet_envelope import normalize_role_name
 from paa_core.services.techlead_acceptance_decision import (
     DefaultTechLeadAcceptanceDecisionService,
 )

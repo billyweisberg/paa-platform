@@ -10,8 +10,8 @@ from typing import Any
 from paa_core.services.runtime_queue_admin import DefaultRuntimeQueueAdminService
 from paa_core.team_worker_roles import active_team_worker_roles, team_worker_role_by_key
 from paa_core.runtime_paths import resolved_repo_runtime_queue_topology
-from paa_core.claim_ledger import FileQueueClaimLedgerRepository
-from paa_core.packet_envelope import normalize_role_name
+from paa_core.runtime.transport.claim_ledger import FileQueueClaimLedgerRepository
+from paa_core.runtime.transport.packet_envelope import normalize_role_name
 
 QUEUE_PREVIEW_DEPTH = 10
 TECHLEAD_GATE_SCHEMA_TYPES = {
