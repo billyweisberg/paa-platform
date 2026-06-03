@@ -116,7 +116,6 @@ packages/
   paa-cli/
     src/paa_cli/
       app.py
-      runtime_api_client.py
       router.py
       command_adapters.py
       rendering.py
@@ -162,6 +161,7 @@ packages/
       api/
         runtime/
           app.py
+          client.py
           dependencies.py
           routers/
             operators.py
@@ -276,6 +276,13 @@ packages/
     src/paa_consumer/
       __main__.py
       __init__.py
+
+tests/
+  integration/
+    cli/
+    api/
+    runtime/
+    producer/
 ```
 
 ## UI And API Layers
@@ -305,6 +312,27 @@ paa producer ...
   -> paa_core.application producer services
   -> paa_core.producer business logic
 ```
+
+## Validation Architecture
+
+The target validation model is:
+
+```text
+integration tests
+  -> exercise paa CLI commands
+  -> exercise FastAPI routes
+  -> exercise real application-service orchestration paths
+
+static validation
+  -> basedpyright
+  -> lint
+```
+
+Rules:
+- prefer integration tests over unit tests for architecture slices
+- do not manufacture unit tests that only reassert internal helper behavior without proving the real system path
+- if a slice is not integrated enough to support a meaningful integration test yet, use `basedpyright` and lint and continue implementing the system
+- add integration coverage as soon as the command path or API route is real
 
 The web app should not:
 - call repositories directly

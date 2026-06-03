@@ -40,6 +40,8 @@ It is the sequencing map for the target package refactor so we avoid doing file 
 4. Application services come before Typer rewiring.
 5. Runtime and producer package moves come after the service/API seams are stable.
 6. The web app depends on FastAPI, not on core internals.
+7. Integration tests are preferred over unit tests for architecture slices.
+8. If a slice is not integrated enough to test meaningfully, use `basedpyright` and lint and continue implementing until the real command/API path exists.
 
 ## Ordered Build Graph
 
@@ -127,6 +129,7 @@ At this tier:
 - `paa_cli` stops calling direct helpers
 - `paa_cli` stops mixing router/adapters with ad hoc direct runtime calls
 - Typer becomes a consistent host over application services
+- producer commands also move toward the same `paa` host surface instead of staying in a peer CLI
 
 ### Tier 5. FastAPI runtime gateway
 May happen only after Tiers 1-3 exist.
@@ -137,6 +140,10 @@ At this tier:
 - router modules for supervisor, queues, packets, workflow, status, reports
 
 FastAPI depends on the same application services Typer uses.
+
+Validation rule at this tier:
+- add integration coverage for the real `paa` command path or FastAPI route whenever the path exists
+- do not substitute low-value helper unit tests for missing integration work
 
 ### Tier 6. Runtime relocation
 May happen only after Typer and FastAPI are both backed by application services.
@@ -198,3 +205,12 @@ That creates the first real application-service seam without waiting for the who
 If a proposed refactor step does not clearly fit into one of the tiers above, stop and re-evaluate it before coding.
 
 That is how we avoid another parallel structure or unplanned adapter layer.
+
+## Validation Rule
+
+The preferred validation order for architecture work is:
+1. integration test through `paa` command path or FastAPI route
+2. `basedpyright`
+3. lint
+
+If step 1 is not possible yet because the path is not real, do steps 2 and 3 and keep implementing until step 1 becomes possible.

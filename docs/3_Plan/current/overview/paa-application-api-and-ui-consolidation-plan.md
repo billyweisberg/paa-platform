@@ -218,6 +218,7 @@ packages/
       api/
         runtime/
           app.py
+          client.py
           dependencies.py
           routers/
             operators.py
@@ -244,6 +245,13 @@ packages/
       policies/
       governance/
       domain/
+
+tests/
+  integration/
+    cli/
+    api/
+    runtime/
+    producer/
 ```
 
 ## Architectural Rules
@@ -300,6 +308,14 @@ That means:
 Create the service and DTO seams first.
 Then move code into the target package map.
 
+### Rule 6. Integration validation beats unit-level reassertion
+For architecture slices:
+- prefer integration tests that exercise `paa` command paths or FastAPI routes
+- prefer tests that prove CLI -> proxy/client -> HTTP API -> controller -> application-service behavior
+- do not spend time writing unit tests that only restate helper behavior without proving the real system path
+- if a slice is not integrated enough for a meaningful integration test yet, use `basedpyright` and lint and continue implementing
+- add the integration test as soon as the command path or API route becomes real
+
 ## Execution Order
 
 ### Phase 1. Create the application layer skeleton
@@ -325,11 +341,13 @@ Replace direct Typer calls to:
 - runtime host builders
 - runtime install/validate helpers
 - report helpers
+- producer helper entrypoints
 
 with calls into the application services.
 
 Goal:
 - `paa_cli` becomes a thin host over `paa_core.application`
+- `paa` remains the only user-facing CLI surface
 
 ### Phase 3. Define the FastAPI runtime gateway
 Create:
@@ -345,6 +363,7 @@ First HTTP slices:
 
 Goal:
 - a real network API over the same application services used by Typer
+- producer commands follow the same HTTP/API path as runtime commands
 
 ### Phase 4. Package relocation
 After Phases 1-3 are in place:
@@ -354,6 +373,7 @@ After Phases 1-3 are in place:
 
 Goal:
 - file layout matches the stabilized architecture instead of leading it
+- `paa_producer` no longer exists as a peer CLI surface
 
 ### Phase 5. Web UI readiness
 After FastAPI is stable:
