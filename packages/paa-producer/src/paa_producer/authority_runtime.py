@@ -48,51 +48,11 @@ from paa_core.producer.authority_packet_support import (
     write_review_markdown,
 )
 
-def build_authority_context(manifest: Path, manifest_data: dict, package: dict):
-    task = find_task(manifest_data, task_id=package['authority_context']['task_id'])
-    authority_context = {
-        'manifest_path': str(manifest),
-        'authority_version': package['authority_context'].get('authority_version') or manifest_data['project']['authority_version'],
-        'milestone_id': package['authority_context']['milestone_id'],
-        'phase_id': package['authority_context']['phase_id'],
-        'task_id': package['authority_context']['task_id'],
-    }
-    if task:
-        authority_context.update({
-            'authority_version': manifest_data['project']['authority_version'],
-            'issue_number': task.get('issue_number'),
-            'task_title': task.get('title'),
-        })
-    return authority_context, task
-
-
-def resolve_brief_for_packet(
-    *,
-    project_slug: str,
-    package_id_external: str,
-    brief_id_external: str,
-    require_ready: bool = True,
-):
-    briefs = load_ready_coder_briefs_from_paa(
-        project_slug=project_slug,
-        package_id_external=package_id_external,
-    )
-    if not briefs:
-        raise RuntimeError(f'No coder briefs found for design package {package_id_external}')
-    selected = None
-    for brief in briefs:
-        if brief['brief_id_external'] == brief_id_external:
-            selected = brief
-            break
-    if not selected:
-        raise RuntimeError(f'Brief {brief_id_external} not found in design package {package_id_external}')
-    if require_ready and selected['readiness_state'] not in {'execution_ready', 'parallel_ready'}:
-        raise RuntimeError(
-            f"Brief {brief_id_external} is not execution-eligible "
-            f"(readiness={selected['readiness_state']})"
-        )
-    return selected
-
+from paa_core.producer.authority_resolution import (
+    build_authority_context,
+    find_task,
+    resolve_brief_for_packet,
+)
 
 def derive_dev_workflow_compliance(dev_input: dict):
     compliance = dict(dev_input.get('workflow_compliance', {}))
@@ -629,13 +589,6 @@ def persist_architect_decision(
     run_psql(sql)
 
 
-def find_task(data, issue_number=None, task_id=None):
-    for task in data.get('tasks', []):
-        if issue_number is not None and task.get('issue_number') == issue_number:
-            return task
-        if task_id is not None and task.get('task_id') == task_id:
-            return task
-    return None
 
 
 def task_or_die(data, issue_number=None, task_id=None):
