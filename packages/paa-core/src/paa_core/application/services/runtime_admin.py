@@ -7,7 +7,7 @@ from paa_core.application.dto.runtime import (
     RuntimeStatusRequest,
     RuntimeSupervisorRequest,
 )
-from paa_core.runtime_control import (
+from paa_core.runtime.control.supervisor import (
     restart_runtime_supervisor,
     runtime_supervisor_logs,
     runtime_supervisor_status,

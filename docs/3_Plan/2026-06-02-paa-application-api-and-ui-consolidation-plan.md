@@ -37,6 +37,20 @@ This order prevents another file-shuffle that leaves the system shape ambiguous.
 Package moves without stable service and data boundaries do not improve architecture.
 They only move confusion around.
 
+## Methodology Insight
+
+This refactor sequence is itself a proof of the PAA methodology.
+
+What helped most was not broad refactor ambition. It was:
+- a target package map
+- a dependency-order map
+- a phased plan diagram
+- narrow slices with explicit validation gates
+
+That means these artifacts should become first-class methodology outputs for future TechLead, Dev, and QA execution in Fractal Core and later systems.
+
+PAA should not only move work through queues. It should materialize the structural plan artifacts that let role sessions execute coherent object-oriented refactors without drifting into parallel systems or file-shuffle confusion.
+
 The real target is a system with:
 - one CLI host
 - one HTTP runtime gateway

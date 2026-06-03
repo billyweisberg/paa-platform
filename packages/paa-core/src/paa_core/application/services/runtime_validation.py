@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from paa_core.application.dto.status import RuntimeSmokeRequest, RuntimeStatusResultView, RuntimeValidationRequest
 from paa_core.runtime_guardrails import validate_runtime_install
-from paa_core.runtime_smoke import run_runtime_smoke_test
+from paa_core.runtime.control.smoke import run_runtime_smoke_test
 
 
 class DefaultRuntimeValidationApplicationService:
