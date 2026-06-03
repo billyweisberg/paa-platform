@@ -11,7 +11,7 @@ from typing import Any
 
 from paa_core.db import query_rows, run_psql, sql_literal
 from paa_core.producer.authority_support import persist_packet_compilation
-from paa_producer.authority_runtime import (
+from paa_core.producer.authority_packet_support import (
     derive_focus,
     derive_governance_reminders,
     derive_keep_stable,
