@@ -1049,6 +1049,26 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertTrue(payload['ok'])
         fake_service.runtime_smoke.assert_called_once()
 
+    def test_producer_command_dispatches_through_unified_paa_cli(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        with unittest.mock.patch('paa_cli.app._producer_main', return_value=0) as producer_main:
+            result = self.runner.invoke(
+                app,
+                ['producer', 'derive-artifacts', '--repo-root', str(ROOT)],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        producer_main.assert_called_once_with(['derive-artifacts', '--repo-root', str(ROOT)])
+
+    def test_producer_help_is_available_under_paa(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['producer', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('Producer authority and derivation surfaces.', result.output)
+
     def test_role_add_renders_live_typer_output(self) -> None:
         app, _, _ = self._typer_cli()
 

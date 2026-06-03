@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import asdict, is_dataclass
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Final, cast
 
@@ -60,6 +62,17 @@ def _build_runtime_api_client() -> RuntimeApiClient:
 def _emit_json_result(result: object) -> None:
     payload = asdict(cast(Any, result)) if is_dataclass(result) else result
     typer.echo(json.dumps(payload, indent=2))
+
+
+def _producer_main(argv: list[str]) -> int:
+    producer_main = getattr(import_module('paa_producer.__main__'), 'main')
+    original_argv = list(sys.argv)
+    try:
+        sys.argv = ['paa-producer', *argv]
+        result = producer_main()
+    finally:
+        sys.argv = original_argv
+    return int(result) if result is not None else 0
 
 
 class NullStructuredLogger:
@@ -234,7 +247,6 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     queue_app = typer.Typer(help='Queue packet preview surfaces over the runtime controller.', no_args_is_help=True)
     worker_app = typer.Typer(help='Worker dispatch preview surfaces over the runtime controller.', no_args_is_help=True)
     runtime_app = typer.Typer(help='Runtime host and supervisor control surfaces.', no_args_is_help=True)
-
     @component_app.command('materialize')
     def component_materialize(
         spec: str = typer.Option(..., '--spec', help='Absolute or relative component spec path.'),
@@ -1120,6 +1132,17 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         _emit_json_result(result.payload)
         raise typer.Exit(code=result.exit_code)
+
+    @app.command(
+        'producer',
+        context_settings={'allow_extra_args': True, 'ignore_unknown_options': True},
+        help='Producer authority and derivation surfaces.',
+    )
+    def producer_dispatch(ctx: typer.Context) -> None:
+        if not ctx.args:
+            typer.echo(ctx.get_help())
+            raise typer.Exit(code=0)
+        raise typer.Exit(code=_producer_main(ctx.args))
 
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
