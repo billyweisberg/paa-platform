@@ -1,4 +1,5 @@
 from .authority import *
+from .operator import *
 from .queue import *
 from .status import *
 from .runtime import *

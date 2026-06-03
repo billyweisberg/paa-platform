@@ -31,7 +31,7 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
             component_element_keys = ('a', 'b')
             activity_keys = ('x',)
 
-        with patch('paa_cli.command_adapters.materialize_component_spec', return_value=_Result()):
+        with patch('paa_core.application.operator_command_adapters.materialize_component_spec', return_value=_Result()):
             result = ComponentCommandAdapter().run(request)
 
         self.assertTrue(result.success)
@@ -53,7 +53,7 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
             invocation_context=OperatorInvocationContext(),
             arguments={'plan_id': 'plan-123'},
         )
-        with patch('paa_cli.command_adapters.implementation_plan_progress', return_value={'next_activity_key': 'dto'}):
+        with patch('paa_core.application.operator_command_adapters.implementation_plan_progress', return_value={'next_activity_key': 'dto'}):
             result = PlanCommandAdapter().run(request)
         self.assertTrue(result.success)
         self.assertEqual(result.sections[0].data['next_activity_key'], 'dto')
@@ -65,7 +65,7 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
             arguments={'plan_id': 'plan-123'},
         )
         payload = {'ok': False, 'blocking_reasons': ('No required incomplete activities remain.',)}
-        with patch('paa_cli.command_adapters.derive_next_activity_bundle', return_value=payload):
+        with patch('paa_core.application.operator_command_adapters.derive_next_activity_bundle', return_value=payload):
             result = ComponentCommandAdapter().run(request)
         self.assertFalse(result.success)
         self.assertEqual(result.failure.code, 'no_next_activity')
@@ -87,13 +87,13 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
             arguments={'plan_id': 'plan-123', 'activity_key': 'dto-models'},
         )
         with patch(
-            'paa_cli.command_adapters.set_implementation_plan_activity_state',
+            'paa_core.application.operator_command_adapters.set_implementation_plan_activity_state',
             return_value={'ok': True, 'implementation_plan_id': 'plan-123', 'activity_key': 'dto-models', 'requested_state': 'completed'},
         ) as mock_mutate, patch(
-            'paa_cli.command_adapters.reconcile_implementation_plan_progress',
+            'paa_core.application.operator_command_adapters.reconcile_implementation_plan_progress',
             return_value={'authority_state_summary': 'partially_realized_plan', 'next_activity_key': 'postgres-adapter'},
         ) as mock_reconcile, patch(
-            'paa_cli.command_adapters.derive_next_activity_bundle',
+            'paa_core.application.operator_command_adapters.derive_next_activity_bundle',
             return_value={'ok': True, 'next_bundle_activity_keys': ['postgres-adapter'], 'bundle_kind': 'single_activity'},
         ) as mock_next:
             result = ComponentCommandAdapter().run(request)
@@ -112,10 +112,10 @@ class PAAOperatorCLIAdapterTests(unittest.TestCase):
             arguments={'plan_id': 'plan-123', 'activity_key': 'dto-models', 'no_reconcile': True},
         )
         with patch(
-            'paa_cli.command_adapters.set_implementation_plan_activity_state',
+            'paa_core.application.operator_command_adapters.set_implementation_plan_activity_state',
             return_value={'ok': True, 'implementation_plan_id': 'plan-123', 'activity_key': 'dto-models', 'requested_state': 'completed'},
         ) as mock_mutate, patch(
-            'paa_cli.command_adapters.reconcile_implementation_plan_progress'
+            'paa_core.application.operator_command_adapters.reconcile_implementation_plan_progress'
         ) as mock_reconcile:
             result = ComponentCommandAdapter().run(request)
 
