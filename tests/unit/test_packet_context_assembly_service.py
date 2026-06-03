@@ -13,7 +13,7 @@ from paa_core.runtime.packets.execution_package_resolution import (
     ExecutionPackageGap,
     ExecutionPackageResolutionView,
 )
-from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
+from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionStatusProjection
 from paa_core.runtime.packets.context_assembly import (
     DefaultPacketContextAssemblyService,
     PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA,

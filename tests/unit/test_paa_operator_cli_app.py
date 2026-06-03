@@ -44,7 +44,7 @@ from paa_core.repositories.runtime_identity import AgentRecord, RoleRecord
 
 class _StubProjectionService:
     def get_status_projection(self, methodology_execution_id: str):
-        from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
+        from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionStatusProjection
         return MethodologyExecutionStatusProjection(
             methodology_execution_id=methodology_execution_id,
             lane='component_realization',
@@ -70,7 +70,7 @@ class _StubProjectionService:
         return self.get_status_projection('exec-from-anchor')
 
     def get_next_action_projection(self, methodology_execution_id: str):
-        from paa_core.services.methodology_execution_projection import MethodologyExecutionNextActionProjection
+        from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionNextActionProjection
         return MethodologyExecutionNextActionProjection(
             methodology_execution_id=methodology_execution_id,
             recommended_next_action_key='execute_component_activity',
@@ -86,7 +86,7 @@ class _StubProjectionService:
         )
 
     def explain_current_methodology_execution(self, methodology_execution_id: str):
-        from paa_core.services.methodology_execution_projection import MethodologyExecutionExplainProjection
+        from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionExplainProjection
         return MethodologyExecutionExplainProjection(
             methodology_execution_id=methodology_execution_id,
             lane='component_realization',
@@ -112,7 +112,7 @@ class _StubPreflightService:
             MethodologyExecutionPreflightOutcome,
             MethodologyExecutionPreflightResult,
         )
-        from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
+        from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionStatusProjection
 
         projection = MethodologyExecutionStatusProjection(
             methodology_execution_id=request.methodology_execution_id or 'exec-1',

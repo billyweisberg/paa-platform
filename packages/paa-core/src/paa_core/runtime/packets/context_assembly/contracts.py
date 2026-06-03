@@ -7,7 +7,7 @@ from typing import Protocol
 from paa_core.repositories.methodology_execution import MethodologyExecutionRepository
 from paa_core.runtime.packets.execution_package_resolution import ExecutionPackageResolutionService
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.methodology_execution_projection import MethodologyExecutionProjectionService
+from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionProjectionService
 
 from .models import PacketContextAssemblyRequest, PacketContextAssemblyResult
 

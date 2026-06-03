@@ -9,12 +9,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME
-from paa_core.services.methodology_execution_preflight import (
+from paa_core.runtime.workflow.methodology_execution_preflight import (
     DefaultMethodologyExecutionPreflightService,
     METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
     MethodologyExecutionPreflightRequest,
 )
-from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
+from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionStatusProjection
 
 
 class MethodologyExecutionPreflightServiceTests(unittest.TestCase):

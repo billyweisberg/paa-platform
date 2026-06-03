@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.repositories.methodology_execution import MethodologyExecutionBindingEntrySpec
-from paa_core.services.methodology_execution_state import (
+from paa_core.runtime.workflow.methodology_execution_state import (
     MethodologyExecutionStateRequest,
     MethodologyExecutionStateResult,
     MethodologyExecutionStateSummary,

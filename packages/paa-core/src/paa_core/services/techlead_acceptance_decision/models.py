@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from paa_core.services.workflow_lifecycle.models import WorkflowLifecycleResult
+from paa_core.runtime.workflow.workflow_lifecycle.models import WorkflowLifecycleResult
 
 
 @dataclass(frozen=True)

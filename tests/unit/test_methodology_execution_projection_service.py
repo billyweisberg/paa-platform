@@ -15,7 +15,7 @@ from paa_core.repositories.methodology_execution import (
     MethodologyExecutionRecord,
 )
 from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_projection import (
     DefaultMethodologyExecutionProjectionService,
     METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
     MethodologyExecutionProjectionRequest,

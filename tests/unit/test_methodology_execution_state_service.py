@@ -13,7 +13,7 @@ from paa_core.repositories.methodology_execution import (
     MethodologyExecutionBindingRecord,
     MethodologyExecutionRecord,
 )
-from paa_core.services.methodology_execution_state import (
+from paa_core.runtime.workflow.methodology_execution_state import (
     DefaultMethodologyExecutionStateService,
     MethodologyExecutionStateRequest,
 )

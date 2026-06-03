@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Callable
 
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.workflow_lifecycle import WorkflowLifecycleService
+from paa_core.runtime.workflow.workflow_lifecycle import WorkflowLifecycleService
 
 from .models import (
     TechLeadAssignmentDecisionRequest,

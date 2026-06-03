@@ -27,8 +27,8 @@ from paa_core.runtime.packets.execution_package_resolution import (
     ExecutionPackageResolutionView,
 )
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
-from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
+from paa_core.runtime.workflow.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
+from paa_core.runtime.workflow.methodology_execution_state import DefaultMethodologyExecutionStateService
 from paa_core.runtime.packets.context_assembly import DefaultPacketContextAssemblyService, PacketContextAssemblyService
 from paa_core.runtime.packets.reference_resolution import (
     DefaultPacketReferenceResolutionService,

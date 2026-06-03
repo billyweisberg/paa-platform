@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from paa_core.repositories.methodology_execution import MethodologyExecutionRepository
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.methodology_execution_preflight import MethodologyExecutionPreflightService
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_preflight import MethodologyExecutionPreflightService
+from paa_core.runtime.workflow.methodology_execution_projection import (
     MethodologyExecutionProjectionService,
     MethodologyExecutionStatusProjection,
 )
-from paa_core.services.methodology_execution_state import MethodologyExecutionStateService
+from paa_core.runtime.workflow.methodology_execution_state import MethodologyExecutionStateService
 from paa_core.services.techlead_acceptance_decision import TechLeadAcceptanceDecisionService
 from paa_core.services.techlead_acceptance_decision.models import TechLeadAcceptanceDecisionRequest
 from paa_core.services.techlead_assignment_decision import TechLeadAssignmentDecisionService

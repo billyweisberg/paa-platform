@@ -5,13 +5,13 @@ from __future__ import annotations
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
 from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
 from paa_core.repositories.runtime_identity import RUNTIME_IDENTITY_REPOSITORY_METADATA
-from paa_core.services.methodology_execution_state import (
+from paa_core.runtime.workflow.methodology_execution_state import (
     METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_projection import (
     METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_preflight import (
+from paa_core.runtime.workflow.methodology_execution_preflight import (
     METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
 )
 from paa_core.runtime.packets.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA

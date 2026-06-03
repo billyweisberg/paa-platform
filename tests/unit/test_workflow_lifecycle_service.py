@@ -21,7 +21,7 @@ from paa_core.runtime.packets.execution_package_resolution import (  # noqa: E40
     ExecutionPackageCapabilitySummary,
     ExecutionPackageResolutionView,
 )
-from paa_core.services.workflow_lifecycle import (  # noqa: E402
+from paa_core.runtime.workflow.workflow_lifecycle import (  # noqa: E402
     DefaultWorkflowLifecycleService,
     WorkflowLifecycleRequest,
 )

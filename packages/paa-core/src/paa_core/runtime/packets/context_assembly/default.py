@@ -11,7 +11,7 @@ from paa_core.runtime.packets.execution_package_resolution import (
     ExecutionPackageResolutionView,
 )
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_projection import (
     MethodologyExecutionProjectionService,
     MethodologyExecutionStatusProjection,
 )

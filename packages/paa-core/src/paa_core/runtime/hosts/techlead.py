@@ -39,9 +39,9 @@ from paa_core.runtime.packets.execution_package_resolution.models import (
     ExecutionPackageResolutionView,
 )
 from paa_core.services.implementation_plan_derivation.contracts import StructuredLogger
-from paa_core.services.methodology_execution_preflight import DefaultMethodologyExecutionPreflightService
-from paa_core.services.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
-from paa_core.services.methodology_execution_state import DefaultMethodologyExecutionStateService
+from paa_core.runtime.workflow.methodology_execution_preflight import DefaultMethodologyExecutionPreflightService
+from paa_core.runtime.workflow.methodology_execution_projection import DefaultMethodologyExecutionProjectionService
+from paa_core.runtime.workflow.methodology_execution_state import DefaultMethodologyExecutionStateService
 from paa_core.runtime.packets.reference_resolution import (
     DefaultPacketReferenceResolutionService,
     PacketReferenceResolutionRequest,
@@ -70,7 +70,7 @@ from paa_core.runtime.workers.techlead_worker import (
     TechLeadWorkerResult,
 )
 from paa_core.services.techlead_worker_review_routing import DefaultTechLeadWorkerReviewRoutingService
-from paa_core.services.workflow_lifecycle import DefaultWorkflowLifecycleService, WorkflowLifecycleRequest
+from paa_core.runtime.workflow.workflow_lifecycle import DefaultWorkflowLifecycleService, WorkflowLifecycleRequest
 
 from paa_core.runtime.transport.packet_dispatch import dispatch_packet
 

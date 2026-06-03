@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from paa_core.services.methodology_execution_projection import MethodologyExecutionStatusProjection
-from paa_core.services.methodology_execution_state import MethodologyExecutionStateResult
+from paa_core.runtime.workflow.methodology_execution_projection import MethodologyExecutionStatusProjection
+from paa_core.runtime.workflow.methodology_execution_state import MethodologyExecutionStateResult
 from paa_core.services.techlead_assignment_decision import TechLeadAssignmentDecisionResult
 from paa_core.services.techlead_worker_review_routing import TechLeadWorkerReviewRoutingResult
 
