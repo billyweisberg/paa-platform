@@ -10,7 +10,7 @@ from paa_core.config import load_producer_project_config
 from paa_core.install import install_producer_runtime
 from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
-from paa_producer.authority_runtime import main as authority_main
+from paa_core.producer.authority_runtime import main as authority_main
 from paa_core.producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
 from paa_core.producer.brief_target_author import author_brief_targets
 from paa_core.producer.coder_brief_assembler import assemble_coder_brief

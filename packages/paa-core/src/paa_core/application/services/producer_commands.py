@@ -27,7 +27,7 @@ from paa_core.application.dto.producer import (
 from paa_core.config import load_producer_project_config
 from paa_core.readiness import main as readiness_main
 from paa_core.producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
-from paa_producer.authority_runtime import main as authority_main
+from paa_core.producer.authority_runtime import main as authority_main
 from paa_core.producer.brief_reviewer import review_coder_brief
 from paa_core.producer.brief_target_author import author_brief_targets
 from paa_core.producer.component_spec_materializer import materialize_component_spec
