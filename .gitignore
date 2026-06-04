@@ -219,3 +219,7 @@ __marimo__/
 
 # Local planning snapshots with internal machine paths
 docs/3_Plan/2026-05-03-current-state-vs-target-state-snapshot.md
+
+# Local Codex scratch and project metadata
+.codex-work/
+.project/
