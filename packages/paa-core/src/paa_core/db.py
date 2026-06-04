@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
+from typing import cast
 from typing import Any, Iterable
 
 import psycopg
+from psycopg.abc import Query
+
+SQLQuery = str | Query
 
 
 @dataclass(frozen=True)
@@ -133,20 +137,20 @@ def _stringify_cell(value: object | None) -> str:
     return str(value)
 
 
-def execute_sql(sql: str, *, settings: DBSettings | None = None) -> None:
+def execute_sql(query: SQLQuery, *, settings: DBSettings | None = None) -> None:
     cfg = settings or settings_from_profile(None)
     try:
         with _connect(cfg) as conn, conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(cast(Query, query))
     except psycopg.Error as exc:
         raise RuntimeError(str(exc).strip() or 'PAA PostgreSQL command failed') from exc
 
 
-def query_all_rows(sql: str, *, settings: DBSettings | None = None) -> list[tuple[Any, ...]]:
+def query_all_rows(query: SQLQuery, *, settings: DBSettings | None = None) -> list[tuple[Any, ...]]:
     cfg = settings or settings_from_profile(None)
     try:
         with _connect(cfg) as conn, conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(cast(Query, query))
             if cur.description is None:
                 return []
             return list(cur.fetchall())
@@ -154,8 +158,8 @@ def query_all_rows(sql: str, *, settings: DBSettings | None = None) -> list[tupl
         raise RuntimeError(str(exc).strip() or 'PAA PostgreSQL command failed') from exc
 
 
-def query_json_rows(sql: str, *, settings: DBSettings | None = None) -> list[dict[str, Any]]:
-    rows = query_all_rows(sql, settings=settings)
+def query_json_rows(query: SQLQuery, *, settings: DBSettings | None = None) -> list[dict[str, Any]]:
+    rows = query_all_rows(query, settings=settings)
     result: list[dict[str, Any]] = []
     for row in rows:
         if not row:
@@ -164,28 +168,28 @@ def query_json_rows(sql: str, *, settings: DBSettings | None = None) -> list[dic
         if payload is None:
             continue
         if isinstance(payload, dict):
-            result.append(payload)
+            result.append(cast(dict[str, Any], payload))
         elif isinstance(payload, str):
-            result.append(json.loads(payload))
+            result.append(cast(dict[str, Any], json.loads(payload)))
         else:
             raise RuntimeError(f'Expected JSON row object, got {type(payload).__name__}')
     return result
 
 
-def query_scalar(sql: str, *, settings: DBSettings | None = None) -> Any | None:
-    rows = query_all_rows(sql, settings=settings)
+def query_scalar(query: SQLQuery, *, settings: DBSettings | None = None) -> Any | None:
+    rows = query_all_rows(query, settings=settings)
     if not rows or not rows[0]:
         return None
     return rows[0][0]
 
 
-def run_psql(sql: str, *, settings: DBSettings | None = None) -> str:
-    rows = query_all_rows(sql, settings=settings)
+def run_psql(query: SQLQuery, *, settings: DBSettings | None = None) -> str:
+    rows = query_all_rows(query, settings=settings)
     return '\n'.join('\t'.join(_stringify_cell(cell) for cell in row) for row in rows)
 
 
-def query_rows(sql: str, *, settings: DBSettings | None = None) -> list[list[str]]:
-    out = run_psql(sql, settings=settings)
+def query_rows(query: SQLQuery, *, settings: DBSettings | None = None) -> list[list[str]]:
+    out = run_psql(query, settings=settings)
     rows: list[list[str]] = []
     for line in out.splitlines():
         if not line.strip():

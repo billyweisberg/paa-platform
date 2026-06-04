@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'paa-core' / 'src'))
 
@@ -55,7 +55,7 @@ class DBSettingsTests(unittest.TestCase):
 
 
 class RunPsqlTests(unittest.TestCase):
-    def test_run_psql_uses_docker_exec_for_container_mode(self) -> None:
+    def test_run_psql_uses_psycopg_connection_for_container_mode(self) -> None:
         settings = DBSettings(
             mode='docker_exec',
             container='paa-postgres-db',
@@ -64,15 +64,26 @@ class RunPsqlTests(unittest.TestCase):
             name='paa_dev',
             user='paa',
         )
-        with patch('paa_core.db.subprocess.run') as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = 'ok\n'
+        fake_cursor = MagicMock()
+        fake_cursor.description = (object(),)
+        fake_cursor.fetchall.return_value = [('ok',)]
+        fake_conn = MagicMock()
+        fake_conn.__enter__.return_value = fake_conn
+        fake_conn.cursor.return_value.__enter__.return_value = fake_cursor
+        with patch('paa_core.db.psycopg.connect', return_value=fake_conn) as mock_connect:
             out = run_psql('select 1;', settings=settings)
-        self.assertEqual(out, 'ok\n')
-        cmd = mock_run.call_args.kwargs['args'] if 'args' in mock_run.call_args.kwargs else mock_run.call_args.args[0]
-        self.assertEqual(cmd[:4], ['docker', 'exec', '-i', 'paa-postgres-db'])
+        self.assertEqual(out, 'ok')
+        mock_connect.assert_called_once_with(
+            host='127.0.0.1',
+            port=55433,
+            dbname='paa_dev',
+            user='paa',
+            password=None,
+            autocommit=True,
+        )
+        fake_cursor.execute.assert_called_once_with('select 1;')
 
-    def test_run_psql_uses_host_psql_for_tcp_mode(self) -> None:
+    def test_run_psql_uses_psycopg_connection_for_tcp_mode(self) -> None:
         settings = DBSettings(
             mode='tcp',
             container='paa-postgres-db',
@@ -82,17 +93,24 @@ class RunPsqlTests(unittest.TestCase):
             user='paa',
             password='secret',
         )
-        with patch('paa_core.db.subprocess.run') as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = 'ok\n'
+        fake_cursor = MagicMock()
+        fake_cursor.description = (object(),)
+        fake_cursor.fetchall.return_value = [('ok',)]
+        fake_conn = MagicMock()
+        fake_conn.__enter__.return_value = fake_conn
+        fake_conn.cursor.return_value.__enter__.return_value = fake_cursor
+        with patch('paa_core.db.psycopg.connect', return_value=fake_conn) as mock_connect:
             out = run_psql('select 1;', settings=settings)
-        self.assertEqual(out, 'ok\n')
-        cmd = mock_run.call_args.kwargs['args'] if 'args' in mock_run.call_args.kwargs else mock_run.call_args.args[0]
-        env = mock_run.call_args.kwargs['env']
-        self.assertEqual(cmd[:2], ['psql', '-h'])
-        self.assertEqual(cmd[2], '127.0.0.1')
-        self.assertEqual(cmd[4], '55433')
-        self.assertEqual(env['PGPASSWORD'], 'secret')
+        self.assertEqual(out, 'ok')
+        mock_connect.assert_called_once_with(
+            host='127.0.0.1',
+            port=55433,
+            dbname='paa_dev',
+            user='paa',
+            password='secret',
+            autocommit=True,
+        )
+        fake_cursor.execute.assert_called_once_with('select 1;')
 
 
 if __name__ == '__main__':
