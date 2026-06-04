@@ -47,26 +47,86 @@ For the Python implementation of PAA, build in this order:
 7. integration proof through `paa` as the system surface
 8. extraction of legacy ownership from `db.py` into the new structure only after the destination structure is defined
 
+The governing control record for this workflow is the persisted `MethodologyExecution` pointer.
+
+That pointer must be treated as the system answer for:
+- where this execution thread is in the methodology
+- which lane is active
+- which stage is active
+- which step is active
+- who owns the next action
+- what command family is valid now
+- what transition is allowed, blocked, or waiting
+
+The Python build and runtime surfaces must increasingly operate against this pointer rather than inferring current state from scattered artifacts alone.
+
+## Governing Pointer Model
+
+The methodology workflow is not only conceptual.
+It is governed by the persisted `MethodologyExecution` thread defined in:
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-execution-state-model.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-30-paa-methodology-lane-and-command-model.md`
+
+The minimum governing fields are:
+- `lane`
+- `stage`
+- `step`
+- `status`
+- `current_owner_role`
+- `next_action_key`
+
+Supporting records:
+- `MethodologyExecutionEvent`
+- `MethodologyExecutionBinding`
+- `MethodologyExecutionProjection`
+
+Rule:
+- the pointer is the canonical answer to `where are we?`
+- artifacts such as design packages, briefs, plans, packets, workflow state, and runtime evidence remain specialized truth
+- those artifacts do not replace the pointer
+
 ## Methodology Workflow
 
 The workflow below is the implementation-driving process model.
 
 ```mermaid
 flowchart TD
-    A["Authority Source Truth\nDesign docs, terminology, policy, package taxonomy"] --> B["Authority Derivation Lane\npackage, readiness, brief, packet"]
-    B --> C["Component Realization Lane\ncomponent taxonomy, element types, realization types, plan progress"]
-    C --> D["Runtime Execution Lane\nqueue, worker, packet consumption, evidence"]
-    D --> E["Acceptance And Closeout Lane\nverify, report, accept, close"]
+    A["Authority Source Truth\nDesign docs, terminology, policy, package taxonomy"] --> P["MethodologyExecution Pointer\nlane, stage, step, status, owner, next action"]
+    P --> B["Authority Derivation Lane\npackage, readiness, brief, packet"]
+    P --> C["Component Realization Lane\ncomponent taxonomy, element types, realization types, plan progress"]
+    P --> D["Runtime Execution Lane\nqueue, worker, packet consumption, evidence"]
+    P --> E["Acceptance And Closeout Lane\nverify, report, accept, close"]
 
     B --> B1["Artifacts\ndesign package, readiness result, implementation plan, coder brief, architect packet"]
     C --> C1["Artifacts\ncomponent rows, element rows, realization rows, brief targets, progress state"]
     D --> D1["Artifacts\nqueue packets, runtime events, workflow state, result packets"]
     E --> E1["Artifacts\nverification result, acceptance decision, closeout report"]
 
-    B1 --> C
-    C1 --> D
-    D1 --> E
+    B1 --> P
+    C1 --> P
+    D1 --> P
+    E1 --> P
+
+    P --> T["Transition Decision\nallowed, warn, blocked, redirect"]
+    T --> B
+    T --> C
+    T --> D
+    T --> E
 ```
+
+## Pointer Transition Rule
+
+Every meaningful CLI or API operation should eventually do one or both of these:
+- read the `MethodologyExecution` pointer before acting
+- update or append pointer state after a valid transition
+
+This means:
+- preflight is pointer-aware
+- command-family validity is pointer-aware
+- build sequencing is pointer-aware
+- runtime transition and acceptance logic are pointer-aware
+
+If a path does not yet consult the pointer, that path should be treated as transitional.
 
 ## Implementation Dependency Model
 
@@ -94,6 +154,7 @@ Owns:
 - repository operations
 - taxonomy persistence
 - DB-facing query and mutation boundaries
+- persisted methodology execution truth
 
 Examples:
 - component tables
@@ -109,6 +170,7 @@ Owns:
 - realization vocabulary
 - governed policy terms
 - normalized domain records and classification values
+- normalized pointer vocabulary for lane, stage, step, status, owner, and next action
 
 Examples:
 - component element types
@@ -123,12 +185,14 @@ Owns:
 - request and response DTOs
 - orchestration of repositories, policy, and runtime collaborators
 - operation boundaries used by CLI and HTTP
+- pointer-aware transition coordination
 
 Examples:
 - taxonomy management operations
 - brief generation operations
 - plan progress operations
 - queue and runtime operations
+- methodology-execution state reads and writes
 
 ### HTTP API layer
 
@@ -149,12 +213,17 @@ Owns:
 - CLI argument normalization
 - output rendering
 - client or proxy invocation into the system
+- pointer-visible operator flow
 
 Does not own:
 - producer logic
 - runtime logic
 - taxonomy logic
 - persistence logic
+
+Important rule:
+- the CLI is not just a launcher
+- it is the main integration proof surface for whether the pointer-governed methodology is actually operable
 
 ## Dishka Placement
 
@@ -191,6 +260,7 @@ That means Dishka belongs in the composition stage of the build, not the discove
 
 Build outputs:
 - methodology workflow map
+- explicit `MethodologyExecution` pointer placement in that workflow
 - dependency node review
 - Python ownership decomposition
 - updated target structure including data layer, domain layer, orchestration/API layer, and CLI layer
@@ -204,6 +274,7 @@ Build outputs:
 - component taxonomy audit
 - realization taxonomy extension for Python-valid realizations
 - repository coverage for component, element, realization, and mapping operations
+- repository coverage for methodology execution pointer reads and writes where missing
 - initial extraction targets identified inside `db.py`
 
 Proof through CLI:
@@ -216,6 +287,7 @@ Build outputs:
 - DTOs for taxonomy operations
 - application services for taxonomy management and derivation operations
 - explicit operation boundaries for producer and component-realization flows
+- explicit pointer-aware preflight and transition surfaces
 
 Proof through CLI:
 - `paa` commands execute the new application operations against the real data layer
@@ -226,6 +298,7 @@ Build outputs:
 - Dishka providers and scopes
 - FastAPI controller wiring through Dishka
 - CLI composition through Dishka where it improves lifecycle management
+- pointer-aware service composition that does not bypass methodology state
 
 Constraint:
 - Dishka must wire the structure already chosen
@@ -239,6 +312,7 @@ Proof through CLI:
 Build outputs:
 - move one responsibility cluster at a time out of `db.py`
 - relocate query and mutation helpers into the real data-layer modules already defined by the target structure
+- keep methodology execution persistence and non-pointer data concerns distinct while extracting
 
 Constraint:
 - do not extract from `db.py` until the destination module is already defined by the target structure and dependency model
@@ -251,6 +325,7 @@ Proof through CLI:
 Build outputs:
 - runtime lane wiring continues against the clarified data and application layers
 - verification and acceptance surfaces continue against the same governed structure
+- the runtime path increasingly reads and advances the persisted pointer instead of inferring flow from artifacts alone
 
 Proof through CLI:
 - runtime and producer commands continue to execute through `paa`
@@ -260,10 +335,11 @@ Proof through CLI:
 
 The next coding work should follow this order:
 1. update the workflow and dependency diagrams
-2. update the target structure to include the data and domain layers explicitly
-3. identify the first Python realization types to add to governed taxonomy
-4. expose those operations through `paa`
-5. only then begin extracting the relevant ownership from `db.py`
+2. make the `MethodologyExecution` pointer explicit in those diagrams and the target structure
+3. update the target structure to include the data and domain layers explicitly
+4. identify the first Python realization types to add to governed taxonomy
+5. expose those operations through `paa`
+6. only then begin extracting the relevant ownership from `db.py`
 
 ## Non-Negotiable Proof Rule
 
@@ -271,6 +347,7 @@ As the Python system is built, test through the CLI as each slice lands.
 
 Preferred proof order:
 1. `paa` integration path
+2. pointer-aware CLI preflight and transition proof
 2. HTTP integration path where relevant
 3. `basedpyright`
 4. lint and compile checks
