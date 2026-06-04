@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 from typing import Any
 
-from paa_core.config import load_producer_project_config
+from paa_core.runtime.support.config import load_producer_project_config
 from paa_core.db import run_psql as shared_run_psql
-from paa_core.runtime_paths import (
+from paa_core.runtime.support.runtime_paths import (
     default_installed_manifest_path,
     producer_manifest_candidates,
     repo_root_from_cwd,

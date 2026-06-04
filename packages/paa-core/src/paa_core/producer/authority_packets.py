@@ -24,7 +24,7 @@ from paa_core.producer.authority_support import (
     persist_packet_compilation,
     sync_issue_source_into_paa,
 )
-from paa_core.runtime_paths import repo_root_from_cwd
+from paa_core.runtime.support.runtime_paths import repo_root_from_cwd
 
 
 def cmd_materialize_coder_brief(args: Any) -> None:

@@ -9,7 +9,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory
+from paa_core.support.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory
 
 PLATFORM_VERSION = "0.1.0"
 SCHEMA_BUNDLE_VERSION = "0.1.0"

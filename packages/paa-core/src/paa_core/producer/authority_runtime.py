@@ -3,8 +3,8 @@ import sys
 from typing import Sequence
 from typing import Optional
 
-from paa_core.runtime_paths import repo_root_from_cwd
-from paa_core.runtime_paths import default_installed_artifact_path
+from paa_core.runtime.support.runtime_paths import default_installed_artifact_path
+from paa_core.runtime.support.runtime_paths import repo_root_from_cwd
 
 from paa_core.producer.authority_parser import build_authority_parser
 

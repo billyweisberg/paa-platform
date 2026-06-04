@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from paa_core.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory, resolve_from_repo_root
+from paa_core.support.paths import CODEX_INSTALL_ROOT, PROJECT_DATA_ROOT, ensure_directory, resolve_from_repo_root
 from paa_core.runtime.support.config import (
     RuntimeQueueTopology,
     load_runtime_queue_topology,

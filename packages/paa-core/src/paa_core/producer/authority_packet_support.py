@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from paa_core.runtime_paths import default_installed_artifact_path, repo_root_from_cwd
+from paa_core.runtime.support.runtime_paths import default_installed_artifact_path, repo_root_from_cwd
 from paa_core.team_worker_roles import team_worker_role_by_display_name, team_worker_role_by_key
 from paa_core.producer.authority_support import DEFAULT_GOVERNANCE_REMINDERS, run_psql, sql_literal
 

@@ -25,3 +25,4 @@ def authority_package_staging_root(base: Path) -> Path:
     """Return the canonical staging root used during publication."""
 
     return base / "authority-package"
+

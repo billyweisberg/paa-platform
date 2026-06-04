@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from paa_core.config import ProducerProjectConfig
+from paa_core.runtime.support.config import ProducerProjectConfig
 from paa_core.db import run_psql, sql_literal
 
 

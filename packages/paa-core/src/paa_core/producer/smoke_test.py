@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from paa_core.config import load_producer_project_config
+from paa_core.runtime.support.config import load_producer_project_config
 from paa_core.producer.authority_support import load_manifest, resolve_producer_project_config_path
 
 

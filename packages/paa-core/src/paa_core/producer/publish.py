@@ -9,9 +9,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from paa_core.config import ProducerProjectConfig
-from paa_core.package_metadata import AuthorityPackageMetadata
-from paa_core.paths import authority_package_staging_root, ensure_directory, resolve_from_repo_root
+from paa_core.producer.support.package_metadata import AuthorityPackageMetadata
+from paa_core.runtime.support.config import ProducerProjectConfig
+from paa_core.support.paths import authority_package_staging_root, ensure_directory, resolve_from_repo_root
 
 PACKAGE_FORMAT_VERSION = "0.1.0"
 PRODUCER_PLATFORM_VERSION = "0.1.0"

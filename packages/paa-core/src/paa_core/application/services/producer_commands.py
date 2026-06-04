@@ -24,7 +24,7 @@ from paa_core.application.dto.producer import (
     ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
-from paa_core.config import load_producer_project_config
+from paa_core.runtime.support.config import load_producer_project_config
 from paa_core.readiness import main as readiness_main
 from paa_core.producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
 from paa_core.producer.authority_runtime import main as authority_main

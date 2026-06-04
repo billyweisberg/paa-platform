@@ -32,3 +32,4 @@ class AuthorityPackageMetadata:
         """Return a JSON-serializable mapping."""
 
         return asdict(self)
+
