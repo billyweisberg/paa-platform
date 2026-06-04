@@ -54,6 +54,23 @@ from paa_core.producer.authority_resolution import (
     resolve_brief_for_packet,
 )
 
+from paa_core.producer.authority_queries import (
+    build_issue_payload,
+    bump_authority_version,
+    cmd_authoring_check,
+    cmd_current,
+    cmd_materialize_next,
+    cmd_materialize_task,
+    cmd_next,
+    cmd_summary,
+    cmd_task,
+    cmd_verify_issue,
+    format_markdown_list,
+    print_payload,
+    publish_authority,
+    task_or_die,
+)
+
 def derive_dev_workflow_compliance(dev_input: dict):
     compliance = dict(dev_input.get('workflow_compliance', {}))
     compliance.setdefault('closes_issue', True)
@@ -589,180 +606,6 @@ def persist_architect_decision(
     run_psql(sql)
 
 
-
-
-def task_or_die(data, issue_number=None, task_id=None):
-    task = find_task(data, issue_number=issue_number, task_id=task_id)
-    if not task:
-        print(json.dumps({'ok': False, 'error': 'task not found'}, indent=2))
-        sys.exit(1)
-    return task
-
-
-def bump_authority_version(current: str) -> str:
-    today = datetime.now(timezone.utc).date().isoformat()
-    if '.' in current:
-        prefix, suffix = current.rsplit('.', 1)
-        if prefix == today and suffix.isdigit():
-            return f'{today}.{int(suffix) + 1}'
-    return f'{today}.1'
-
-
-def publish_authority(manifest: Path):
-    script = manifest.parents[4] / 'tools' / 'codex-skills' / 'fractal-core-authority' / 'scripts' / 'publish_current.py'
-    subprocess.run(['python3', str(script)], check=True, cwd=str(manifest.parents[4]))
-
-
-def format_markdown_list(items):
-    return '\n'.join(f'- {item}' for item in items)
-
-
-def build_issue_payload(manifest, data, task):
-    ops = data['operations']
-    authoring = task.get('authoring') or {}
-    missing = [
-        key for key in [
-            'objective', 'background', 'current_gap', 'acceptance_criteria',
-            'validation_commands', 'out_of_scope', 'references'
-        ] if key not in authoring
-    ]
-    if missing:
-        return {
-            'ok': False,
-            'error': 'task authoring is incomplete',
-            'missing_fields': missing,
-            'task_id': task['task_id'],
-            'issue_number': task.get('issue_number'),
-        }
-
-    title_prefix = ops.get('issue_title_prefix', '').strip()
-    title = f"{title_prefix} {task['title']}".strip()
-    body = '\n\n'.join([
-        '## Objective\n' + authoring['objective'],
-        '## Background\n' + format_markdown_list(authoring['background']),
-        '## Current gap\n' + format_markdown_list(authoring['current_gap']),
-        '## Acceptance criteria\n' + format_markdown_list(authoring['acceptance_criteria']),
-        '## Validation\n```bash\n' + '\n'.join(authoring['validation_commands']) + '\n```',
-        '## Out of scope\n' + format_markdown_list(authoring['out_of_scope']),
-        '## References\n' + format_markdown_list(authoring['references']),
-        '## Authority context\n' + format_markdown_list([
-            f"authority version: {data['project']['authority_version']}",
-            f"manifest path: {manifest}",
-            f"milestone id: {task['milestone_id']}",
-            f"phase id: {task['phase_id']}",
-            f"task id: {task['task_id']}",
-            f"requires QA: {task.get('requires_qa', False)}",
-            f"merge policy: {task.get('merge_policy')}",
-            'allowed successors: ' + (', '.join(task.get('allowed_successors', [])) or '(none)'),
-        ])
-    ])
-    return {
-        'ok': True,
-        'manifest_path': str(manifest),
-        'authority_version': data['project']['authority_version'],
-        'repo': data['project']['repo'],
-        'task_id': task['task_id'],
-        'issue_number': task.get('issue_number'),
-        'title': title,
-        'body': body,
-    }
-
-
-def print_payload(payload, fmt):
-    if fmt == 'markdown':
-        print(f"# {payload['title']}\n")
-        print(payload['body'])
-    else:
-        print(json.dumps(payload, indent=2))
-
-
-def cmd_summary(args):
-    manifest, data = load_manifest(args.manifest)
-    project = dict(data['project'])
-    out = {
-        'manifest_path': str(manifest),
-        'project_id': project['project_id'],
-        'authority_version': project['authority_version'],
-        'published_at': project.get('published_at'),
-        'repo': project.get('repo'),
-        'active_phases': [p['phase_id'] for p in data.get('phases', []) if p.get('status') == 'active'],
-        'active_tasks': [t['task_id'] for t in data.get('tasks', []) if t.get('status') in {'planned', 'in_dev', 'in_qa', 'in_review'}],
-    }
-    print(json.dumps(out, indent=2))
-
-
-def cmd_current(args):
-    manifest, data = load_manifest(args.manifest)
-    tasks = [t for t in data.get('tasks', []) if t.get('status') in {'in_dev', 'in_qa', 'in_review'}]
-    print(json.dumps({'manifest_path': str(manifest), 'tasks': tasks}, indent=2))
-
-
-def cmd_task(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    print(json.dumps({'ok': True, 'manifest_path': str(manifest), 'task': task}, indent=2))
-
-
-def cmd_next(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    nxt = [find_task(data, task_id=t) for t in task.get('allowed_successors', [])]
-    print(json.dumps({'ok': True, 'manifest_path': str(manifest), 'task_id': task['task_id'], 'allowed_successors': [t for t in nxt if t]}, indent=2))
-
-
-def cmd_verify_issue(args):
-    manifest, data = load_manifest(args.manifest)
-    task = find_task(data, issue_number=args.issue_number)
-    if not task:
-        print(json.dumps({'ok': False, 'issue_number': args.issue_number, 'authorized': False}, indent=2))
-        sys.exit(1)
-    print(json.dumps({'ok': True, 'manifest_path': str(manifest), 'issue_number': args.issue_number, 'authorized': True, 'task_id': task['task_id'], 'authority_version': data['project']['authority_version']}, indent=2))
-
-
-def cmd_authoring_check(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    payload = build_issue_payload(manifest, data, task)
-    if not payload.get('ok'):
-        print(json.dumps(payload, indent=2))
-        sys.exit(1)
-    print(json.dumps({
-        'ok': True,
-        'manifest_path': str(manifest),
-        'task_id': task['task_id'],
-        'issue_number': task.get('issue_number'),
-        'authoring_complete': True
-    }, indent=2))
-
-
-def cmd_materialize_task(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    payload = build_issue_payload(manifest, data, task)
-    if not payload.get('ok'):
-        print(json.dumps(payload, indent=2))
-        sys.exit(1)
-    print_payload(payload, args.format)
-
-
-def cmd_materialize_next(args):
-    manifest, data = load_manifest(args.manifest)
-    current = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    successors = [find_task(data, task_id=t) for t in current.get('allowed_successors', [])]
-    successors = [t for t in successors if t]
-    if len(successors) != 1:
-        print(json.dumps({
-            'ok': False,
-            'error': 'expected exactly one allowed successor to materialize',
-            'task_id': current['task_id'],
-            'successor_count': len(successors)
-        }, indent=2))
-        sys.exit(1)
-    payload = build_issue_payload(manifest, data, successors[0])
-    if not payload.get('ok'):
-        print(json.dumps(payload, indent=2))
-        sys.exit(1)
-    print_payload(payload, args.format)
 
 
 def run_gh_issue_edit(repo, issue_number, title, body):
