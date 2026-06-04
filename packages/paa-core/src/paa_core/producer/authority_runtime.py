@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -70,6 +69,7 @@ from paa_core.producer.authority_queries import (
     publish_authority,
     task_or_die,
 )
+from paa_core.producer.authority_issues import cmd_create_issue, cmd_sync_issue
 
 def derive_dev_workflow_compliance(dev_input: dict):
     compliance = dict(dev_input.get('workflow_compliance', {}))
@@ -606,69 +606,6 @@ def persist_architect_decision(
     run_psql(sql)
 
 
-
-
-def run_gh_issue_edit(repo, issue_number, title, body):
-    with tempfile.NamedTemporaryFile('w', delete=False, suffix='.md') as tmp:
-        tmp.write(body)
-        tmp_path = tmp.name
-    try:
-        cmd = ['gh', 'issue', 'edit', str(issue_number), '-R', repo, '--title', title, '--body-file', tmp_path]
-        subprocess.run(cmd, check=True)
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
-
-
-def run_gh_issue_create(repo, title, body):
-    with tempfile.NamedTemporaryFile('w', delete=False, suffix='.md') as tmp:
-        tmp.write(body)
-        tmp_path = tmp.name
-    try:
-        cmd = ['gh', 'issue', 'create', '-R', repo, '--title', title, '--body-file', tmp_path]
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        return result.stdout.strip()
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
-
-
-def cmd_sync_issue(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    payload = build_issue_payload(manifest, data, task)
-    if not payload.get('ok'):
-        print(json.dumps(payload, indent=2))
-        sys.exit(1)
-    if not payload.get('issue_number'):
-        print(json.dumps({'ok': False, 'error': 'task has no issue_number; use create-issue instead', 'task_id': task['task_id']}, indent=2))
-        sys.exit(1)
-    run_gh_issue_edit(payload['repo'], payload['issue_number'], payload['title'], payload['body'])
-    print(json.dumps({
-        'ok': True,
-        'action': 'synced',
-        'repo': payload['repo'],
-        'issue_number': payload['issue_number'],
-        'task_id': task['task_id']
-    }, indent=2))
-
-
-def cmd_create_issue(args):
-    manifest, data = load_manifest(args.manifest)
-    task = task_or_die(data, issue_number=args.issue_number, task_id=args.task_id)
-    payload = build_issue_payload(manifest, data, task)
-    if not payload.get('ok'):
-        print(json.dumps(payload, indent=2))
-        sys.exit(1)
-    if payload.get('issue_number') and not args.force:
-        print(json.dumps({'ok': False, 'error': 'task already has issue_number; use sync-issue or pass --force', 'issue_number': payload['issue_number'], 'task_id': task['task_id']}, indent=2))
-        sys.exit(1)
-    url = run_gh_issue_create(payload['repo'], payload['title'], payload['body'])
-    print(json.dumps({
-        'ok': True,
-        'action': 'created',
-        'repo': payload['repo'],
-        'task_id': task['task_id'],
-        'url': url
-    }, indent=2))
 
 
 def cmd_advance_after_merge(args):
