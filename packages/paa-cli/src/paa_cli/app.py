@@ -32,15 +32,21 @@ from paa_core.application.dto.authority import AuthorityInstallRequest
 from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.producer import (
+    ProducerAssembleCoderBriefRequest,
+    ProducerAuthorityCommandRequest,
+    ProducerAuthorBriefTargetsRequest,
     ProducerDeriveArtifactsRequest,
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
     ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeReadinessRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
+    ProducerPrepareArchitectPacketRequest,
+    ProducerReviewCoderBriefRequest,
     ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
@@ -220,6 +226,54 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
         _emit_json_result(result.payload)
         return result.exit_code
 
+    if command == 'assemble-coder-brief':
+        parser = argparse.ArgumentParser(
+            prog='paa producer assemble-coder-brief',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--package-schema-path')
+        parser.add_argument('--brief-schema-path')
+        parser.add_argument('--project-slug')
+        parser.add_argument('--output')
+        parser.add_argument('--no-persist-db', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.assemble_coder_brief(
+            ProducerAssembleCoderBriefRequest(
+                design_package=Path(args.design_package).resolve(),
+                package_schema_path=Path(args.package_schema_path).resolve() if args.package_schema_path else None,
+                brief_schema_path=Path(args.brief_schema_path).resolve() if args.brief_schema_path else None,
+                project_slug=args.project_slug,
+                output_path=Path(args.output).resolve() if args.output else None,
+                persist_db=not args.no_persist_db,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'author-brief-targets':
+        parser = argparse.ArgumentParser(
+            prog='paa producer author-brief-targets',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--package-schema-path')
+        parser.add_argument('--brief-schema-path')
+        parser.add_argument('--project-slug')
+        parser.add_argument('--output')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.author_brief_targets(
+            ProducerAuthorBriefTargetsRequest(
+                design_package=Path(args.design_package).resolve(),
+                package_schema_path=Path(args.package_schema_path).resolve() if args.package_schema_path else None,
+                brief_schema_path=Path(args.brief_schema_path).resolve() if args.brief_schema_path else None,
+                project_slug=args.project_slug,
+                output_path=Path(args.output).resolve() if args.output else None,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
     if command == 'set-implementation-plan-activity-state':
         parser = argparse.ArgumentParser(
             prog='paa producer set-implementation-plan-activity-state',
@@ -243,6 +297,116 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
                 completed_at=args.completed_at,
                 metadata_json=args.metadata_json,
             )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'review-coder-brief':
+        parser = argparse.ArgumentParser(
+            prog='paa producer review-coder-brief',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--coder-run-brief-id')
+        parser.add_argument('--design-package')
+        parser.add_argument('--decision', required=True, choices=('approve', 'reject', 'reopen-draft'))
+        parser.add_argument('--notes')
+        parser.add_argument('--review-summary')
+        parser.add_argument('--output')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.review_coder_brief(
+            ProducerReviewCoderBriefRequest(
+                coder_run_brief_id=args.coder_run_brief_id,
+                design_package=Path(args.design_package).resolve() if args.design_package else None,
+                decision=args.decision,
+                notes=args.notes,
+                review_summary=args.review_summary,
+                output_path=Path(args.output).resolve() if args.output else None,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'prepare-architect-packet':
+        parser = argparse.ArgumentParser(
+            prog='paa producer prepare-architect-packet',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--manifest-path', required=True)
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--packet-output', required=True)
+        parser.add_argument('--brief-output', required=True)
+        parser.add_argument('--repo', required=True)
+        parser.add_argument('--branch', default='main')
+        parser.add_argument('--accepted-pr-number', type=int, required=True)
+        parser.add_argument('--accepted-pr-url', required=True)
+        parser.add_argument('--closed-issue-number', type=int, required=True)
+        parser.add_argument('--closed-issue-url', required=True)
+        parser.add_argument('--next-issue-number', type=int, required=True)
+        parser.add_argument('--next-issue-url', required=True)
+        parser.add_argument('--baseline-file', required=True)
+        parser.add_argument('--review-output')
+        parser.add_argument('--schema-path')
+        parser.add_argument('--project-slug')
+        parser.add_argument('--packet-project')
+        parser.add_argument('--remaining-gap')
+        parser.add_argument('--next-move', action='append')
+        parser.add_argument('--focus', action='append')
+        parser.add_argument('--keep-stable', action='append')
+        parser.add_argument('--governance-reminder', action='append')
+        parser.add_argument('--pr-starter-branch')
+        parser.add_argument('--pr-starter-title')
+        parser.add_argument('--pr-starter-body-linkage')
+        parser.add_argument('--message-id')
+        parser.add_argument('--correlation-id')
+        parser.add_argument('--created-at')
+        parser.add_argument('--no-persist-db', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.prepare_architect_packet(
+            ProducerPrepareArchitectPacketRequest(
+                manifest_path=Path(args.manifest_path).resolve(),
+                design_package=Path(args.design_package).resolve(),
+                packet_output=Path(args.packet_output).resolve(),
+                brief_output=Path(args.brief_output).resolve(),
+                repo=args.repo,
+                accepted_pr_number=args.accepted_pr_number,
+                accepted_pr_url=args.accepted_pr_url,
+                closed_issue_number=args.closed_issue_number,
+                closed_issue_url=args.closed_issue_url,
+                next_issue_number=args.next_issue_number,
+                next_issue_url=args.next_issue_url,
+                baseline_file=Path(args.baseline_file).resolve(),
+                branch=args.branch,
+                review_output=Path(args.review_output).resolve() if args.review_output else None,
+                schema_path=Path(args.schema_path).resolve() if args.schema_path else None,
+                project_slug=args.project_slug,
+                packet_project=args.packet_project,
+                remaining_gap=args.remaining_gap,
+                next_move=tuple(args.next_move or ()),
+                focus=tuple(args.focus or ()),
+                keep_stable=tuple(args.keep_stable or ()),
+                governance_reminder=tuple(args.governance_reminder or ()),
+                pr_starter_branch=args.pr_starter_branch,
+                pr_starter_title=args.pr_starter_title,
+                pr_starter_body_linkage=args.pr_starter_body_linkage,
+                message_id=args.message_id,
+                correlation_id=args.correlation_id,
+                created_at=args.created_at,
+                persist_db=not args.no_persist_db,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'materialize-readiness':
+        result = runtime_api_client.materialize_readiness(
+            ProducerMaterializeReadinessRequest(argv=tuple(remainder))
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'authority':
+        result = runtime_api_client.authority_command(
+            ProducerAuthorityCommandRequest(argv=tuple(remainder))
         )
         _emit_json_result(result.payload)
         return result.exit_code
@@ -338,9 +502,10 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
 
     typer.echo(
         f"Producer command '{command}' is not yet migrated to the unified runtime API. "
-        'Supported now: derive-artifacts, derive-design-package, evaluate-derivation-readiness, '
-        'derive-implementation-plan, materialize-component-spec, implementation-plan-progress, '
-        'set-implementation-plan-activity-state, derive-next-activity-bundle, '
+        'Supported now: authority, materialize-readiness, assemble-coder-brief, author-brief-targets, '
+        'review-coder-brief, prepare-architect-packet, derive-artifacts, derive-design-package, '
+        'evaluate-derivation-readiness, derive-implementation-plan, materialize-component-spec, '
+        'implementation-plan-progress, set-implementation-plan-activity-state, derive-next-activity-bundle, '
         'reconcile-implementation-plan-progress, publish-authority-package, smoke-test, '
         'load-issue-into-paa, materialize-verification-obligations.'
     )

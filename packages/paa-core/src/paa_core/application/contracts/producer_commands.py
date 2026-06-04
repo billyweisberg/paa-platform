@@ -3,22 +3,30 @@ from __future__ import annotations
 from typing import Protocol
 
 from paa_core.application.dto.producer import (
+    ProducerAssembleCoderBriefRequest,
+    ProducerAuthorityCommandRequest,
+    ProducerAuthorBriefTargetsRequest,
     ProducerDeriveArtifactsRequest,
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
     ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeReadinessRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
+    ProducerPrepareArchitectPacketRequest,
     ProducerPublishAuthorityPackageRequest,
+    ProducerReviewCoderBriefRequest,
     ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 
 
 class ProducerCommandService(Protocol):
+    def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult: ...
+    def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult: ...
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
     def derive_design_package(self, request: ProducerDeriveDesignPackageRequest) -> ProducerOperationResult: ...
     def evaluate_derivation_readiness(
@@ -45,6 +53,10 @@ class ProducerCommandService(Protocol):
         self,
         request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult: ...
+    def review_coder_brief(self, request: ProducerReviewCoderBriefRequest) -> ProducerOperationResult: ...
+    def prepare_architect_packet(self, request: ProducerPrepareArchitectPacketRequest) -> ProducerOperationResult: ...
+    def materialize_readiness(self, request: ProducerMaterializeReadinessRequest) -> ProducerOperationResult: ...
+    def authority_command(self, request: ProducerAuthorityCommandRequest) -> ProducerOperationResult: ...
     def materialize_component_spec(
         self,
         request: ProducerMaterializeComponentSpecRequest,

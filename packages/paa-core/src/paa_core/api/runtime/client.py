@@ -31,16 +31,22 @@ from paa_core.application.dto.operator import (
     OperatorOutputTable,
 )
 from paa_core.application.dto.producer import (
+    ProducerAssembleCoderBriefRequest,
+    ProducerAuthorityCommandRequest,
+    ProducerAuthorBriefTargetsRequest,
     ProducerDeriveArtifactsRequest,
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
     ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeReadinessRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
     ProducerPublishAuthorityPackageRequest,
+    ProducerPrepareArchitectPacketRequest,
+    ProducerReviewCoderBriefRequest,
     ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
@@ -89,6 +95,8 @@ class RuntimeApiClient(Protocol):
     def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult: ...
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
     def supports_operator_command_family(self, command_family: str) -> bool: ...
+    def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult: ...
+    def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult: ...
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
     def derive_design_package(self, request: ProducerDeriveDesignPackageRequest) -> ProducerOperationResult: ...
     def evaluate_derivation_readiness(
@@ -115,6 +123,10 @@ class RuntimeApiClient(Protocol):
         self,
         request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult: ...
+    def review_coder_brief(self, request: ProducerReviewCoderBriefRequest) -> ProducerOperationResult: ...
+    def prepare_architect_packet(self, request: ProducerPrepareArchitectPacketRequest) -> ProducerOperationResult: ...
+    def materialize_readiness(self, request: ProducerMaterializeReadinessRequest) -> ProducerOperationResult: ...
+    def authority_command(self, request: ProducerAuthorityCommandRequest) -> ProducerOperationResult: ...
     def materialize_component_spec(
         self,
         request: ProducerMaterializeComponentSpecRequest,
@@ -192,6 +204,12 @@ class InProcessRuntimeApiClient:
     def supports_operator_command_family(self, command_family: str) -> bool:
         return self._operator_commands.supports_command_family(command_family)
 
+    def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
+        return self._producer_commands.assemble_coder_brief(request)
+
+    def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult:
+        return self._producer_commands.author_brief_targets(request)
+
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
         return self._producer_commands.derive_artifacts(request)
 
@@ -233,6 +251,18 @@ class InProcessRuntimeApiClient:
         request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult:
         return self._producer_commands.set_implementation_plan_activity_state(request)
+
+    def review_coder_brief(self, request: ProducerReviewCoderBriefRequest) -> ProducerOperationResult:
+        return self._producer_commands.review_coder_brief(request)
+
+    def prepare_architect_packet(self, request: ProducerPrepareArchitectPacketRequest) -> ProducerOperationResult:
+        return self._producer_commands.prepare_architect_packet(request)
+
+    def materialize_readiness(self, request: ProducerMaterializeReadinessRequest) -> ProducerOperationResult:
+        return self._producer_commands.materialize_readiness(request)
+
+    def authority_command(self, request: ProducerAuthorityCommandRequest) -> ProducerOperationResult:
+        return self._producer_commands.authority_command(request)
 
     def materialize_component_spec(
         self,
@@ -363,6 +393,14 @@ class HttpRuntimeApiClient:
         payload = self._get_json(f'/runtime/operators/supports/{command_family}')
         return bool(payload.get('supported', False))
 
+    def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/assemble-coder-brief', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/author-brief-targets', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/derive-artifacts', request)
         return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
@@ -411,6 +449,22 @@ class HttpRuntimeApiClient:
         request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/set-implementation-plan-activity-state', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def review_coder_brief(self, request: ProducerReviewCoderBriefRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/review-coder-brief', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def prepare_architect_packet(self, request: ProducerPrepareArchitectPacketRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/prepare-architect-packet', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def materialize_readiness(self, request: ProducerMaterializeReadinessRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/materialize-readiness', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def authority_command(self, request: ProducerAuthorityCommandRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/authority', request)
         return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def materialize_component_spec(

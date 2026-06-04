@@ -98,3 +98,75 @@ class ProducerSetImplementationPlanActivityStateRequest:
     started_at: str | None = None
     completed_at: str | None = None
     metadata_json: str | None = None
+
+
+@dataclass(frozen=True)
+class ProducerAssembleCoderBriefRequest:
+    design_package: Path
+    package_schema_path: Path | None = None
+    brief_schema_path: Path | None = None
+    project_slug: str | None = None
+    output_path: Path | None = None
+    persist_db: bool = True
+
+
+@dataclass(frozen=True)
+class ProducerAuthorBriefTargetsRequest:
+    design_package: Path
+    package_schema_path: Path | None = None
+    brief_schema_path: Path | None = None
+    project_slug: str | None = None
+    output_path: Path | None = None
+
+
+@dataclass(frozen=True)
+class ProducerReviewCoderBriefRequest:
+    coder_run_brief_id: str | None = None
+    design_package: Path | None = None
+    decision: str = 'approve'
+    notes: str | None = None
+    review_summary: str | None = None
+    output_path: Path | None = None
+
+
+@dataclass(frozen=True)
+class ProducerPrepareArchitectPacketRequest:
+    manifest_path: Path
+    design_package: Path
+    packet_output: Path
+    brief_output: Path
+    repo: str
+    accepted_pr_number: int
+    accepted_pr_url: str
+    closed_issue_number: int
+    closed_issue_url: str
+    next_issue_number: int
+    next_issue_url: str
+    baseline_file: Path
+    branch: str = 'main'
+    review_output: Path | None = None
+    schema_path: Path | None = None
+    project_slug: str | None = None
+    packet_project: str | None = None
+    remaining_gap: str | None = None
+    next_move: tuple[str, ...] = ()
+    focus: tuple[str, ...] = ()
+    keep_stable: tuple[str, ...] = ()
+    governance_reminder: tuple[str, ...] = ()
+    pr_starter_branch: str | None = None
+    pr_starter_title: str | None = None
+    pr_starter_body_linkage: str | None = None
+    message_id: str | None = None
+    correlation_id: str | None = None
+    created_at: str | None = None
+    persist_db: bool = True
+
+
+@dataclass(frozen=True)
+class ProducerMaterializeReadinessRequest:
+    argv: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProducerAuthorityCommandRequest:
+    argv: tuple[str, ...]

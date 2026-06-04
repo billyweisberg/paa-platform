@@ -8,15 +8,21 @@ from pydantic import BaseModel
 
 from paa_core.api.runtime.dependencies import get_producer_command_service
 from paa_core.application.dto.producer import (
+    ProducerAssembleCoderBriefRequest,
+    ProducerAuthorityCommandRequest,
+    ProducerAuthorBriefTargetsRequest,
     ProducerDeriveArtifactsRequest,
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
     ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeReadinessRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
+    ProducerPrepareArchitectPacketRequest,
+    ProducerReviewCoderBriefRequest,
     ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
@@ -27,6 +33,23 @@ router = APIRouter(prefix='/runtime/producer', tags=['runtime-producer'])
 
 class ProducerRepoRootModel(BaseModel):
     repo_root: str
+
+
+class ProducerAssembleCoderBriefModel(BaseModel):
+    design_package: str
+    package_schema_path: str | None = None
+    brief_schema_path: str | None = None
+    project_slug: str | None = None
+    output_path: str | None = None
+    persist_db: bool = True
+
+
+class ProducerAuthorBriefTargetsModel(BaseModel):
+    design_package: str
+    package_schema_path: str | None = None
+    brief_schema_path: str | None = None
+    project_slug: str | None = None
+    output_path: str | None = None
 
 
 class ProducerPublishAuthorityPackageModel(BaseModel):
@@ -79,6 +102,51 @@ class ProducerSetImplementationPlanActivityStateModel(BaseModel):
     metadata_json: str | None = None
 
 
+class ProducerReviewCoderBriefModel(BaseModel):
+    coder_run_brief_id: str | None = None
+    design_package: str | None = None
+    decision: str
+    notes: str | None = None
+    review_summary: str | None = None
+    output_path: str | None = None
+
+
+class ProducerPrepareArchitectPacketModel(BaseModel):
+    manifest_path: str
+    design_package: str
+    packet_output: str
+    brief_output: str
+    repo: str
+    accepted_pr_number: int
+    accepted_pr_url: str
+    closed_issue_number: int
+    closed_issue_url: str
+    next_issue_number: int
+    next_issue_url: str
+    baseline_file: str
+    branch: str = 'main'
+    review_output: str | None = None
+    schema_path: str | None = None
+    project_slug: str | None = None
+    packet_project: str | None = None
+    remaining_gap: str | None = None
+    next_move: list[str] = []
+    focus: list[str] = []
+    keep_stable: list[str] = []
+    governance_reminder: list[str] = []
+    pr_starter_branch: str | None = None
+    pr_starter_title: str | None = None
+    pr_starter_body_linkage: str | None = None
+    message_id: str | None = None
+    correlation_id: str | None = None
+    created_at: str | None = None
+    persist_db: bool = True
+
+
+class ProducerArgvModel(BaseModel):
+    argv: list[str]
+
+
 class ProducerSmokeTestModel(BaseModel):
     repo_root: str
     output_path: str | None = None
@@ -110,6 +178,39 @@ def derive_artifacts(
 ) -> dict[str, object]:
     return service.derive_artifacts(
         ProducerDeriveArtifactsRequest(repo_root=Path(request.repo_root).resolve())
+    ).payload
+
+
+@router.post('/assemble-coder-brief')
+def assemble_coder_brief_route(
+    request: ProducerAssembleCoderBriefModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.assemble_coder_brief(
+        ProducerAssembleCoderBriefRequest(
+            design_package=Path(request.design_package).resolve(),
+            package_schema_path=Path(request.package_schema_path).resolve() if request.package_schema_path else None,
+            brief_schema_path=Path(request.brief_schema_path).resolve() if request.brief_schema_path else None,
+            project_slug=request.project_slug,
+            output_path=Path(request.output_path).resolve() if request.output_path else None,
+            persist_db=request.persist_db,
+        )
+    ).payload
+
+
+@router.post('/author-brief-targets')
+def author_brief_targets_route(
+    request: ProducerAuthorBriefTargetsModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.author_brief_targets(
+        ProducerAuthorBriefTargetsRequest(
+            design_package=Path(request.design_package).resolve(),
+            package_schema_path=Path(request.package_schema_path).resolve() if request.package_schema_path else None,
+            brief_schema_path=Path(request.brief_schema_path).resolve() if request.brief_schema_path else None,
+            project_slug=request.project_slug,
+            output_path=Path(request.output_path).resolve() if request.output_path else None,
+        )
     ).payload
 
 
@@ -221,6 +322,83 @@ def set_implementation_plan_activity_state_route(
             completed_at=request.completed_at,
             metadata_json=request.metadata_json,
         )
+    ).payload
+
+
+@router.post('/review-coder-brief')
+def review_coder_brief_route(
+    request: ProducerReviewCoderBriefModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.review_coder_brief(
+        ProducerReviewCoderBriefRequest(
+            coder_run_brief_id=request.coder_run_brief_id,
+            design_package=Path(request.design_package).resolve() if request.design_package else None,
+            decision=request.decision,
+            notes=request.notes,
+            review_summary=request.review_summary,
+            output_path=Path(request.output_path).resolve() if request.output_path else None,
+        )
+    ).payload
+
+
+@router.post('/prepare-architect-packet')
+def prepare_architect_packet_route(
+    request: ProducerPrepareArchitectPacketModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.prepare_architect_packet(
+        ProducerPrepareArchitectPacketRequest(
+            manifest_path=Path(request.manifest_path).resolve(),
+            design_package=Path(request.design_package).resolve(),
+            packet_output=Path(request.packet_output).resolve(),
+            brief_output=Path(request.brief_output).resolve(),
+            repo=request.repo,
+            accepted_pr_number=request.accepted_pr_number,
+            accepted_pr_url=request.accepted_pr_url,
+            closed_issue_number=request.closed_issue_number,
+            closed_issue_url=request.closed_issue_url,
+            next_issue_number=request.next_issue_number,
+            next_issue_url=request.next_issue_url,
+            baseline_file=Path(request.baseline_file).resolve(),
+            branch=request.branch,
+            review_output=Path(request.review_output).resolve() if request.review_output else None,
+            schema_path=Path(request.schema_path).resolve() if request.schema_path else None,
+            project_slug=request.project_slug,
+            packet_project=request.packet_project,
+            remaining_gap=request.remaining_gap,
+            next_move=tuple(request.next_move),
+            focus=tuple(request.focus),
+            keep_stable=tuple(request.keep_stable),
+            governance_reminder=tuple(request.governance_reminder),
+            pr_starter_branch=request.pr_starter_branch,
+            pr_starter_title=request.pr_starter_title,
+            pr_starter_body_linkage=request.pr_starter_body_linkage,
+            message_id=request.message_id,
+            correlation_id=request.correlation_id,
+            created_at=request.created_at,
+            persist_db=request.persist_db,
+        )
+    ).payload
+
+
+@router.post('/materialize-readiness')
+def materialize_readiness_route(
+    request: ProducerArgvModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.materialize_readiness(
+        ProducerMaterializeReadinessRequest(argv=tuple(request.argv))
+    ).payload
+
+
+@router.post('/authority')
+def authority_command_route(
+    request: ProducerArgvModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.authority_command(
+        ProducerAuthorityCommandRequest(argv=tuple(request.argv))
     ).payload
 
 
