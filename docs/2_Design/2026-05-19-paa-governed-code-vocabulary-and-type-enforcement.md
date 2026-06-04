@@ -128,7 +128,7 @@ Add repo configuration for `basedpyright` with an initially narrow scope.
 
 Recommended initial scope:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src`
 
 Do not attempt whole-repo strictness immediately.
 

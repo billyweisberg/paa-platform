@@ -95,7 +95,7 @@ Consumer-side execution uses the installed authority package under `.project/dat
 Some runtime paths still need to prefer installed authority artifacts over stale DB-backed brief content.
 
 Relevant implementation surfaces:
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 - `packages/paa-consumer/src/paa_consumer/authority_install.py`
 - `scripts/runtime/install_pilot_authority_overlay.py`
 

@@ -230,7 +230,7 @@ python -m py_compile \
 Recommended broader confidence pass after the dedicated service tests are green:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m unittest discover -s tests/unit -p 'test_*.py'
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m unittest discover -s tests/unit -p 'test_*.py'
 ```
 
 ## Success Criteria

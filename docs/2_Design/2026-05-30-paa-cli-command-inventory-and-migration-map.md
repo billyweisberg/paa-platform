@@ -48,8 +48,8 @@ That deeper inventory is the next pass.
 ## Current Command Surface Sources
 
 Primary current sources:
-- `packages/paa-producer/src/paa_producer/commands.py`
-- `packages/paa-producer/src/paa_producer/__main__.py`
+- `packages/paa-core/src/paa_producer/commands.py`
+- `packages/paa-core/src/paa_producer/__main__.py`
 - `packages/paa-cli/src/paa_cli/app.py`
 - `packages/paa-consumer/src/paa_consumer/`
 - `scripts/docs/`

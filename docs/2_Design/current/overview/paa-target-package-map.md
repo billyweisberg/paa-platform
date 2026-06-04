@@ -53,9 +53,9 @@ The target command shape is:
 - `paa producer ...`
 
 Not:
-- `paa_producer ...`
+- `paa producer ...`
 
-`paa_producer` may exist only as transitional residue while the cutover completes.
+The old `paa_producer` package boundary has been removed. Producer implementation now lives in `paa_core.producer`, and a temporary compatibility import package remains at `packages/paa-core/src/paa_producer/` until remaining references are retired.
 It is not part of the target system shape.
 
 ## Bootstrap Exception
@@ -441,7 +441,7 @@ Current files already belong in the correct top-level package:
 - `packages/paa-cli/src/paa_cli/rendering.py`
 - `packages/paa-cli/src/paa_cli/normalization.py`
 
-### Fold `paa_producer` into `paa_core.producer`
+### Producer Boundary Removal
 The current top-level producer package should not remain a separate first-class system package.
 
 Producer logic is part of the same application/system boundary and should become an internal subsystem under `paa_core.producer`.

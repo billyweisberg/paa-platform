@@ -257,7 +257,7 @@ This is the key finding:
 
 ### Producer-side load path
 
-`packages/paa-producer/src/paa_producer/issue_loader.py`:
+`packages/paa-core/src/paa_producer/issue_loader.py`:
 - loads design-package artifacts from files
 - loads coder-brief artifacts from files
 - inserts rows into `paa.design_packages`
@@ -287,7 +287,7 @@ Important consequence:
 
 ### Producer runtime resolution path
 
-`packages/paa-producer/src/paa_producer/authority_runtime.py`:
+`packages/paa-core/src/paa_producer/authority_runtime.py`:
 - reads `paa.design_packages`
 - reads `paa.coder_run_briefs`
 - reads `paa.coder_brief_sequence_states`

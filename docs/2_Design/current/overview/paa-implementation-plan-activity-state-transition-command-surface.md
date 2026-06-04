@@ -268,8 +268,8 @@ Update the operator guide and loop docs with the real command examples.
 Low-level:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. \
-python -m paa_producer set-implementation-plan-activity-state \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+python -m paa_cli producer set-implementation-plan-activity-state \
   --plan-id <implementation-plan-id> \
   --activity-key <activity-key> \
   --activity-state completed

@@ -57,13 +57,13 @@ Connected draft brief artifact:
 ## Commands
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_producer.__main__ derive-implementation-plan \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer derive-implementation-plan \
   --design-package docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json \
   --output docs/2_Design/2026-05-17-component-design-planning-service-implementation-plan.json
 ```
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_producer.__main__ assemble-coder-brief \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer assemble-coder-brief \
   --design-package docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json \
   --output docs/2_Design/2026-05-17-component-design-planning-service-assembled-draft-coder-run-brief.json
 ```

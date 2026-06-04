@@ -211,7 +211,7 @@
       "packages/paa-core/src/paa_core/repositories/component_design/postgres.py",
       "packages/paa-core/src/paa_core/services/workflow_lifecycle/",
       "packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/",
-      "packages/paa-producer/src/paa_producer/authority_runtime.py",
+      "packages/paa-core/src/paa_producer/authority_runtime.py",
       "packages/paa-consumer/src/paa_consumer/",
       "migrations/postgres/"
     ],

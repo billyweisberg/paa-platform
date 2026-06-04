@@ -31,10 +31,10 @@ Every legacy helper or duplicate runtime surface should have one of these status
 | canonical | `packages/paa-core/src/paa_core/traceability.py` | traceability/report query helpers | `paa-platform` | keep |
 | canonical | `packages/paa-core/src/paa_core/runtime_guardrails.py` | stale-topology/runtime guardrails | `paa-platform` | keep |
 | canonical | `packages/paa-core/src/paa_core/install.py` | repo-local producer/consumer install/update | `paa-platform` | keep |
-| canonical | `packages/paa-producer/src/paa_producer/authority_runtime.py` | producer authority runtime commands | `paa-platform` | keep |
-| canonical | `packages/paa-producer/src/paa_producer/publish.py` | authority package publish flow | `paa-platform` | keep |
-| canonical | `packages/paa-producer/src/paa_producer/obligation_loader.py` | generic verification obligation loader | `paa-platform` | keep |
-| canonical | `packages/paa-producer/src/paa_producer/issue_loader.py` | generic source-to-PAA issue loader | `paa-platform` | keep |
+| canonical | `packages/paa-core/src/paa_producer/authority_runtime.py` | producer authority runtime commands | `paa-platform` | keep |
+| canonical | `packages/paa-core/src/paa_producer/publish.py` | authority package publish flow | `paa-platform` | keep |
+| canonical | `packages/paa-core/src/paa_producer/obligation_loader.py` | generic verification obligation loader | `paa-platform` | keep |
+| canonical | `packages/paa-core/src/paa_producer/issue_loader.py` | generic source-to-PAA issue loader | `paa-platform` | keep |
 | canonical | `packages/paa-consumer/src/paa_consumer/authority_install.py` | authority package install/update | `paa-platform` | keep |
 | canonical | `packages/paa-consumer/src/paa_consumer/inbox.py` | consumer queue operations | `paa-platform` | keep |
 | canonical | `packages/paa-consumer/src/paa_consumer/delivery_runtime.py` | consumer delivery/handoff runtime | `paa-platform` | keep |

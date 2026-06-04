@@ -56,9 +56,9 @@ Code corrections:
   - fall back to packet GitHub context when live GitHub issue/PR lookup is unavailable
   - pass `--project-slug` through worker/QA result compilation commands
   - resolve proof-slice issue number from persisted `DesignPackage -> WorkItem` linkage
-- `packages/paa-producer/src/paa_producer/design_package_deriver.py`
+- `packages/paa-core/src/paa_producer/design_package_deriver.py`
   - allow a proof slice to gain an issue binding later without forking its work-item identity
-- `packages/paa-producer/src/paa_producer/architect_packet_preparer.py`
+- `packages/paa-core/src/paa_producer/architect_packet_preparer.py`
   - persist packet-ready `brief_json` and `generated_from_json.readiness_class = execution_ready`
 
 Authority/data corrections:

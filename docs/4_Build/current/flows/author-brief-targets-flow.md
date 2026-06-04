@@ -50,11 +50,11 @@ for one execution-authoritative slice.
 ## Implementation Surfaces
 
 CLI wiring:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/__main__.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/commands.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/__main__.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/commands.py`
 
 Producer flow:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_target_author.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/brief_target_author.py`
 
 Repository support extended for this flow:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/repositories/component_design/contracts.py`
@@ -124,12 +124,12 @@ That is a better match to the actual service component spec than the earlier rep
 
 Unit tests:
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m unittest tests.unit.test_component_design_repository tests.unit.test_derivation_readiness tests.unit.test_brief_target_author
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m unittest tests.unit.test_component_design_repository tests.unit.test_derivation_readiness tests.unit.test_brief_target_author
 ```
 
 Proof-slice materialization:
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_producer author-brief-targets \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer author-brief-targets \
   --design-package docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json \
   --output docs/2_Design/2026-05-16-component-design-planning-service-authored-brief-targets.json
 ```

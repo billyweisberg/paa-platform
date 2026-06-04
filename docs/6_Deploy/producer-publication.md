@@ -7,8 +7,8 @@ This note documents the first config-driven publication entrypoint exposed by `p
 ## Command
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
-uv run --python 3.12 --isolated python -m paa_producer publish-authority-package \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+uv run --python 3.12 --isolated python -m paa_cli producer publish-authority-package \
   --repo-root /absolute/path/to/producer-repo \
   --project-config /absolute/path/to/.codex/paa/project-config.json
 ```

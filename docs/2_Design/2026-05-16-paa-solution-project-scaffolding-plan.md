@@ -25,7 +25,7 @@ Read alongside:
 
 Current package roots already in place:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/`
 
 Current structured scaffolding already in place:
@@ -187,7 +187,7 @@ Examples:
 ## 7. Host Surface Layout
 
 Producer-side host roots:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/hosts/`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/hosts/`
 
 Consumer-side host roots:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-consumer/src/paa_consumer/hosts/`

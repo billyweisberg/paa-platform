@@ -52,11 +52,11 @@ It makes brief approval a real action with:
 ## Implementation Surfaces
 
 CLI wiring:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/__main__.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/commands.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/__main__.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/commands.py`
 
 Producer flow:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_reviewer.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/brief_reviewer.py`
 
 Tests:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/tests/unit/test_brief_reviewer.py`
@@ -122,12 +122,12 @@ That confirms the slice is no longer only a useful draft. It is now a governed a
 
 Unit tests:
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m unittest tests.unit.test_brief_reviewer
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m unittest tests.unit.test_brief_reviewer
 ```
 
 Proof-slice review:
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_producer review-coder-brief \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer review-coder-brief \
   --coder-run-brief-id fceab499-60f4-4a11-851d-b1059d8dbde9 \
   --decision approve \
   --review-summary "Proof slice approved after target authoring validation." \

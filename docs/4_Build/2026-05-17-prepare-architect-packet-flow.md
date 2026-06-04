@@ -36,7 +36,7 @@ Use:
 
 ```bash
 cd /Users/billyweisberg/Repos/billyweisberg/paa-platform
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src python -m paa_producer prepare-architect-packet \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer prepare-architect-packet \
   --manifest-path docs/2_Design/2026-05-17-paa-proof-slice-authority-manifest.json \
   --design-package docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json \
   --packet-output docs/2_Design/2026-05-17-component-design-planning-service-architect-cycle-packet.json \

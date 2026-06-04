@@ -81,7 +81,7 @@ Prefer:
 ### Component row materialization
 
 Current real path:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/design_package_deriver.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/design_package_deriver.py`
 
 Important existing function:
 - `_ensure_component(...)`
@@ -93,8 +93,8 @@ That path already:
 ### Component element and realization materialization
 
 Current real paths:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_target_author.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/implementation_plan_deriver.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/brief_target_author.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/implementation_plan_deriver.py`
 
 These paths already:
 - create required `component_elements`

@@ -89,20 +89,20 @@ We should not yet claim “all PAA docs are fully covered” because:
 ### Canonical runtime ownership in `paa-platform`
 Current canonical runtime modules live in:
 - `packages/paa-core/src/paa_core/`
-- `packages/paa-producer/src/paa_producer/`
+- `packages/paa-core/src/paa_producer/`
 - `packages/paa-consumer/src/paa_consumer/`
 
 ### Legacy / duplicate / deprecated runtime surfaces
 
 | Capability | Canonical in `paa-platform` | Duplicate or deprecated copies outside platform | Status |
 |---|---|---|---|
-| Authority runtime / packet compilation | `packages/paa-producer/src/paa_producer/authority_runtime.py` | `<producer_repo_root>/tools/codex-skills/fractal-core-authority/scripts/project_authority.py`, `<producer_repo_root>-authority-source/tools/.../project_authority.py`, `<producer_repo_root>-authority-source-clean/tools/.../project_authority.py`, `<codex_home>/skills/fractal-core-authority/scripts/project_authority.py` | Canonicalized in platform; legacy copies remain |
-| Authority publication | `packages/paa-producer/src/paa_producer/publish.py` | `<producer_repo_root>/tools/codex-skills/fractal-core-authority/scripts/publish_current.py`, legacy source/source-clean copies, home `.codex` copy | Canonicalized in platform; legacy copies remain |
+| Authority runtime / packet compilation | `packages/paa-core/src/paa_producer/authority_runtime.py` | `<producer_repo_root>/tools/codex-skills/fractal-core-authority/scripts/project_authority.py`, `<producer_repo_root>-authority-source/tools/.../project_authority.py`, `<producer_repo_root>-authority-source-clean/tools/.../project_authority.py`, `<codex_home>/skills/fractal-core-authority/scripts/project_authority.py` | Canonicalized in platform; legacy copies remain |
+| Authority publication | `packages/paa-core/src/paa_producer/publish.py` | `<producer_repo_root>/tools/codex-skills/fractal-core-authority/scripts/publish_current.py`, legacy source/source-clean copies, home `.codex` copy | Canonicalized in platform; legacy copies remain |
 | Readiness materialization | `packages/paa-core/src/paa_core/readiness.py` | `materialize_coder_brief_readiness.py` exists only in legacy source/source-clean and home `.codex` copies | Canonicalized in platform; canonical producer repo no longer owns the old script |
 | Queue / handoff runtime | `packages/paa-core/src/paa_core/handoff_runtime.py`, `packages/paa-consumer/src/paa_consumer/inbox.py`, `packages/paa-consumer/src/paa_consumer/delivery_runtime.py` | `<producer_repo_root>/tools/codex-skills/fractal-core-handoff/.../rabbitmq_handoff.py`, legacy source/source-clean copies, home `.codex` copy | Canonicalized in platform; legacy copies remain |
 | TechLead reporting | `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`, `packages/paa-core/src/paa_core/traceability.py` | `<codex_home>/skills/fractal-core-techlead/scripts/techlead_status.py` | Canonicalized in platform; old script still exists only as deprecated legacy copy |
-| Generic issue loading | `packages/paa-producer/src/paa_producer/issue_loader.py` | issue-specific load SQL in legacy docs | Canonicalized in platform; SQL remains historical |
-| Verification obligation loading | `packages/paa-producer/src/paa_producer/obligation_loader.py` | issue-specific obligation inserts in legacy SQL | Canonicalized in platform; SQL remains historical |
+| Generic issue loading | `packages/paa-core/src/paa_producer/issue_loader.py` | issue-specific load SQL in legacy docs | Canonicalized in platform; SQL remains historical |
+| Verification obligation loading | `packages/paa-core/src/paa_producer/obligation_loader.py` | issue-specific obligation inserts in legacy SQL | Canonicalized in platform; SQL remains historical |
 | Repo-local install/update | `packages/paa-core/src/paa_core/install.py`, producer/consumer CLI entrypoints | `<producer_repo_root>/tools/codex-skills/install_fractal_core_skills.py`, `<producer_repo_root>/tools/codex-skills/fractal-core-handoff/install_to_codex_skills.py`, legacy source/source-clean copies | Canonical platform install exists; old install helpers are still outside platform and should be treated as deprecated migration helpers |
 
 ## Section 4. Does Any Live Runtime Capability Exist Only Outside `paa-platform`?

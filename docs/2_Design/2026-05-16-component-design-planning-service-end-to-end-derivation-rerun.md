@@ -143,7 +143,7 @@ It is now represented as an explicitly approved authority artifact with a record
 ## Important Finding From The Rerun
 
 A real governance bug surfaced during this rerun:
-- rerunning `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/coder_brief_assembler.py`
+- rerunning `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/coder_brief_assembler.py`
   against an already approved slice could demote the brief back to `draft_brief`
 
 That bug was fixed during this run.

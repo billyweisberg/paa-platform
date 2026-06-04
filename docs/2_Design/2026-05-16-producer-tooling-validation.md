@@ -26,10 +26,10 @@ Process and architecture references:
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-paa-solution-project-scaffolding-plan.md`
 
 Primary code/tool surfaces inspected:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/__main__.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/derive_artifacts.py`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/README.md`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/__main__.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/authority_runtime.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/derive_artifacts.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/README.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/repositories/component_design/contracts.py`
 
 ## Main question
@@ -63,7 +63,7 @@ This means the current tooling supports the outer shell of derivation better tha
 ## 1. Top-level producer CLI
 
 Primary entrypoint:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/__main__.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/__main__.py`
 
 Current commands include:
 - `install-producer-runtime`
@@ -84,7 +84,7 @@ Assessment:
 ## 2. Authority helper command family
 
 Primary implementation:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Current subcommands include:
 - `summary`
@@ -114,7 +114,7 @@ Assessment:
 ## 3. Publication tooling
 
 Primary implementation:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/publish.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/publish.py`
 
 Assessment:
 - authority-package publication is already toolable and real
@@ -149,7 +149,7 @@ Assessment:
 ## 6. Placeholder derivation tool surface
 
 Primary implementation:
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/derive_artifacts.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/derive_artifacts.py`
 
 Current behavior:
 - returns an inventory message saying artifact derivation logic belongs here next
@@ -496,7 +496,7 @@ Status update:
 - `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
 - current implementation surface:
   - `paa-producer derive-design-package`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/design_package_deriver.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/design_package_deriver.py`
 
 ## 2. `evaluate-derivation-readiness`
 
@@ -510,7 +510,7 @@ Status update:
 - `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
 - current implementation surface:
   - `paa-producer evaluate-derivation-readiness`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/derivation_readiness.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/derivation_readiness.py`
 
 ## 3. `assemble-coder-brief`
 
@@ -530,7 +530,7 @@ Status update:
 - `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
 - current implementation surface:
   - `paa-producer assemble-coder-brief`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/coder_brief_assembler.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/coder_brief_assembler.py`
 
 ## 4. `author-brief-targets`
 
@@ -544,7 +544,7 @@ Status update:
 - `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
 - current implementation surface:
   - `paa-producer author-brief-targets`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_target_author.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/brief_target_author.py`
 
 ## 5. `review-coder-brief`
 
@@ -558,7 +558,7 @@ Status update:
 - `2026-05-16`: implemented and validated for the `Component Design Planning Service` proof slice
 - current implementation surface:
   - `paa-producer review-coder-brief`
-  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/brief_reviewer.py`
+  - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/brief_reviewer.py`
 
 ## 6. `prepare-architect-packet`
 

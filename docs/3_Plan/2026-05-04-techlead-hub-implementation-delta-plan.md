@@ -59,7 +59,7 @@ Important current assumptions:
 ### Packet compilers
 
 Current compiler entrypoints:
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Current compiled packet assumptions:
 - `materialize-architect-packet`
@@ -211,7 +211,7 @@ Current compiler payloads bake the mesh into the envelope:
 ### `materialize-architect-packet`
 
 File:
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Changes:
 - treat as temporary bridge only
@@ -222,7 +222,7 @@ Changes:
 ### `materialize-slice-result-packet`
 
 File:
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Changes:
 - default `to_role` should become `techlead`
@@ -237,7 +237,7 @@ Changes:
 ### `materialize-qa-verification-packet`
 
 File:
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Changes:
 - default `to_role` should become `techlead`
@@ -367,7 +367,7 @@ Add to packet payload or metadata:
 ## Current code touchpoints
 
 ### Packet compiler payloads
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 ### Queue persistence metadata
 - `packages/paa-core/src/paa_core/handoff_runtime.py`

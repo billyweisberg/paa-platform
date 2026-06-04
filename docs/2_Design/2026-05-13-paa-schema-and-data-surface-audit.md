@@ -185,7 +185,7 @@ The DB is already used for:
 
 Relevant code surfaces:
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 - `packages/paa-core/src/paa_core/sql/full_chain_reporting_view.sql`
 
 ### Important design finding
@@ -230,7 +230,7 @@ How they are used:
 - referenced by producer/runtime packet compilation and validation flows
 - schema type drives route policy and payload checks in:
   - `packages/paa-core/src/paa_core/handoff_runtime.py`
-  - `packages/paa-producer/src/paa_producer/authority_runtime.py`
+  - `packages/paa-core/src/paa_producer/authority_runtime.py`
 
 Important design finding:
 - packet schemas are canonical in files, not in DB
@@ -257,7 +257,7 @@ How they are used:
 - copied into installed runtime under `.codex/paa/schemas/authority-package/`
 - used by installer/publication flows in:
   - `packages/paa-core/src/paa_core/install.py`
-  - `packages/paa-producer/src/paa_producer/publish.py`
+  - `packages/paa-core/src/paa_producer/publish.py`
   - `packages/paa-consumer/src/paa_consumer/authority_install.py`
 
 Important design finding:
@@ -292,7 +292,7 @@ Important design finding:
 
 ### Canonical publication surfaces
 Producer publication code:
-- `packages/paa-producer/src/paa_producer/publish.py`
+- `packages/paa-core/src/paa_producer/publish.py`
 - `packages/paa-consumer/src/paa_consumer/authority_install.py`
 - `packages/paa-core/src/paa_core/install.py`
 
@@ -353,7 +353,7 @@ The packet schema files in:
 ### Runtime packet handling
 Main handling code:
 - `packages/paa-core/src/paa_core/handoff_runtime.py`
-- `packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `packages/paa-core/src/paa_producer/authority_runtime.py`
 - `packages/paa-consumer/src/paa_consumer/inbox.py`
 - `packages/paa-core/src/paa_core/services/runtime_workflow.py and related paa_core runtime services`
 

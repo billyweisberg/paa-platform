@@ -66,7 +66,7 @@ The real target is a system with:
 The CLI rule must be interpreted strictly:
 - there is one user-facing CLI: `paa`
 - producer commands are part of that CLI
-- `paa_producer` is transitional residue only and must be removed as a peer CLI
+- the old `paa_producer` peer CLI/package has been removed
 
 There is one narrow host exception:
 - local bootstrap and process-control commands may operate directly on local application/runtime control when they are responsible for starting or stopping the system that would host the HTTP API

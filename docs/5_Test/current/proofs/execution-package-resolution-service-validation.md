@@ -160,5 +160,5 @@ This does not yet prove every runtime consumer has migrated.
 
 Follow-on work should move the same service-backed lookup into other remaining direct manifest consumers, especially:
 
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/authority_runtime.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/authority_runtime.py`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_core/runtime_guardrails.py`

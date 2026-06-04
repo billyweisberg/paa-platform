@@ -41,7 +41,7 @@ This flow closes Priority 1 item 6 by turning draft coder-brief construction int
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-03-coder-brief-field-derivation-matrix.md`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/2_Design/2026-05-16-component-design-planning-service-stage1-design-package.json`
 - `/Users/billyweisberg/Repos/billyweisberg/paa-platform/docs/4_Build/2026-05-16-evaluate-derivation-readiness-flow.md`
-- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-producer/src/paa_producer/coder_brief_assembler.py`
+- `/Users/billyweisberg/Repos/billyweisberg/paa-platform/packages/paa-core/src/paa_producer/coder_brief_assembler.py`
 
 ## Problem
 

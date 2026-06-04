@@ -341,42 +341,42 @@ Common commands:
 
 ### Derive a Stage 1 design package
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-design-package --design-package docs/2_Design/<stage1-package>.json
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer derive-design-package --design-package docs/2_Design/<stage1-package>.json
 ```
 
 ### Evaluate derivation readiness
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer evaluate-derivation-readiness --design-package docs/2_Design/<stage1-package>.json
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer evaluate-derivation-readiness --design-package docs/2_Design/<stage1-package>.json
 ```
 
 ### Derive an implementation plan from a Stage 1 package
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-implementation-plan --design-package docs/2_Design/<stage1-package>.json
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer derive-implementation-plan --design-package docs/2_Design/<stage1-package>.json
 ```
 
 ### Assemble a coder brief
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer assemble-coder-brief --design-package docs/2_Design/<stage1-package>.json
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer assemble-coder-brief --design-package docs/2_Design/<stage1-package>.json
 ```
 
 ### Materialize a component spec
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
 ```
 
 ### Show plan progress
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer implementation-plan-progress --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer implementation-plan-progress --plan-id <implementation-plan-id>
 ```
 
 ### Reconcile progress
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
 ```
 
 ### Derive the next activity bundle
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-next-activity-bundle --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer derive-next-activity-bundle --plan-id <implementation-plan-id>
 ```
 
 ### Sync current authority

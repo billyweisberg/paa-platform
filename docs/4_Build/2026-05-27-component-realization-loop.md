@@ -123,8 +123,8 @@ Materialize the component spec into live model truth.
 Producer command:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. \
-python -m paa_producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+python -m paa_cli producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
 ```
 
 Expected result:
@@ -143,8 +143,8 @@ Recompute plan-progress truth from the current model state.
 Producer command:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. \
-python -m paa_producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+python -m paa_cli producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
 ```
 
 Expected first result for a new component:
@@ -160,8 +160,8 @@ Derive the next valid executable slice.
 Producer command:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. \
-python -m paa_producer derive-next-activity-bundle --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+python -m paa_cli producer derive-next-activity-bundle --plan-id <implementation-plan-id>
 ```
 
 Expected result in the standard narrow loop:
@@ -271,25 +271,25 @@ The extracted component should own:
 ### Materialize spec
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer materialize-component-spec --spec docs/2_Design/<component-spec>.md
 ```
 
 ### Show plan progress
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer implementation-plan-progress --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer implementation-plan-progress --plan-id <implementation-plan-id>
 ```
 
 ### Reconcile progress
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer reconcile-implementation-plan-progress --plan-id <implementation-plan-id>
 ```
 
 ### Derive next activity bundle
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src:. python -m paa_producer derive-next-activity-bundle --plan-id <implementation-plan-id>
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. python -m paa_cli producer derive-next-activity-bundle --plan-id <implementation-plan-id>
 ```
 
 ## Proven Result Set

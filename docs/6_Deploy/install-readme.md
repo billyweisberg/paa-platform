@@ -7,8 +7,8 @@ This directory documents producer-mode and consumer-mode installation flows for 
 ### Producer runtime install/update
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
-uv run --python 3.12 --isolated python -m paa_producer install-producer-runtime \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+uv run --python 3.12 --isolated python -m paa_cli producer install-producer-runtime \
   --repo-root /absolute/path/to/producer-repo \
   --project-pack fractal-core
 ```
@@ -16,8 +16,8 @@ uv run --python 3.12 --isolated python -m paa_producer install-producer-runtime 
 Alias:
 
 ```bash
-PYTHONPATH=packages/paa-core/src:packages/paa-producer/src \
-uv run --python 3.12 --isolated python -m paa_producer update-producer-runtime \
+PYTHONPATH=packages/paa-core/src:packages/paa-core/src:packages/paa-cli/src:. \
+uv run --python 3.12 --isolated python -m paa_cli producer update-producer-runtime \
   --repo-root /absolute/path/to/producer-repo \
   --project-pack fractal-core
 ```
