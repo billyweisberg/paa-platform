@@ -19,7 +19,7 @@ from paa_core.runtime.transport.rabbitmq import RabbitMQManagementClient, build_
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository, RuntimeEventRepository
 from paa_core.runtime.support.runtime_evidence import persist_qa_verification, persist_slice_result
 from paa_core.runtime.support.runtime_paths import repo_queue_state_root, resolved_repo_runtime_queue_topology
-from paa_core.team_worker_roles import team_worker_queue_name_by_display_name
+from paa_core.runtime.support.team_worker_roles import team_worker_queue_name_by_display_name
 
 JsonDict = dict[str, Any]
 

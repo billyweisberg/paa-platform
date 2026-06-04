@@ -17,7 +17,7 @@ from paa_core.runtime.bridges.worktree import (
     DefaultRuntimeWorktreeService,
     RuntimeWorktreeInspectRequest,
 )
-from paa_core.team_worker_roles import team_worker_role_by_display_name
+from paa_core.runtime.support.team_worker_roles import team_worker_role_by_display_name
 
 
 @dataclass(frozen=True)

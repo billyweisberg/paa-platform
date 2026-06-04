@@ -4,7 +4,7 @@ import json
 from typing import Any, cast
 
 from paa_core.application.dto.authority import AuthorityInstallRequest, AuthorityInstallResultView
-from paa_core.install import install_authority_package
+from paa_core.runtime.support.install import install_authority_package
 
 
 class DefaultAuthorityInstallApplicationService:

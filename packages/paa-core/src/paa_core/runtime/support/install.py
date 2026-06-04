@@ -39,7 +39,7 @@ class AuthorityInstallResult:
 
 def platform_repo_root() -> Path:
     """Resolve the platform repo root from the source tree layout."""
-    metadata_path = Path(__file__).resolve().parents[2] / "install-metadata.json"
+    metadata_path = Path(__file__).resolve().parents[3] / "install-metadata.json"
     if metadata_path.exists():
         try:
             metadata = json.loads(metadata_path.read_text())
@@ -50,7 +50,7 @@ def platform_repo_root() -> Path:
             candidate = Path(str(configured_root)).expanduser().resolve()
             if candidate.exists():
                 return candidate
-    return Path(__file__).resolve().parents[4]
+    return Path(__file__).resolve().parents[5]
 
 
 def platform_revision() -> str:

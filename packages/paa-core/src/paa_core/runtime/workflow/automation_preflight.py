@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from paa_core.runtime.transport.queue_admin import DefaultRuntimeQueueAdminService
-from paa_core.team_worker_roles import active_team_worker_roles, team_worker_role_by_key
+from paa_core.runtime.support.team_worker_roles import active_team_worker_roles, team_worker_role_by_key
 from paa_core.runtime.support.runtime_paths import resolved_repo_runtime_queue_topology
 from paa_core.runtime.transport.claim_ledger import FileQueueClaimLedgerRepository
 from paa_core.runtime.transport.packet_envelope import normalize_role_name

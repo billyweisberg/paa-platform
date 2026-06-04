@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from paa_core.runtime.transport.claim_ledger import load_json
-from paa_core.team_worker_roles import active_team_worker_roles
+from paa_core.runtime.support.team_worker_roles import active_team_worker_roles
 
 
 @dataclass(frozen=True)

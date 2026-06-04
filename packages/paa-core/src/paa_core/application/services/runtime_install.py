@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from paa_core.application.dto.runtime import RuntimeInstallRequest, RuntimeOperationResult
-from paa_core.install import install_runtime_support
+from paa_core.runtime.support.install import install_runtime_support
 
 
 class DefaultRuntimeInstallApplicationService:

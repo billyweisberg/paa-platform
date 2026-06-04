@@ -14,16 +14,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from paa_core import claim_ledger as claim_ledger_helpers
-from paa_core import packet_envelope as packet_envelope_helpers
-from paa_core import queue_transport as queue_transport_helpers
+from paa_core.runtime.transport import claim_ledger as claim_ledger_helpers
+from paa_core.runtime.transport import packet_envelope as packet_envelope_helpers
+from paa_core.runtime.transport import rabbitmq as queue_transport_helpers
 from paa_core.runtime.support.config import DEFAULT_RUNTIME_QUEUE_EXCHANGE
 from paa_core.db import run_psql as shared_run_psql
 from paa_core.repositories.runtime_event import PostgresRuntimeEventRepository
 from paa_core.runtime.support.runtime_paths import repo_root_from_cwd, resolved_repo_runtime_queue_topology
 from paa_core.runtime.support.runtime_evidence import persist_qa_verification as shared_persist_qa_verification
 from paa_core.runtime.support.runtime_evidence import persist_slice_result as shared_persist_slice_result
-from paa_core.team_worker_roles import (
+from paa_core.runtime.support.team_worker_roles import (
     active_team_worker_roles,
     techlead_assignment_route_pairs,
     team_worker_result_route_pairs,

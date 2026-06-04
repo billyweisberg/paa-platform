@@ -14,7 +14,7 @@ from paa_core.runtime.support.runtime_paths import (
     producer_manifest_candidates,
     repo_root_from_cwd,
 )
-from paa_core.team_worker_roles import (
+from paa_core.runtime.support.team_worker_roles import (
     active_team_worker_roles,
     team_worker_role_by_key,
 )

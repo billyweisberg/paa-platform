@@ -4,7 +4,7 @@ from unittest.mock import patch
 from types import SimpleNamespace
 import tempfile
 
-from paa_core.handoff_runtime import (
+from paa_core.runtime.transport.handoff_runtime import (
     DEFAULT_EXCHANGE,
     DEFAULT_QUEUES,
     _resolved_runtime_exchange,
@@ -35,7 +35,7 @@ class HandoffRuntimeTests(unittest.TestCase):
             },
         }
         with patch(
-            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.resolve_work_item_id_for_message',
+            'paa_core.runtime.transport.handoff_runtime.PostgresRuntimeEventRepository.resolve_work_item_id_for_message',
             return_value='9e4509a5-5738-476b-a417-28e0012278f1',
         ) as mock_resolve:
             work_item_id = resolve_work_item_id_from_message(message)
@@ -75,7 +75,7 @@ class HandoffRuntimeTests(unittest.TestCase):
         }
         fake_record = SimpleNamespace(automation_run_id='run-1')
         with patch(
-            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.create_packet_compilation_run_for_message',
+            'paa_core.runtime.transport.handoff_runtime.PostgresRuntimeEventRepository.create_packet_compilation_run_for_message',
             return_value=fake_record,
         ) as mock_create:
             automation_run_id = persist_packet_compilation_for_send_message(
@@ -117,12 +117,12 @@ class HandoffRuntimeTests(unittest.TestCase):
                 exchange=DEFAULT_EXCHANGE,
             )
             fake_client = SimpleNamespace(publish=lambda exchange, queue, payload: ({}, {'routed': True}))
-            with patch('paa_core.handoff_runtime.validate_envelope', return_value=[]), \
-                 patch('paa_core.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
-                 patch('paa_core.handoff_runtime.persist_packet_compilation_for_send_message') as mock_compile, \
-                 patch('paa_core.handoff_runtime.persist_send_event') as mock_send_event, \
-                 patch('paa_core.handoff_runtime.persist_slice_result'), \
-                 patch('paa_core.handoff_runtime.persist_qa_verification'), \
+            with patch('paa_core.runtime.transport.handoff_runtime.validate_envelope', return_value=[]), \
+                 patch('paa_core.runtime.transport.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
+                 patch('paa_core.runtime.transport.handoff_runtime.persist_packet_compilation_for_send_message') as mock_compile, \
+                 patch('paa_core.runtime.transport.handoff_runtime.persist_send_event') as mock_send_event, \
+                 patch('paa_core.runtime.transport.handoff_runtime.persist_slice_result'), \
+                 patch('paa_core.runtime.transport.handoff_runtime.persist_qa_verification'), \
                  patch('builtins.print'):
                 cmd_send(args)
         mock_compile.assert_called_once_with(message, message_file=str(path))
@@ -140,7 +140,7 @@ class HandoffRuntimeTests(unittest.TestCase):
             artifacts={},
         )
         with patch(
-            'paa_core.handoff_runtime.PostgresRuntimeEventRepository.find_packet_compilation_run',
+            'paa_core.runtime.transport.handoff_runtime.PostgresRuntimeEventRepository.find_packet_compilation_run',
             return_value=fake_record,
         ):
             result = lookup_packet_compilation_run(message)
@@ -162,8 +162,8 @@ class HandoffRuntimeTests(unittest.TestCase):
         fake_client = SimpleNamespace(get_messages=lambda queue, count=1, ackmode='ack_requeue_false': ({}, [{'payload': 'null'}]))
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            with patch('paa_core.handoff_runtime.ensure_state_dirs', return_value=(root, 'test', root)), \
-                 patch('paa_core.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
+            with patch('paa_core.runtime.transport.handoff_runtime.ensure_state_dirs', return_value=(root, 'test', root)), \
+                 patch('paa_core.runtime.transport.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
                  patch('builtins.print') as mock_print:
                 with self.assertRaises(SystemExit) as exc:
                     cmd_claim_next(args)
@@ -184,7 +184,7 @@ class HandoffRuntimeTests(unittest.TestCase):
             queues=list(DEFAULT_QUEUES),
         )
         fake_client = SimpleNamespace(purge_queue=lambda queue: ({}, None))
-        with patch('paa_core.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
+        with patch('paa_core.runtime.transport.handoff_runtime.RabbitMQManagementClient', return_value=fake_client), \
              patch('builtins.print') as mock_print:
             cmd_purge(args)
         printed = mock_print.call_args[0][0]

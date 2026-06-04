@@ -14,7 +14,7 @@ from paa_core.services.techlead_delivery_review_decision import (
     TechLeadDeliveryReviewDecisionRequest,
     TechLeadDeliveryReviewDecisionResult,
 )
-from paa_core.team_worker_roles import TeamWorkerRole
+from paa_core.runtime.support.team_worker_roles import TeamWorkerRole
 
 
 @dataclass(frozen=True)

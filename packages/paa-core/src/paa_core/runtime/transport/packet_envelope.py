@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from paa_core.team_worker_roles import (
+from paa_core.runtime.support.team_worker_roles import (
     active_team_worker_roles,
     techlead_assignment_route_pairs,
     team_worker_result_route_pairs,
