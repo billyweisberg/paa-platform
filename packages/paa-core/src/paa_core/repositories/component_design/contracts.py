@@ -32,6 +32,16 @@ class ComponentDesignRepository(Protocol):
         """Return all canonical component element types in stable sort order."""
         ...
 
+    def list_realization_types(self) -> list[ComponentElementRealizationTypeRecord]:
+        """Return all canonical realization types in stable sort order."""
+        ...
+
+    def get_realization_type_by_key(
+        self, realization_key: str
+    ) -> ComponentElementRealizationTypeRecord | None:
+        """Return one realization type by stable key."""
+        ...
+
     def get_component_element_by_id(self, component_element_id: str) -> ComponentElementRecord | None:
         """Return one component element by primary id."""
         ...

@@ -78,6 +78,11 @@ These slices directly satisfy the current active phase:
 - then `Phase 4. API Exposure`
 - then `Phase 5. CLI Proof Surface`
 
+Current build position inside the working set:
+- active slice: `S01`
+- completed layer: data layer
+- next layer: domain/app logic
+
 ## `db.py` Extraction Rule Inside The Map
 
 `db.py` is not a slice by itself.

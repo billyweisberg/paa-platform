@@ -95,6 +95,55 @@ FROM (
 """
         return [self._element_type_from_row(row) for row in self._query_json_rows(sql)]
 
+    def list_realization_types(self) -> list[ComponentElementRealizationTypeRecord]:
+        sql = """
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    cert.component_element_realization_type_id::text,
+    cert.realization_key,
+    cert.label,
+    cert.category,
+    cert.description,
+    cert.is_brief_targetable,
+    cert.is_multi_instance,
+    cert.sort_order,
+    cert.metadata_json AS metadata,
+    false AS is_default_for_element_type,
+    0 AS element_type_sort_order
+  FROM paa.component_element_realization_types cert
+  ORDER BY cert.sort_order, cert.realization_key
+) AS t;
+"""
+        return [self._realization_type_from_row(row) for row in self._query_json_rows(sql)]
+
+    def get_realization_type_by_key(
+        self, realization_key: str
+    ) -> ComponentElementRealizationTypeRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    cert.component_element_realization_type_id::text,
+    cert.realization_key,
+    cert.label,
+    cert.category,
+    cert.description,
+    cert.is_brief_targetable,
+    cert.is_multi_instance,
+    cert.sort_order,
+    cert.metadata_json AS metadata,
+    false AS is_default_for_element_type,
+    0 AS element_type_sort_order
+  FROM paa.component_element_realization_types cert
+  WHERE cert.realization_key = {sql_literal(realization_key)}
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        if not rows:
+            return None
+        return self._realization_type_from_row(rows[0])
+
     def get_component_element_by_id(self, component_element_id: str) -> ComponentElementRecord | None:
         sql = f"""
 SELECT row_to_json(t)

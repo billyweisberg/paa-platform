@@ -54,6 +54,39 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
         self.assertEqual([row.element_key for row in rows], ['interfaces', 'functions'])
         self.assertEqual(rows[1].metadata, {'x': 1})
 
+    def test_list_realization_types_parses_rows_in_registry_shape(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '\n'.join(
+            [
+                '{"component_element_realization_type_id":"10","realization_key":"repository_interface","label":"Repository Interface","category":"code_artifact","description":"desc","is_brief_targetable":true,"is_multi_instance":false,"sort_order":10,"metadata":{"scope":"dal"},"is_default_for_element_type":false,"element_type_sort_order":0}',
+                '{"component_element_realization_type_id":"11","realization_key":"service_implementation","label":"Service Implementation","category":"code_artifact","description":null,"is_brief_targetable":true,"is_multi_instance":true,"sort_order":20,"metadata":{},"is_default_for_element_type":false,"element_type_sort_order":0}',
+            ]
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            rows = repo.list_realization_types()
+
+        self.assertEqual([row.realization_key for row in rows], ['repository_interface', 'service_implementation'])
+        self.assertFalse(rows[0].is_default_for_element_type)
+        self.assertEqual(rows[0].metadata, {'scope': 'dal'})
+
+    def test_get_realization_type_by_key_returns_one_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"component_element_realization_type_id":"10","realization_key":"repository_interface","label":"Repository Interface","category":"code_artifact","description":"desc","is_brief_targetable":true,"is_multi_instance":false,"sort_order":10,"metadata":{"scope":"dal"},"is_default_for_element_type":false,"element_type_sort_order":0}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_realization_type_by_key('repository_interface')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.realization_key, 'repository_interface')
+        self.assertEqual(row.metadata, {'scope': 'dal'})
+
+    def test_get_realization_type_by_key_returns_none_when_missing(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=''):
+            row = repo.get_realization_type_by_key('missing_type')
+
+        self.assertIsNone(row)
+
     def test_list_realization_types_for_element_type_parses_flags(self) -> None:
         repo = PostgresComponentDesignRepository()
         output = '{"component_element_realization_type_id":"10","realization_key":"repository_interface","label":"Repository Interface","category":"code_artifact","description":"desc","is_brief_targetable":true,"is_multi_instance":false,"sort_order":10,"metadata":{},"is_default_for_element_type":true,"element_type_sort_order":5}'
