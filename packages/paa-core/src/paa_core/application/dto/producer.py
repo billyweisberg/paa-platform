@@ -82,3 +82,19 @@ class ProducerMaterializeComponentSpecRequest:
     project_slug: str
     anchor_design_package_external: str
     anchor_consumer_context_key: str
+
+
+@dataclass(frozen=True)
+class ProducerImplementationPlanProgressRequest:
+    plan_id: str
+
+
+@dataclass(frozen=True)
+class ProducerSetImplementationPlanActivityStateRequest:
+    plan_id: str
+    activity_key: str
+    activity_state: str
+    blocking_reason: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    metadata_json: str | None = None

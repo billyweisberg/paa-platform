@@ -7,11 +7,13 @@ from paa_core.application.dto.producer import (
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
+    ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
     ProducerPublishAuthorityPackageRequest,
+    ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 
@@ -26,6 +28,22 @@ class ProducerCommandService(Protocol):
     def derive_implementation_plan(
         self,
         request: ProducerDeriveImplementationPlanRequest,
+    ) -> ProducerOperationResult: ...
+    def implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def derive_next_activity_bundle(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def reconcile_implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def set_implementation_plan_activity_state(
+        self,
+        request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult: ...
     def materialize_component_spec(
         self,

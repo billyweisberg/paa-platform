@@ -12,10 +12,12 @@ from paa_core.application.dto.producer import (
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
+    ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
+    ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 from paa_core.application.services import DefaultProducerCommandApplicationService
@@ -61,6 +63,20 @@ class ProducerMaterializeComponentSpecModel(BaseModel):
     project_slug: str
     anchor_design_package_external: str
     anchor_consumer_context_key: str
+
+
+class ProducerImplementationPlanProgressModel(BaseModel):
+    plan_id: str
+
+
+class ProducerSetImplementationPlanActivityStateModel(BaseModel):
+    plan_id: str
+    activity_key: str
+    activity_state: str
+    blocking_reason: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    metadata_json: str | None = None
 
 
 class ProducerSmokeTestModel(BaseModel):
@@ -156,6 +172,54 @@ def materialize_component_spec_route(
             project_slug=request.project_slug,
             anchor_design_package_external=request.anchor_design_package_external,
             anchor_consumer_context_key=request.anchor_consumer_context_key,
+        )
+    ).payload
+
+
+@router.post('/implementation-plan-progress')
+def implementation_plan_progress_route(
+    request: ProducerImplementationPlanProgressModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.implementation_plan_progress(
+        ProducerImplementationPlanProgressRequest(plan_id=request.plan_id)
+    ).payload
+
+
+@router.post('/derive-next-activity-bundle')
+def derive_next_activity_bundle_route(
+    request: ProducerImplementationPlanProgressModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.derive_next_activity_bundle(
+        ProducerImplementationPlanProgressRequest(plan_id=request.plan_id)
+    ).payload
+
+
+@router.post('/reconcile-implementation-plan-progress')
+def reconcile_implementation_plan_progress_route(
+    request: ProducerImplementationPlanProgressModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.reconcile_implementation_plan_progress(
+        ProducerImplementationPlanProgressRequest(plan_id=request.plan_id)
+    ).payload
+
+
+@router.post('/set-implementation-plan-activity-state')
+def set_implementation_plan_activity_state_route(
+    request: ProducerSetImplementationPlanActivityStateModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.set_implementation_plan_activity_state(
+        ProducerSetImplementationPlanActivityStateRequest(
+            plan_id=request.plan_id,
+            activity_key=request.activity_key,
+            activity_state=request.activity_state,
+            blocking_reason=request.blocking_reason,
+            started_at=request.started_at,
+            completed_at=request.completed_at,
+            metadata_json=request.metadata_json,
         )
     ).payload
 

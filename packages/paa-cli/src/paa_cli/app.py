@@ -36,10 +36,12 @@ from paa_core.application.dto.producer import (
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
+    ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
+    ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 from paa_core.application.dto.runtime import (
@@ -205,6 +207,72 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
         _emit_json_result(result.payload)
         return result.exit_code
 
+    if command == 'implementation-plan-progress':
+        parser = argparse.ArgumentParser(
+            prog='paa producer implementation-plan-progress',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--plan-id', required=True)
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.implementation_plan_progress(
+            ProducerImplementationPlanProgressRequest(plan_id=args.plan_id)
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'set-implementation-plan-activity-state':
+        parser = argparse.ArgumentParser(
+            prog='paa producer set-implementation-plan-activity-state',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--plan-id', required=True)
+        parser.add_argument('--activity-key', required=True)
+        parser.add_argument('--activity-state', required=True)
+        parser.add_argument('--blocking-reason')
+        parser.add_argument('--started-at')
+        parser.add_argument('--completed-at')
+        parser.add_argument('--metadata-json')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.set_implementation_plan_activity_state(
+            ProducerSetImplementationPlanActivityStateRequest(
+                plan_id=args.plan_id,
+                activity_key=args.activity_key,
+                activity_state=args.activity_state,
+                blocking_reason=args.blocking_reason,
+                started_at=args.started_at,
+                completed_at=args.completed_at,
+                metadata_json=args.metadata_json,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'derive-next-activity-bundle':
+        parser = argparse.ArgumentParser(
+            prog='paa producer derive-next-activity-bundle',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--plan-id', required=True)
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.derive_next_activity_bundle(
+            ProducerImplementationPlanProgressRequest(plan_id=args.plan_id)
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'reconcile-implementation-plan-progress':
+        parser = argparse.ArgumentParser(
+            prog='paa producer reconcile-implementation-plan-progress',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--plan-id', required=True)
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.reconcile_implementation_plan_progress(
+            ProducerImplementationPlanProgressRequest(plan_id=args.plan_id)
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
     if command == 'smoke-test':
         parser = argparse.ArgumentParser(prog='paa producer smoke-test', allow_abbrev=False)
         parser.add_argument('--repo-root')
@@ -271,8 +339,10 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
     typer.echo(
         f"Producer command '{command}' is not yet migrated to the unified runtime API. "
         'Supported now: derive-artifacts, derive-design-package, evaluate-derivation-readiness, '
-        'derive-implementation-plan, materialize-component-spec, publish-authority-package, '
-        'smoke-test, load-issue-into-paa, materialize-verification-obligations.'
+        'derive-implementation-plan, materialize-component-spec, implementation-plan-progress, '
+        'set-implementation-plan-activity-state, derive-next-activity-bundle, '
+        'reconcile-implementation-plan-progress, publish-authority-package, smoke-test, '
+        'load-issue-into-paa, materialize-verification-obligations.'
     )
     return 2
 

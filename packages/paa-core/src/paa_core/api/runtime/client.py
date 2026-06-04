@@ -35,11 +35,13 @@ from paa_core.application.dto.producer import (
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
+    ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
     ProducerPublishAuthorityPackageRequest,
+    ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 from paa_core.application.dto.runtime import (
@@ -96,6 +98,22 @@ class RuntimeApiClient(Protocol):
     def derive_implementation_plan(
         self,
         request: ProducerDeriveImplementationPlanRequest,
+    ) -> ProducerOperationResult: ...
+    def implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def derive_next_activity_bundle(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def reconcile_implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult: ...
+    def set_implementation_plan_activity_state(
+        self,
+        request: ProducerSetImplementationPlanActivityStateRequest,
     ) -> ProducerOperationResult: ...
     def materialize_component_spec(
         self,
@@ -191,6 +209,30 @@ class InProcessRuntimeApiClient:
         request: ProducerDeriveImplementationPlanRequest,
     ) -> ProducerOperationResult:
         return self._producer_commands.derive_implementation_plan(request)
+
+    def implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.implementation_plan_progress(request)
+
+    def derive_next_activity_bundle(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.derive_next_activity_bundle(request)
+
+    def reconcile_implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.reconcile_implementation_plan_progress(request)
+
+    def set_implementation_plan_activity_state(
+        self,
+        request: ProducerSetImplementationPlanActivityStateRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.set_implementation_plan_activity_state(request)
 
     def materialize_component_spec(
         self,
@@ -341,6 +383,34 @@ class HttpRuntimeApiClient:
         request: ProducerDeriveImplementationPlanRequest,
     ) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/derive-implementation-plan', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/implementation-plan-progress', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def derive_next_activity_bundle(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/derive-next-activity-bundle', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def reconcile_implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/reconcile-implementation-plan-progress', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def set_implementation_plan_activity_state(
+        self,
+        request: ProducerSetImplementationPlanActivityStateRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/set-implementation-plan-activity-state', request)
         return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def materialize_component_spec(

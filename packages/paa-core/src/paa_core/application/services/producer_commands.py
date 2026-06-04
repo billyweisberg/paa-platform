@@ -5,11 +5,13 @@ from paa_core.application.dto.producer import (
     ProducerDeriveDesignPackageRequest,
     ProducerDeriveImplementationPlanRequest,
     ProducerEvaluateDerivationReadinessRequest,
+    ProducerImplementationPlanProgressRequest,
     ProducerLoadIssueRequest,
     ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
     ProducerPublishAuthorityPackageRequest,
+    ProducerSetImplementationPlanActivityStateRequest,
     ProducerSmokeTestRequest,
 )
 from paa_core.config import load_producer_project_config
@@ -17,6 +19,12 @@ from paa_producer.component_spec_materializer import materialize_component_spec
 from paa_producer.derivation_readiness import evaluate_derivation_readiness
 from paa_producer.design_package_deriver import derive_design_package
 from paa_producer.implementation_plan_deriver import derive_implementation_plan
+from paa_producer.implementation_plan_activity_state import set_implementation_plan_activity_state
+from paa_producer.implementation_plan_progress import (
+    derive_next_activity_bundle,
+    implementation_plan_progress,
+    reconcile_implementation_plan_progress,
+)
 from paa_core.producer.derive_artifacts import derive_inventory
 from paa_core.producer.issue_loader import load_issue_into_paa
 from paa_core.producer.obligation_loader import materialize_verification_obligations
@@ -117,6 +125,40 @@ class DefaultProducerCommandApplicationService:
                 'output_path': result.output_path,
                 'persisted': result.persisted,
             }
+        )
+
+    def implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return ProducerOperationResult(payload=implementation_plan_progress(plan_id=request.plan_id))
+
+    def derive_next_activity_bundle(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return ProducerOperationResult(payload=derive_next_activity_bundle(plan_id=request.plan_id))
+
+    def reconcile_implementation_plan_progress(
+        self,
+        request: ProducerImplementationPlanProgressRequest,
+    ) -> ProducerOperationResult:
+        return ProducerOperationResult(payload=reconcile_implementation_plan_progress(plan_id=request.plan_id))
+
+    def set_implementation_plan_activity_state(
+        self,
+        request: ProducerSetImplementationPlanActivityStateRequest,
+    ) -> ProducerOperationResult:
+        return ProducerOperationResult(
+            payload=set_implementation_plan_activity_state(
+                plan_id=request.plan_id,
+                activity_key=request.activity_key,
+                activity_state=request.activity_state,
+                blocking_reason=request.blocking_reason,
+                started_at=request.started_at,
+                completed_at=request.completed_at,
+                metadata_json=request.metadata_json,
+            )
         )
 
     def materialize_component_spec(self, request: ProducerMaterializeComponentSpecRequest) -> ProducerOperationResult:
