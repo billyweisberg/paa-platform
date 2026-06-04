@@ -11,28 +11,28 @@ from paa_core.install import install_producer_runtime
 from paa_core.readiness import main as readiness_main
 from paa_core.runtime_paths import repo_root_from_cwd
 from paa_producer.authority_runtime import main as authority_main
-from paa_producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
-from paa_producer.brief_target_author import author_brief_targets
-from paa_producer.coder_brief_assembler import assemble_coder_brief
-from paa_producer.brief_reviewer import review_coder_brief
+from paa_core.producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
+from paa_core.producer.brief_target_author import author_brief_targets
+from paa_core.producer.coder_brief_assembler import assemble_coder_brief
+from paa_core.producer.brief_reviewer import review_coder_brief
 from paa_core.producer.commands import PRODUCER_COMMANDS
-from paa_producer.derivation_readiness import evaluate_derivation_readiness
-from paa_producer.design_package_deriver import derive_design_package
-from paa_producer.implementation_plan_deriver import derive_implementation_plan
+from paa_core.producer.derivation_readiness import evaluate_derivation_readiness
+from paa_core.producer.design_package_deriver import derive_design_package
+from paa_core.producer.implementation_plan_deriver import derive_implementation_plan
 from paa_core.producer.derive_artifacts import derive_inventory
 from paa_core.producer.issue_loader import load_issue_into_paa
-from paa_producer.component_spec_materializer import (
+from paa_core.producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
     DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
     DEFAULT_PROJECT_SLUG,
     materialize_component_spec,
 )
-from paa_producer.implementation_plan_progress import (
+from paa_core.producer.implementation_plan_progress import (
     derive_next_activity_bundle,
     implementation_plan_progress,
     reconcile_implementation_plan_progress,
 )
-from paa_producer.implementation_plan_activity_state import (
+from paa_core.producer.implementation_plan_activity_state import (
     set_implementation_plan_activity_state,
 )
 from paa_core.producer.obligation_loader import materialize_verification_obligations

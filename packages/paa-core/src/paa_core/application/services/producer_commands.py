@@ -26,17 +26,17 @@ from paa_core.application.dto.producer import (
 )
 from paa_core.config import load_producer_project_config
 from paa_core.readiness import main as readiness_main
-from paa_producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
+from paa_core.producer.architect_packet_preparer import PacketPreparationOptions, prepare_architect_packet
 from paa_producer.authority_runtime import main as authority_main
-from paa_producer.brief_reviewer import review_coder_brief
-from paa_producer.brief_target_author import author_brief_targets
-from paa_producer.component_spec_materializer import materialize_component_spec
-from paa_producer.coder_brief_assembler import assemble_coder_brief
-from paa_producer.derivation_readiness import evaluate_derivation_readiness
-from paa_producer.design_package_deriver import derive_design_package
-from paa_producer.implementation_plan_deriver import derive_implementation_plan
-from paa_producer.implementation_plan_activity_state import set_implementation_plan_activity_state
-from paa_producer.implementation_plan_progress import (
+from paa_core.producer.brief_reviewer import review_coder_brief
+from paa_core.producer.brief_target_author import author_brief_targets
+from paa_core.producer.component_spec_materializer import materialize_component_spec
+from paa_core.producer.coder_brief_assembler import assemble_coder_brief
+from paa_core.producer.derivation_readiness import evaluate_derivation_readiness
+from paa_core.producer.design_package_deriver import derive_design_package
+from paa_core.producer.implementation_plan_deriver import derive_implementation_plan
+from paa_core.producer.implementation_plan_activity_state import set_implementation_plan_activity_state
+from paa_core.producer.implementation_plan_progress import (
     derive_next_activity_bundle,
     implementation_plan_progress,
     reconcile_implementation_plan_progress,
