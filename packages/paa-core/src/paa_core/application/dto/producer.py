@@ -47,3 +47,38 @@ class ProducerMaterializeVerificationObligationsRequest:
     verification_key_prefix: str | None = None
     scope_authority_label: str | None = None
     dry_run: bool = False
+
+
+@dataclass(frozen=True)
+class ProducerDeriveDesignPackageRequest:
+    repo_root: Path
+    design_package: Path
+    schema_path: Path | None = None
+    project_slug: str | None = None
+    project_name: str | None = None
+    dry_run: bool = False
+
+
+@dataclass(frozen=True)
+class ProducerEvaluateDerivationReadinessRequest:
+    design_package: Path
+    schema_path: Path | None = None
+    project_slug: str | None = None
+
+
+@dataclass(frozen=True)
+class ProducerDeriveImplementationPlanRequest:
+    design_package: Path
+    package_schema_path: Path | None = None
+    project_slug: str | None = None
+    consumer_context_key: str = 'python'
+    output_path: Path | None = None
+    persist_db: bool = True
+
+
+@dataclass(frozen=True)
+class ProducerMaterializeComponentSpecRequest:
+    spec: Path
+    project_slug: str
+    anchor_design_package_external: str
+    anchor_consumer_context_key: str

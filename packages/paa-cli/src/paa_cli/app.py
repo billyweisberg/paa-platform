@@ -33,7 +33,11 @@ from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.producer import (
     ProducerDeriveArtifactsRequest,
+    ProducerDeriveDesignPackageRequest,
+    ProducerDeriveImplementationPlanRequest,
+    ProducerEvaluateDerivationReadinessRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
     ProducerSmokeTestRequest,
@@ -108,6 +112,99 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
         _emit_json_result(result.payload)
         return result.exit_code
 
+    if command == 'derive-design-package':
+        parser = argparse.ArgumentParser(prog='paa producer derive-design-package', allow_abbrev=False)
+        parser.add_argument('--repo-root')
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--schema-path')
+        parser.add_argument('--project-slug')
+        parser.add_argument('--project-name')
+        parser.add_argument('--dry-run', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.derive_design_package(
+            ProducerDeriveDesignPackageRequest(
+                repo_root=_producer_repo_root(args.repo_root),
+                design_package=Path(args.design_package).resolve(),
+                schema_path=Path(args.schema_path).resolve() if args.schema_path else None,
+                project_slug=args.project_slug,
+                project_name=args.project_name,
+                dry_run=args.dry_run,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'evaluate-derivation-readiness':
+        parser = argparse.ArgumentParser(
+            prog='paa producer evaluate-derivation-readiness',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--schema-path')
+        parser.add_argument('--project-slug')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.evaluate_derivation_readiness(
+            ProducerEvaluateDerivationReadinessRequest(
+                design_package=Path(args.design_package).resolve(),
+                schema_path=Path(args.schema_path).resolve() if args.schema_path else None,
+                project_slug=args.project_slug,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'derive-implementation-plan':
+        parser = argparse.ArgumentParser(
+            prog='paa producer derive-implementation-plan',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--design-package', required=True)
+        parser.add_argument('--package-schema-path')
+        parser.add_argument('--project-slug')
+        parser.add_argument('--consumer-context-key', default='python')
+        parser.add_argument('--output')
+        parser.add_argument('--no-persist-db', action='store_true')
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.derive_implementation_plan(
+            ProducerDeriveImplementationPlanRequest(
+                design_package=Path(args.design_package).resolve(),
+                package_schema_path=Path(args.package_schema_path).resolve() if args.package_schema_path else None,
+                project_slug=args.project_slug,
+                consumer_context_key=args.consumer_context_key,
+                output_path=Path(args.output).resolve() if args.output else None,
+                persist_db=not args.no_persist_db,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    if command == 'materialize-component-spec':
+        parser = argparse.ArgumentParser(
+            prog='paa producer materialize-component-spec',
+            allow_abbrev=False,
+        )
+        parser.add_argument('--spec', required=True)
+        parser.add_argument('--project-slug', default='paa-platform')
+        parser.add_argument(
+            '--anchor-design-package-external',
+            default='paa-stage1-2026-05-16-component-design-planning-service',
+        )
+        parser.add_argument(
+            '--anchor-consumer-context-key',
+            default='python',
+        )
+        args = parser.parse_args(remainder)
+        result = runtime_api_client.materialize_component_spec(
+            ProducerMaterializeComponentSpecRequest(
+                spec=Path(args.spec).resolve(),
+                project_slug=args.project_slug,
+                anchor_design_package_external=args.anchor_design_package_external,
+                anchor_consumer_context_key=args.anchor_consumer_context_key,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
     if command == 'smoke-test':
         parser = argparse.ArgumentParser(prog='paa producer smoke-test', allow_abbrev=False)
         parser.add_argument('--repo-root')
@@ -173,8 +270,9 @@ def _run_producer_command(argv: list[str], runtime_api_client: RuntimeApiClient)
 
     typer.echo(
         f"Producer command '{command}' is not yet migrated to the unified runtime API. "
-        'Supported now: derive-artifacts, publish-authority-package, smoke-test, '
-        'load-issue-into-paa, materialize-verification-obligations.'
+        'Supported now: derive-artifacts, derive-design-package, evaluate-derivation-readiness, '
+        'derive-implementation-plan, materialize-component-spec, publish-authority-package, '
+        'smoke-test, load-issue-into-paa, materialize-verification-obligations.'
     )
     return 2
 

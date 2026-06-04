@@ -9,7 +9,11 @@ from pydantic import BaseModel
 from paa_core.api.runtime.dependencies import get_producer_command_service
 from paa_core.application.dto.producer import (
     ProducerDeriveArtifactsRequest,
+    ProducerDeriveDesignPackageRequest,
+    ProducerDeriveImplementationPlanRequest,
+    ProducerEvaluateDerivationReadinessRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerPublishAuthorityPackageRequest,
     ProducerSmokeTestRequest,
@@ -26,6 +30,37 @@ class ProducerRepoRootModel(BaseModel):
 class ProducerPublishAuthorityPackageModel(BaseModel):
     repo_root: str
     project_config: str
+
+
+class ProducerDeriveDesignPackageModel(BaseModel):
+    repo_root: str
+    design_package: str
+    schema_path: str | None = None
+    project_slug: str | None = None
+    project_name: str | None = None
+    dry_run: bool = False
+
+
+class ProducerEvaluateDerivationReadinessModel(BaseModel):
+    design_package: str
+    schema_path: str | None = None
+    project_slug: str | None = None
+
+
+class ProducerDeriveImplementationPlanModel(BaseModel):
+    design_package: str
+    package_schema_path: str | None = None
+    project_slug: str | None = None
+    consumer_context_key: str = 'python'
+    output_path: str | None = None
+    persist_db: bool = True
+
+
+class ProducerMaterializeComponentSpecModel(BaseModel):
+    spec: str
+    project_slug: str
+    anchor_design_package_external: str
+    anchor_consumer_context_key: str
 
 
 class ProducerSmokeTestModel(BaseModel):
@@ -59,6 +94,69 @@ def derive_artifacts(
 ) -> dict[str, object]:
     return service.derive_artifacts(
         ProducerDeriveArtifactsRequest(repo_root=Path(request.repo_root).resolve())
+    ).payload
+
+
+@router.post('/derive-design-package')
+def derive_design_package_route(
+    request: ProducerDeriveDesignPackageModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.derive_design_package(
+        ProducerDeriveDesignPackageRequest(
+            repo_root=Path(request.repo_root).resolve(),
+            design_package=Path(request.design_package).resolve(),
+            schema_path=Path(request.schema_path).resolve() if request.schema_path else None,
+            project_slug=request.project_slug,
+            project_name=request.project_name,
+            dry_run=request.dry_run,
+        )
+    ).payload
+
+
+@router.post('/evaluate-derivation-readiness')
+def evaluate_derivation_readiness_route(
+    request: ProducerEvaluateDerivationReadinessModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.evaluate_derivation_readiness(
+        ProducerEvaluateDerivationReadinessRequest(
+            design_package=Path(request.design_package).resolve(),
+            schema_path=Path(request.schema_path).resolve() if request.schema_path else None,
+            project_slug=request.project_slug,
+        )
+    ).payload
+
+
+@router.post('/derive-implementation-plan')
+def derive_implementation_plan_route(
+    request: ProducerDeriveImplementationPlanModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.derive_implementation_plan(
+        ProducerDeriveImplementationPlanRequest(
+            design_package=Path(request.design_package).resolve(),
+            package_schema_path=Path(request.package_schema_path).resolve() if request.package_schema_path else None,
+            project_slug=request.project_slug,
+            consumer_context_key=request.consumer_context_key,
+            output_path=Path(request.output_path).resolve() if request.output_path else None,
+            persist_db=request.persist_db,
+        )
+    ).payload
+
+
+@router.post('/materialize-component-spec')
+def materialize_component_spec_route(
+    request: ProducerMaterializeComponentSpecModel,
+    service: DefaultProducerCommandApplicationService = Depends(get_producer_command_service),
+) -> dict[str, object]:
+    return service.materialize_component_spec(
+        ProducerMaterializeComponentSpecRequest(
+            spec=Path(request.spec).resolve(),
+            project_slug=request.project_slug,
+            anchor_design_package_external=request.anchor_design_package_external,
+            anchor_consumer_context_key=request.anchor_consumer_context_key,
+        )
     ).payload
 
 

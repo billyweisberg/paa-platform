@@ -32,7 +32,11 @@ from paa_core.application.dto.operator import (
 )
 from paa_core.application.dto.producer import (
     ProducerDeriveArtifactsRequest,
+    ProducerDeriveDesignPackageRequest,
+    ProducerDeriveImplementationPlanRequest,
+    ProducerEvaluateDerivationReadinessRequest,
     ProducerLoadIssueRequest,
+    ProducerMaterializeComponentSpecRequest,
     ProducerMaterializeVerificationObligationsRequest,
     ProducerOperationResult,
     ProducerPublishAuthorityPackageRequest,
@@ -84,6 +88,19 @@ class RuntimeApiClient(Protocol):
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
     def supports_operator_command_family(self, command_family: str) -> bool: ...
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
+    def derive_design_package(self, request: ProducerDeriveDesignPackageRequest) -> ProducerOperationResult: ...
+    def evaluate_derivation_readiness(
+        self,
+        request: ProducerEvaluateDerivationReadinessRequest,
+    ) -> ProducerOperationResult: ...
+    def derive_implementation_plan(
+        self,
+        request: ProducerDeriveImplementationPlanRequest,
+    ) -> ProducerOperationResult: ...
+    def materialize_component_spec(
+        self,
+        request: ProducerMaterializeComponentSpecRequest,
+    ) -> ProducerOperationResult: ...
     def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult: ...
     def producer_smoke_test(self, request: ProducerSmokeTestRequest) -> ProducerOperationResult: ...
     def load_issue_into_paa(self, request: ProducerLoadIssueRequest) -> ProducerOperationResult: ...
@@ -159,6 +176,27 @@ class InProcessRuntimeApiClient:
 
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
         return self._producer_commands.derive_artifacts(request)
+
+    def derive_design_package(self, request: ProducerDeriveDesignPackageRequest) -> ProducerOperationResult:
+        return self._producer_commands.derive_design_package(request)
+
+    def evaluate_derivation_readiness(
+        self,
+        request: ProducerEvaluateDerivationReadinessRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.evaluate_derivation_readiness(request)
+
+    def derive_implementation_plan(
+        self,
+        request: ProducerDeriveImplementationPlanRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.derive_implementation_plan(request)
+
+    def materialize_component_spec(
+        self,
+        request: ProducerMaterializeComponentSpecRequest,
+    ) -> ProducerOperationResult:
+        return self._producer_commands.materialize_component_spec(request)
 
     def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult:
         return self._producer_commands.publish_authority_package(request)
@@ -285,6 +323,31 @@ class HttpRuntimeApiClient:
 
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/derive-artifacts', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def derive_design_package(self, request: ProducerDeriveDesignPackageRequest) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/derive-design-package', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def evaluate_derivation_readiness(
+        self,
+        request: ProducerEvaluateDerivationReadinessRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/evaluate-derivation-readiness', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def derive_implementation_plan(
+        self,
+        request: ProducerDeriveImplementationPlanRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/derive-implementation-plan', request)
+        return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def materialize_component_spec(
+        self,
+        request: ProducerMaterializeComponentSpecRequest,
+    ) -> ProducerOperationResult:
+        payload = self._post_json('/runtime/producer/materialize-component-spec', request)
         return ProducerOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def publish_authority_package(self, request: ProducerPublishAuthorityPackageRequest) -> ProducerOperationResult:
