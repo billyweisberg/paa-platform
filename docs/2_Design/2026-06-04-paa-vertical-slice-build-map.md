@@ -93,8 +93,10 @@ Use this table to decide the next implementation slice.
 
 For each slice:
 1. confirm the row is the next one allowed by dependencies
-2. build left to right across the row
-3. prove the row through `paa`
-4. only then move to the next row
+2. mark that slice as active in the phase-ordered progress tree
+3. build left to right across the row
+4. prove the row through `paa`
+5. mark the row complete in the phase-ordered progress tree
+6. only then move to the next row
 
 That is how the full Python PAA system should be assembled into one coherent governed system.

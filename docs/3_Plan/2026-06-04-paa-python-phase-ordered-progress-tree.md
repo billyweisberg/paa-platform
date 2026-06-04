@@ -153,9 +153,15 @@ If a build slice cannot answer those questions clearly, it is probably not align
 
 Use this tree as the progress tracker for implementation planning.
 
+When we start a slice:
+1. mark the active phase explicitly if it changed
+2. record the active slice id from the build map
+3. record the exact subtree items expected to move
+
 When we complete a slice:
-1. update the phase status
+1. update the phase status if the phase exit rule was satisfied
 2. mark the exact subtree item that moved
-3. keep the next active item explicit
+3. mark the completed slice id from the build map
+4. keep the next active item explicit
 
 That way the tree stays honest and we always know where we are.
