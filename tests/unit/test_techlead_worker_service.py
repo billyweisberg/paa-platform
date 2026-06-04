@@ -17,7 +17,7 @@ from paa_core.services.techlead_assignment_decision.models import (
     TechLeadAssignmentDecisionResult,
     TechLeadAssignmentDecisionSummary,
 )
-from paa_core.services.techlead_worker import (
+from paa_core.runtime.workers.techlead_worker import (
     DefaultTechLeadWorkerService,
     TECHLEAD_WORKER_SERVICE_METADATA,
     TechLeadWorkerRequest,

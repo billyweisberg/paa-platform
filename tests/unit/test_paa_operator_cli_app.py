@@ -107,7 +107,7 @@ class _StubPreflightService:
         self.reason = reason
 
     def evaluate_command(self, request):
-        from paa_core.services.methodology_execution_preflight import (
+        from paa_core.runtime.workflow.methodology_execution_preflight import (
             MethodologyExecutionPreflightOutcome,
             MethodologyExecutionPreflightResult,
         )

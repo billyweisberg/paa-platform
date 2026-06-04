@@ -8,7 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.queue_packet_runtime_controller import (
+from paa_core.runtime.orchestration.queue_packet_runtime_controller import (
     DefaultQueuePacketRuntimeController,
     QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA,
     QueuePacketRuntimeRequest,
@@ -18,7 +18,7 @@ from paa_core.runtime.orchestration.queue_packet_runtime_controller.contracts im
     QueuePacketReader,
     QueuePacketRuntimeController,
 )
-from paa_core.services.techlead_worker import (
+from paa_core.runtime.workers.techlead_worker import (
     TechLeadWorkerDispatchSummary,
     TechLeadWorkerRequest,
     TechLeadWorkerResult,

@@ -62,7 +62,7 @@ from paa_core.runtime.orchestration.queue_claim_runtime import (
 from paa_core.runtime.packets.reference_resolution import (
     PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA,
 )
-from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
+from paa_core.runtime.workflow.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
 
 from .component_metadata import GovernedComponentMetadata
 

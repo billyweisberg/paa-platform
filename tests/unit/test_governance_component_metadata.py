@@ -13,22 +13,22 @@ from paa_core.governance.component_registry import COMPONENT_METADATA_BY_NAME, G
 from paa_core.repositories.implementation_plan import IMPLEMENTATION_PLAN_REPOSITORY_METADATA
 from paa_core.repositories.methodology_execution import METHODOLOGY_EXECUTION_REPOSITORY_METADATA
 from paa_core.runtime.packets.execution_package_resolution import EXECUTION_PACKAGE_RESOLUTION_SERVICE_METADATA
-from paa_core.services.methodology_execution_preflight import (
+from paa_core.runtime.workflow.methodology_execution_preflight import (
     METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_projection import (
     METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_state import (
+from paa_core.runtime.workflow.methodology_execution_state import (
     METHODOLOGY_EXECUTION_STATE_SERVICE_METADATA,
 )
-from paa_core.services.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
-from paa_core.services.techlead_worker import TECHLEAD_WORKER_SERVICE_METADATA
+from paa_core.runtime.workflow.workflow_lifecycle import WORKFLOW_LIFECYCLE_SERVICE_METADATA
+from paa_core.runtime.workers.techlead_worker import TECHLEAD_WORKER_SERVICE_METADATA
 from paa_core.runtime.packets.context_assembly import PACKET_CONTEXT_ASSEMBLY_SERVICE_METADATA
-from paa_core.services.dev_worker import DEV_WORKER_SERVICE_METADATA
-from paa_core.services.qa_worker import QA_WORKER_SERVICE_METADATA
-from paa_core.services.queue_packet_runtime_controller import QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA
-from paa_core.services.queue_claim_runtime import QUEUE_CLAIM_RUNTIME_SERVICE_METADATA
+from paa_core.runtime.workers.dev_worker import DEV_WORKER_SERVICE_METADATA
+from paa_core.runtime.workers.qa_worker import QA_WORKER_SERVICE_METADATA
+from paa_core.runtime.orchestration.queue_packet_runtime_controller import QUEUE_PACKET_RUNTIME_CONTROLLER_METADATA
+from paa_core.runtime.orchestration.queue_claim_runtime import QUEUE_CLAIM_RUNTIME_SERVICE_METADATA
 from paa_core.runtime.packets.reference_resolution import PACKET_REFERENCE_RESOLUTION_SERVICE_METADATA
 from paa_cli import PAA_OPERATOR_CLI_METADATA
 

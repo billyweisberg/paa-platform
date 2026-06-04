@@ -8,13 +8,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.runtime.hosts.dev import DevRuntimeHost, _WorkerResultPublisher
-from paa_core.services.dev_worker import DevWorkerExecutionSummary, DevWorkerRequest, DevWorkerResult
+from paa_core.runtime.workers.dev_worker import DevWorkerExecutionSummary, DevWorkerRequest, DevWorkerResult
 from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionRequest,
     PacketReferenceResolutionResult,
     PacketReferenceResolutionSummary,
 )
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     QueueClaimRuntimeRequest,
     QueueClaimRuntimeResult,
     QueuePacketClaimSummary,

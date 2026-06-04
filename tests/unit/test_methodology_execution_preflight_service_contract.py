@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 from paa_core.runtime.workflow.methodology_execution_preflight import (
     METHODOLOGY_EXECUTION_PREFLIGHT_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_preflight.contracts import (
+from paa_core.runtime.workflow.methodology_execution_preflight.contracts import (
     MethodologyExecutionPreflightService,
 )
 

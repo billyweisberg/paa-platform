@@ -14,7 +14,7 @@ from paa_core.runtime.packets.context_assembly import (
     PacketContextAssemblyResult,
     PacketContextAssemblySummary,
 )
-from paa_core.services.qa_worker import (
+from paa_core.runtime.workers.qa_worker import (
     DefaultQAWorkerService,
     QA_WORKER_SERVICE_METADATA,
     QAWorkerRequest,

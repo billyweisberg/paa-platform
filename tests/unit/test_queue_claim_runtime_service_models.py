@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     QueueClaimRuntimeRequest,
     QueueClaimRuntimeResult,
     QueuePacketClaimSummary,

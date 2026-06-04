@@ -7,10 +7,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.methodology_execution_projection import (
+from paa_core.runtime.workflow.methodology_execution_projection import (
     METHODOLOGY_EXECUTION_PROJECTION_SERVICE_METADATA,
 )
-from paa_core.services.methodology_execution_projection.contracts import (
+from paa_core.runtime.workflow.methodology_execution_projection.contracts import (
     MethodologyExecutionProjectionService,
 )
 

@@ -8,7 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.dev_worker import (
+from paa_core.runtime.workers.dev_worker import (
     DEV_WORKER_SERVICE_METADATA,
     DefaultDevWorkerService,
     DevWorkerRequest,

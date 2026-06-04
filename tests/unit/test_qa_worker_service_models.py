@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.qa_worker import (
+from paa_core.runtime.workers.qa_worker import (
     QAWorkerRequest,
     QAWorkerResult,
     QAWorkerVerificationSummary,

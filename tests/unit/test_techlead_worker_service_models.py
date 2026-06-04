@@ -8,7 +8,7 @@ from typing import get_type_hints
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
-from paa_core.services.techlead_worker import (
+from paa_core.runtime.workers.techlead_worker import (
     TechLeadWorkerDispatchSummary,
     TechLeadWorkerRequest,
     TechLeadWorkerResult,

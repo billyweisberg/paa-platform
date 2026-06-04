@@ -13,8 +13,8 @@ from paa_core.runtime.packets.reference_resolution import (
     PacketReferenceResolutionResult,
     PacketReferenceResolutionSummary,
 )
-from paa_core.services.qa_worker import QAWorkerRequest, QAWorkerResult, QAWorkerVerificationSummary
-from paa_core.services.queue_claim_runtime import (
+from paa_core.runtime.workers.qa_worker import QAWorkerRequest, QAWorkerResult, QAWorkerVerificationSummary
+from paa_core.runtime.orchestration.queue_claim_runtime import (
     QueueClaimRuntimeRequest,
     QueueClaimRuntimeResult,
     QueuePacketClaimSummary,

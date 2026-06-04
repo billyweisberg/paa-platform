@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
 
 from paa_core.runtime.hosts.techlead import TechLeadRuntimeHost, _TechLeadAssignmentPublisher
-from paa_core.services.queue_claim_runtime import QueueClaimRuntimeResult, QueuePacketClaimSummary, QueuePacketPreviewSummary, QueueClaimRuntimeRequest
+from paa_core.runtime.orchestration.queue_claim_runtime import QueueClaimRuntimeResult, QueuePacketClaimSummary, QueuePacketPreviewSummary, QueueClaimRuntimeRequest
 from paa_core.runtime.packets.reference_resolution import PacketReferenceResolutionResult, PacketReferenceResolutionSummary, PacketReferenceResolutionRequest
-from paa_core.services.queue_packet_runtime_controller import QueuePacketDispatchSummary, QueuePacketRuntimeRequest, QueuePacketRuntimeResult
-from paa_core.services.techlead_worker import TechLeadWorkerDispatchSummary, TechLeadWorkerRequest, TechLeadWorkerResult
+from paa_core.runtime.orchestration.queue_packet_runtime_controller import QueuePacketDispatchSummary, QueuePacketRuntimeRequest, QueuePacketRuntimeResult
+from paa_core.runtime.workers.techlead_worker import TechLeadWorkerDispatchSummary, TechLeadWorkerRequest, TechLeadWorkerResult
 
 
 class _FakeQueueClaimRuntimeService:
