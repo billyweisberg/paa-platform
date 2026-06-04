@@ -19,6 +19,18 @@ Use it to:
 - create new docs with headers
 - retrofit headers onto existing docs
 
+Supported governed doc types include:
+- `vision`
+- `vision-plan`
+- `design-note`
+- `plan`
+- `runbook`
+- `policy`
+- `validation-note`
+- `reference`
+- `glossary`
+- and the remaining contract/schema/component-specific types supported by the tool
+
 ## Most Useful Commands
 
 ### 1. Show current docs for a stage

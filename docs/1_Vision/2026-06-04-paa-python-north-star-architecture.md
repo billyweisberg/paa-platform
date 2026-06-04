@@ -7,7 +7,7 @@ Created: 2026-06-04
 Last-Edited: 2026-06-04
 Author: Billy Weisberg
 Repo: paa-platform
-Component: PAAOperatorSystem
+Component: PAAPythonNorthStar
 Domain: system-architecture
 Keywords: paa, python, north star, cli, api, services, data layer, methodology execution, target structure
 Depends-On: 2026-05-28-paa-authority-stack-and-operator-architecture.md, 2026-05-28-paa-cli-system-architecture.md, 2026-06-04-paa-python-realization-profile.md, 2026-06-04-paa-language-profile-terminology-framework.md

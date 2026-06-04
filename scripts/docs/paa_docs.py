@@ -113,6 +113,8 @@ DATE_FIELDS = {
     "Expires",
 }
 DOC_TYPE_VALUES = {
+    "vision",
+    "vision-plan",
     "design-note",
     "component-spec",
     "contract",
@@ -126,7 +128,7 @@ DOC_TYPE_VALUES = {
     "reference",
 }
 STATUS_VALUES = {"draft", "active", "superseded", "archived"}
-LIFECYCLE_VALUES = {"design", "plan", "build", "test", "deploy", "operate", "reference"}
+LIFECYCLE_VALUES = {"vision", "design", "plan", "build", "test", "deploy", "operate", "reference"}
 BOOLEAN_VALUES = {"true", "false"}
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | set(RECOMMENDED_FIELDS) | set(OPTIONAL_FIELDS)
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
@@ -248,7 +250,7 @@ def detect_stage_from_path(path: Path) -> str:
         if part == "docs" and idx + 1 < len(parts):
             next_part = parts[idx + 1]
             mapping = {
-                "1_Vision": "reference",
+                "1_Vision": "vision",
                 "2_Design": "design",
                 "3_Plan": "plan",
                 "4_Build": "build",
