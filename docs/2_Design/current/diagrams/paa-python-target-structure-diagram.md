@@ -20,7 +20,7 @@ Supersedes:
 Superseded-By:
 Canonical: true
 Review-After: 2026-07-01
-Summary: Defines the updated Python target structure for PAA with explicit data, domain, application, API, CLI, and methodology pointer layers so build sequencing can follow the real system structure.
+Summary: Defines the updated Python target structure for PAA with explicit data, services/app logic, API, CLI, and methodology pointer layers so build sequencing can follow the real system structure.
 
 # PAA Python Target Structure Diagram
 
@@ -36,15 +36,14 @@ The target structure must now reflect:
 
 ## Core Decision
 
-The Python PAA target structure is now defined by six explicit layers plus transitional residue.
+The Python PAA target structure is now defined by five explicit layers plus transitional residue.
 
 Those layers are:
 1. authority and methodology truth
 2. data layer
-3. domain and taxonomy layer
-4. application and orchestration layer
-5. transport and composition layer
-6. CLI proof surface
+3. services and app logic layer
+4. transport and composition layer
+5. CLI proof surface
 
 The `MethodologyExecution` pointer sits across the workflow as a governing control record, but structurally it is persisted through the data layer and consumed by the application, runtime, API, and CLI surfaces.
 
@@ -54,17 +53,14 @@ The `MethodologyExecution` pointer sits across the workflow as a governing contr
 flowchart BT
     AUTH["Authority And Methodology Truth\nGoverned docs, terminology, policy, taxonomy authority"]
     DATA["Data Layer\nRepositories, DB schema, persistent records, `db.py` residue"]
-    DOMAIN["Domain And Taxonomy Layer\nPolicies, governance, domain vocabulary, component and realization taxonomies"]
-    APP["Application And Orchestration Layer\nApplication contracts, DTOs, services, producer and runtime operation boundaries"]
+    APP["Services And App Logic Layer\nApplication contracts, DTOs, services, producer and runtime operation boundaries"]
     TRANSPORT["Transport And Composition Layer\nFastAPI routers, runtime API client, Dishka composition root"]
     CLI["CLI Proof Surface\n`paa` command host, command grammar, rendering, proxy path"]
     PTR["MethodologyExecution Pointer\nLane, stage, step, status, owner, next action"]
     TRANS["Transitional Residue\ntraceability.py, db.py, placeholder packages, permanent services domain"]
 
     AUTH --> DATA
-    AUTH --> DOMAIN
     DATA --> PTR
-    DOMAIN --> APP
     DATA --> APP
     PTR --> APP
     APP --> TRANSPORT
@@ -112,20 +108,7 @@ Role:
 - own query and mutation boundaries
 - persist `MethodologyExecution` state and related records
 
-### 3. Domain and taxonomy layer
-
-Primary ownership:
-- `packages/paa-core/src/paa_core/policies/`
-- `packages/paa-core/src/paa_core/governance/`
-- `packages/paa-core/src/paa_core/domain/`
-- governed taxonomies encoded in data and models
-
-Role:
-- define meaning, invariants, vocabularies, classifications, and allowed mappings
-- carry component, element, and realization taxonomy meaning
-- carry methodology pointer vocabulary meaning
-
-### 4. Application and orchestration layer
+### 3. Services and app logic layer
 
 Primary ownership:
 - `packages/paa-core/src/paa_core/application/`
@@ -171,10 +154,11 @@ Sub-layers inside this layer:
 
 Role:
 - coordinate real work
+- consume policy, governance, and domain meaning
 - read and advance the methodology pointer
 - perform producer, component-realization, runtime, verification, and acceptance operations
 
-### 5. Transport and composition layer
+### 4. Transport and composition layer
 
 Primary ownership:
 - `packages/paa-core/src/paa_core/api/runtime/`
@@ -190,7 +174,7 @@ Constraint:
 - this layer composes the structure
 - it does not define the business ownership model
 
-### 6. CLI proof surface
+### 5. CLI proof surface
 
 Primary ownership:
 - `packages/paa-cli/src/paa_cli/`
@@ -254,8 +238,7 @@ After this step, the system now has:
 - a pointer-aware workflow/build note
 - a target structure diagram that explicitly includes:
   - data layer
-  - domain/taxonomy layer
-  - application/orchestration layer
+  - services/app logic layer
   - transport/composition layer
   - CLI proof surface
   - methodology pointer placement

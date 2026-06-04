@@ -70,50 +70,18 @@ Primary nodes:
 
 These nodes own persisted truth access.
 
-### 3. Domain and taxonomy nodes
+### 3. Service and application-logic nodes
 
 Primary nodes:
-- `paa_core.policies.*`
-- `paa_core.governance.*`
-- `paa_core.domain.*`
-- component/element/realization taxonomies as governed data
-- methodology pointer vocabulary for lane, stage, step, status, owner, next action
-
-These nodes define meaning and allowed structure.
-
-### 4. Application and orchestration nodes
-
-Primary nodes:
-- `paa_core.application.contracts.*`
-- `paa_core.application.dto.*`
-- `paa_core.application.services.*`
-- operator command routing and normalization under `paa_core.application.*`
-
-These nodes coordinate behavior across repositories, runtime collaborators, and producer flows.
-
-### 5. Runtime nodes
-
-Primary nodes:
-- `paa_core.runtime.hosts.*`
-- `paa_core.runtime.control.*`
-- `paa_core.runtime.transport.*`
-- `paa_core.runtime.orchestration.*`
-- `paa_core.runtime.workflow.*`
-- `paa_core.runtime.bridges.*`
-- `paa_core.runtime.workers.*`
-- `paa_core.runtime.packets.*`
-- `paa_core.runtime.support.*`
-
-These nodes execute and advance runtime work.
-
-### 6. Producer nodes
-
-Primary nodes:
+- `paa_core.application.*`
+- `paa_core.runtime.*`
 - `paa_core.producer.*`
+- permanent business-service packages under `paa_core.services.*`
+- policy and governance logic consumed by those services
 
-These nodes derive authority outputs, briefs, packets, plans, readiness, and producer-side review artifacts.
+These nodes coordinate app behavior, enforce rules, and interpret persisted truth.
 
-### 7. Transport and host nodes
+### 4. Transport and host nodes
 
 Primary nodes:
 - `paa_core.api.runtime.*`
@@ -121,7 +89,7 @@ Primary nodes:
 
 These nodes expose the system to operators and future clients.
 
-### 8. Transitional residue nodes
+### 5. Transitional residue nodes
 
 These still exist and therefore still matter in dependency planning:
 - `paa_core.db`
@@ -143,30 +111,21 @@ flowchart TD
     AUTH["Authority And Methodology Truth\nDocs, terminology, pointer model, taxonomy data"]
     PTR["MethodologyExecution Pointer\nlane, stage, step, status, owner, next action"]
     DATA["Data Layer\nrepositories, schema, persistent records, db helper residue"]
-    DOMAIN["Domain And Taxonomy\npolicies, governance, domain vocabulary"]
-    APP["Application And Orchestration\ncontracts, DTOs, application services"]
-    PROD["Producer\nauthority derivation, briefs, packets, plans"]
-    RT["Runtime\nworkflow, workers, transport, bridges, control"]
-    API["HTTP API\nFastAPI runtime gateway"]
-    CLI["CLI\n`paa` command host and proxy client"]
+    SERVICES["Services And App Logic\napplication, runtime, producer, permanent business services"]
+    API["API Layer\nFastAPI runtime gateway"]
+    CLI["CLI Layer\n`paa` command host and proxy client"]
     TRANS["Transitional Residue\ndb.py, traceability.py, placeholder packages, legacy service residue"]
 
     AUTH --> PTR
-    AUTH --> DOMAIN
     AUTH --> DATA
-    PTR --> APP
-    PTR --> PROD
-    PTR --> RT
-    DATA --> APP
-    DOMAIN --> APP
-    APP --> PROD
-    APP --> RT
-    APP --> API
+    DATA --> PTR
+    PTR --> SERVICES
+    DATA --> SERVICES
+    SERVICES --> API
     API --> CLI
-    PROD --> API
-    RT --> API
+    PTR --> CLI
     TRANS --> DATA
-    TRANS -.cleanup dependency.-> APP
+    TRANS -.cleanup dependency.-> SERVICES
 ```
 
 ## Key Dependency Updates
@@ -257,12 +216,10 @@ These are still in the graph and must be handled deliberately in later steps:
 Before step 2 of the sequence, the system should now be treated as depending on these ordered anchors:
 1. authority and methodology truth
 2. methodology pointer truth
-3. data and taxonomy persistence
-4. domain and policy vocabulary
-5. application and orchestration surfaces
-6. producer and runtime execution domains
-7. HTTP API
-8. CLI proof surface
+3. data persistence
+4. services and app logic
+5. HTTP API
+6. CLI proof surface
 
 That is the corrected dependency stack for the Python implementation effort.
 

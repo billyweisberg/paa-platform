@@ -41,7 +41,7 @@ For the Python implementation of PAA, build in this order:
 1. methodology workflow map
 2. dependency graph and node review
 3. package and module ownership decomposition
-4. target structure update including data, domain, orchestration/API, and CLI layers
+4. target structure update including data, services/app logic, API, and CLI layers
 5. build sequence derived from dependencies and workflow order
 6. implementation in that sequence
 7. integration proof through `paa` as the system surface
@@ -134,11 +134,9 @@ The Python system should be built from the bottom of governed truth upward.
 
 ```mermaid
 flowchart BT
-    DL["Data Layer\nDB schema, repositories, persistence contracts"] --> DM["Domain And Taxonomy Layer\ncomponent vocabulary, realization taxonomy, policy models"]
-    DM --> APP["Application And Orchestration Layer\nrequest DTOs, response DTOs, operation services"]
-    APP --> API["HTTP API Layer\nFastAPI routers/controllers"]
-    APP --> CLI["CLI Client Layer\n`paa` commands and proxy client"]
-    API --> CLI
+    DL["Data Layer\nDB schema, repositories, persistence contracts"] --> APP["Services And App Logic Layer\nrequest DTOs, response DTOs, application services, runtime and producer logic"]
+    APP --> API["API Layer\nFastAPI routers/controllers"]
+    API --> CLI["CLI Layer\n`paa` commands and proxy client"]
 
     COMP["Composition Root\nDishka providers, scopes, lifecycle wiring"] -.wires.-> APP
     COMP -.wires.-> API
@@ -163,23 +161,7 @@ Examples:
 - implementation-plan persistence
 - methodology execution persistence
 
-### Domain and taxonomy layer
-
-Owns:
-- stable component concepts
-- realization vocabulary
-- governed policy terms
-- normalized domain records and classification values
-- normalized pointer vocabulary for lane, stage, step, status, owner, and next action
-
-Examples:
-- component element types
-- realization types
-- allowed element-to-realization mappings
-- status vocabularies
-- target-language realization rules that are encoded as governed data
-
-### Application and orchestration layer
+### Services and app logic layer
 
 Owns:
 - request and response DTOs
@@ -194,7 +176,7 @@ Examples:
 - queue and runtime operations
 - methodology-execution state reads and writes
 
-### HTTP API layer
+### API layer
 
 Owns:
 - FastAPI transport adaptation only
@@ -206,7 +188,7 @@ Does not own:
 - persistence logic
 - domain truth
 
-### CLI client layer
+### CLI layer
 
 Owns:
 - `paa` command grammar
@@ -250,7 +232,7 @@ Dishka should be introduced after:
 - the methodology workflow map is explicit
 - package ownership is defined
 - the target structure is updated
-- the first data and application boundaries are known
+- the first data and service boundaries are known
 
 That means Dishka belongs in the composition stage of the build, not the discovery stage.
 
@@ -263,7 +245,7 @@ Build outputs:
 - explicit `MethodologyExecution` pointer placement in that workflow
 - dependency node review
 - Python ownership decomposition
-- updated target structure including data layer, domain layer, orchestration/API layer, and CLI layer
+- updated target structure including data layer, services/app logic layer, API layer, and CLI layer
 
 Proof:
 - governed docs only
@@ -336,7 +318,7 @@ Proof through CLI:
 The next coding work should follow this order:
 1. update the workflow and dependency diagrams
 2. make the `MethodologyExecution` pointer explicit in those diagrams and the target structure
-3. update the target structure to include the data and domain layers explicitly
+3. update the target structure to include the data layer and services/app logic layer explicitly
 4. identify the first Python realization types to add to governed taxonomy
 5. expose those operations through `paa`
 6. only then begin extracting the relevant ownership from `db.py`
