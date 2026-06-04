@@ -64,12 +64,12 @@ Phase 1. North Star Alignment [complete]
 └── MethodologyExecution pointer made explicit [complete]
 
 Phase 2. Data Layer Foundation [active]
-├── repositories/component_design review [pending]
-├── realization type operations normalized [pending]
+├── repositories/component_design review [complete]
+├── realization type operations normalized [complete]
 ├── element-realization mapping operations normalized [pending]
 ├── repositories/methodology_execution review [pending]
 ├── pointer persistence coverage checked [pending]
-└── db.py responsibility inventory for this slice [pending]
+└── db.py responsibility inventory for this slice [complete]
 
 Phase 3. Services/App Logic Over Data [pending]
 ├── application DTOs for taxonomy operations [pending]
@@ -106,11 +106,15 @@ Phase 7. Runtime And Producer Continuation [pending]
 
 The current system position is:
 - Phase 2. Data Layer Foundation `[active]`
+- Active slice: `S01` Realization Type Registry
+- Completed layer for active slice: data layer
+- Next layer for active slice: domain/app logic
 
 That means:
 - the design and planning frame is ready
-- the next correct work is in repository and data-layer normalization
-- this is not the time to start cutting random pieces out of `db.py`
+- the repository normalization for realization-type registry is in place
+- the next correct work for `S01` is app/service wiring, not more random data-layer churn
+- this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule
 
