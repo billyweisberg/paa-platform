@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from paa_producer.architect_packet_preparer import (
+from paa_core.producer.architect_packet_preparer import (
     PacketBriefContext,
     PacketPreparationOptions,
     _build_packet,

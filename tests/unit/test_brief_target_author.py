@@ -1,8 +1,8 @@
 import unittest
 from pathlib import Path
 
-from paa_producer.brief_target_author import _target_blueprints
-from paa_producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
+from paa_core.producer.brief_target_author import _target_blueprints
+from paa_core.producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
 
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')

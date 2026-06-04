@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from paa_producer.design_package_deriver import (
+from paa_core.producer.design_package_deriver import (
     _node_for_primary_component,
     _project_name_from_slug,
     _query_scalar,
@@ -42,7 +42,7 @@ class DesignPackageDeriverTests(unittest.TestCase):
         self.assertEqual(node['tier'], 'runtime')
 
     def test_query_scalar_ignores_psql_command_tag_lines(self):
-        with patch('paa_producer.design_package_deriver.run_psql', return_value='abc-123\nINSERT 0 1\n'):
+        with patch('paa_core.producer.design_package_deriver.run_psql', return_value='abc-123\nINSERT 0 1\n'):
             self.assertEqual(_query_scalar('select 1'), 'abc-123')
 
 

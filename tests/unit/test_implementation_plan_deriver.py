@@ -17,8 +17,8 @@ from paa_core.services.implementation_plan_derivation import (
     ImplementationPlanDerivationResult,
     ImplementationPlanVerificationSurfaceDraft,
 )
-from paa_producer.derivation_readiness import DerivationReadinessResult
-from paa_producer.implementation_plan_deriver import (
+from paa_core.producer.derivation_readiness import DerivationReadinessResult
+from paa_core.producer.implementation_plan_deriver import (
     _activity_blueprints,
     derive_implementation_plan,
 )
@@ -38,7 +38,7 @@ class ImplementationPlanDeriverTests(unittest.TestCase):
             'component_design_planning_service_service_tests': ('element-4', 'realization-4'),
             'component_design_planning_service_package_export': ('element-1', 'realization-5'),
         }
-        with patch('paa_producer.implementation_plan_deriver._ensure_component_design_records', return_value=fake_ids):
+        with patch('paa_core.producer.implementation_plan_deriver._ensure_component_design_records', return_value=fake_ids):
             rows = _activity_blueprints(package, 'component-1', 'project-1')
 
         self.assertEqual([row.activity_key for row in rows], [
@@ -150,13 +150,13 @@ class ImplementationPlanDeriverTests(unittest.TestCase):
             gaps=(),
             persisted=True,
         )
-        with patch('paa_producer.implementation_plan_deriver.evaluate_derivation_readiness', return_value=readiness), \
-             patch('paa_producer.implementation_plan_deriver.validate_stage1_design_package', return_value=package), \
-             patch('paa_producer.implementation_plan_deriver._resolve_stage1_schema_path', return_value=REPO_ROOT / 'schemas/derivation/stage1_design_package.schema.json'), \
-             patch('paa_producer.implementation_plan_deriver._project_id_for_slug', return_value='project-1'), \
-             patch('paa_producer.implementation_plan_deriver._activity_blueprints', return_value=activity_blueprints), \
-             patch('paa_producer.implementation_plan_deriver._verification_surfaces', return_value=verification_surfaces), \
-             patch('paa_producer.implementation_plan_deriver.DefaultImplementationPlanDerivationService') as mock_service_cls:
+        with patch('paa_core.producer.implementation_plan_deriver.evaluate_derivation_readiness', return_value=readiness), \
+             patch('paa_core.producer.implementation_plan_deriver.validate_stage1_design_package', return_value=package), \
+             patch('paa_core.producer.implementation_plan_deriver._resolve_stage1_schema_path', return_value=REPO_ROOT / 'schemas/derivation/stage1_design_package.schema.json'), \
+             patch('paa_core.producer.implementation_plan_deriver._project_id_for_slug', return_value='project-1'), \
+             patch('paa_core.producer.implementation_plan_deriver._activity_blueprints', return_value=activity_blueprints), \
+             patch('paa_core.producer.implementation_plan_deriver._verification_surfaces', return_value=verification_surfaces), \
+             patch('paa_core.producer.implementation_plan_deriver.DefaultImplementationPlanDerivationService') as mock_service_cls:
             mock_service_cls.return_value.derive_plan.return_value = service_result
             result = derive_implementation_plan(
                 package_path=PACKAGE_PATH,

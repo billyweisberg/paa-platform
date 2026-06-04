@@ -8,13 +8,13 @@ from paa_core.repositories.implementation_plan import (
     ImplementationPlanActivityDependencyRecord,
     ImplementationPlanActivityRecord,
 )
-from paa_producer.coder_brief_assembler import (
+from paa_core.producer.coder_brief_assembler import (
     _derive_forbidden_surfaces,
     _resolve_coder_brief_schema_path,
     assemble_coder_brief,
 )
-from paa_producer.derivation_readiness import DerivationReadinessResult
-from paa_producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
+from paa_core.producer.derivation_readiness import DerivationReadinessResult
+from paa_core.producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
 
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')
@@ -39,7 +39,7 @@ class CoderBriefAssemblerTests(unittest.TestCase):
         if OUTPUT_PATH.exists():
             OUTPUT_PATH.unlink()
         with patch(
-            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            'paa_core.producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=None,
         ), patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
             result = assemble_coder_brief(
@@ -72,10 +72,10 @@ class CoderBriefAssemblerTests(unittest.TestCase):
             'metadata': {'system_layer': 'domain-services', 'tier': 'runtime'},
         }
         with patch(
-            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            'paa_core.producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=None,
         ), patch(
-            'paa_producer.coder_brief_assembler._load_component_brief_planning_payload',
+            'paa_core.producer.coder_brief_assembler._load_component_brief_planning_payload',
             return_value=planning_payload,
         ), patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
             assemble_coder_brief(
@@ -103,10 +103,10 @@ class CoderBriefAssemblerTests(unittest.TestCase):
         OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
         OUTPUT_PATH.unlink(missing_ok=True)
         with patch(
-            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            'paa_core.producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=None,
         ), patch(
-            'paa_producer.coder_brief_assembler._load_implementation_plan_binding',
+            'paa_core.producer.coder_brief_assembler._load_implementation_plan_binding',
             return_value={'implementation_plan_id': 'impl-plan-1', 'plan_id_external': 'plan-external-1', 'authority_state': 'draft_plan', 'status': 'draft'},
         ), patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
             result = assemble_coder_brief(
@@ -165,10 +165,10 @@ class CoderBriefAssemblerTests(unittest.TestCase):
             'verification_surfaces': [],
         }
         with patch(
-            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            'paa_core.producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=None,
         ), patch(
-            'paa_producer.coder_brief_assembler._load_component_brief_planning_payload',
+            'paa_core.producer.coder_brief_assembler._load_component_brief_planning_payload',
             return_value={
                 'component_name': 'Component Design Planning Service',
                 'component_aspects': ['interfaces', 'functions'],
@@ -178,10 +178,10 @@ class CoderBriefAssemblerTests(unittest.TestCase):
                 'metadata': {'system_layer': 'domain-services', 'tier': 'runtime'},
             },
         ), patch(
-            'paa_producer.coder_brief_assembler._load_implementation_plan_binding',
+            'paa_core.producer.coder_brief_assembler._load_implementation_plan_binding',
             return_value={'implementation_plan_id': 'impl-plan-1', 'plan_id_external': 'plan-external-1', 'authority_state': 'draft_plan', 'status': 'draft'},
         ), patch(
-            'paa_producer.coder_brief_assembler._load_implementation_plan_context',
+            'paa_core.producer.coder_brief_assembler._load_implementation_plan_context',
             return_value=plan_context,
         ), patch.dict(os.environ, {'PAA_DB_PROFILE': 'agenthub_paa_dev_legacy'}, clear=False):
             assemble_coder_brief(
@@ -214,12 +214,12 @@ class CoderBriefAssemblerTests(unittest.TestCase):
 
     def test_assemble_coder_brief_refuses_to_overwrite_approved_authority(self):
         with patch(
-            'paa_producer.coder_brief_assembler._existing_brief_for_design_package',
+            'paa_core.producer.coder_brief_assembler._existing_brief_for_design_package',
             return_value=('brief-id', 'brief-external', 'approved_brief'),
         ), patch(
-            'paa_producer.coder_brief_assembler.evaluate_derivation_readiness'
+            'paa_core.producer.coder_brief_assembler.evaluate_derivation_readiness'
         ) as mock_readiness, patch(
-            'paa_producer.coder_brief_assembler._load_design_package_json'
+            'paa_core.producer.coder_brief_assembler._load_design_package_json'
         ) as mock_package:
             mock_readiness.return_value = DerivationReadinessResult(
                 project_slug='paa-platform',

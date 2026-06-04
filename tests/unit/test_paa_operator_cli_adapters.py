@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(ROOT / 'packages' / 'paa-producer' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 
 from paa_cli.command_adapters import ComponentCommandAdapter, PlanCommandAdapter

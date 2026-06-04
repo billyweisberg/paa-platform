@@ -4,13 +4,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from paa_producer.derivation_readiness import (
+from paa_core.producer.derivation_readiness import (
     _artifact_signoff_roles,
     _has_brief_lifecycle_support,
     _required_signoff_roles,
     evaluate_derivation_readiness,
 )
-from paa_producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
+from paa_core.producer.design_package_deriver import _resolve_stage1_schema_path, validate_stage1_design_package
 
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')
@@ -33,7 +33,7 @@ class DerivationReadinessTests(unittest.TestCase):
         )
 
     def test_has_brief_lifecycle_support_accepts_text_bools(self):
-        with patch('paa_producer.derivation_readiness._query_single_row', return_value=['true', 'true', 'true']):
+        with patch('paa_core.producer.derivation_readiness._query_single_row', return_value=['true', 'true', 'true']):
             self.assertTrue(_has_brief_lifecycle_support())
 
     def test_evaluate_derivation_readiness_for_proof_slice(self):

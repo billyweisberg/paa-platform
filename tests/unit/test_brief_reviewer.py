@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from paa_producer.brief_reviewer import _review_checks, review_coder_brief, BriefContext
+from paa_core.producer.brief_reviewer import _review_checks, review_coder_brief, BriefContext
 
 
 REPO_ROOT = Path('/Users/billyweisberg/Repos/billyweisberg/paa-platform')
@@ -43,7 +43,7 @@ class BriefReviewerTests(unittest.TestCase):
             readiness_class='derivation_ready',
             target_count=5,
         )
-        with patch('paa_producer.brief_reviewer._resolve_brief_context', return_value=context):
+        with patch('paa_core.producer.brief_reviewer._resolve_brief_context', return_value=context):
             result = review_coder_brief(coder_run_brief_id='brief', decision='approve')
         self.assertFalse(result.transition_applied)
         self.assertEqual(result.authority_state, 'approved_brief')
@@ -64,7 +64,7 @@ class BriefReviewerTests(unittest.TestCase):
             readiness_class='derivation_ready',
             target_count=5,
         )
-        with patch('paa_producer.brief_reviewer._resolve_brief_context', return_value=context):
+        with patch('paa_core.producer.brief_reviewer._resolve_brief_context', return_value=context):
             result = review_coder_brief(
                 coder_run_brief_id='brief',
                 decision='approve',

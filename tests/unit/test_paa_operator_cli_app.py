@@ -11,7 +11,6 @@ from typer.testing import CliRunner
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-core' / 'src'))
-sys.path.insert(0, str(ROOT / 'packages' / 'paa-producer' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-cli' / 'src'))
 sys.path.insert(0, str(ROOT / 'packages' / 'paa-consumer' / 'src'))
 
