@@ -1,7 +1,6 @@
 {
   "include": [
-    "packages/paa-core/src",
-    "packages/paa-producer/src"
+    "packages/paa-core/src"
   ],
   "exclude": [
     "**/__pycache__",
@@ -19,13 +18,6 @@
         "packages/paa-core/src"
       ]
     },
-    {
-      "root": "packages/paa-producer/src",
-      "extraPaths": [
-        "packages/paa-producer/src",
-        "packages/paa-core/src"
-      ]
-    }
   ],
   "typeCheckingMode": "standard",
   "reportMissingImports": "warning",

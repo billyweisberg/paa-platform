@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${REPO_ROOT}"
 
-PYTHONPATH_VALUE="packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:."
+PYTHONPATH_VALUE="packages/paa-core/src:packages/paa-cli/src:packages/paa-consumer/src:."
 export PYTHONPATH="${PYTHONPATH_VALUE}${PYTHONPATH:+:${PYTHONPATH}}"
 
 if [[ $# -lt 1 ]]; then

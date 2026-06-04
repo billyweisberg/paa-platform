@@ -267,7 +267,7 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
     result = _install_common_layout(
         repo_root,
         mode="producer",
-        package_names=["paa-core", "paa-producer"],
+        package_names=["paa-core"],
         example_config_name="project-config.producer.example.json",
         project_pack=project_pack,
     )
@@ -276,7 +276,6 @@ def install_producer_runtime(repo_root: Path, project_pack: str = DEFAULT_PROJEC
     replacements = {"{{REPO_ROOT}}": str(repo_root.resolve())}
     ensure_directory(result.runtime_data_root / "publish")
     ensure_directory(result.runtime_data_root / "cache")
-    _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
     _install_selected_files(
         root / "scripts" / "runtime",
         result.codex_install_root / "scripts" / "runtime",
@@ -318,7 +317,7 @@ def install_runtime_support(repo_root: Path, project_pack: str = DEFAULT_PROJECT
     result = _install_common_layout(
         repo_root,
         mode="consumer",
-        package_names=["paa-core", "paa-consumer", "paa-producer"],
+        package_names=["paa-core", "paa-consumer"],
         example_config_name="project-config.consumer.example.json",
         project_pack=project_pack,
     )
@@ -328,7 +327,6 @@ def install_runtime_support(repo_root: Path, project_pack: str = DEFAULT_PROJECT
     for name in ["authority/current", "claims", "queue-state", "artifacts", "evidence", "cache", "reports"]:
         ensure_directory(result.runtime_data_root / name)
     _write_wrapper(result.codex_install_root / 'bin' / 'paa', 'paa_cli')
-    _write_wrapper(result.codex_install_root / 'bin' / 'paa-producer', 'paa_producer')
     _install_selected_files(
         root / "scripts" / "runtime",
         result.codex_install_root / "scripts" / "runtime",

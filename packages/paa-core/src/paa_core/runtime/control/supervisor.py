@@ -87,7 +87,7 @@ def start_runtime_supervisor(
     paths['runtime_dir'].mkdir(parents=True, exist_ok=True)
     paths['log_file'].write_text('')
     env = os.environ.copy()
-    pythonpath = 'packages/paa-core/src:packages/paa-producer/src:packages/paa-cli/src:packages/paa-consumer/src:.'
+    pythonpath = 'packages/paa-core/src:packages/paa-cli/src:packages/paa-consumer/src:.'
     env['PYTHONPATH'] = f"{pythonpath}:{env['PYTHONPATH']}" if env.get('PYTHONPATH') else pythonpath
     env['PYTHONUNBUFFERED'] = '1'
 

@@ -194,7 +194,7 @@ def _derive_forbidden_surfaces(package: dict[str, Any]) -> list[str]:
     if 'execution-package-resolution-implementation' in out_of_scope:
         forbidden.append('packages/paa-core/src/paa_core/runtime/packets/execution_package_resolution/')
     if 'producer-derivation-orchestration' in out_of_scope:
-        forbidden.append('packages/paa-producer/src/paa_producer/authority_runtime.py')
+        forbidden.append('packages/paa-core/src/paa_core/producer/authority_runtime.py')
     if 'runtime-adoption' in out_of_scope:
         forbidden.append('packages/paa-consumer/src/paa_consumer/')
     if 'repository-sql-expansion' in out_of_scope or any('No workflow, runtime-event, or repository-schema ownership is redefined' in item for item in baseline):

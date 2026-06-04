@@ -8,16 +8,16 @@ from typing import Any
 import json
 
 from paa_core.runtime.support.runtime_paths import resolved_repo_runtime_queue_topology
-from paa_producer.component_spec_materializer import (
+from paa_core.producer.component_spec_materializer import (
     DEFAULT_ANCHOR_CONSUMER_CONTEXT_KEY,
     DEFAULT_ANCHOR_DESIGN_PACKAGE_EXTERNAL,
     DEFAULT_PROJECT_SLUG,
     materialize_component_spec,
 )
-from paa_producer.implementation_plan_activity_state import (
+from paa_core.producer.implementation_plan_activity_state import (
     set_implementation_plan_activity_state,
 )
-from paa_producer.implementation_plan_progress import (
+from paa_core.producer.implementation_plan_progress import (
     derive_next_activity_bundle,
     implementation_plan_progress,
     reconcile_implementation_plan_progress,
