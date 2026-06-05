@@ -85,8 +85,8 @@ These slices directly satisfy the current active phase:
 
 Current build position inside the working set:
 - active slice: `S03`
-- completed layer: data layer
-- next layer: domain/app logic
+- completed layer: domain/app logic
+- next layer: API
 
 ## `db.py` Extraction Rule Inside The Map
 

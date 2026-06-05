@@ -69,7 +69,7 @@ Phase 2. Data Layer Foundation [complete]
 Phase 3. Services/App Logic Over Data [active]
 ├── application DTOs for taxonomy operations [complete]
 ├── application services for taxonomy operations [complete]
-├── methodology pointer app-service operations [pending]
+├── methodology pointer app-service operations [complete]
 └── pointer-aware command validation where needed [pending]
 
 Phase 4. API Exposure [pending]
@@ -102,8 +102,8 @@ Phase 7. Runtime And Producer Continuation [pending]
 The current system position is:
 - Phase 3. Services/App Logic Over Data `[active]`
 - Active slice: `S03` Methodology Pointer Inspection And Transition
-- Completed layer for active slice: data layer
-- Next layer for active slice: domain/app logic
+- Completed layer for active slice: domain/app logic
+- Next layer for active slice: API
 
 That means:
 - the design and planning frame is ready
@@ -112,7 +112,8 @@ That means:
 - the runtime API now exposes both realization types and element-realization mappings
 - `paa` now exposes and proves both realization types and element-realization mappings end to end
 - the `methodology_execution` repository surface is now normalized and proven for `S03` data-layer work
-- the next correct work is `S03` domain/app logic for methodology pointer inspection and transition
+- the `application/methodology_execution` surface now wraps projection, state, and preflight services through one explicit app boundary
+- the next correct work is `S03` API work for methodology pointer inspection and transition
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

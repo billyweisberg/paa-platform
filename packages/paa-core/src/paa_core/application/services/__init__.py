@@ -12,10 +12,16 @@ from .component_taxonomy import (
     DefaultComponentTaxonomyApplicationService,
     build_default_component_taxonomy_application_service,
 )
+from .methodology_execution import (
+    DefaultMethodologyExecutionApplicationService,
+    build_default_methodology_execution_application_service,
+)
 
 __all__ = [
     'DefaultComponentTaxonomyApplicationService',
     'build_default_component_taxonomy_application_service',
+    'DefaultMethodologyExecutionApplicationService',
+    'build_default_methodology_execution_application_service',
 
     'DefaultAuthorityInstallApplicationService',
     'DefaultAutomationPreflightApplicationService',

@@ -9,9 +9,11 @@ from .runtime_report import RuntimeReportService
 from .runtime_admin import RuntimeAdminService
 from .runtime_validation import RuntimeValidationService
 from .component_taxonomy import ComponentTaxonomyService
+from .methodology_execution import MethodologyExecutionService
 
 __all__ = [
     'ComponentTaxonomyService',
+    'MethodologyExecutionService',
 
     'AuthorityInstallService',
     'AutomationPreflightService',
