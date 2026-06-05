@@ -1395,6 +1395,532 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn('Governed element-to-realization mapping commands.', result.output)
 
+    def test_methodology_current_dispatches_through_runtime_api_client_by_id(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_status.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'item': {'methodology_execution_id': 'exec-1'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'current', '--methodology-execution-id', 'exec-1'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['item']['methodology_execution_id'], 'exec-1')
+        from paa_core.application.dto.methodology_execution import GetMethodologyExecutionStatusRequest
+        fake_service.get_methodology_execution_status.assert_called_once_with(
+            GetMethodologyExecutionStatusRequest(methodology_execution_id='exec-1')
+        )
+
+    def test_methodology_current_dispatches_through_runtime_api_client_by_anchors(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_status.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'item': {'methodology_execution_id': 'exec-from-anchor'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'current',
+                    '--project-id',
+                    'proj-1',
+                    '--work-item-id',
+                    'work-1',
+                    '--component-id',
+                    'component-1',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        from paa_core.application.dto.methodology_execution import GetMethodologyExecutionStatusRequest
+        fake_service.get_methodology_execution_status.assert_called_once_with(
+            GetMethodologyExecutionStatusRequest(
+                project_id='proj-1',
+                work_item_id='work-1',
+                component_id='component-1',
+            )
+        )
+
+    def test_methodology_current_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_status.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'code': 'methodology_execution_not_found'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'current', '--methodology-execution-id', 'missing-exec'])
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['code'], 'methodology_execution_not_found')
+
+    def test_methodology_next_dispatches_through_runtime_api_client_by_id(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_next_action.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'item': {'recommended_next_action_key': 'component-progress-reconciled'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'next', '--methodology-execution-id', 'exec-1'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['item']['recommended_next_action_key'], 'component-progress-reconciled')
+        from paa_core.application.dto.methodology_execution import GetMethodologyExecutionNextActionRequest
+        fake_service.get_methodology_execution_next_action.assert_called_once_with(
+            GetMethodologyExecutionNextActionRequest(methodology_execution_id='exec-1')
+        )
+
+    def test_methodology_next_dispatches_through_runtime_api_client_by_anchors(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_next_action.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'item': {'recommended_next_action_key': 'component-progress-reconciled'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'next',
+                    '--project-id',
+                    'proj-1',
+                    '--work-item-id',
+                    'work-1',
+                    '--component-id',
+                    'component-1',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        from paa_core.application.dto.methodology_execution import GetMethodologyExecutionNextActionRequest
+        fake_service.get_methodology_execution_next_action.assert_called_once_with(
+            GetMethodologyExecutionNextActionRequest(
+                project_id='proj-1',
+                work_item_id='work-1',
+                component_id='component-1',
+            )
+        )
+
+    def test_methodology_next_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.get_methodology_execution_next_action.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'code': 'methodology_execution_not_found'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'next', '--methodology-execution-id', 'missing-exec'])
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+
+    def test_methodology_explain_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.explain_methodology_execution.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'item': {'methodology_execution_id': 'exec-1'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'explain', '--methodology-execution-id', 'exec-1'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        from paa_core.application.dto.methodology_execution import ExplainMethodologyExecutionRequest
+        fake_service.explain_methodology_execution.assert_called_once_with(
+            ExplainMethodologyExecutionRequest(methodology_execution_id='exec-1')
+        )
+
+    def test_methodology_explain_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.explain_methodology_execution.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'code': 'methodology_execution_not_found'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['methodology', 'explain', '--methodology-execution-id', 'missing-exec'])
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+
+    def test_methodology_preflight_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.evaluate_methodology_execution_preflight.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'outcome': {'outcome_kind': 'allowed'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'preflight',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--command-family',
+                    'component',
+                    '--command-name',
+                    'next',
+                    '--command-arguments-json',
+                    '{"plan_id":"plan-1"}',
+                    '--actor-role-id',
+                    'techlead',
+                    '--actor-name',
+                    'TechLead Agent',
+                    '--metadata-json',
+                    '{"proof":"cli"}',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        from paa_core.application.dto.methodology_execution import EvaluateMethodologyExecutionPreflightRequest
+        fake_service.evaluate_methodology_execution_preflight.assert_called_once_with(
+            EvaluateMethodologyExecutionPreflightRequest(
+                command_family='component',
+                command_name='next',
+                methodology_execution_id='exec-1',
+                command_arguments={'plan_id': 'plan-1'},
+                actor_role_id='techlead',
+                actor_name='TechLead Agent',
+                metadata={'proof': 'cli'},
+            )
+        )
+
+    def test_methodology_preflight_blocked_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.evaluate_methodology_execution_preflight.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'reason': 'blocked_state', 'outcome': {'outcome_kind': 'blocked'}},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'preflight',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--command-family',
+                    'component',
+                    '--command-name',
+                    'next',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['reason'], 'blocked_state')
+
+    def test_methodology_preflight_rejects_non_object_command_arguments_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'preflight',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--command-family',
+                    'component',
+                    '--command-name',
+                    'next',
+                    '--command-arguments-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--command-arguments-json must decode to an object.', result.output)
+        fake_service.evaluate_methodology_execution_preflight.assert_not_called()
+
+    def test_methodology_preflight_rejects_non_object_metadata_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'preflight',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--command-family',
+                    'component',
+                    '--command-name',
+                    'next',
+                    '--metadata-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--metadata-json must decode to an object.', result.output)
+        fake_service.evaluate_methodology_execution_preflight.assert_not_called()
+
+    def test_methodology_transition_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.apply_methodology_execution_transition.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': True, 'transition': {'transition_key': 'component-progress-reconciled'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--transition-key',
+                    'component-progress-reconciled',
+                    '--actor-role-id',
+                    'techlead',
+                    '--actor-name',
+                    'TechLead Agent',
+                    '--notes',
+                    'advance pointer',
+                    '--evidence-json',
+                    '{"proof":"cli"}',
+                    '--binding-entry-json',
+                    '{"binding_kind":"implementation_plan","bound_record_id":"plan-1","is_primary":true,"metadata":{"source":"cli"}}',
+                    '--metadata-json',
+                    '{"proof":"cli"}',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        from paa_core.application.dto.methodology_execution import (
+            ApplyMethodologyExecutionTransitionRequest,
+            MethodologyExecutionBindingEntryInput,
+        )
+        fake_service.apply_methodology_execution_transition.assert_called_once_with(
+            ApplyMethodologyExecutionTransitionRequest(
+                transition_key='component-progress-reconciled',
+                methodology_execution_id='exec-1',
+                actor_role_id='techlead',
+                actor_name='TechLead Agent',
+                notes='advance pointer',
+                evidence={'proof': 'cli'},
+                binding_entries=(
+                    MethodologyExecutionBindingEntryInput(
+                        binding_kind='implementation_plan',
+                        bound_record_id='plan-1',
+                        is_primary=True,
+                        metadata={'source': 'cli'},
+                    ),
+                ),
+                metadata={'proof': 'cli'},
+            )
+        )
+
+    def test_methodology_transition_blocked_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.apply_methodology_execution_transition.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'code': 'unsupported_transition_key'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--transition-key',
+                    'blocked-transition',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+
+    def test_methodology_transition_missing_execution_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
+        fake_service.apply_methodology_execution_transition.return_value = MethodologyExecutionOperationResult(
+            payload={'ok': False, 'code': 'methodology_execution_not_found'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'missing-exec',
+                    '--transition-key',
+                    'component-progress-reconciled',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+
+    def test_methodology_transition_rejects_non_object_evidence_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--transition-key',
+                    'component-progress-reconciled',
+                    '--evidence-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--evidence-json must decode to an object.', result.output)
+        fake_service.apply_methodology_execution_transition.assert_not_called()
+
+    def test_methodology_transition_rejects_non_object_binding_entry_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--transition-key',
+                    'component-progress-reconciled',
+                    '--binding-entry-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--binding-entry-json must decode to an object.', result.output)
+        fake_service.apply_methodology_execution_transition.assert_not_called()
+
+    def test_methodology_transition_rejects_non_object_metadata_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'methodology',
+                    'transition',
+                    '--methodology-execution-id',
+                    'exec-1',
+                    '--transition-key',
+                    'component-progress-reconciled',
+                    '--metadata-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--metadata-json must decode to an object.', result.output)
+        fake_service.apply_methodology_execution_transition.assert_not_called()
+
+    def test_methodology_help_is_available(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['methodology', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('Methodology pointer inspection and transition commands.', result.output)
+
+    def test_methodology_transition_help_is_available(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['methodology', 'transition', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--transition-key', result.output)
+
     def test_producer_help_is_available_under_paa(self) -> None:
         app, _, _ = self._typer_cli()
 

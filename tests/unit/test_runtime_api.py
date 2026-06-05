@@ -14,6 +14,7 @@ from paa_core.api.runtime.dependencies import (
     get_authority_install_service,
     get_automation_preflight_service,
     get_component_taxonomy_service,
+    get_methodology_execution_service,
     get_operator_command_service,
     get_producer_command_service,
     get_queue_admin_service,
@@ -25,6 +26,7 @@ from paa_core.api.runtime.dependencies import (
 )
 from paa_core.application.dto.authority import AuthorityInstallResultView
 from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+from paa_core.application.dto.methodology_execution import MethodologyExecutionOperationResult
 from paa_core.application.dto.queue import QueueOperationResult
 from paa_core.application.dto.operator import (
     OperatorCommand,
@@ -321,11 +323,253 @@ class _FakeComponentTaxonomyService:
         )
 
 
+class _FakeMethodologyExecutionService:
+    def get_status(self, request):
+        if request.methodology_execution_id == 'missing-exec' or request.project_id == 'missing-project':
+            return MethodologyExecutionOperationResult(
+                payload={
+                    'ok': False,
+                    'code': 'methodology_execution_not_found',
+                    'methodology_execution_id': request.methodology_execution_id,
+                    'project_id': request.project_id,
+                    'work_item_id': request.work_item_id,
+                    'component_id': request.component_id,
+                },
+                exit_code=1,
+            )
+        if request.methodology_execution_id is None and not (request.project_id and request.work_item_id):
+            return MethodologyExecutionOperationResult(payload={'ok': False, 'code': 'missing_methodology_identity'}, exit_code=1)
+        return MethodologyExecutionOperationResult(
+            payload={
+                'ok': True,
+                'item': {
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'lane': 'component_realization',
+                    'stage': 'slice_execution',
+                    'step': 'reconcile_component_plan_progress',
+                    'status': 'active',
+                    'current_owner_role': 'techlead',
+                    'next_action_key': 'component-progress-reconciled',
+                    'blocked_reason': None,
+                    'component_id': request.component_id,
+                    'design_package_id': None,
+                    'implementation_plan_id': 'plan-1',
+                    'coder_run_brief_id': None,
+                    'packet_id': None,
+                    'workflow_state_id': 'wf-1',
+                    'active_authority_ref': None,
+                    'active_artifact_ref': None,
+                    'binding_refs': [],
+                    'summary_text': 'Current methodology state.',
+                    'metadata': {},
+                },
+            }
+        )
+
+    def get_next_action(self, request):
+        if request.methodology_execution_id == 'missing-exec' or request.project_id == 'missing-project':
+            return MethodologyExecutionOperationResult(
+                payload={
+                    'ok': False,
+                    'code': 'methodology_execution_not_found',
+                    'methodology_execution_id': request.methodology_execution_id,
+                    'project_id': request.project_id,
+                    'work_item_id': request.work_item_id,
+                    'component_id': request.component_id,
+                },
+                exit_code=1,
+            )
+        if request.methodology_execution_id is None and not (request.project_id and request.work_item_id):
+            return MethodologyExecutionOperationResult(payload={'ok': False, 'code': 'missing_methodology_identity'}, exit_code=1)
+        return MethodologyExecutionOperationResult(
+            payload={
+                'ok': True,
+                'item': {
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'recommended_next_action_key': 'component-progress-reconciled',
+                    'recommended_owner_role': 'techlead',
+                    'lane': 'component_realization',
+                    'stage': 'slice_execution',
+                    'step': 'reconcile_component_plan_progress',
+                    'prerequisite_summary': 'Ready to reconcile.',
+                    'blocked_reason': None,
+                    'component_id': request.component_id,
+                    'implementation_plan_id': 'plan-1',
+                    'packet_id': None,
+                    'metadata': {},
+                },
+            }
+        )
+
+    def explain(self, request):
+        if request.methodology_execution_id == 'missing-exec' or request.project_id == 'missing-project':
+            return MethodologyExecutionOperationResult(
+                payload={
+                    'ok': False,
+                    'code': 'methodology_execution_not_found',
+                    'methodology_execution_id': request.methodology_execution_id,
+                    'project_id': request.project_id,
+                    'work_item_id': request.work_item_id,
+                    'component_id': request.component_id,
+                },
+                exit_code=1,
+            )
+        if request.methodology_execution_id is None and not (request.project_id and request.work_item_id):
+            return MethodologyExecutionOperationResult(payload={'ok': False, 'code': 'missing_methodology_identity'}, exit_code=1)
+        return MethodologyExecutionOperationResult(
+            payload={
+                'ok': True,
+                'item': {
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'lane': 'component_realization',
+                    'stage': 'slice_execution',
+                    'step': 'reconcile_component_plan_progress',
+                    'status': 'active',
+                    'current_owner_role': 'techlead',
+                    'explanation_summary': 'Waiting on progress reconciliation.',
+                    'transition_context': {'transition_key': 'component-progress-reconciled'},
+                    'binding_refs': [],
+                    'blocked_reason': None,
+                    'metadata': {},
+                },
+            }
+        )
+
+    def apply_transition(self, request):
+        if request.methodology_execution_id is None and not (request.project_id and request.work_item_id):
+            return MethodologyExecutionOperationResult(payload={'ok': False, 'code': 'missing_methodology_identity'}, exit_code=1)
+        if request.methodology_execution_id == 'missing-exec' or request.project_id == 'missing-project':
+            return MethodologyExecutionOperationResult(
+                payload={
+                    'ok': False,
+                    'code': 'methodology_execution_not_found',
+                    'methodology_execution_id': request.methodology_execution_id,
+                    'project_id': request.project_id,
+                    'work_item_id': request.work_item_id,
+                    'component_id': request.component_id,
+                },
+                exit_code=1,
+            )
+        if request.transition_key == 'blocked-transition':
+            return MethodologyExecutionOperationResult(
+                payload={
+                    'ok': False,
+                    'code': 'unsupported_transition_key',
+                    'details': 'Transition is not supported in this slice.',
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'current_state': {
+                        'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                        'lane': 'component_realization',
+                        'stage': 'slice_execution',
+                        'step': 'reconcile_component_plan_progress',
+                        'status': 'active',
+                        'current_owner_role': 'techlead',
+                        'next_action_key': 'component-progress-reconciled',
+                        'blocked_reason': None,
+                        'component_id': request.component_id,
+                        'design_package_id': None,
+                        'implementation_plan_id': 'plan-1',
+                        'coder_run_brief_id': None,
+                        'packet_id': None,
+                        'workflow_state_id': 'wf-1',
+                        'active_authority_ref': None,
+                        'active_artifact_ref': None,
+                        'binding_refs': [],
+                        'summary_text': 'Current methodology state.',
+                        'metadata': {},
+                    },
+                },
+                exit_code=1,
+            )
+        return MethodologyExecutionOperationResult(
+            payload={
+                'ok': True,
+                'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                'current_state': {
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'lane': 'component_realization',
+                    'stage': 'slice_execution',
+                    'step': 'derive_next_activity_bundle',
+                    'status': 'ready',
+                    'current_owner_role': 'producer',
+                    'next_action_key': 'derive-next-activity-bundle',
+                    'blocked_reason': None,
+                    'component_id': request.component_id,
+                    'design_package_id': None,
+                    'implementation_plan_id': 'plan-1',
+                    'coder_run_brief_id': None,
+                    'packet_id': None,
+                    'workflow_state_id': 'wf-1',
+                    'active_authority_ref': None,
+                    'active_artifact_ref': None,
+                    'binding_refs': [],
+                    'summary_text': 'Transition applied.',
+                    'metadata': {},
+                },
+                'transition': {
+                    'transition_key': request.transition_key,
+                    'from_step': 'reconcile_component_plan_progress',
+                    'to_step': 'derive_next_activity_bundle',
+                    'from_status': 'active',
+                    'to_status': 'ready',
+                    'event_type': 'methodology_transition',
+                    'notes': request.notes,
+                    'metadata': request.metadata or {},
+                },
+                'binding_update_applied': bool(request.binding_entries),
+            }
+        )
+
+    def evaluate_preflight(self, request):
+        if request.methodology_execution_id is None and not (request.project_id and request.work_item_id):
+            return MethodologyExecutionOperationResult(payload={'ok': False, 'code': 'missing_methodology_identity'}, exit_code=1)
+        blocked = request.command_name == 'blocked'
+        return MethodologyExecutionOperationResult(
+            payload={
+                'ok': not blocked,
+                'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                'outcome': {
+                    'allowed': not blocked,
+                    'classification': 'blocked' if blocked else 'allowed',
+                    'recommended_command_family': request.command_family,
+                    'recommended_command_name': request.command_name,
+                    'message': 'blocked' if blocked else 'allowed',
+                    'metadata': {},
+                },
+                'reason': 'blocked_state' if blocked else None,
+                'details': 'Current methodology state blocks this command.' if blocked else None,
+                'status_projection': {
+                    'methodology_execution_id': request.methodology_execution_id or 'exec-1',
+                    'lane': 'component_realization',
+                    'stage': 'slice_execution',
+                    'step': 'reconcile_component_plan_progress',
+                    'status': 'active',
+                    'current_owner_role': 'techlead',
+                    'next_action_key': 'component-progress-reconciled',
+                    'blocked_reason': None,
+                    'component_id': request.component_id,
+                    'design_package_id': None,
+                    'implementation_plan_id': 'plan-1',
+                    'coder_run_brief_id': None,
+                    'packet_id': None,
+                    'workflow_state_id': 'wf-1',
+                    'active_authority_ref': None,
+                    'active_artifact_ref': None,
+                    'binding_refs': [],
+                    'summary_text': 'Current methodology state.',
+                    'metadata': {},
+                },
+            },
+            exit_code=1 if blocked else 0,
+        )
+
+
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = build_runtime_api_app()
         self.app.dependency_overrides[get_authority_install_service] = lambda: _FakeAuthorityInstallService()
         self.app.dependency_overrides[get_component_taxonomy_service] = lambda: _FakeComponentTaxonomyService()
+        self.app.dependency_overrides[get_methodology_execution_service] = lambda: _FakeMethodologyExecutionService()
         self.app.dependency_overrides[get_queue_admin_service] = lambda: _FakeQueueAdminService()
         self.app.dependency_overrides[get_runtime_admin_service] = lambda: _FakeRuntimeAdminService()
         self.app.dependency_overrides[get_runtime_dispatch_service] = lambda: _FakeRuntimeDispatchService()
@@ -468,6 +712,141 @@ class RuntimeApiTests(unittest.TestCase):
         self.assertFalse(detail['ok'])
         self.assertEqual(detail['code'], 'realization_type_not_found')
         self.assertEqual(detail['realization_key'], 'missing_realization_type')
+
+    def test_methodology_execution_status_by_id(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/status', params={'methodology_execution_id': 'exec-1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['methodology_execution_id'], 'exec-1')
+
+    def test_methodology_execution_status_by_anchors(self) -> None:
+        response = self.client.get(
+            '/runtime/methodology-execution/status',
+            params={'project_id': 'proj-1', 'work_item_id': 'work-1', 'component_id': 'component-1'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['component_id'], 'component-1')
+
+    def test_methodology_execution_status_missing_identity_returns_400(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/status')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['detail']['code'], 'missing_methodology_identity')
+
+    def test_methodology_execution_status_missing_returns_404(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/status', params={'methodology_execution_id': 'missing-exec'})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['detail']['code'], 'methodology_execution_not_found')
+
+    def test_methodology_execution_next_by_id(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/next', params={'methodology_execution_id': 'exec-1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['recommended_next_action_key'], 'component-progress-reconciled')
+
+    def test_methodology_execution_next_by_anchors(self) -> None:
+        response = self.client.get(
+            '/runtime/methodology-execution/next',
+            params={'project_id': 'proj-1', 'work_item_id': 'work-1', 'component_id': 'component-1'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['component_id'], 'component-1')
+
+    def test_methodology_execution_next_missing_returns_404(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/next', params={'methodology_execution_id': 'missing-exec'})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['detail']['code'], 'methodology_execution_not_found')
+
+    def test_methodology_execution_explain_by_id(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/explain', params={'methodology_execution_id': 'exec-1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['methodology_execution_id'], 'exec-1')
+
+    def test_methodology_execution_explain_by_anchors(self) -> None:
+        response = self.client.get(
+            '/runtime/methodology-execution/explain',
+            params={'project_id': 'proj-1', 'work_item_id': 'work-1', 'component_id': 'component-1'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['current_owner_role'], 'techlead')
+
+    def test_methodology_execution_explain_missing_returns_404(self) -> None:
+        response = self.client.get('/runtime/methodology-execution/explain', params={'methodology_execution_id': 'missing-exec'})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['detail']['code'], 'methodology_execution_not_found')
+
+    def test_methodology_execution_apply_transition(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/transitions',
+            json={
+                'methodology_execution_id': 'exec-1',
+                'transition_key': 'component-progress-reconciled',
+                'notes': 'advance state',
+                'binding_entries': [
+                    {
+                        'binding_kind': 'implementation_plan',
+                        'bound_record_id': 'plan-1',
+                        'is_primary': True,
+                        'metadata': {'source': 'test'},
+                    }
+                ],
+                'metadata': {'proof': 'api'},
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['transition']['transition_key'], 'component-progress-reconciled')
+        self.assertTrue(response.json()['binding_update_applied'])
+
+    def test_methodology_execution_apply_transition_missing_identity_returns_400(self) -> None:
+        response = self.client.post('/runtime/methodology-execution/transitions', json={'transition_key': 'component-progress-reconciled'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['detail']['code'], 'missing_methodology_identity')
+
+    def test_methodology_execution_apply_transition_missing_returns_404(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/transitions',
+            json={'methodology_execution_id': 'missing-exec', 'transition_key': 'component-progress-reconciled'},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['detail']['code'], 'methodology_execution_not_found')
+
+    def test_methodology_execution_apply_transition_blocked_returns_409(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/transitions',
+            json={'methodology_execution_id': 'exec-1', 'transition_key': 'blocked-transition'},
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['detail']['code'], 'unsupported_transition_key')
+
+    def test_methodology_execution_preflight_allowed_returns_200(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/preflight',
+            json={'methodology_execution_id': 'exec-1', 'command_family': 'component', 'command_name': 'next'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['outcome']['classification'], 'allowed')
+
+    def test_methodology_execution_preflight_blocked_returns_200(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/preflight',
+            json={'methodology_execution_id': 'exec-1', 'command_family': 'component', 'command_name': 'blocked'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['ok'])
+        self.assertEqual(response.json()['reason'], 'blocked_state')
+
+    def test_methodology_execution_preflight_missing_identity_returns_400(self) -> None:
+        response = self.client.post(
+            '/runtime/methodology-execution/preflight',
+            json={'command_family': 'component', 'command_name': 'next'},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['detail']['code'], 'missing_methodology_identity')
 
     def test_install_runtime(self) -> None:
         response = self.client.post('/runtime/ops/install-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})

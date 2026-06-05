@@ -18,6 +18,15 @@ from paa_core.application.dto.component_taxonomy import (
     UpsertElementTypeRealizationLinkRequest,
     UpsertRealizationTypeRequest,
 )
+from paa_core.application.contracts.methodology_execution import MethodologyExecutionService
+from paa_core.application.dto.methodology_execution import (
+    ApplyMethodologyExecutionTransitionRequest,
+    EvaluateMethodologyExecutionPreflightRequest,
+    ExplainMethodologyExecutionRequest,
+    GetMethodologyExecutionNextActionRequest,
+    GetMethodologyExecutionStatusRequest,
+    MethodologyExecutionOperationResult,
+)
 from paa_core.application.dto.queue import (
     QueueCheckRequest,
     QueueClaimActionRequest,
@@ -114,6 +123,21 @@ class RuntimeApiClient(Protocol):
         self, request: UpsertElementTypeRealizationLinkRequest
     ) -> ComponentTaxonomyOperationResult: ...
     def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult: ...
+    def get_methodology_execution_status(
+        self, request: GetMethodologyExecutionStatusRequest
+    ) -> MethodologyExecutionOperationResult: ...
+    def get_methodology_execution_next_action(
+        self, request: GetMethodologyExecutionNextActionRequest
+    ) -> MethodologyExecutionOperationResult: ...
+    def explain_methodology_execution(
+        self, request: ExplainMethodologyExecutionRequest
+    ) -> MethodologyExecutionOperationResult: ...
+    def apply_methodology_execution_transition(
+        self, request: ApplyMethodologyExecutionTransitionRequest
+    ) -> MethodologyExecutionOperationResult: ...
+    def evaluate_methodology_execution_preflight(
+        self, request: EvaluateMethodologyExecutionPreflightRequest
+    ) -> MethodologyExecutionOperationResult: ...
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult: ...
     def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult: ...
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
@@ -198,6 +222,7 @@ class InProcessRuntimeApiClient:
         producer_commands: DefaultProducerCommandApplicationService | None = None,
         authority_install: DefaultAuthorityInstallApplicationService | None = None,
         component_taxonomy: ComponentTaxonomyService | None = None,
+        methodology_execution: MethodologyExecutionService | None = None,
     ) -> None:
         self._queue_admin = queue_admin or DefaultQueueAdminApplicationService()
         self._runtime_admin = runtime_admin or DefaultRuntimeAdminApplicationService()
@@ -214,6 +239,12 @@ class InProcessRuntimeApiClient:
             self._component_taxonomy = DefaultComponentTaxonomyApplicationService()
         else:
             self._component_taxonomy = component_taxonomy
+        if methodology_execution is None:
+            from paa_core.application.services import DefaultMethodologyExecutionApplicationService
+
+            self._methodology_execution = DefaultMethodologyExecutionApplicationService()
+        else:
+            self._methodology_execution = methodology_execution
 
     def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
         return self._authority_install.install_package(request)
@@ -248,6 +279,31 @@ class InProcessRuntimeApiClient:
 
     def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
         return self._component_taxonomy.upsert_realization_type(request)
+
+    def get_methodology_execution_status(
+        self, request: GetMethodologyExecutionStatusRequest
+    ) -> MethodologyExecutionOperationResult:
+        return self._methodology_execution.get_status(request)
+
+    def get_methodology_execution_next_action(
+        self, request: GetMethodologyExecutionNextActionRequest
+    ) -> MethodologyExecutionOperationResult:
+        return self._methodology_execution.get_next_action(request)
+
+    def explain_methodology_execution(
+        self, request: ExplainMethodologyExecutionRequest
+    ) -> MethodologyExecutionOperationResult:
+        return self._methodology_execution.explain(request)
+
+    def apply_methodology_execution_transition(
+        self, request: ApplyMethodologyExecutionTransitionRequest
+    ) -> MethodologyExecutionOperationResult:
+        return self._methodology_execution.apply_transition(request)
+
+    def evaluate_methodology_execution_preflight(
+        self, request: EvaluateMethodologyExecutionPreflightRequest
+    ) -> MethodologyExecutionOperationResult:
+        return self._methodology_execution.evaluate_preflight(request)
 
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
         return self._producer_commands.assemble_coder_brief(request)
@@ -502,6 +558,65 @@ class HttpRuntimeApiClient:
     def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
         payload = self._post_json('/runtime/component-taxonomy/realization-types', request)
         return ComponentTaxonomyOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def get_methodology_execution_status(
+        self, request: GetMethodologyExecutionStatusRequest
+    ) -> MethodologyExecutionOperationResult:
+        status_code, payload = self._get_json_response(
+            '/runtime/methodology-execution/status',
+            params={
+                'methodology_execution_id': request.methodology_execution_id,
+                'project_id': request.project_id,
+                'work_item_id': request.work_item_id,
+                'component_id': request.component_id,
+            },
+        )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return MethodologyExecutionOperationResult(payload=payload, exit_code=exit_code)
+
+    def get_methodology_execution_next_action(
+        self, request: GetMethodologyExecutionNextActionRequest
+    ) -> MethodologyExecutionOperationResult:
+        status_code, payload = self._get_json_response(
+            '/runtime/methodology-execution/next',
+            params={
+                'methodology_execution_id': request.methodology_execution_id,
+                'project_id': request.project_id,
+                'work_item_id': request.work_item_id,
+                'component_id': request.component_id,
+            },
+        )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return MethodologyExecutionOperationResult(payload=payload, exit_code=exit_code)
+
+    def explain_methodology_execution(
+        self, request: ExplainMethodologyExecutionRequest
+    ) -> MethodologyExecutionOperationResult:
+        status_code, payload = self._get_json_response(
+            '/runtime/methodology-execution/explain',
+            params={
+                'methodology_execution_id': request.methodology_execution_id,
+                'project_id': request.project_id,
+                'work_item_id': request.work_item_id,
+                'component_id': request.component_id,
+            },
+        )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return MethodologyExecutionOperationResult(payload=payload, exit_code=exit_code)
+
+    def apply_methodology_execution_transition(
+        self, request: ApplyMethodologyExecutionTransitionRequest
+    ) -> MethodologyExecutionOperationResult:
+        status_code, payload = self._post_json_response('/runtime/methodology-execution/transitions', request)
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return MethodologyExecutionOperationResult(payload=payload, exit_code=exit_code)
+
+    def evaluate_methodology_execution_preflight(
+        self, request: EvaluateMethodologyExecutionPreflightRequest
+    ) -> MethodologyExecutionOperationResult:
+        status_code, payload = self._post_json_response('/runtime/methodology-execution/preflight', request)
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return MethodologyExecutionOperationResult(payload=payload, exit_code=exit_code)
 
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/assemble-coder-brief', request)

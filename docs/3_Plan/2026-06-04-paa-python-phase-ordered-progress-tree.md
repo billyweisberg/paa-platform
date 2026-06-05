@@ -66,22 +66,22 @@ Phase 2. Data Layer Foundation [complete]
 ├── pointer persistence coverage checked [complete]
 └── db.py responsibility inventory for this slice [complete]
 
-Phase 3. Services/App Logic Over Data [active]
+Phase 3. Services/App Logic Over Data [complete]
 ├── application DTOs for taxonomy operations [complete]
 ├── application services for taxonomy operations [complete]
 ├── methodology pointer app-service operations [complete]
-└── pointer-aware command validation where needed [pending]
+└── pointer-aware command validation where needed [complete]
 
-Phase 4. API Exposure [pending]
+Phase 4. API Exposure [complete]
 ├── realization type routes [complete]
 ├── element-realization mapping routes [complete]
-├── methodology execution routes [pending]
-└── composition cleanup with Dishka if needed [pending]
+├── methodology execution routes [complete]
+└── composition cleanup with Dishka if needed [deferred]
 
-Phase 5. CLI Proof Surface [pending]
+Phase 5. CLI Proof Surface [complete]
 ├── paa commands for realization types [complete]
 ├── paa commands for realization mappings [complete]
-├── pointer inspection/preflight command path [pending]
+├── pointer inspection/preflight command path [complete]
 └── integration proof through paa [complete]
 
 Phase 6. db.py Extraction By Destination [deferred]
@@ -90,8 +90,8 @@ Phase 6. db.py Extraction By Destination [deferred]
 ├── prove through paa after each extraction [pending]
 └── repeat until db.py is no longer a dumping ground [pending]
 
-Phase 7. Runtime And Producer Continuation [pending]
-├── continue producer work on the same stack [pending]
+Phase 7. Runtime And Producer Continuation [active]
+├── continue producer work on the same stack [active]
 ├── continue runtime work on the same stack [pending]
 ├── keep pointer-governed transitions real [pending]
 └── keep CLI proof as the main validation path [pending]
@@ -100,10 +100,10 @@ Phase 7. Runtime And Producer Continuation [pending]
 ## Current Pointer To Where We Are
 
 The current system position is:
-- Phase 3. Services/App Logic Over Data `[active]`
-- Active slice: `S03` Methodology Pointer Inspection And Transition
-- Completed layer for active slice: domain/app logic
-- Next layer for active slice: API
+- Phase 7. Runtime And Producer Continuation `[active]`
+- Active slice: `S04` Design Package Derivation
+- Completed layer for active slice: not started
+- Next layer for active slice: data layer
 
 That means:
 - the design and planning frame is ready
@@ -113,7 +113,10 @@ That means:
 - `paa` now exposes and proves both realization types and element-realization mappings end to end
 - the `methodology_execution` repository surface is now normalized and proven for `S03` data-layer work
 - the `application/methodology_execution` surface now wraps projection, state, and preflight services through one explicit app boundary
-- the next correct work is `S03` API work for methodology pointer inspection and transition
+- the runtime API now exposes methodology status, next-action, explain, transition, and preflight routes through one explicit `methodology_execution` router
+- `paa methodology current|next|explain|preflight|transition` now proves the methodology pointer surface through the real CLI -> API -> app -> repository path
+- `S03` is now complete across data, app, API, CLI, and end-to-end proof
+- the next correct work is `S04` data-layer work for design package derivation
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

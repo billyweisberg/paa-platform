@@ -37,6 +37,14 @@ from paa_core.application.dto.component_taxonomy import (
     UpsertElementTypeRealizationLinkRequest,
     UpsertRealizationTypeRequest,
 )
+from paa_core.application.dto.methodology_execution import (
+    ApplyMethodologyExecutionTransitionRequest,
+    EvaluateMethodologyExecutionPreflightRequest,
+    ExplainMethodologyExecutionRequest,
+    GetMethodologyExecutionNextActionRequest,
+    GetMethodologyExecutionStatusRequest,
+    MethodologyExecutionBindingEntryInput,
+)
 from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.producer import (
@@ -680,6 +688,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         help='Governed element-to-realization mapping commands.',
         no_args_is_help=True,
     )
+    methodology_app = typer.Typer(
+        help='Methodology pointer inspection and transition commands.',
+        no_args_is_help=True,
+    )
     plan_app = typer.Typer(
         help=(
             'Implementation-plan inspection commands. When methodology anchors are supplied, '
@@ -874,14 +886,35 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
-    def _metadata_object_from_json(metadata_json: str | None) -> dict[str, Any] | None:
-        metadata: dict[str, Any] | None = None
-        if metadata_json:
-            parsed = json.loads(metadata_json)
+    def _json_object_from_option(raw_json: str | None, *, option_name: str) -> dict[str, Any] | None:
+        payload: dict[str, Any] | None = None
+        if raw_json:
+            parsed = json.loads(raw_json)
             if not isinstance(parsed, dict):
-                raise typer.BadParameter('--metadata-json must decode to an object.')
-            metadata = {str(key): value for key, value in parsed.items()}
-        return metadata
+                raise typer.BadParameter(f'{option_name} must decode to an object.')
+            payload = {str(key): value for key, value in parsed.items()}
+        return payload
+
+    def _metadata_object_from_json(metadata_json: str | None) -> dict[str, Any] | None:
+        return _json_object_from_option(metadata_json, option_name='--metadata-json')
+
+    def _binding_entry_from_json(raw_json: str) -> MethodologyExecutionBindingEntryInput:
+        payload = _json_object_from_option(raw_json, option_name='--binding-entry-json')
+        if payload is None or 'binding_kind' not in payload:
+            raise typer.BadParameter('--binding-entry-json objects require binding_kind.')
+        return MethodologyExecutionBindingEntryInput(
+            binding_kind=str(payload['binding_kind']),
+            bound_record_id=_optional_string(payload.get('bound_record_id')),
+            bound_record_key=_optional_string(payload.get('bound_record_key')),
+            bound_record_ref=_optional_string(payload.get('bound_record_ref')),
+            is_primary=bool(payload.get('is_primary', False)),
+            notes=_optional_string(payload.get('notes')),
+            metadata=(
+                {str(key): value for key, value in cast(dict[str, Any], payload.get('metadata', {})).items()}
+                if isinstance(payload.get('metadata'), dict)
+                else None
+            ),
+        )
 
     @component_taxonomy_app.command('list')
     def component_realization_type_list() -> None:
@@ -1014,6 +1047,123 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
                 metadata_json=metadata_json,
             )
         )
+
+    @methodology_app.command('current')
+    def methodology_current(
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+    ) -> None:
+        result = _build_runtime_api_client().get_methodology_execution_status(
+            GetMethodologyExecutionStatusRequest(
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    @methodology_app.command('next')
+    def methodology_next(
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+    ) -> None:
+        result = _build_runtime_api_client().get_methodology_execution_next_action(
+            GetMethodologyExecutionNextActionRequest(
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    @methodology_app.command('explain')
+    def methodology_explain(
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+    ) -> None:
+        result = _build_runtime_api_client().explain_methodology_execution(
+            ExplainMethodologyExecutionRequest(
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    @methodology_app.command('preflight')
+    def methodology_preflight(
+        command_family: str = typer.Option(..., '--command-family'),
+        command_name: str = typer.Option(..., '--command-name'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+        command_arguments_json: str | None = typer.Option(None, '--command-arguments-json'),
+        actor_role_id: str | None = typer.Option(None, '--actor-role-id'),
+        actor_name: str | None = typer.Option(None, '--actor-name'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json'),
+    ) -> None:
+        result = _build_runtime_api_client().evaluate_methodology_execution_preflight(
+            EvaluateMethodologyExecutionPreflightRequest(
+                command_family=command_family,
+                command_name=command_name,
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+                command_arguments=_json_object_from_option(command_arguments_json, option_name='--command-arguments-json'),
+                actor_role_id=actor_role_id,
+                actor_name=actor_name,
+                metadata=_metadata_object_from_json(metadata_json),
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    @methodology_app.command('transition')
+    def methodology_transition(
+        transition_key: str = typer.Option(..., '--transition-key'),
+        methodology_execution_id: str | None = typer.Option(None, '--methodology-execution-id'),
+        project_id: str | None = typer.Option(None, '--project-id'),
+        work_item_id: str | None = typer.Option(None, '--work-item-id'),
+        component_id: str | None = typer.Option(None, '--component-id'),
+        actor_role_id: str | None = typer.Option(None, '--actor-role-id'),
+        actor_name: str | None = typer.Option(None, '--actor-name'),
+        notes: str | None = typer.Option(None, '--notes'),
+        evidence_json: str | None = typer.Option(None, '--evidence-json'),
+        binding_entry_json: list[str] | None = typer.Option(None, '--binding-entry-json'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json'),
+    ) -> None:
+        binding_entries = tuple(_binding_entry_from_json(item) for item in (binding_entry_json or []))
+        result = _build_runtime_api_client().apply_methodology_execution_transition(
+            ApplyMethodologyExecutionTransitionRequest(
+                transition_key=transition_key,
+                methodology_execution_id=methodology_execution_id,
+                project_id=project_id,
+                work_item_id=work_item_id,
+                component_id=component_id,
+                actor_role_id=actor_role_id,
+                actor_name=actor_name,
+                notes=notes,
+                evidence=_json_object_from_option(evidence_json, option_name='--evidence-json'),
+                binding_entries=binding_entries,
+                metadata=_metadata_object_from_json(metadata_json),
+            )
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
 
     @component_taxonomy_app.command('update')
     def component_realization_type_update(
@@ -1765,6 +1915,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
     component_app.add_typer(component_taxonomy_app, name='realization-type')
     component_app.add_typer(component_realization_map_app, name='realization-map')
     app.add_typer(component_app, name='component')
+    app.add_typer(methodology_app, name='methodology')
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')
     app.add_typer(report_app, name='report')

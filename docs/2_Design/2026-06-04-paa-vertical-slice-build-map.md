@@ -68,20 +68,17 @@ The earlier rows should be built first unless the design is updated deliberately
 ## Immediate Working Set
 
 Based on the current phase-ordered progress tree, the immediate active working set is:
-1. `S01` Realization Type Registry
-2. `S02` Element-Realization Mapping
-3. `S03` Methodology Pointer Inspection And Transition
+1. `S04` Design Package Derivation
+2. `S05` Derivation Readiness Evaluation
+3. `S06` Implementation Plan Derivation
 
 These slices directly satisfy the current active phase:
-- `Phase 2. Data Layer Foundation`
-- then `Phase 3. Services/App Logic Over Data`
-- then `Phase 4. API Exposure`
-- then `Phase 5. CLI Proof Surface`
+- `Phase 7. Runtime And Producer Continuation`
 
 Current build position inside the working set:
-- active slice: `S03`
-- completed layer: domain/app logic
-- next layer: API
+- active slice: `S04`
+- completed layer: not started
+- next layer: data layer
 
 ## `db.py` Extraction Rule Inside The Map
 

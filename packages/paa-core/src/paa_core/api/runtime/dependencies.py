@@ -4,6 +4,7 @@ from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
     DefaultAuthorityInstallApplicationService,
     DefaultComponentTaxonomyApplicationService,
+    DefaultMethodologyExecutionApplicationService,
     DefaultOperatorCommandApplicationService,
     DefaultProducerCommandApplicationService,
     DefaultQueueAdminApplicationService,
@@ -12,6 +13,7 @@ from paa_core.application.services import (
     DefaultRuntimeInstallApplicationService,
     DefaultRuntimeReportApplicationService,
     DefaultRuntimeValidationApplicationService,
+    build_default_methodology_execution_application_service,
     build_default_operator_command_service,
 )
 
@@ -34,6 +36,10 @@ def get_authority_install_service() -> DefaultAuthorityInstallApplicationService
 
 def get_component_taxonomy_service() -> DefaultComponentTaxonomyApplicationService:
     return DefaultComponentTaxonomyApplicationService()
+
+
+def get_methodology_execution_service() -> DefaultMethodologyExecutionApplicationService:
+    return build_default_methodology_execution_application_service()
 
 
 def get_producer_command_service() -> DefaultProducerCommandApplicationService:
