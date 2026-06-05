@@ -58,15 +58,15 @@ Phase 1. North Star Alignment [complete]
 │   └── cli -> api -> services/app logic -> data layer [complete]
 └── MethodologyExecution pointer made explicit [complete]
 
-Phase 2. Data Layer Foundation [active]
+Phase 2. Data Layer Foundation [complete]
 ├── repositories/component_design review [complete]
 ├── realization type operations normalized [complete]
 ├── element-realization mapping operations normalized [complete]
-├── repositories/methodology_execution review [pending]
-├── pointer persistence coverage checked [pending]
+├── repositories/methodology_execution review [complete]
+├── pointer persistence coverage checked [complete]
 └── db.py responsibility inventory for this slice [complete]
 
-Phase 3. Services/App Logic Over Data [pending]
+Phase 3. Services/App Logic Over Data [active]
 ├── application DTOs for taxonomy operations [complete]
 ├── application services for taxonomy operations [complete]
 ├── methodology pointer app-service operations [pending]
@@ -100,10 +100,10 @@ Phase 7. Runtime And Producer Continuation [pending]
 ## Current Pointer To Where We Are
 
 The current system position is:
-- Phase 2. Data Layer Foundation `[active]`
+- Phase 3. Services/App Logic Over Data `[active]`
 - Active slice: `S03` Methodology Pointer Inspection And Transition
-- Completed layer for active slice: not started
-- Next layer for active slice: data layer
+- Completed layer for active slice: data layer
+- Next layer for active slice: domain/app logic
 
 That means:
 - the design and planning frame is ready
@@ -111,7 +111,8 @@ That means:
 - the `component_taxonomy` app surface now covers both realization types and element-realization mappings
 - the runtime API now exposes both realization types and element-realization mappings
 - `paa` now exposes and proves both realization types and element-realization mappings end to end
-- the next correct work is `S03` data-layer work for methodology pointer inspection and transition
+- the `methodology_execution` repository surface is now normalized and proven for `S03` data-layer work
+- the next correct work is `S03` domain/app logic for methodology pointer inspection and transition
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

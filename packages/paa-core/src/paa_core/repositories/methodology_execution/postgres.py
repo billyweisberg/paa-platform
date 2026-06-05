@@ -48,7 +48,11 @@ class PostgresMethodologyExecutionRepository:
             where_parts.append('me.component_id IS NULL')
         else:
             where_parts.append(f"me.component_id = {sql_literal(component_id)}::uuid")
-        sql = self._execution_sql(where_clause=' AND '.join(where_parts))
+        sql = self._execution_sql(
+            where_clause=' AND '.join(where_parts),
+            order_by='me.updated_at DESC, me.created_at DESC, me.methodology_execution_id DESC',
+            limit=1,
+        )
         rows = self._query_json_rows(sql)
         return self._execution_from_row(rows[0]) if rows else None
 
@@ -104,7 +108,7 @@ FROM (
     meb.updated_at::text
   FROM paa.methodology_execution_bindings meb
   WHERE meb.methodology_execution_id = {sql_literal(methodology_execution_id)}::uuid
-  ORDER BY meb.is_primary DESC, meb.binding_kind, meb.created_at
+  ORDER BY meb.is_primary DESC, meb.binding_kind, meb.created_at, meb.methodology_execution_binding_id
 ) AS t;
 """
         return [self._binding_from_row(row) for row in self._query_json_rows(sql)]
@@ -277,7 +281,15 @@ VALUES (
 );
 """
 
-    def _execution_sql(self, *, where_clause: str) -> str:
+    def _execution_sql(
+        self,
+        *,
+        where_clause: str,
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> str:
+        order_sql = f"\n  ORDER BY {order_by}" if order_by else ''
+        limit_sql = f"\n  LIMIT {limit}" if limit is not None else ''
         return f"""
 SELECT row_to_json(t)
 FROM (
@@ -305,6 +317,8 @@ FROM (
     me.updated_at::text
   FROM paa.methodology_executions me
   WHERE {where_clause}
+{order_sql}
+{limit_sql}
 ) AS t;
 """
 
