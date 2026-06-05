@@ -84,8 +84,8 @@ These slices directly satisfy the current active phase:
 - then `Phase 5. CLI Proof Surface`
 
 Current build position inside the working set:
-- completed slice: `S01`
-- next active slice: `S02`
+- active slice: `S03`
+- completed layer: not started
 - next layer: data layer
 
 ## `db.py` Extraction Rule Inside The Map

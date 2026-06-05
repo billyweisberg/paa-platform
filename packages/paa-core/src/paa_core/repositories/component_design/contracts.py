@@ -14,6 +14,7 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
 )
@@ -30,6 +31,10 @@ class ComponentDesignRepository(Protocol):
 
     def list_component_element_types(self) -> list[ComponentElementTypeRecord]:
         """Return all canonical component element types in stable sort order."""
+        ...
+
+    def get_component_element_type_by_key(self, element_type_key: str) -> ComponentElementTypeRecord | None:
+        """Return one component element type by stable key."""
         ...
 
     def list_realization_types(self) -> list[ComponentElementRealizationTypeRecord]:
@@ -58,6 +63,12 @@ class ComponentDesignRepository(Protocol):
         self, element_type_key: str
     ) -> list[ComponentElementRealizationTypeRecord]:
         """Return allowed realization kinds for one component element type."""
+        ...
+
+    def list_element_type_realization_links(
+        self, element_type_key: str
+    ) -> list[ElementTypeRealizationLinkRecord]:
+        """Return allowed realization mapping rows for one component element type."""
         ...
 
     def list_realizations_for_component_element(

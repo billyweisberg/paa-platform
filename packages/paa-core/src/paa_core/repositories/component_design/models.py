@@ -133,6 +133,20 @@ class ElementTypeRealizationLinkSpec:
 
 
 @dataclass(frozen=True)
+class ElementTypeRealizationLinkRecord:
+    component_element_type_realization_type_id: str
+    component_element_type_id: str
+    component_element_realization_type_id: str
+    element_type_key: str
+    realization_key: str
+    realization_label: str
+    realization_category: str
+    is_default: bool
+    sort_order: int
+    metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class ComponentElementRealizationUpsertSpec:
     project_id: str
     component_id: str

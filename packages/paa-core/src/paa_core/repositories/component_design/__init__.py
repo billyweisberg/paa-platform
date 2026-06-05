@@ -11,6 +11,7 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
 )
@@ -27,6 +28,7 @@ __all__ = [
     'ComponentElementRecord',
     'ComponentElementTypeRecord',
     'ComponentRecord',
+    'ElementTypeRealizationLinkRecord',
     'ElementTypeRealizationLinkSpec',
     'PostgresComponentDesignRepository',
     'RealizationTypeUpsertSpec',

@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from paa_core.api.runtime.dependencies import get_component_taxonomy_service
 from paa_core.application.dto.component_taxonomy import (
     GetRealizationTypeRequest,
+    ListElementTypeRealizationLinksRequest,
     ListRealizationTypesRequest,
+    UpsertElementTypeRealizationLinkRequest,
     UpsertRealizationTypeRequest,
 )
 from paa_core.application.services import DefaultComponentTaxonomyApplicationService
@@ -23,6 +25,14 @@ class UpsertRealizationTypeModel(BaseModel):
     description: str | None = None
     is_brief_targetable: bool = True
     is_multi_instance: bool = True
+    sort_order: int = 0
+    metadata: dict[str, object] | None = None
+
+
+class UpsertElementTypeRealizationLinkModel(BaseModel):
+    element_type_key: str
+    realization_key: str
+    is_default: bool = False
     sort_order: int = 0
     metadata: dict[str, object] | None = None
 
@@ -70,6 +80,42 @@ def upsert_realization_type(
             metadata=_metadata_object(request.metadata),
         )
     ).payload
+
+
+@router.get('/realization-maps')
+def list_element_type_realization_links(
+    element_type_key: str,
+    service: DefaultComponentTaxonomyApplicationService = Depends(get_component_taxonomy_service),
+) -> dict[str, object]:
+    result = service.list_element_type_realization_links(
+        ListElementTypeRealizationLinksRequest(element_type_key=element_type_key)
+    )
+    if result.payload.get('ok'):
+        return result.payload
+    if result.payload.get('code') == 'element_type_not_found':
+        raise HTTPException(status_code=404, detail=result.payload)
+    raise HTTPException(status_code=500, detail=result.payload)
+
+
+@router.post('/realization-maps')
+def upsert_element_type_realization_link(
+    request: UpsertElementTypeRealizationLinkModel,
+    service: DefaultComponentTaxonomyApplicationService = Depends(get_component_taxonomy_service),
+) -> dict[str, object]:
+    result = service.upsert_element_type_realization_link(
+        UpsertElementTypeRealizationLinkRequest(
+            element_type_key=request.element_type_key,
+            realization_key=request.realization_key,
+            is_default=request.is_default,
+            sort_order=request.sort_order,
+            metadata=_metadata_object(request.metadata),
+        )
+    )
+    if result.payload.get('ok'):
+        return result.payload
+    if result.payload.get('code') in {'element_type_not_found', 'realization_type_not_found'}:
+        raise HTTPException(status_code=404, detail=result.payload)
+    raise HTTPException(status_code=500, detail=result.payload)
 
 
 __all__ = ['router']

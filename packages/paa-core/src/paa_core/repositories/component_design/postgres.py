@@ -17,6 +17,7 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
 )
@@ -94,6 +95,29 @@ FROM (
 ) AS t;
 """
         return [self._element_type_from_row(row) for row in self._query_json_rows(sql)]
+
+    def get_component_element_type_by_key(self, element_type_key: str) -> ComponentElementTypeRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    cet.component_element_type_id::text,
+    cet.element_key,
+    cet.label,
+    cet.category,
+    cet.description,
+    cet.is_brief_targetable,
+    cet.is_multi_instance,
+    cet.sort_order,
+    cet.metadata_json AS metadata
+  FROM paa.component_element_types cet
+  WHERE cet.element_key = {sql_literal(element_type_key)}
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        if not rows:
+            return None
+        return self._element_type_from_row(rows[0])
 
     def list_realization_types(self) -> list[ComponentElementRealizationTypeRecord]:
         sql = """
@@ -260,6 +284,34 @@ FROM (
 """
         return [self._realization_type_from_row(row) for row in self._query_json_rows(sql)]
 
+    def list_element_type_realization_links(
+        self, element_type_key: str
+    ) -> list[ElementTypeRealizationLinkRecord]:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    cetrt.component_element_type_realization_type_id::text,
+    cetrt.component_element_type_id::text,
+    cetrt.component_element_realization_type_id::text,
+    cet.element_key,
+    cert.realization_key,
+    cert.label AS realization_label,
+    cert.category AS realization_category,
+    cetrt.is_default,
+    cetrt.sort_order,
+    cetrt.metadata_json AS metadata
+  FROM paa.component_element_type_realization_types cetrt
+  JOIN paa.component_element_types cet
+    ON cet.component_element_type_id = cetrt.component_element_type_id
+  JOIN paa.component_element_realization_types cert
+    ON cert.component_element_realization_type_id = cetrt.component_element_realization_type_id
+  WHERE cet.element_key = {sql_literal(element_type_key)}
+  ORDER BY cetrt.sort_order, cert.sort_order, cert.realization_key
+) AS t;
+"""
+        return [self._element_type_realization_link_from_row(row) for row in self._query_json_rows(sql)]
+
     def list_realizations_for_component_element(
         self, component_element_id: str
     ) -> list[ComponentElementRealizationRecord]:
@@ -354,6 +406,12 @@ ON CONFLICT (realization_key) DO UPDATE SET
         run_psql(sql, settings=self._settings)
 
     def upsert_element_type_realization_link(self, spec: ElementTypeRealizationLinkSpec) -> None:
+        element_type = self.get_component_element_type_by_key(spec.element_type_key)
+        if element_type is None:
+            raise LookupError(f"Unknown component element type: {spec.element_type_key}")
+        realization_type = self.get_realization_type_by_key(spec.realization_key)
+        if realization_type is None:
+            raise LookupError(f"Unknown realization type: {spec.realization_key}")
         sql = f"""
 INSERT INTO paa.component_element_type_realization_types (
   component_element_type_id,
@@ -362,16 +420,13 @@ INSERT INTO paa.component_element_type_realization_types (
   sort_order,
   metadata_json
 )
-SELECT
-  cet.component_element_type_id,
-  cert.component_element_realization_type_id,
+VALUES (
+  {sql_literal(element_type.component_element_type_id)}::uuid,
+  {sql_literal(realization_type.component_element_realization_type_id)}::uuid,
   {self._bool_sql(spec.is_default)},
   {int(spec.sort_order)},
   {self._json_sql(spec.metadata)}::jsonb
-FROM paa.component_element_types cet
-JOIN paa.component_element_realization_types cert
-  ON cert.realization_key = {sql_literal(spec.realization_key)}
-WHERE cet.element_key = {sql_literal(spec.element_type_key)}
+)
 ON CONFLICT (component_element_type_id, component_element_realization_type_id) DO UPDATE SET
   is_default = EXCLUDED.is_default,
   sort_order = EXCLUDED.sort_order,
@@ -540,6 +595,21 @@ ON CONFLICT (coder_run_brief_id, component_element_realization_id, target_intent
             metadata=row.get('metadata') or {},
             is_default_for_element_type=bool(row.get('is_default_for_element_type', False)),
             element_type_sort_order=int(row.get('element_type_sort_order', 0)),
+        )
+
+    @staticmethod
+    def _element_type_realization_link_from_row(row: dict[str, Any]) -> ElementTypeRealizationLinkRecord:
+        return ElementTypeRealizationLinkRecord(
+            component_element_type_realization_type_id=row['component_element_type_realization_type_id'],
+            component_element_type_id=row['component_element_type_id'],
+            component_element_realization_type_id=row['component_element_realization_type_id'],
+            element_type_key=row['element_key'],
+            realization_key=row['realization_key'],
+            realization_label=row['realization_label'],
+            realization_category=row['realization_category'],
+            is_default=bool(row['is_default']),
+            sort_order=int(row['sort_order']),
+            metadata=row.get('metadata') or {},
         )
 
     @staticmethod

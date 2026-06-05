@@ -1182,6 +1182,219 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn('Governed realization-type registry commands.', result.output)
 
+    def test_component_realization_map_list_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.list_element_type_realization_links.return_value = ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'element_type': {'element_key': 'interfaces'},
+                'items': [{'realization_key': 'service_interface'}],
+                'count': 1,
+            },
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['component', 'realization-map', 'list', '--element-type', 'interfaces'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['element_type']['element_key'], 'interfaces')
+        self.assertEqual(payload['count'], 1)
+        from paa_core.application.dto.component_taxonomy import ListElementTypeRealizationLinksRequest
+        fake_service.list_element_type_realization_links.assert_called_once_with(
+            ListElementTypeRealizationLinksRequest(element_type_key='interfaces')
+        )
+
+    def test_component_realization_map_list_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.list_element_type_realization_links.return_value = ComponentTaxonomyOperationResult(
+            payload={'ok': False, 'code': 'element_type_not_found', 'element_type_key': 'missing_element_type'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                ['component', 'realization-map', 'list', '--element-type', 'missing_element_type'],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['code'], 'element_type_not_found')
+        from paa_core.application.dto.component_taxonomy import ListElementTypeRealizationLinksRequest
+        fake_service.list_element_type_realization_links.assert_called_once_with(
+            ListElementTypeRealizationLinksRequest(element_type_key='missing_element_type')
+        )
+
+    def test_component_realization_map_add_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.upsert_element_type_realization_link.return_value = ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'element_type_key': 'interfaces',
+                'realization_key': 'typed_service_class',
+                'action': 'upserted',
+            },
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'component',
+                    'realization-map',
+                    'add',
+                    '--element-type',
+                    'interfaces',
+                    '--realization-key',
+                    'typed_service_class',
+                    '--default',
+                    '--sort-order',
+                    '25',
+                    '--metadata-json',
+                    '{"language":"python"}',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['action'], 'upserted')
+        from paa_core.application.dto.component_taxonomy import UpsertElementTypeRealizationLinkRequest
+        fake_service.upsert_element_type_realization_link.assert_called_once_with(
+            UpsertElementTypeRealizationLinkRequest(
+                element_type_key='interfaces',
+                realization_key='typed_service_class',
+                is_default=True,
+                sort_order=25,
+                metadata={'language': 'python'},
+            )
+        )
+
+    def test_component_realization_map_update_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.upsert_element_type_realization_link.return_value = ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'element_type_key': 'interfaces',
+                'realization_key': 'typed_service_class',
+                'action': 'upserted',
+            },
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'component',
+                    'realization-map',
+                    'update',
+                    '--element-type',
+                    'interfaces',
+                    '--realization-key',
+                    'typed_service_class',
+                    '--not-default',
+                    '--sort-order',
+                    '26',
+                    '--metadata-json',
+                    '{"language":"python"}',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['action'], 'upserted')
+        from paa_core.application.dto.component_taxonomy import UpsertElementTypeRealizationLinkRequest
+        fake_service.upsert_element_type_realization_link.assert_called_once_with(
+            UpsertElementTypeRealizationLinkRequest(
+                element_type_key='interfaces',
+                realization_key='typed_service_class',
+                is_default=False,
+                sort_order=26,
+                metadata={'language': 'python'},
+            )
+        )
+
+    def test_component_realization_map_add_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.upsert_element_type_realization_link.return_value = ComponentTaxonomyOperationResult(
+            payload={'ok': False, 'code': 'realization_type_not_found', 'realization_key': 'missing_realization_type'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'component',
+                    'realization-map',
+                    'add',
+                    '--element-type',
+                    'interfaces',
+                    '--realization-key',
+                    'missing_realization_type',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['code'], 'realization_type_not_found')
+
+    def test_component_realization_map_rejects_non_object_metadata_json(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'component',
+                    'realization-map',
+                    'add',
+                    '--element-type',
+                    'interfaces',
+                    '--realization-key',
+                    'typed_service_class',
+                    '--metadata-json',
+                    '[]',
+                ],
+            )
+
+        self.assertNotEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('--metadata-json must decode to an object.', result.output)
+        fake_service.upsert_element_type_realization_link.assert_not_called()
+
+    def test_component_realization_map_help_is_available(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['component', 'realization-map', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('Governed element-to-realization mapping commands.', result.output)
+
     def test_producer_help_is_available_under_paa(self) -> None:
         app, _, _ = self._typer_cli()
 

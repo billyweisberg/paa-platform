@@ -21,6 +21,11 @@ class GetRealizationTypeRequest:
 
 
 @dataclass(frozen=True)
+class ListElementTypeRealizationLinksRequest:
+    element_type_key: str
+
+
+@dataclass(frozen=True)
 class UpsertRealizationTypeRequest:
     realization_key: str
     label: str
@@ -28,5 +33,14 @@ class UpsertRealizationTypeRequest:
     description: str | None = None
     is_brief_targetable: bool = True
     is_multi_instance: bool = True
+    sort_order: int = 0
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class UpsertElementTypeRealizationLinkRequest:
+    element_type_key: str
+    realization_key: str
+    is_default: bool = False
     sort_order: int = 0
     metadata: dict[str, Any] | None = None

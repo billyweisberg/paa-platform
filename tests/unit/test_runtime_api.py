@@ -249,6 +249,77 @@ class _FakeComponentTaxonomyService:
             payload={'ok': True, 'realization_key': request.realization_key, 'action': 'upserted'}
         )
 
+    def list_element_type_realization_links(self, request):
+        if request.element_type_key == 'missing_element_type':
+            return ComponentTaxonomyOperationResult(
+                payload={'ok': False, 'code': 'element_type_not_found', 'element_type_key': request.element_type_key},
+                exit_code=1,
+            )
+        items = [
+            {
+                'component_element_type_realization_type_id': '30',
+                'component_element_type_id': '20',
+                'component_element_realization_type_id': '10',
+                'element_type_key': request.element_type_key,
+                'realization_key': 'service_interface',
+                'realization_label': 'Service Interface',
+                'realization_category': 'code_artifact',
+                'is_default': True,
+                'sort_order': 10,
+                'metadata': {'language': 'python'},
+            },
+            {
+                'component_element_type_realization_type_id': '31',
+                'component_element_type_id': '20',
+                'component_element_realization_type_id': '11',
+                'element_type_key': request.element_type_key,
+                'realization_key': 'typed_service_class',
+                'realization_label': 'Typed Service Class',
+                'realization_category': 'python_artifact',
+                'is_default': False,
+                'sort_order': 20,
+                'metadata': {},
+            },
+        ]
+        return ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'element_type': {
+                    'component_element_type_id': '20',
+                    'element_key': request.element_type_key,
+                    'label': 'Interfaces',
+                    'category': 'contract',
+                    'description': 'Contract surfaces',
+                    'is_brief_targetable': True,
+                    'is_multi_instance': True,
+                    'sort_order': 5,
+                    'metadata': {'scope': 'app'},
+                },
+                'items': items,
+                'count': len(items),
+            }
+        )
+
+    def upsert_element_type_realization_link(self, request):
+        if request.element_type_key == 'missing_element_type':
+            return ComponentTaxonomyOperationResult(
+                payload={'ok': False, 'code': 'element_type_not_found', 'element_type_key': request.element_type_key},
+                exit_code=1,
+            )
+        if request.realization_key == 'missing_realization_type':
+            return ComponentTaxonomyOperationResult(
+                payload={'ok': False, 'code': 'realization_type_not_found', 'realization_key': request.realization_key},
+                exit_code=1,
+            )
+        return ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'element_type_key': request.element_type_key,
+                'realization_key': request.realization_key,
+                'action': 'upserted',
+            }
+        )
+
 
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -341,6 +412,62 @@ class RuntimeApiTests(unittest.TestCase):
         self.assertTrue(response.json()['ok'])
         self.assertEqual(response.json()['realization_key'], 'module_operation_surface')
         self.assertEqual(response.json()['action'], 'upserted')
+
+    def test_component_taxonomy_list_realization_maps(self) -> None:
+        response = self.client.get('/runtime/component-taxonomy/realization-maps', params={'element_type_key': 'interfaces'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['element_type']['element_key'], 'interfaces')
+        self.assertEqual(response.json()['count'], 2)
+        self.assertEqual(response.json()['items'][0]['realization_key'], 'service_interface')
+
+    def test_component_taxonomy_list_realization_maps_missing_returns_404(self) -> None:
+        response = self.client.get(
+            '/runtime/component-taxonomy/realization-maps', params={'element_type_key': 'missing_element_type'}
+        )
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()['detail']
+        self.assertFalse(detail['ok'])
+        self.assertEqual(detail['code'], 'element_type_not_found')
+        self.assertEqual(detail['element_type_key'], 'missing_element_type')
+
+    def test_component_taxonomy_upsert_realization_map(self) -> None:
+        response = self.client.post(
+            '/runtime/component-taxonomy/realization-maps',
+            json={
+                'element_type_key': 'interfaces',
+                'realization_key': 'typed_service_class',
+                'is_default': False,
+                'sort_order': 25,
+                'metadata': {'language': 'python'},
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['element_type_key'], 'interfaces')
+        self.assertEqual(response.json()['realization_key'], 'typed_service_class')
+        self.assertEqual(response.json()['action'], 'upserted')
+
+    def test_component_taxonomy_upsert_realization_map_missing_element_type_returns_404(self) -> None:
+        response = self.client.post(
+            '/runtime/component-taxonomy/realization-maps',
+            json={'element_type_key': 'missing_element_type', 'realization_key': 'typed_service_class'},
+        )
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()['detail']
+        self.assertFalse(detail['ok'])
+        self.assertEqual(detail['code'], 'element_type_not_found')
+
+    def test_component_taxonomy_upsert_realization_map_missing_realization_type_returns_404(self) -> None:
+        response = self.client.post(
+            '/runtime/component-taxonomy/realization-maps',
+            json={'element_type_key': 'interfaces', 'realization_key': 'missing_realization_type'},
+        )
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()['detail']
+        self.assertFalse(detail['ok'])
+        self.assertEqual(detail['code'], 'realization_type_not_found')
+        self.assertEqual(detail['realization_key'], 'missing_realization_type')
 
     def test_install_runtime(self) -> None:
         response = self.client.post('/runtime/ops/install-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})

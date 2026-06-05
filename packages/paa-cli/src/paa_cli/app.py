@@ -32,7 +32,9 @@ from paa_core.application.dto.queue import (
 from paa_core.application.dto.authority import AuthorityInstallRequest
 from paa_core.application.dto.component_taxonomy import (
     GetRealizationTypeRequest,
+    ListElementTypeRealizationLinksRequest,
     ListRealizationTypesRequest,
+    UpsertElementTypeRealizationLinkRequest,
     UpsertRealizationTypeRequest,
 )
 from paa_core.application.contracts import OperatorCommandService
@@ -674,6 +676,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         help='Governed realization-type registry commands.',
         no_args_is_help=True,
     )
+    component_realization_map_app = typer.Typer(
+        help='Governed element-to-realization mapping commands.',
+        no_args_is_help=True,
+    )
     plan_app = typer.Typer(
         help=(
             'Implementation-plan inspection commands. When methodology anchors are supplied, '
@@ -868,6 +874,15 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         )
         raise typer.Exit(code=code)
 
+    def _metadata_object_from_json(metadata_json: str | None) -> dict[str, Any] | None:
+        metadata: dict[str, Any] | None = None
+        if metadata_json:
+            parsed = json.loads(metadata_json)
+            if not isinstance(parsed, dict):
+                raise typer.BadParameter('--metadata-json must decode to an object.')
+            metadata = {str(key): value for key, value in parsed.items()}
+        return metadata
+
     @component_taxonomy_app.command('list')
     def component_realization_type_list() -> None:
         result = _build_runtime_api_client().list_realization_types(ListRealizationTypesRequest())
@@ -894,12 +909,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         sort_order: int,
         metadata_json: str | None,
     ) -> int:
-        metadata: dict[str, Any] | None = None
-        if metadata_json:
-            parsed = json.loads(metadata_json)
-            if not isinstance(parsed, dict):
-                raise typer.BadParameter('--metadata-json must decode to an object.')
-            metadata = {str(key): value for key, value in parsed.items()}
+        metadata = _metadata_object_from_json(metadata_json)
         result = _build_runtime_api_client().upsert_realization_type(
             UpsertRealizationTypeRequest(
                 realization_key=realization_key,
@@ -934,6 +944,72 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
                 description=description,
                 is_brief_targetable=is_brief_targetable,
                 is_multi_instance=is_multi_instance,
+                sort_order=sort_order,
+                metadata_json=metadata_json,
+            )
+        )
+
+    @component_realization_map_app.command('list')
+    def component_realization_map_list(
+        element_type: str = typer.Option(..., '--element-type', help='Stable component element type key.'),
+    ) -> None:
+        result = _build_runtime_api_client().list_element_type_realization_links(
+            ListElementTypeRealizationLinksRequest(element_type_key=element_type)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    def _upsert_component_realization_map(
+        element_type: str,
+        realization_key: str,
+        is_default: bool,
+        sort_order: int,
+        metadata_json: str | None,
+    ) -> int:
+        metadata = _metadata_object_from_json(metadata_json)
+        result = _build_runtime_api_client().upsert_element_type_realization_link(
+            UpsertElementTypeRealizationLinkRequest(
+                element_type_key=element_type,
+                realization_key=realization_key,
+                is_default=is_default,
+                sort_order=sort_order,
+                metadata=metadata,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    @component_realization_map_app.command('add')
+    def component_realization_map_add(
+        element_type: str = typer.Option(..., '--element-type', help='Stable component element type key.'),
+        realization_key: str = typer.Option(..., '--realization-key', help='Stable realization type key.'),
+        is_default: bool = typer.Option(False, '--default/--not-default'),
+        sort_order: int = typer.Option(0, '--sort-order'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional JSON object metadata.'),
+    ) -> None:
+        raise typer.Exit(
+            code=_upsert_component_realization_map(
+                element_type=element_type,
+                realization_key=realization_key,
+                is_default=is_default,
+                sort_order=sort_order,
+                metadata_json=metadata_json,
+            )
+        )
+
+    @component_realization_map_app.command('update')
+    def component_realization_map_update(
+        element_type: str = typer.Option(..., '--element-type', help='Stable component element type key.'),
+        realization_key: str = typer.Option(..., '--realization-key', help='Stable realization type key.'),
+        is_default: bool = typer.Option(False, '--default/--not-default'),
+        sort_order: int = typer.Option(0, '--sort-order'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional JSON object metadata.'),
+    ) -> None:
+        raise typer.Exit(
+            code=_upsert_component_realization_map(
+                element_type=element_type,
+                realization_key=realization_key,
+                is_default=is_default,
                 sort_order=sort_order,
                 metadata_json=metadata_json,
             )
@@ -1687,6 +1763,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         raise typer.Exit(code=_run_producer_command(ctx.args, _build_runtime_api_client()))
 
     component_app.add_typer(component_taxonomy_app, name='realization-type')
+    component_app.add_typer(component_realization_map_app, name='realization-map')
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')

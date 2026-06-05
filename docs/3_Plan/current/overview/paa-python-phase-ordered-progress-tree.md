@@ -66,7 +66,7 @@ Phase 1. North Star Alignment [complete]
 Phase 2. Data Layer Foundation [active]
 ├── repositories/component_design review [complete]
 ├── realization type operations normalized [complete]
-├── element-realization mapping operations normalized [pending]
+├── element-realization mapping operations normalized [complete]
 ├── repositories/methodology_execution review [pending]
 ├── pointer persistence coverage checked [pending]
 └── db.py responsibility inventory for this slice [complete]
@@ -79,13 +79,13 @@ Phase 3. Services/App Logic Over Data [pending]
 
 Phase 4. API Exposure [pending]
 ├── realization type routes [complete]
-├── element-realization mapping routes [pending]
+├── element-realization mapping routes [complete]
 ├── methodology execution routes [pending]
 └── composition cleanup with Dishka if needed [pending]
 
 Phase 5. CLI Proof Surface [pending]
 ├── paa commands for realization types [complete]
-├── paa commands for realization mappings [pending]
+├── paa commands for realization mappings [complete]
 ├── pointer inspection/preflight command path [pending]
 └── integration proof through paa [complete]
 
@@ -106,14 +106,17 @@ Phase 7. Runtime And Producer Continuation [pending]
 
 The current system position is:
 - Phase 2. Data Layer Foundation `[active]`
-- Completed slice: `S01` Realization Type Registry
-- Next active slice: `S02` Element-Realization Mapping
+- Active slice: `S03` Methodology Pointer Inspection And Transition
+- Completed layer for active slice: not started
 - Next layer for active slice: data layer
 
 That means:
 - the design and planning frame is ready
-- the repository normalization for realization-type registry is in place
-- the next correct work is `S02` data-layer mapping support, not more random `S01` surface expansion
+- the repository normalization for realization-type registry and mapping support is in place
+- the `component_taxonomy` app surface now covers both realization types and element-realization mappings
+- the runtime API now exposes both realization types and element-realization mappings
+- `paa` now exposes and proves both realization types and element-realization mappings end to end
+- the next correct work is `S03` data-layer work for methodology pointer inspection and transition
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

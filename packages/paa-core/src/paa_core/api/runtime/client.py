@@ -13,7 +13,9 @@ from paa_core.application.contracts.component_taxonomy import ComponentTaxonomyS
 from paa_core.application.dto.component_taxonomy import (
     ComponentTaxonomyOperationResult,
     GetRealizationTypeRequest,
+    ListElementTypeRealizationLinksRequest,
     ListRealizationTypesRequest,
+    UpsertElementTypeRealizationLinkRequest,
     UpsertRealizationTypeRequest,
 )
 from paa_core.application.dto.queue import (
@@ -105,6 +107,12 @@ class RuntimeApiClient(Protocol):
     def supports_operator_command_family(self, command_family: str) -> bool: ...
     def list_realization_types(self, request: ListRealizationTypesRequest) -> ComponentTaxonomyOperationResult: ...
     def get_realization_type(self, request: GetRealizationTypeRequest) -> ComponentTaxonomyOperationResult: ...
+    def list_element_type_realization_links(
+        self, request: ListElementTypeRealizationLinksRequest
+    ) -> ComponentTaxonomyOperationResult: ...
+    def upsert_element_type_realization_link(
+        self, request: UpsertElementTypeRealizationLinkRequest
+    ) -> ComponentTaxonomyOperationResult: ...
     def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult: ...
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult: ...
     def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult: ...
@@ -227,6 +235,16 @@ class InProcessRuntimeApiClient:
 
     def get_realization_type(self, request: GetRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
         return self._component_taxonomy.get_realization_type(request)
+
+    def list_element_type_realization_links(
+        self, request: ListElementTypeRealizationLinksRequest
+    ) -> ComponentTaxonomyOperationResult:
+        return self._component_taxonomy.list_element_type_realization_links(request)
+
+    def upsert_element_type_realization_link(
+        self, request: UpsertElementTypeRealizationLinkRequest
+    ) -> ComponentTaxonomyOperationResult:
+        return self._component_taxonomy.upsert_element_type_realization_link(request)
 
     def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
         return self._component_taxonomy.upsert_realization_type(request)
@@ -427,6 +445,23 @@ class HttpRuntimeApiClient:
         with urlopen(request) as response:  # noqa: S310
             return json.loads(response.read().decode('utf-8'))
 
+    def _post_json_response(self, path: str, payload: object) -> tuple[int, dict[str, Any]]:
+        body = json.dumps(_to_jsonable(payload)).encode('utf-8')
+        request = Request(
+            f'{self._base_url}{path}',
+            data=body,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        try:
+            with urlopen(request) as response:  # noqa: S310
+                return int(response.status), json.loads(response.read().decode('utf-8'))
+        except HTTPError as exc:
+            body = exc.read().decode('utf-8')
+            raw_payload = cast(dict[str, Any], json.loads(body) if body else {})
+            detail = cast(dict[str, Any] | None, raw_payload.get('detail')) if isinstance(raw_payload, dict) else None
+            return exc.code, detail or raw_payload
+
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult:
         payload = self._post_json('/runtime/operators/command', request)
         return _operator_command_result_from_payload(payload)
@@ -444,6 +479,23 @@ class HttpRuntimeApiClient:
         status_code, payload = self._get_json_response(
             f'/runtime/component-taxonomy/realization-types/{request.realization_key}'
         )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return ComponentTaxonomyOperationResult(payload=payload, exit_code=exit_code)
+
+    def list_element_type_realization_links(
+        self, request: ListElementTypeRealizationLinksRequest
+    ) -> ComponentTaxonomyOperationResult:
+        status_code, payload = self._get_json_response(
+            '/runtime/component-taxonomy/realization-maps',
+            params={'element_type_key': request.element_type_key},
+        )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return ComponentTaxonomyOperationResult(payload=payload, exit_code=exit_code)
+
+    def upsert_element_type_realization_link(
+        self, request: UpsertElementTypeRealizationLinkRequest
+    ) -> ComponentTaxonomyOperationResult:
+        status_code, payload = self._post_json_response('/runtime/component-taxonomy/realization-maps', request)
         exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
         return ComponentTaxonomyOperationResult(payload=payload, exit_code=exit_code)
 

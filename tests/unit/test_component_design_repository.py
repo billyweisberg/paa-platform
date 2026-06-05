@@ -54,6 +54,24 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
         self.assertEqual([row.element_key for row in rows], ['interfaces', 'functions'])
         self.assertEqual(rows[1].metadata, {'x': 1})
 
+    def test_get_component_element_type_by_key_returns_one_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"component_element_type_id":"1","element_key":"interfaces","label":"Interfaces","category":"dependency","description":"desc","is_brief_targetable":true,"is_multi_instance":true,"sort_order":60,"metadata":{"x":1}}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_component_element_type_by_key('interfaces')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.element_key, 'interfaces')
+        self.assertEqual(row.metadata, {'x': 1})
+
+    def test_get_component_element_type_by_key_returns_none_when_missing(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=''):
+            row = repo.get_component_element_type_by_key('missing_type')
+
+        self.assertIsNone(row)
+
     def test_list_realization_types_parses_rows_in_registry_shape(self) -> None:
         repo = PostgresComponentDesignRepository()
         output = '\n'.join(
@@ -97,6 +115,22 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
         self.assertTrue(rows[0].is_default_for_element_type)
         self.assertEqual(rows[0].realization_key, 'repository_interface')
 
+    def test_list_element_type_realization_links_parses_mapping_rows(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '\n'.join(
+            [
+                '{"component_element_type_realization_type_id":"a1","component_element_type_id":"t1","component_element_realization_type_id":"r1","element_key":"interfaces","realization_key":"repository_interface","realization_label":"Repository Interface","realization_category":"code_artifact","is_default":true,"sort_order":10,"metadata":{"scope":"base"}}',
+                '{"component_element_type_realization_type_id":"a2","component_element_type_id":"t1","component_element_realization_type_id":"r2","element_key":"interfaces","realization_key":"service_interface","realization_label":"Service Interface","realization_category":"code_artifact","is_default":false,"sort_order":15,"metadata":{"scope":"extension"}}',
+            ]
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            rows = repo.list_element_type_realization_links('interfaces')
+
+        self.assertEqual([row.realization_key for row in rows], ['repository_interface', 'service_interface'])
+        self.assertTrue(rows[0].is_default)
+        self.assertEqual(rows[0].element_type_key, 'interfaces')
+        self.assertEqual(rows[1].metadata, {'scope': 'extension'})
+
     def test_list_brief_realization_targets_keeps_sequence(self) -> None:
         repo = PostgresComponentDesignRepository()
         output = '\n'.join(
@@ -139,13 +173,46 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
             is_default=True,
             sort_order=10,
         )
-        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value='') as mock_run:
+        with patch(
+            'paa_core.repositories.component_design.postgres.run_psql',
+            side_effect=[
+                '{"component_element_type_id":"1","element_key":"interfaces","label":"Interfaces","category":"dependency","description":"desc","is_brief_targetable":true,"is_multi_instance":true,"sort_order":60,"metadata":{}}',
+                '{"component_element_realization_type_id":"10","realization_key":"repository_interface","label":"Repository Interface","category":"code_artifact","description":"desc","is_brief_targetable":true,"is_multi_instance":false,"sort_order":10,"metadata":{},"is_default_for_element_type":false,"element_type_sort_order":0}',
+                '',
+            ],
+        ) as mock_run:
             repo.upsert_element_type_realization_link(spec)
 
         sql = mock_run.call_args.args[0]
         self.assertIn('INSERT INTO paa.component_element_type_realization_types', sql)
-        self.assertIn("WHERE cet.element_key = 'interfaces'", sql)
-        self.assertIn("cert.realization_key = 'repository_interface'", sql)
+        self.assertIn("'1'::uuid", sql)
+        self.assertIn("'10'::uuid", sql)
+
+    def test_upsert_element_type_realization_link_raises_for_missing_element_type(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ElementTypeRealizationLinkSpec(
+            element_type_key='missing_type',
+            realization_key='repository_interface',
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=''):
+            with self.assertRaises(LookupError):
+                repo.upsert_element_type_realization_link(spec)
+
+    def test_upsert_element_type_realization_link_raises_for_missing_realization_type(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ElementTypeRealizationLinkSpec(
+            element_type_key='interfaces',
+            realization_key='missing_realization',
+        )
+        with patch(
+            'paa_core.repositories.component_design.postgres.run_psql',
+            side_effect=[
+                '{"component_element_type_id":"1","element_key":"interfaces","label":"Interfaces","category":"dependency","description":"desc","is_brief_targetable":true,"is_multi_instance":true,"sort_order":60,"metadata":{}}',
+                '',
+            ],
+        ):
+            with self.assertRaises(LookupError):
+                repo.upsert_element_type_realization_link(spec)
 
     def test_upsert_component_element_realization_emits_upsert_sql(self) -> None:
         repo = PostgresComponentDesignRepository()
