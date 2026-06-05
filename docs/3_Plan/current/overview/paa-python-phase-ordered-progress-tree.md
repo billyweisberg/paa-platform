@@ -72,22 +72,22 @@ Phase 2. Data Layer Foundation [active]
 └── db.py responsibility inventory for this slice [complete]
 
 Phase 3. Services/App Logic Over Data [pending]
-├── application DTOs for taxonomy operations [pending]
-├── application services for taxonomy operations [pending]
+├── application DTOs for taxonomy operations [complete]
+├── application services for taxonomy operations [complete]
 ├── methodology pointer app-service operations [pending]
 └── pointer-aware command validation where needed [pending]
 
 Phase 4. API Exposure [pending]
-├── realization type routes [pending]
+├── realization type routes [complete]
 ├── element-realization mapping routes [pending]
 ├── methodology execution routes [pending]
 └── composition cleanup with Dishka if needed [pending]
 
 Phase 5. CLI Proof Surface [pending]
-├── paa commands for realization types [pending]
+├── paa commands for realization types [complete]
 ├── paa commands for realization mappings [pending]
 ├── pointer inspection/preflight command path [pending]
-└── integration proof through paa [pending]
+└── integration proof through paa [complete]
 
 Phase 6. db.py Extraction By Destination [deferred]
 ├── extract one coherent responsibility cluster [pending]
@@ -106,14 +106,14 @@ Phase 7. Runtime And Producer Continuation [pending]
 
 The current system position is:
 - Phase 2. Data Layer Foundation `[active]`
-- Active slice: `S01` Realization Type Registry
-- Completed layer for active slice: data layer
-- Next layer for active slice: domain/app logic
+- Completed slice: `S01` Realization Type Registry
+- Next active slice: `S02` Element-Realization Mapping
+- Next layer for active slice: data layer
 
 That means:
 - the design and planning frame is ready
 - the repository normalization for realization-type registry is in place
-- the next correct work for `S01` is app/service wiring, not more random data-layer churn
+- the next correct work is `S02` data-layer mapping support, not more random `S01` surface expansion
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

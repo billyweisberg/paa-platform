@@ -1069,6 +1069,119 @@ class PAAOperatorCLIAppTests(unittest.TestCase):
         self.assertEqual(payload['command'], 'derive-artifacts')
         fake_service.derive_artifacts.assert_called_once()
 
+    def test_component_realization_type_list_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.list_realization_types.return_value = ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'items': [{'realization_key': 'service_interface'}],
+                'count': 1,
+            },
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(app, ['component', 'realization-type', 'list'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['count'], 1)
+        fake_service.list_realization_types.assert_called_once()
+
+    def test_component_realization_type_show_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.get_realization_type.return_value = ComponentTaxonomyOperationResult(
+            payload={'ok': True, 'item': {'realization_key': 'service_interface'}},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                ['component', 'realization-type', 'show', '--realization-key', 'service_interface'],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['item']['realization_key'], 'service_interface')
+        fake_service.get_realization_type.assert_called_once()
+
+    def test_component_realization_type_show_returns_service_exit_code(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.get_realization_type.return_value = ComponentTaxonomyOperationResult(
+            payload={'ok': False, 'code': 'realization_type_not_found', 'realization_key': 'missing_type'},
+            exit_code=1,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                ['component', 'realization-type', 'show', '--realization-key', 'missing_type'],
+            )
+
+        self.assertEqual(result.exit_code, 1, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['code'], 'realization_type_not_found')
+
+    def test_component_realization_type_add_dispatches_through_runtime_api_client(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        fake_service = unittest.mock.Mock()
+        from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
+        fake_service.upsert_realization_type.return_value = ComponentTaxonomyOperationResult(
+            payload={'ok': True, 'realization_key': 'module_operation_surface', 'action': 'upserted'},
+            exit_code=0,
+        )
+
+        with unittest.mock.patch('paa_cli.app._build_runtime_api_client', return_value=fake_service):
+            result = self.runner.invoke(
+                app,
+                [
+                    'component',
+                    'realization-type',
+                    'add',
+                    '--realization-key',
+                    'module_operation_surface',
+                    '--label',
+                    'Module Operation Surface',
+                    '--category',
+                    'python_artifact',
+                    '--description',
+                    'Function-style module surface',
+                    '--single-instance',
+                    '--sort-order',
+                    '30',
+                    '--metadata-json',
+                    '{"language":"python"}',
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['action'], 'upserted')
+        fake_service.upsert_realization_type.assert_called_once()
+
+    def test_component_realization_type_help_is_available(self) -> None:
+        app, _, _ = self._typer_cli()
+
+        result = self.runner.invoke(app, ['component', 'realization-type', '--help'])
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('Governed realization-type registry commands.', result.output)
+
     def test_producer_help_is_available_under_paa(self) -> None:
         app, _, _ = self._typer_cli()
 

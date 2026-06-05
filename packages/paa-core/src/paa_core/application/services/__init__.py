@@ -8,8 +8,15 @@ from .runtime_dispatch import DefaultRuntimeDispatchApplicationService
 from .runtime_install import DefaultRuntimeInstallApplicationService
 from .runtime_report import DefaultRuntimeReportApplicationService
 from .runtime_validation import DefaultRuntimeValidationApplicationService
+from .component_taxonomy import (
+    DefaultComponentTaxonomyApplicationService,
+    build_default_component_taxonomy_application_service,
+)
 
 __all__ = [
+    'DefaultComponentTaxonomyApplicationService',
+    'build_default_component_taxonomy_application_service',
+
     'DefaultAuthorityInstallApplicationService',
     'DefaultAutomationPreflightApplicationService',
     'DefaultOperatorCommandApplicationService',

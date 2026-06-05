@@ -4,10 +4,18 @@ from dataclasses import asdict, is_dataclass
 import json
 from pathlib import Path
 from typing import Any, Protocol, cast
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from paa_core.application.dto.authority import AuthorityInstallRequest, AuthorityInstallResultView
+from paa_core.application.contracts.component_taxonomy import ComponentTaxonomyService
+from paa_core.application.dto.component_taxonomy import (
+    ComponentTaxonomyOperationResult,
+    GetRealizationTypeRequest,
+    ListRealizationTypesRequest,
+    UpsertRealizationTypeRequest,
+)
 from paa_core.application.dto.queue import (
     QueueCheckRequest,
     QueueClaimActionRequest,
@@ -95,6 +103,9 @@ class RuntimeApiClient(Protocol):
     def update_runtime(self, request: RuntimeInstallRequest) -> RuntimeOperationResult: ...
     def run_operator_command(self, request: OperatorCommandRequest) -> OperatorCommandResult: ...
     def supports_operator_command_family(self, command_family: str) -> bool: ...
+    def list_realization_types(self, request: ListRealizationTypesRequest) -> ComponentTaxonomyOperationResult: ...
+    def get_realization_type(self, request: GetRealizationTypeRequest) -> ComponentTaxonomyOperationResult: ...
+    def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult: ...
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult: ...
     def author_brief_targets(self, request: ProducerAuthorBriefTargetsRequest) -> ProducerOperationResult: ...
     def derive_artifacts(self, request: ProducerDeriveArtifactsRequest) -> ProducerOperationResult: ...
@@ -178,6 +189,7 @@ class InProcessRuntimeApiClient:
         operator_commands: DefaultOperatorCommandApplicationService | None = None,
         producer_commands: DefaultProducerCommandApplicationService | None = None,
         authority_install: DefaultAuthorityInstallApplicationService | None = None,
+        component_taxonomy: ComponentTaxonomyService | None = None,
     ) -> None:
         self._queue_admin = queue_admin or DefaultQueueAdminApplicationService()
         self._runtime_admin = runtime_admin or DefaultRuntimeAdminApplicationService()
@@ -188,6 +200,12 @@ class InProcessRuntimeApiClient:
         self._operator_commands = operator_commands or build_default_operator_command_service(logger=_NullStructuredLogger())
         self._producer_commands = producer_commands or DefaultProducerCommandApplicationService()
         self._authority_install = authority_install or DefaultAuthorityInstallApplicationService()
+        if component_taxonomy is None:
+            from paa_core.application.services import DefaultComponentTaxonomyApplicationService
+
+            self._component_taxonomy = DefaultComponentTaxonomyApplicationService()
+        else:
+            self._component_taxonomy = component_taxonomy
 
     def install_authority_package(self, request: AuthorityInstallRequest) -> AuthorityInstallResultView:
         return self._authority_install.install_package(request)
@@ -203,6 +221,15 @@ class InProcessRuntimeApiClient:
 
     def supports_operator_command_family(self, command_family: str) -> bool:
         return self._operator_commands.supports_command_family(command_family)
+
+    def list_realization_types(self, request: ListRealizationTypesRequest) -> ComponentTaxonomyOperationResult:
+        return self._component_taxonomy.list_realization_types(request)
+
+    def get_realization_type(self, request: GetRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
+        return self._component_taxonomy.get_realization_type(request)
+
+    def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
+        return self._component_taxonomy.upsert_realization_type(request)
 
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
         return self._producer_commands.assemble_coder_brief(request)
@@ -374,6 +401,21 @@ class HttpRuntimeApiClient:
         with urlopen(url) as response:  # noqa: S310
             return json.loads(response.read().decode('utf-8'))
 
+    def _get_json_response(self, path: str, *, params: dict[str, object] | None = None) -> tuple[int, dict[str, Any]]:
+        url = f'{self._base_url}{path}'
+        if params:
+            encoded = urlencode({key: str(value) for key, value in params.items() if value is not None})
+            if encoded:
+                url = f'{url}?{encoded}'
+        try:
+            with urlopen(url) as response:  # noqa: S310
+                return int(response.status), json.loads(response.read().decode('utf-8'))
+        except HTTPError as exc:
+            body = exc.read().decode('utf-8')
+            raw_payload = cast(dict[str, Any], json.loads(body) if body else {})
+            detail = cast(dict[str, Any] | None, raw_payload.get('detail')) if isinstance(raw_payload, dict) else None
+            return exc.code, detail or raw_payload
+
     def _post_json(self, path: str, payload: object) -> dict[str, Any]:
         body = json.dumps(_to_jsonable(payload)).encode('utf-8')
         request = Request(
@@ -392,6 +434,22 @@ class HttpRuntimeApiClient:
     def supports_operator_command_family(self, command_family: str) -> bool:
         payload = self._get_json(f'/runtime/operators/supports/{command_family}')
         return bool(payload.get('supported', False))
+
+    def list_realization_types(self, request: ListRealizationTypesRequest) -> ComponentTaxonomyOperationResult:
+        del request
+        payload = self._get_json('/runtime/component-taxonomy/realization-types')
+        return ComponentTaxonomyOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
+
+    def get_realization_type(self, request: GetRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
+        status_code, payload = self._get_json_response(
+            f'/runtime/component-taxonomy/realization-types/{request.realization_key}'
+        )
+        exit_code = 0 if status_code == 200 and payload.get('ok', True) else 1
+        return ComponentTaxonomyOperationResult(payload=payload, exit_code=exit_code)
+
+    def upsert_realization_type(self, request: UpsertRealizationTypeRequest) -> ComponentTaxonomyOperationResult:
+        payload = self._post_json('/runtime/component-taxonomy/realization-types', request)
+        return ComponentTaxonomyOperationResult(payload=payload, exit_code=0 if payload.get('ok', True) else 1)
 
     def assemble_coder_brief(self, request: ProducerAssembleCoderBriefRequest) -> ProducerOperationResult:
         payload = self._post_json('/runtime/producer/assemble-coder-brief', request)

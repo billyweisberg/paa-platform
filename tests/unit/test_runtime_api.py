@@ -13,6 +13,7 @@ from paa_core.api.runtime.app import build_runtime_api_app
 from paa_core.api.runtime.dependencies import (
     get_authority_install_service,
     get_automation_preflight_service,
+    get_component_taxonomy_service,
     get_operator_command_service,
     get_producer_command_service,
     get_queue_admin_service,
@@ -23,6 +24,7 @@ from paa_core.api.runtime.dependencies import (
     get_runtime_validation_service,
 )
 from paa_core.application.dto.authority import AuthorityInstallResultView
+from paa_core.application.dto.component_taxonomy import ComponentTaxonomyOperationResult
 from paa_core.application.dto.queue import QueueOperationResult
 from paa_core.application.dto.operator import (
     OperatorCommand,
@@ -184,10 +186,75 @@ class _FakeProducerCommandService:
         return ProducerOperationResult(payload={'ok': True, 'command': 'materialize-verification-obligations', 'issue_number': request.issue_number})
 
 
+class _FakeComponentTaxonomyService:
+    def list_realization_types(self, request):
+        del request
+        items = [
+            {
+                'component_element_realization_type_id': '10',
+                'realization_key': 'service_interface',
+                'label': 'Service Interface',
+                'category': 'code_artifact',
+                'description': 'Contract surface',
+                'is_brief_targetable': True,
+                'is_multi_instance': False,
+                'sort_order': 10,
+                'metadata': {'language': 'python'},
+                'is_default_for_element_type': False,
+                'element_type_sort_order': 0,
+            },
+            {
+                'component_element_realization_type_id': '11',
+                'realization_key': 'typed_service_class',
+                'label': 'Typed Service Class',
+                'category': 'python_artifact',
+                'description': None,
+                'is_brief_targetable': True,
+                'is_multi_instance': True,
+                'sort_order': 20,
+                'metadata': {},
+                'is_default_for_element_type': False,
+                'element_type_sort_order': 0,
+            },
+        ]
+        return ComponentTaxonomyOperationResult(payload={'ok': True, 'items': items, 'count': len(items)})
+
+    def get_realization_type(self, request):
+        if request.realization_key == 'missing_type':
+            return ComponentTaxonomyOperationResult(
+                payload={'ok': False, 'code': 'realization_type_not_found', 'realization_key': request.realization_key},
+                exit_code=1,
+            )
+        return ComponentTaxonomyOperationResult(
+            payload={
+                'ok': True,
+                'item': {
+                    'component_element_realization_type_id': '10',
+                    'realization_key': request.realization_key,
+                    'label': 'Service Interface',
+                    'category': 'code_artifact',
+                    'description': 'Contract surface',
+                    'is_brief_targetable': True,
+                    'is_multi_instance': False,
+                    'sort_order': 10,
+                    'metadata': {'language': 'python'},
+                    'is_default_for_element_type': False,
+                    'element_type_sort_order': 0,
+                },
+            }
+        )
+
+    def upsert_realization_type(self, request):
+        return ComponentTaxonomyOperationResult(
+            payload={'ok': True, 'realization_key': request.realization_key, 'action': 'upserted'}
+        )
+
+
 class RuntimeApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = build_runtime_api_app()
         self.app.dependency_overrides[get_authority_install_service] = lambda: _FakeAuthorityInstallService()
+        self.app.dependency_overrides[get_component_taxonomy_service] = lambda: _FakeComponentTaxonomyService()
         self.app.dependency_overrides[get_queue_admin_service] = lambda: _FakeQueueAdminService()
         self.app.dependency_overrides[get_runtime_admin_service] = lambda: _FakeRuntimeAdminService()
         self.app.dependency_overrides[get_runtime_dispatch_service] = lambda: _FakeRuntimeDispatchService()
@@ -234,6 +301,46 @@ class RuntimeApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['ok'])
+
+    def test_component_taxonomy_list_realization_types(self) -> None:
+        response = self.client.get('/runtime/component-taxonomy/realization-types')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['count'], 2)
+        self.assertEqual(response.json()['items'][0]['realization_key'], 'service_interface')
+
+    def test_component_taxonomy_get_realization_type(self) -> None:
+        response = self.client.get('/runtime/component-taxonomy/realization-types/service_interface')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['item']['realization_key'], 'service_interface')
+
+    def test_component_taxonomy_get_realization_type_missing_returns_404(self) -> None:
+        response = self.client.get('/runtime/component-taxonomy/realization-types/missing_type')
+        self.assertEqual(response.status_code, 404)
+        detail = response.json()['detail']
+        self.assertFalse(detail['ok'])
+        self.assertEqual(detail['code'], 'realization_type_not_found')
+        self.assertEqual(detail['realization_key'], 'missing_type')
+
+    def test_component_taxonomy_upsert_realization_type(self) -> None:
+        response = self.client.post(
+            '/runtime/component-taxonomy/realization-types',
+            json={
+                'realization_key': 'module_operation_surface',
+                'label': 'Module Operation Surface',
+                'category': 'python_artifact',
+                'description': 'Function-style module surface',
+                'is_brief_targetable': True,
+                'is_multi_instance': False,
+                'sort_order': 30,
+                'metadata': {'language': 'python'},
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['realization_key'], 'module_operation_surface')
+        self.assertEqual(response.json()['action'], 'upserted')
 
     def test_install_runtime(self) -> None:
         response = self.client.post('/runtime/ops/install-runtime', json={'repo_root': str(ROOT), 'project_pack': 'fractal-core'})

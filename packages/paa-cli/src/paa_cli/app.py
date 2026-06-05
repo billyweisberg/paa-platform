@@ -1,3 +1,4 @@
+# pyright: reportMissingTypeStubs=false, reportOptionalMemberAccess=false, reportUnknownMemberType=false, reportUnknownParameterType=false, reportUnknownArgumentType=false, reportInvalidTypeForm=false, reportUnknownVariableType=false
 """Thin Typer application root for the unified PAA operator CLI."""
 
 from __future__ import annotations
@@ -29,6 +30,11 @@ from paa_core.application.dto.queue import (
     QueueValidateRequest,
 )
 from paa_core.application.dto.authority import AuthorityInstallRequest
+from paa_core.application.dto.component_taxonomy import (
+    GetRealizationTypeRequest,
+    ListRealizationTypesRequest,
+    UpsertRealizationTypeRequest,
+)
 from paa_core.application.contracts import OperatorCommandService
 from paa_core.application.dto.operator import OperatorCommand, OperatorCommandRequest, OperatorCommandResult
 from paa_core.application.dto.producer import (
@@ -664,6 +670,10 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
         ),
         no_args_is_help=True,
     )
+    component_taxonomy_app = typer.Typer(
+        help='Governed realization-type registry commands.',
+        no_args_is_help=True,
+    )
     plan_app = typer.Typer(
         help=(
             'Implementation-plan inspection commands. When methodology anchors are supplied, '
@@ -857,6 +867,101 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             },
         )
         raise typer.Exit(code=code)
+
+    @component_taxonomy_app.command('list')
+    def component_realization_type_list() -> None:
+        result = _build_runtime_api_client().list_realization_types(ListRealizationTypesRequest())
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    @component_taxonomy_app.command('show')
+    def component_realization_type_show(
+        realization_key: str = typer.Option(..., '--realization-key', help='Stable realization type key.'),
+    ) -> None:
+        result = _build_runtime_api_client().get_realization_type(
+            GetRealizationTypeRequest(realization_key=realization_key)
+        )
+        _emit_json_result(result.payload)
+        raise typer.Exit(code=result.exit_code)
+
+    def _upsert_component_realization_type(
+        realization_key: str,
+        label: str,
+        category: str,
+        description: str | None,
+        is_brief_targetable: bool,
+        is_multi_instance: bool,
+        sort_order: int,
+        metadata_json: str | None,
+    ) -> int:
+        metadata: dict[str, Any] | None = None
+        if metadata_json:
+            parsed = json.loads(metadata_json)
+            if not isinstance(parsed, dict):
+                raise typer.BadParameter('--metadata-json must decode to an object.')
+            metadata = {str(key): value for key, value in parsed.items()}
+        result = _build_runtime_api_client().upsert_realization_type(
+            UpsertRealizationTypeRequest(
+                realization_key=realization_key,
+                label=label,
+                category=category,
+                description=description,
+                is_brief_targetable=is_brief_targetable,
+                is_multi_instance=is_multi_instance,
+                sort_order=sort_order,
+                metadata=metadata,
+            )
+        )
+        _emit_json_result(result.payload)
+        return result.exit_code
+
+    @component_taxonomy_app.command('add')
+    def component_realization_type_add(
+        realization_key: str = typer.Option(..., '--realization-key', help='Stable realization type key.'),
+        label: str = typer.Option(..., '--label', help='Human-facing label.'),
+        category: str = typer.Option(..., '--category', help='Realization category.'),
+        description: str | None = typer.Option(None, '--description'),
+        is_brief_targetable: bool = typer.Option(True, '--brief-targetable/--not-brief-targetable'),
+        is_multi_instance: bool = typer.Option(True, '--multi-instance/--single-instance'),
+        sort_order: int = typer.Option(0, '--sort-order'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional JSON object metadata.'),
+    ) -> None:
+        raise typer.Exit(
+            code=_upsert_component_realization_type(
+                realization_key=realization_key,
+                label=label,
+                category=category,
+                description=description,
+                is_brief_targetable=is_brief_targetable,
+                is_multi_instance=is_multi_instance,
+                sort_order=sort_order,
+                metadata_json=metadata_json,
+            )
+        )
+
+    @component_taxonomy_app.command('update')
+    def component_realization_type_update(
+        realization_key: str = typer.Option(..., '--realization-key', help='Stable realization type key.'),
+        label: str = typer.Option(..., '--label', help='Human-facing label.'),
+        category: str = typer.Option(..., '--category', help='Realization category.'),
+        description: str | None = typer.Option(None, '--description'),
+        is_brief_targetable: bool = typer.Option(True, '--brief-targetable/--not-brief-targetable'),
+        is_multi_instance: bool = typer.Option(True, '--multi-instance/--single-instance'),
+        sort_order: int = typer.Option(0, '--sort-order'),
+        metadata_json: str | None = typer.Option(None, '--metadata-json', help='Optional JSON object metadata.'),
+    ) -> None:
+        raise typer.Exit(
+            code=_upsert_component_realization_type(
+                realization_key=realization_key,
+                label=label,
+                category=category,
+                description=description,
+                is_brief_targetable=is_brief_targetable,
+                is_multi_instance=is_multi_instance,
+                sort_order=sort_order,
+                metadata_json=metadata_json,
+            )
+        )
 
     @plan_app.command(
         'progress',
@@ -1581,6 +1686,7 @@ def build_app(cli: DefaultPAAOperatorCLI | None = None):
             raise typer.Exit(code=0)
         raise typer.Exit(code=_run_producer_command(ctx.args, _build_runtime_api_client()))
 
+    component_app.add_typer(component_taxonomy_app, name='realization-type')
     app.add_typer(component_app, name='component')
     app.add_typer(plan_app, name='plan')
     app.add_typer(status_app, name='status')

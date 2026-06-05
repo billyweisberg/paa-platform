@@ -10,6 +10,7 @@ else:
     _FASTAPI_IMPORT_ERROR = None
 
 from paa_core.api.runtime.routers.authority import router as authority_router
+from paa_core.api.runtime.routers.component_taxonomy import router as component_taxonomy_router
 from paa_core.api.runtime.routers.hosts import router as host_router
 from paa_core.api.runtime.routers.ops import router as ops_router
 from paa_core.api.runtime.routers.operators import router as operator_router
@@ -40,6 +41,7 @@ def build_runtime_api_app():
 
     app.include_router(supervisor_router)
     app.include_router(authority_router)
+    app.include_router(component_taxonomy_router)
     app.include_router(host_router)
     app.include_router(ops_router)
     app.include_router(operator_router)

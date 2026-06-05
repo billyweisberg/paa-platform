@@ -3,6 +3,7 @@ from __future__ import annotations
 from paa_core.application.services import (
     DefaultAutomationPreflightApplicationService,
     DefaultAuthorityInstallApplicationService,
+    DefaultComponentTaxonomyApplicationService,
     DefaultOperatorCommandApplicationService,
     DefaultProducerCommandApplicationService,
     DefaultQueueAdminApplicationService,
@@ -29,6 +30,10 @@ def get_operator_command_service() -> DefaultOperatorCommandApplicationService:
 
 def get_authority_install_service() -> DefaultAuthorityInstallApplicationService:
     return DefaultAuthorityInstallApplicationService()
+
+
+def get_component_taxonomy_service() -> DefaultComponentTaxonomyApplicationService:
+    return DefaultComponentTaxonomyApplicationService()
 
 
 def get_producer_command_service() -> DefaultProducerCommandApplicationService:
