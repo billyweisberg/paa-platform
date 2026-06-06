@@ -9,8 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'paa-c
 
 from paa_core.repositories.component_design import (
     BriefRealizationTargetUpsertSpec,
+    ComponentUpsertSpec,
     ComponentElementUpsertSpec,
     ComponentElementRealizationUpsertSpec,
+    DesignPackageSignoffUpsertSpec,
+    DesignPackageUpsertSpec,
     ElementTypeRealizationLinkSpec,
     PostgresComponentDesignRepository,
     RealizationTypeUpsertSpec,
@@ -28,6 +31,30 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
         assert row is not None
         self.assertEqual(row.name, 'Component Design Planning Service')
         self.assertEqual(row.metadata, {'x': 1})
+
+    def test_upsert_component_returns_persisted_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = ComponentUpsertSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            name='Component Design Planning Service',
+            role='planner',
+            system_layer='domain-services',
+            tier='runtime',
+            description='Component planner',
+            metadata={'source': 'test'},
+        )
+        with patch(
+            'paa_core.repositories.component_design.postgres.run_psql',
+            side_effect=[
+                'component-1',
+                '{"component_id":"component-1","project_id":"11111111-1111-1111-1111-111111111111","name":"Component Design Planning Service","role":"planner","system_layer":"domain-services","tier":"runtime","description":"Component planner","status":"active","metadata":{"source":"test"}}',
+            ],
+        ) as mock_run:
+            row = repo.upsert_component(spec)
+
+        self.assertEqual(row.component_id, 'component-1')
+        self.assertEqual(row.metadata, {'source': 'test'})
+        self.assertIn('INSERT INTO paa.components', mock_run.call_args_list[0].args[0])
 
     def test_get_component_element_by_id_parses_row(self) -> None:
         repo = PostgresComponentDesignRepository()
@@ -144,6 +171,108 @@ class ComponentDesignRepositoryTests(unittest.TestCase):
 
         self.assertEqual([row.sequence_order for row in rows], [1, 2])
         self.assertEqual(rows[1].depends_on_target_id, 'a')
+
+    def test_get_design_package_by_id_parses_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"design_package_id":"pkg-1","project_id":"proj-1","work_item_id":"work-1","spec_fragment_id":"frag-1","implementation_target_id":"target-1","authority_version_id":"auth-1","primary_component_id":"comp-1","package_id_external":"package-ext-1","schema_version":"1.0.0","status":"approved_for_derivation","package_json":{"package_id":"package-ext-1"},"provenance":{"source_artifact":"artifact.json"},"metadata":{"issue_number":123},"created_by_role_id":"role-1","created_by_agent_id":null,"created_at":"2026-06-04T12:00:00+00:00","updated_at":"2026-06-04T12:05:00+00:00"}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_design_package_by_id('pkg-1')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.package_id_external, 'package-ext-1')
+        self.assertEqual(row.metadata, {'issue_number': 123})
+
+    def test_get_design_package_by_project_and_external_id_returns_one_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"design_package_id":"pkg-1","project_id":"proj-1","work_item_id":"work-1","spec_fragment_id":"frag-1","implementation_target_id":"target-1","authority_version_id":"auth-1","primary_component_id":"comp-1","package_id_external":"package-ext-1","schema_version":"1.0.0","status":"approved_for_derivation","package_json":{"package_id":"package-ext-1"},"provenance":{"source_artifact":"artifact.json"},"metadata":{},"created_by_role_id":"role-1","created_by_agent_id":null,"created_at":"2026-06-04T12:00:00+00:00","updated_at":"2026-06-04T12:05:00+00:00"}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            row = repo.get_design_package_by_project_and_external_id('proj-slug', 'package-ext-1')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.design_package_id, 'pkg-1')
+
+    def test_get_active_design_package_for_work_item_returns_latest_non_superseded(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '{"design_package_id":"pkg-2","project_id":"proj-1","work_item_id":"work-1","spec_fragment_id":"frag-1","implementation_target_id":"target-1","authority_version_id":"auth-1","primary_component_id":"comp-1","package_id_external":"package-ext-2","schema_version":"1.0.0","status":"approved_for_derivation","package_json":{"package_id":"package-ext-2"},"provenance":{},"metadata":{},"created_by_role_id":"role-1","created_by_agent_id":null,"created_at":"2026-06-04T12:00:00+00:00","updated_at":"2026-06-04T12:05:00+00:00"}'
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output) as mock_run:
+            row = repo.get_active_design_package_for_work_item('work-1')
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.design_package_id, 'pkg-2')
+        self.assertIn("dp.status <> 'superseded'::paa.design_package_status", mock_run.call_args.args[0])
+
+    def test_list_design_package_signoffs_uses_role_order(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        output = '\n'.join(
+            [
+                '{"design_package_signoff_id":"s1","design_package_id":"pkg-1","role_id":"role-1","role_name":"Architect","role_sort_order":10,"signer_name":"Alice","signoff_status":"approved","notes":"ok","signed_at":"2026-06-04T12:00:00+00:00","metadata":{}}',
+                '{"design_package_signoff_id":"s2","design_package_id":"pkg-1","role_id":"role-2","role_name":"Product Owner","role_sort_order":30,"signer_name":"Bob","signoff_status":"approved","notes":null,"signed_at":"2026-06-04T12:10:00+00:00","metadata":{"source":"db"}}',
+            ]
+        )
+        with patch('paa_core.repositories.component_design.postgres.run_psql', return_value=output):
+            rows = repo.list_design_package_signoffs('pkg-1')
+
+        self.assertEqual([row.role_name for row in rows], ['Architect', 'Product Owner'])
+        self.assertEqual(rows[1].metadata, {'source': 'db'})
+
+    def test_upsert_design_package_returns_persisted_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = DesignPackageUpsertSpec(
+            project_id='11111111-1111-1111-1111-111111111111',
+            work_item_id='22222222-2222-2222-2222-222222222222',
+            spec_fragment_id='33333333-3333-3333-3333-333333333333',
+            implementation_target_id='44444444-4444-4444-4444-444444444444',
+            authority_version_id='55555555-5555-5555-5555-555555555555',
+            primary_component_id='66666666-6666-6666-6666-666666666666',
+            package_id_external='package-ext-1',
+            schema_version='1.0.0',
+            status='approved_for_derivation',
+            package_json={'package_id': 'package-ext-1'},
+            provenance={'source_artifact': 'artifact.json'},
+            metadata={'issue_number': 123},
+            created_by_role_id='77777777-7777-7777-7777-777777777777',
+        )
+        with patch(
+            'paa_core.repositories.component_design.postgres.run_psql',
+            side_effect=[
+                'pkg-1',
+                '{"design_package_id":"pkg-1","project_id":"11111111-1111-1111-1111-111111111111","work_item_id":"22222222-2222-2222-2222-222222222222","spec_fragment_id":"33333333-3333-3333-3333-333333333333","implementation_target_id":"44444444-4444-4444-4444-444444444444","authority_version_id":"55555555-5555-5555-5555-555555555555","primary_component_id":"66666666-6666-6666-6666-666666666666","package_id_external":"package-ext-1","schema_version":"1.0.0","status":"approved_for_derivation","package_json":{"package_id":"package-ext-1"},"provenance":{"source_artifact":"artifact.json"},"metadata":{"issue_number":123},"created_by_role_id":"77777777-7777-7777-7777-777777777777","created_by_agent_id":null,"created_at":"2026-06-04T12:00:00+00:00","updated_at":"2026-06-04T12:05:00+00:00"}',
+            ],
+        ) as mock_run:
+            row = repo.upsert_design_package(spec)
+
+        self.assertEqual(row.design_package_id, 'pkg-1')
+        self.assertEqual(row.package_json, {'package_id': 'package-ext-1'})
+        self.assertIn('INSERT INTO paa.design_packages', mock_run.call_args_list[0].args[0])
+        self.assertIn('ON CONFLICT (project_id, package_id_external) DO UPDATE', mock_run.call_args_list[0].args[0])
+
+    def test_upsert_design_package_signoff_returns_persisted_row(self) -> None:
+        repo = PostgresComponentDesignRepository()
+        spec = DesignPackageSignoffUpsertSpec(
+            design_package_id='pkg-1',
+            role_id='role-1',
+            signer_name='Alice',
+            signoff_status='approved',
+            notes='Approved for derivation',
+            signed_at='2026-06-04T12:00:00+00:00',
+            metadata={'source': 'test'},
+        )
+        with patch(
+            'paa_core.repositories.component_design.postgres.run_psql',
+            side_effect=[
+                'signoff-1',
+                '{"design_package_signoff_id":"signoff-1","design_package_id":"pkg-1","role_id":"role-1","role_name":"Architect","role_sort_order":10,"signer_name":"Alice","signoff_status":"approved","notes":"Approved for derivation","signed_at":"2026-06-04T12:00:00+00:00","metadata":{"source":"test"}}',
+            ],
+        ) as mock_run:
+            row = repo.upsert_design_package_signoff(spec)
+
+        self.assertEqual(row.design_package_signoff_id, 'signoff-1')
+        self.assertEqual(row.role_name, 'Architect')
+        self.assertIn('INSERT INTO paa.design_package_signoffs', mock_run.call_args_list[0].args[0])
+        self.assertIn('ON CONFLICT (design_package_id, role_id) DO UPDATE', mock_run.call_args_list[0].args[0])
 
     def test_upsert_realization_type_emits_upsert_sql(self) -> None:
         repo = PostgresComponentDesignRepository()

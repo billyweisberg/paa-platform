@@ -9,6 +9,7 @@ from paa_core.db import DBSettings, run_psql, sql_literal
 
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentUpsertSpec,
     ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
@@ -17,6 +18,10 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    DesignPackageRecord,
+    DesignPackageSignoffRecord,
+    DesignPackageSignoffUpsertSpec,
+    DesignPackageUpsertSpec,
     ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
@@ -75,6 +80,46 @@ FROM (
         if not rows:
             return None
         return self._component_from_row(rows[0])
+
+    def upsert_component(self, spec: ComponentUpsertSpec) -> ComponentRecord:
+        sql = f"""
+INSERT INTO paa.components (
+  project_id,
+  name,
+  role,
+  system_layer,
+  tier,
+  description,
+  status,
+  metadata_json
+)
+VALUES (
+  {sql_literal(spec.project_id)}::uuid,
+  {sql_literal(spec.name)},
+  {sql_literal(spec.role)},
+  {sql_literal(spec.system_layer)}::paa.system_layer,
+  {sql_literal(spec.tier)}::paa.component_tier,
+  {sql_literal(spec.description)},
+  {sql_literal(spec.status)}::paa.component_status,
+  {self._json_sql(spec.metadata)}::jsonb
+)
+ON CONFLICT (project_id, name) DO UPDATE SET
+  role = EXCLUDED.role,
+  system_layer = EXCLUDED.system_layer,
+  tier = EXCLUDED.tier,
+  description = EXCLUDED.description,
+  status = EXCLUDED.status,
+  metadata_json = paa.components.metadata_json || EXCLUDED.metadata_json,
+  updated_at = now()
+RETURNING component_id::text;
+"""
+        out = run_psql(sql, settings=self._settings).strip()
+        if not out:
+            raise RuntimeError(f'Component upsert did not return a persisted record for {spec.name!r}.')
+        record = self.get_component_by_id(out)
+        if record is None:
+            raise RuntimeError(f'Component upsert did not return a readable record for {spec.name!r}.')
+        return record
 
     def list_component_element_types(self) -> list[ComponentElementTypeRecord]:
         sql = """
@@ -369,6 +414,246 @@ FROM (
 """
         return [self._brief_target_from_row(row) for row in self._query_json_rows(sql)]
 
+    def get_design_package_by_id(self, design_package_id: str) -> DesignPackageRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    dp.design_package_id::text,
+    dp.project_id::text,
+    dp.work_item_id::text,
+    dp.spec_fragment_id::text,
+    dp.implementation_target_id::text,
+    dp.authority_version_id::text,
+    dp.primary_component_id::text,
+    dp.package_id_external,
+    dp.schema_version,
+    dp.status::text AS status,
+    dp.package_json,
+    dp.provenance_json AS provenance,
+    dp.metadata_json AS metadata,
+    dp.created_by_role_id::text,
+    dp.created_by_agent_id::text,
+    dp.created_at::text,
+    dp.updated_at::text
+  FROM paa.design_packages dp
+  WHERE dp.design_package_id = {sql_literal(design_package_id)}::uuid
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        return self._design_package_from_row(rows[0]) if rows else None
+
+    def get_design_package_by_project_and_external_id(
+        self, project_slug: str, package_id_external: str
+    ) -> DesignPackageRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    dp.design_package_id::text,
+    dp.project_id::text,
+    dp.work_item_id::text,
+    dp.spec_fragment_id::text,
+    dp.implementation_target_id::text,
+    dp.authority_version_id::text,
+    dp.primary_component_id::text,
+    dp.package_id_external,
+    dp.schema_version,
+    dp.status::text AS status,
+    dp.package_json,
+    dp.provenance_json AS provenance,
+    dp.metadata_json AS metadata,
+    dp.created_by_role_id::text,
+    dp.created_by_agent_id::text,
+    dp.created_at::text,
+    dp.updated_at::text
+  FROM paa.design_packages dp
+  JOIN paa.projects p ON p.project_id = dp.project_id
+  WHERE p.slug = {sql_literal(project_slug)}
+    AND dp.package_id_external = {sql_literal(package_id_external)}
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        return self._design_package_from_row(rows[0]) if rows else None
+
+    def get_active_design_package_for_work_item(self, work_item_id: str) -> DesignPackageRecord | None:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    dp.design_package_id::text,
+    dp.project_id::text,
+    dp.work_item_id::text,
+    dp.spec_fragment_id::text,
+    dp.implementation_target_id::text,
+    dp.authority_version_id::text,
+    dp.primary_component_id::text,
+    dp.package_id_external,
+    dp.schema_version,
+    dp.status::text AS status,
+    dp.package_json,
+    dp.provenance_json AS provenance,
+    dp.metadata_json AS metadata,
+    dp.created_by_role_id::text,
+    dp.created_by_agent_id::text,
+    dp.created_at::text,
+    dp.updated_at::text
+  FROM paa.design_packages dp
+  WHERE dp.work_item_id = {sql_literal(work_item_id)}::uuid
+    AND dp.status <> 'superseded'::paa.design_package_status
+  ORDER BY dp.updated_at DESC, dp.created_at DESC, dp.design_package_id DESC
+  LIMIT 1
+) AS t;
+"""
+        rows = self._query_json_rows(sql)
+        return self._design_package_from_row(rows[0]) if rows else None
+
+    def list_design_package_signoffs(self, design_package_id: str) -> list[DesignPackageSignoffRecord]:
+        sql = f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    dps.design_package_signoff_id::text,
+    dps.design_package_id::text,
+    dps.role_id::text,
+    r.name AS role_name,
+    r.sort_order AS role_sort_order,
+    dps.signer_name,
+    dps.signoff_status,
+    dps.notes,
+    dps.signed_at::text,
+    dps.metadata_json AS metadata
+  FROM paa.design_package_signoffs dps
+  JOIN paa.roles r ON r.role_id = dps.role_id
+  WHERE dps.design_package_id = {sql_literal(design_package_id)}::uuid
+  ORDER BY r.sort_order, r.name
+) AS t;
+"""
+        return [self._design_package_signoff_from_row(row) for row in self._query_json_rows(sql)]
+
+    def upsert_design_package(self, spec: DesignPackageUpsertSpec) -> DesignPackageRecord:
+        sql = f"""
+INSERT INTO paa.design_packages (
+  project_id,
+  work_item_id,
+  spec_fragment_id,
+  implementation_target_id,
+  authority_version_id,
+  primary_component_id,
+  package_id_external,
+  schema_version,
+  status,
+  package_json,
+  provenance_json,
+  metadata_json,
+  created_by_role_id,
+  created_by_agent_id
+)
+VALUES (
+  {sql_literal(spec.project_id)}::uuid,
+  {self._uuid_or_null(spec.work_item_id)},
+  {self._uuid_or_null(spec.spec_fragment_id)},
+  {self._uuid_or_null(spec.implementation_target_id)},
+  {self._uuid_or_null(spec.authority_version_id)},
+  {self._uuid_or_null(spec.primary_component_id)},
+  {sql_literal(spec.package_id_external)},
+  {sql_literal(spec.schema_version)},
+  {sql_literal(spec.status)}::paa.design_package_status,
+  {self._json_sql(spec.package_json)}::jsonb,
+  {self._json_sql(spec.provenance)}::jsonb,
+  {self._json_sql(spec.metadata)}::jsonb,
+  {self._uuid_or_null(spec.created_by_role_id)},
+  {self._uuid_or_null(spec.created_by_agent_id)}
+)
+ON CONFLICT (project_id, package_id_external) DO UPDATE SET
+  work_item_id = EXCLUDED.work_item_id,
+  spec_fragment_id = EXCLUDED.spec_fragment_id,
+  implementation_target_id = EXCLUDED.implementation_target_id,
+  authority_version_id = EXCLUDED.authority_version_id,
+  primary_component_id = EXCLUDED.primary_component_id,
+  schema_version = EXCLUDED.schema_version,
+  status = EXCLUDED.status,
+  package_json = EXCLUDED.package_json,
+  provenance_json = EXCLUDED.provenance_json,
+  metadata_json = EXCLUDED.metadata_json,
+  created_by_role_id = COALESCE(EXCLUDED.created_by_role_id, paa.design_packages.created_by_role_id),
+  created_by_agent_id = COALESCE(EXCLUDED.created_by_agent_id, paa.design_packages.created_by_agent_id),
+  updated_at = now()
+RETURNING design_package_id::text;
+"""
+        out = run_psql(sql, settings=self._settings).strip()
+        if not out:
+            raise RuntimeError(
+                f'Design package upsert did not return a persisted record for {spec.package_id_external!r}.'
+            )
+        record = self.get_design_package_by_id(out)
+        if record is None:
+            raise RuntimeError(
+                f'Design package upsert did not return a readable record for {spec.package_id_external!r}.'
+            )
+        return record
+
+    def upsert_design_package_signoff(
+        self, spec: DesignPackageSignoffUpsertSpec
+    ) -> DesignPackageSignoffRecord:
+        sql = f"""
+INSERT INTO paa.design_package_signoffs (
+  design_package_id,
+  role_id,
+  signer_name,
+  signoff_status,
+  notes,
+  signed_at,
+  metadata_json
+)
+VALUES (
+  {sql_literal(spec.design_package_id)}::uuid,
+  {sql_literal(spec.role_id)}::uuid,
+  {sql_literal(spec.signer_name)},
+  {sql_literal(spec.signoff_status)},
+  {sql_literal(spec.notes)},
+  {self._timestamp_or_null(spec.signed_at)},
+  {self._json_sql(spec.metadata)}::jsonb
+)
+ON CONFLICT (design_package_id, role_id) DO UPDATE SET
+  signer_name = EXCLUDED.signer_name,
+  signoff_status = EXCLUDED.signoff_status,
+  notes = EXCLUDED.notes,
+  signed_at = EXCLUDED.signed_at,
+  metadata_json = EXCLUDED.metadata_json
+RETURNING design_package_signoff_id::text;
+"""
+        out = run_psql(sql, settings=self._settings).strip()
+        if not out:
+            raise RuntimeError(
+                f'Design package signoff upsert did not return a persisted record for role {spec.role_id!r}.'
+            )
+        rows = self._query_json_rows(
+            f"""
+SELECT row_to_json(t)
+FROM (
+  SELECT
+    dps.design_package_signoff_id::text,
+    dps.design_package_id::text,
+    dps.role_id::text,
+    r.name AS role_name,
+    r.sort_order AS role_sort_order,
+    dps.signer_name,
+    dps.signoff_status,
+    dps.notes,
+    dps.signed_at::text,
+    dps.metadata_json AS metadata
+  FROM paa.design_package_signoffs dps
+  JOIN paa.roles r ON r.role_id = dps.role_id
+  WHERE dps.design_package_signoff_id = {sql_literal(out)}::uuid
+) AS t;
+"""
+        )
+        if not rows:
+            raise RuntimeError(
+                f'Design package signoff upsert did not return a readable record for role {spec.role_id!r}.'
+            )
+        return self._design_package_signoff_from_row(rows[0])
 
 
     def upsert_realization_type(self, spec: RealizationTypeUpsertSpec) -> None:
@@ -649,6 +934,43 @@ ON CONFLICT (coder_run_brief_id, component_element_realization_id, target_intent
             metadata=row.get('metadata') or {},
         )
 
+    @staticmethod
+    def _design_package_from_row(row: dict[str, Any]) -> DesignPackageRecord:
+        return DesignPackageRecord(
+            design_package_id=row['design_package_id'],
+            project_id=row['project_id'],
+            work_item_id=row.get('work_item_id'),
+            spec_fragment_id=row.get('spec_fragment_id'),
+            implementation_target_id=row.get('implementation_target_id'),
+            authority_version_id=row.get('authority_version_id'),
+            primary_component_id=row.get('primary_component_id'),
+            package_id_external=row.get('package_id_external'),
+            schema_version=row['schema_version'],
+            status=row['status'],
+            package_json=row.get('package_json') or {},
+            provenance=row.get('provenance') or {},
+            metadata=row.get('metadata') or {},
+            created_by_role_id=row.get('created_by_role_id'),
+            created_by_agent_id=row.get('created_by_agent_id'),
+            created_at=row.get('created_at'),
+            updated_at=row.get('updated_at'),
+        )
+
+    @staticmethod
+    def _design_package_signoff_from_row(row: dict[str, Any]) -> DesignPackageSignoffRecord:
+        return DesignPackageSignoffRecord(
+            design_package_signoff_id=row['design_package_signoff_id'],
+            design_package_id=row['design_package_id'],
+            role_id=row['role_id'],
+            role_name=row['role_name'],
+            role_sort_order=int(row['role_sort_order']),
+            signer_name=row.get('signer_name'),
+            signoff_status=row['signoff_status'],
+            notes=row.get('notes'),
+            signed_at=row.get('signed_at'),
+            metadata=row.get('metadata') or {},
+        )
+
 
     @staticmethod
     def _json_sql(value: dict[str, Any] | None) -> str:
@@ -663,3 +985,9 @@ ON CONFLICT (coder_run_brief_id, component_element_realization_id, target_intent
         if value is None:
             return 'NULL'
         return f"{sql_literal(value)}::uuid"
+
+    @staticmethod
+    def _timestamp_or_null(value: str | None) -> str:
+        if value is None:
+            return 'NULL'
+        return f"{sql_literal(value)}::timestamptz"

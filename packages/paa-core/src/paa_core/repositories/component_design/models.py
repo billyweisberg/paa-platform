@@ -20,6 +20,18 @@ class ComponentRecord:
 
 
 @dataclass(frozen=True)
+class ComponentUpsertSpec:
+    project_id: str
+    name: str
+    role: str
+    system_layer: str
+    tier: str | None = None
+    description: str | None = None
+    status: str = 'active'
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
 class ComponentElementTypeRecord:
     component_element_type_id: str
     element_key: str
@@ -59,6 +71,70 @@ class ComponentElementUpsertSpec:
     metadata: dict[str, Any] | None = None
     created_by_role_id: str | None = None
     created_by_agent_id: str | None = None
+
+
+@dataclass(frozen=True)
+class DesignPackageRecord:
+    design_package_id: str
+    project_id: str
+    work_item_id: str | None
+    spec_fragment_id: str | None
+    implementation_target_id: str | None
+    authority_version_id: str | None
+    primary_component_id: str | None
+    package_id_external: str | None
+    schema_version: str
+    status: str
+    package_json: dict[str, Any]
+    provenance: dict[str, Any]
+    metadata: dict[str, Any]
+    created_by_role_id: str | None
+    created_by_agent_id: str | None
+    created_at: str | None
+    updated_at: str | None
+
+
+@dataclass(frozen=True)
+class DesignPackageUpsertSpec:
+    project_id: str
+    work_item_id: str | None
+    spec_fragment_id: str | None
+    implementation_target_id: str | None
+    authority_version_id: str | None
+    primary_component_id: str | None
+    package_id_external: str | None
+    schema_version: str
+    status: str
+    package_json: dict[str, Any]
+    provenance: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
+    created_by_role_id: str | None = None
+    created_by_agent_id: str | None = None
+
+
+@dataclass(frozen=True)
+class DesignPackageSignoffRecord:
+    design_package_signoff_id: str
+    design_package_id: str
+    role_id: str
+    role_name: str
+    role_sort_order: int
+    signer_name: str | None
+    signoff_status: str
+    notes: str | None
+    signed_at: str | None
+    metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class DesignPackageSignoffUpsertSpec:
+    design_package_id: str
+    role_id: str
+    signer_name: str | None = None
+    signoff_status: str = 'approved'
+    notes: str | None = None
+    signed_at: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)

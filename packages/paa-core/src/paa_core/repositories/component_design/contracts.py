@@ -6,6 +6,7 @@ from typing import Protocol
 
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentUpsertSpec,
     ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
@@ -14,6 +15,10 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    DesignPackageRecord,
+    DesignPackageSignoffRecord,
+    DesignPackageSignoffUpsertSpec,
+    DesignPackageUpsertSpec,
     ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
@@ -27,6 +32,10 @@ class ComponentDesignRepository(Protocol):
 
     def get_component_by_name(self, project_id: str, name: str) -> ComponentRecord | None:
         """Return one component by stable project/name identity."""
+        ...
+
+    def upsert_component(self, spec: ComponentUpsertSpec) -> ComponentRecord:
+        """Create or update one component by stable project/name identity."""
         ...
 
     def list_component_element_types(self) -> list[ComponentElementTypeRecord]:
@@ -81,6 +90,34 @@ class ComponentDesignRepository(Protocol):
         self, coder_run_brief_id: str
     ) -> list[CoderBriefRealizationTargetRecord]:
         """Return brief realization targets in execution order."""
+        ...
+
+    def get_design_package_by_id(self, design_package_id: str) -> DesignPackageRecord | None:
+        """Return one design package by primary id."""
+        ...
+
+    def get_design_package_by_project_and_external_id(
+        self, project_slug: str, package_id_external: str
+    ) -> DesignPackageRecord | None:
+        """Return one design package by stable project/external identity."""
+        ...
+
+    def get_active_design_package_for_work_item(self, work_item_id: str) -> DesignPackageRecord | None:
+        """Return the latest non-superseded design package for one work item."""
+        ...
+
+    def list_design_package_signoffs(self, design_package_id: str) -> list[DesignPackageSignoffRecord]:
+        """Return package signoffs in stable role order."""
+        ...
+
+    def upsert_design_package(self, spec: DesignPackageUpsertSpec) -> DesignPackageRecord:
+        """Create or update one design package by stable project/external identity."""
+        ...
+
+    def upsert_design_package_signoff(
+        self, spec: DesignPackageSignoffUpsertSpec
+    ) -> DesignPackageSignoffRecord:
+        """Create or update one design-package signoff for a role."""
         ...
 
     def upsert_realization_type(self, spec: RealizationTypeUpsertSpec) -> None:

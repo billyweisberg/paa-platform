@@ -102,8 +102,8 @@ Phase 7. Runtime And Producer Continuation [active]
 The current system position is:
 - Phase 7. Runtime And Producer Continuation `[active]`
 - Active slice: `S04` Design Package Derivation
-- Completed layer for active slice: not started
-- Next layer for active slice: data layer
+- Completed layer for active slice: data layer
+- Next layer for active slice: domain/app logic
 
 That means:
 - the design and planning frame is ready
@@ -116,7 +116,8 @@ That means:
 - the runtime API now exposes methodology status, next-action, explain, transition, and preflight routes through one explicit `methodology_execution` router
 - `paa methodology current|next|explain|preflight|transition` now proves the methodology pointer surface through the real CLI -> API -> app -> repository path
 - `S03` is now complete across data, app, API, CLI, and end-to-end proof
-- the next correct work is `S04` data-layer work for design package derivation
+- the `S04` data layer now exists through `source_authority`, `component_design`, and `runtime_identity` repository ownership
+- the next correct work is `S04` domain/app logic for design package derivation
 - this is still not the time to start cutting random pieces out of `db.py`
 
 ## Build Order Rule

@@ -113,6 +113,7 @@ paa-platform/
 │           │
 │           ├── repositories/
 │           │   ├── component_design/
+│           │   ├── source_authority/
 │           │   ├── methodology_execution/
 │           │   ├── implementation_plan/
 │           │   ├── runtime_event/

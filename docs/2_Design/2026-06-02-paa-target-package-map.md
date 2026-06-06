@@ -279,6 +279,7 @@ packages/
         methodology_execution/
         runtime_event/
         runtime_identity/
+        source_authority/
         workflow_state/
 
       governance/

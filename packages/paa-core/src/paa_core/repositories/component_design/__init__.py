@@ -3,6 +3,7 @@
 from .contracts import ComponentDesignRepository
 from .models import (
     BriefRealizationTargetUpsertSpec,
+    ComponentUpsertSpec,
     ComponentElementUpsertSpec,
     CoderBriefRealizationTargetRecord,
     ComponentElementRealizationRecord,
@@ -11,6 +12,10 @@ from .models import (
     ComponentElementRecord,
     ComponentElementTypeRecord,
     ComponentRecord,
+    DesignPackageRecord,
+    DesignPackageSignoffRecord,
+    DesignPackageSignoffUpsertSpec,
+    DesignPackageUpsertSpec,
     ElementTypeRealizationLinkRecord,
     ElementTypeRealizationLinkSpec,
     RealizationTypeUpsertSpec,
@@ -19,6 +24,7 @@ from .postgres import PostgresComponentDesignRepository
 
 __all__ = [
     'BriefRealizationTargetUpsertSpec',
+    'ComponentUpsertSpec',
     'ComponentElementUpsertSpec',
     'CoderBriefRealizationTargetRecord',
     'ComponentDesignRepository',
@@ -28,6 +34,10 @@ __all__ = [
     'ComponentElementRecord',
     'ComponentElementTypeRecord',
     'ComponentRecord',
+    'DesignPackageRecord',
+    'DesignPackageSignoffRecord',
+    'DesignPackageSignoffUpsertSpec',
+    'DesignPackageUpsertSpec',
     'ElementTypeRealizationLinkRecord',
     'ElementTypeRealizationLinkSpec',
     'PostgresComponentDesignRepository',
